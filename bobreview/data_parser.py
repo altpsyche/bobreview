@@ -70,6 +70,7 @@ def parse_filename(filename: str) -> Dict[str, Any]:
     except ValueError as e:
         raise ValueError(
             f"Invalid numeric values in filename: {filename}\n"
+            f"Fields: tricount={parts[1]}, drawcalls={parts[2]}, timestamp={parts[3]}\n"
             f"Triangle count, draw calls, and timestamp must be integers.\n"
             f"Error: {e}"
         ) from e

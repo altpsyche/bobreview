@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 LLM provider and prompt generation for BobReview.
 """
@@ -34,7 +33,12 @@ def clean_llm_response(response: str) -> str:
     return response.strip()
 
 
-def call_llm(prompt: str, data_table: str = None, config=None, max_retries: int = 3) -> str:
+def call_llm(
+    prompt: str,
+    data_table: str | None = None,
+    config=None,
+    max_retries: int = 3,
+) -> str:
     """
     Generate LLM text for a prompt (optionally augmented with a data table), using caching, dry-run support, and retry/backoff on rate limits.
     
@@ -70,8 +74,8 @@ Data Table:
     cache = get_cache()
     if cache:
         cached_response = cache.get(full_prompt, data_table or "", config.openai_model)
-        if cached_response:
-            log_verbose(f"Using cached LLM response", config)
+        if cached_response is not None:
+            log_verbose("Using cached LLM response", config)
             return cached_response
     
     # Check OpenAI availability (only needed for actual API calls)
@@ -141,10 +145,18 @@ Data Table:
     raise RuntimeError(f"Failed to call OpenAI API after {max_retries} attempts")
 
 
-def call_llm_chunked(prompt_base: str, data_points: List[Dict[str, Any]], config, chunk_size: int = None) -> str:
+def call_llm_chunked(
+    prompt_base: str,
+    data_points: List[Dict[str, Any]],
+    config,
+    chunk_size: int | None = None,
+) -> str:
     """Call LLM with data points in chunks and combine results."""
     if chunk_size is None:
         chunk_size = config.image_chunk_size
+    
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be a positive integer")
     
     if not data_points:
         # No data, just call LLM with prompt
@@ -175,7 +187,12 @@ Provide a unified analysis that integrates all the information from these chunks
         return call_llm(combine_prompt, data_table=None, config=config)
 
 
-def generate_executive_summary(data_points: List[Dict[str, Any]], stats: Dict[str, Any], config, images_dir_rel: str) -> str:
+def generate_executive_summary(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> str:
     """Generate executive summary using LLM."""
     critical_idx = stats['critical'][0]
     critical_point = stats['critical'][1]
@@ -219,7 +236,12 @@ Use HTML paragraph tags (<p>) for formatting. Be concise and data-driven."""
     return call_llm_chunked(prompt, sample_data, config)
 
 
-def generate_metric_deep_dive(data_points: List[Dict[str, Any]], stats: Dict[str, Any], config, images_dir_rel: str) -> Dict[str, str]:
+def generate_metric_deep_dive(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> Dict[str, str]:
     """Generate metric deep dive sections using LLM."""
     results = {}
     
@@ -240,8 +262,8 @@ Statistics:
 - Min: {stats['draws']['min']}, Max: {stats['draws']['max']}
 - Q1: {format_number(stats['draws']['q1'], 0)}, Median: {format_number(stats['draws']['median'], 0)}, Q3: {format_number(stats['draws']['q3'], 0)}
 - Mean: {format_number(stats['draws']['mean'], 1)}, Std Dev: {format_number(stats['draws']['stdev'], 1)}
-- High outliers (>2σ): {len(stats['draws']['outliers_high'])} frames at indices {', '.join([str(i) for i, _ in stats['draws']['outliers_high']])}
-- Low outliers (>2σ): {len(stats['draws']['outliers_low'])} frames at indices {', '.join([str(i) for i, _ in stats['draws']['outliers_low']])}
+- High outliers (>2 std dev): {len(stats['draws']['outliers_high'])} frames at indices {', '.join([str(i) for i, _ in stats['draws']['outliers_high']])}
+- Low outliers (>2 std dev): {len(stats['draws']['outliers_low'])} frames at indices {', '.join([str(i) for i, _ in stats['draws']['outliers_low']])}
 - Hard cap threshold: {config.draw_hard_cap}
 
 Analyze the provided data table to understand patterns in high and low draw call frames.
@@ -269,7 +291,7 @@ Statistics:
 - Min: {format_number(stats['tris']['min'])}, Max: {format_number(stats['tris']['max'])}
 - Q1: {format_number(stats['tris']['q1'])}, Median: {format_number(stats['tris']['median'])}, Q3: {format_number(stats['tris']['q3'])}
 - Mean: {format_number(stats['tris']['mean'], 1)}, Std Dev: {format_number(stats['tris']['stdev'], 1)}
-- High outliers (>2σ): {len(stats['tris']['outliers_high'])} frames at indices {', '.join([str(i) for i, _ in stats['tris']['outliers_high']])}
+- High outliers (>2 std dev): {len(stats['tris']['outliers_high'])} frames at indices {', '.join([str(i) for i, _ in stats['tris']['outliers_high']])}
 - Hard cap threshold: {format_number(config.tri_hard_cap, 0)}
 
 Analyze the provided data table to understand patterns in high triangle count frames.
@@ -324,7 +346,12 @@ Use HTML paragraph tags. Include a heading <h3>2.4 Draw Calls vs Triangle Correl
     return results
 
 
-def generate_zones_hotspots(data_points: List[Dict[str, Any]], stats: Dict[str, Any], config, images_dir_rel: str) -> Dict[str, str]:
+def generate_zones_hotspots(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> Dict[str, str]:
     """Generate zones and hotspots analysis using LLM."""
     results = {}
     
@@ -378,7 +405,12 @@ Use HTML paragraph tags."""
     return results
 
 
-def generate_optimization_checklist(data_points: List[Dict[str, Any]], stats: Dict[str, Any], config, images_dir_rel: str) -> Dict[str, str]:
+def generate_optimization_checklist(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> Dict[str, str]:
     """Generate optimization checklist using LLM."""
     results = {}
     
@@ -451,7 +483,12 @@ Format as HTML <ul> with <li> tags."""
     return results
 
 
-def generate_system_recommendations(data_points: List[Dict[str, Any]], stats: Dict[str, Any], config, images_dir_rel: str) -> Dict[str, str]:
+def generate_system_recommendations(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> Dict[str, str]:
     """Generate system-level recommendations using LLM."""
     results = {}
     

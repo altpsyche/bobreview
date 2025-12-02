@@ -3,7 +3,6 @@
 HTML report generation for BobReview.
 """
 
-import statistics
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -54,16 +53,6 @@ def generate_html_report(
         str: A complete HTML document as a string containing styled sections (executive summary, metric deep dive, zones & hotspots,
         optimization checklist, optional system recommendations), embedded thumbnails, statistical summaries, and a full sample table.
     """
-    
-    # Calculate time span
-    timestamps = [p['ts'] for p in data_points]
-    time_span = max(timestamps) - min(timestamps)
-    avg_interval = time_span / (len(data_points) - 1) if len(data_points) > 1 else 0
-    
-    # Correlation analysis
-    sorted_by_draws = sorted(data_points, key=lambda x: x['draws'])
-    low_draw_tris = statistics.mean([p['tris'] for p in sorted_by_draws[:10]])
-    high_draw_tris = statistics.mean([p['tris'] for p in sorted_by_draws[-10:]])
     
     # Extract critical hotspot values for cleaner template
     critical_idx = stats['critical'][0]

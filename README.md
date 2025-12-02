@@ -48,7 +48,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 BobReview uses a modular architecture with clear separation of concerns:
 
-```
+```text
 bobreview/
 ├── bobreview/              # Main package
 │   ├── __init__.py         # Public API exports

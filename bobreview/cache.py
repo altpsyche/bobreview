@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .utils import log_warning, log_success, log_verbose
+from .utils import log_warning, log_success, log_verbose, log_info
 
 
 class LLMCache:
@@ -66,7 +66,7 @@ class LLMCache:
                 with open(cache_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     return data.get('response')
-            except Exception as e:
+            except (OSError, json.JSONDecodeError) as e:
                 log_warning(f"Failed to read cache file {cache_file}: {e}", self.config)
                 return None
         
@@ -92,7 +92,7 @@ class LLMCache:
                     'response': response,
                     'timestamp': datetime.now().isoformat()
                 }, f, indent=2)
-        except Exception as e:
+        except (OSError, TypeError) as e:
             log_warning(f"Failed to write cache file {cache_file}: {e}", self.config)
     
     def clear(self):
@@ -109,10 +109,13 @@ class LLMCache:
             try:
                 cache_file.unlink()
                 count += 1
-            except Exception as e:
+            except OSError as e:
                 log_warning(f"Failed to delete cache file {cache_file}: {e}", self.config)
         
-        log_success(f"Cleared {count} cached responses", self.config)
+        if count > 0:
+            log_success(f"Cleared {count} cached responses", self.config)
+        else:
+            log_info("Cache directory was already empty", self.config)
 
 
 # Global cache instance

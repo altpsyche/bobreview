@@ -89,7 +89,7 @@ def analyze_data(data_points: List[Dict[str, Any]], config) -> Dict[str, Any]:
 
 
 def format_data_table(
-    data_points: List[Dict[str, Any]], max_rows: int = None
+    data_points: List[Dict[str, Any]], max_rows: int | None = None
 ) -> str:
     """
     Render a list of data points as a markdown table suitable for embedding in prompts.

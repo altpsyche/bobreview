@@ -4,7 +4,10 @@ Utility functions for BobReview including logging and formatting.
 """
 
 import sys
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config import ReportConfig
 
 # Try to import optional dependencies
 try:
@@ -20,7 +23,7 @@ except ImportError:
         BRIGHT = DIM = NORMAL = RESET_ALL = ''
 
 
-def log_info(message: str, config=None):
+def log_info(message: str, config: "Optional[ReportConfig]" = None):
     """
     Log an informational message to standard output unless quiet mode is enabled.
     
@@ -38,7 +41,7 @@ def log_info(message: str, config=None):
         print(f"[INFO] {message}")
 
 
-def log_success(message: str, config=None):
+def log_success(message: str, config: "Optional[ReportConfig]" = None):
     """
     Log a success message to stdout, prefixed with a check mark.
     
@@ -57,7 +60,7 @@ def log_success(message: str, config=None):
         print(f"✓ {message}")
 
 
-def log_warning(message: str, config=None):
+def log_warning(message: str, config: "Optional[ReportConfig]" = None):
     """
     Print a warning message to stdout unless suppressed by configuration.
     
@@ -86,7 +89,7 @@ def log_error(message: str):
         print(f"[ERROR] {message}", file=sys.stderr)
 
 
-def log_verbose(message: str, config=None):
+def log_verbose(message: str, config: "Optional[ReportConfig]" = None):
     """
     Log a debug message when verbose mode is enabled and not suppressed by quiet mode.
     
