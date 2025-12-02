@@ -505,7 +505,9 @@ def init_cache(config: ReportConfig):
     _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
 
 
-def format_data_table(data_points: List[Dict[str, Any]], max_rows: int = None) -> str:
+def format_data_table(
+    data_points: List[Dict[str, Any]], max_rows: int | None = None
+) -> str:
     """
     Render a list of data points as a markdown table suitable for embedding in prompts.
     
@@ -518,7 +520,8 @@ def format_data_table(data_points: List[Dict[str, Any]], max_rows: int = None) -
     Returns:
         str: A markdown-formatted table with columns "Index", "Test Case", "Draw Calls", "Triangles", and "Timestamp", or the string "No data available." if `data_points` is empty.
     """
-    if max_rows:
+    total_samples = len(data_points)
+    if max_rows is not None:
         data_points = data_points[:max_rows]
     
     if not data_points:
@@ -532,8 +535,8 @@ def format_data_table(data_points: List[Dict[str, Any]], max_rows: int = None) -
     for idx, point in enumerate(data_points):
         table += f"| {idx} | {point['testcase']} | {point['draws']} | {format_number(point['tris'])} | {point['ts']} |\n"
     
-    if max_rows and len(data_points) == max_rows:
-        table += f"\n(Showing first {max_rows} of {len(data_points)} total samples)"
+    if max_rows is not None and total_samples > max_rows:
+        table += f"\n(Showing first {max_rows} of {total_samples} total samples)"
     
     return table
 
