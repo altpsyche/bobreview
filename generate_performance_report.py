@@ -10,16 +10,21 @@ Usage:
     python generate_performance_report.py --dir <path_to_images> --openai-key <key> --output report.html --title "My Level" --draw-cap 600 --tri-cap 120000
 """
 
+__version__ = "1.0.0"
+
 import argparse
 import os
+import sys
 import statistics
 import json
 import time
 import re
+import hashlib
+import random
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional, Dict, Any, List
 
 try:
@@ -27,6 +32,37 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+try:
+    from tqdm import tqdm
+    TQDM_AVAILABLE = True
+except ImportError:
+    TQDM_AVAILABLE = False
+    # Fallback: create a simple passthrough wrapper
+    class tqdm:
+        def __init__(self, iterable=None, desc=None, total=None, **kwargs):
+            self.iterable = iterable
+            self.desc = desc
+        def __iter__(self):
+            return iter(self.iterable)
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def update(self, n=1):
+            pass
+
+try:
+    from colorama import init as colorama_init, Fore, Style
+    COLORAMA_AVAILABLE = True
+    colorama_init(autoreset=True)
+except ImportError:
+    COLORAMA_AVAILABLE = False
+    # Fallback: create dummy color classes
+    class Fore:
+        RED = GREEN = YELLOW = BLUE = CYAN = MAGENTA = WHITE = RESET = ''
+    class Style:
+        BRIGHT = DIM = NORMAL = RESET_ALL = ''
 
 
 @dataclass
@@ -48,17 +84,115 @@ class ReportConfig:
     openai_model: str = "gpt-4o"
     llm_temperature: float = 0.7
     image_chunk_size: int = 10  # Number of data samples to send per LLM call
+    cache_dir: Path = Path(".perf_cache")
+    use_cache: bool = True
+    clear_cache: bool = False
+    dry_run: bool = False
+    sample_size: Optional[int] = None
+    verbose: bool = False
+    quiet: bool = False
+
+
+def log_info(message: str, config: ReportConfig = None):
+    """Print info message unless quiet mode is enabled."""
+    if config and config.quiet:
+        return
+    if COLORAMA_AVAILABLE:
+        print(f"{Fore.CYAN}[INFO]{Style.RESET_ALL} {message}")
+    else:
+        print(f"[INFO] {message}")
+
+
+def log_success(message: str, config: ReportConfig = None):
+    """Print success message unless quiet mode is enabled."""
+    if config and config.quiet:
+        return
+    if COLORAMA_AVAILABLE:
+        print(f"{Fore.GREEN}✓{Style.RESET_ALL} {message}")
+    else:
+        print(f"✓ {message}")
+
+
+def log_warning(message: str, config: ReportConfig = None):
+    """Print warning message unless quiet mode is enabled."""
+    if config and config.quiet:
+        return
+    if COLORAMA_AVAILABLE:
+        print(f"{Fore.YELLOW}[WARNING]{Style.RESET_ALL} {message}")
+    else:
+        print(f"[WARNING] {message}")
+
+
+def log_error(message: str):
+    """Print error message (always shown)."""
+    if COLORAMA_AVAILABLE:
+        print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} {message}", file=sys.stderr)
+    else:
+        print(f"[ERROR] {message}", file=sys.stderr)
+
+
+def log_verbose(message: str, config: ReportConfig = None):
+    """Print verbose message only if verbose mode is enabled."""
+    if config and config.verbose and not config.quiet:
+        if COLORAMA_AVAILABLE:
+            print(f"{Fore.BLUE}[DEBUG]{Style.RESET_ALL} {message}")
+        else:
+            print(f"[DEBUG] {message}")
+
+
+def validate_config(config: ReportConfig) -> List[str]:
+    """Validate configuration and return list of errors."""
+    errors = []
+    
+    if config.draw_soft_cap > config.draw_hard_cap:
+        errors.append("draw_soft_cap must be <= draw_hard_cap")
+    
+    if config.tri_soft_cap > config.tri_hard_cap:
+        errors.append("tri_soft_cap must be <= tri_hard_cap")
+    
+    if config.outlier_sigma <= 0:
+        errors.append("outlier_sigma must be > 0")
+    
+    if config.image_chunk_size <= 0:
+        errors.append("image_chunk_size must be > 0")
+    
+    if config.sample_size is not None and config.sample_size <= 0:
+        errors.append("sample_size must be > 0")
+    
+    if config.llm_temperature < 0 or config.llm_temperature > 2:
+        errors.append("llm_temperature must be between 0 and 2")
+    
+    return errors
 
 
 def parse_filename(filename):
     """Parse filename format: TestCase_tricount_drawcalls_timestamp.png"""
-    parts = filename.replace('.png', '').split('_')
+    if not filename.lower().endswith('.png'):
+        raise ValueError(f"File must be a PNG: {filename}")
+    
+    parts = filename.replace('.png', '').replace('.PNG', '').split('_')
     if len(parts) < 4:
-        raise ValueError(f"Invalid filename format: {filename}")
-    testcase = parts[0]
-    tricount = int(parts[1])
-    drawcalls = int(parts[2])
-    timestamp = int(parts[3])
+        raise ValueError(
+            f"Invalid filename format: {filename}\n"
+            f"Expected format: TestCase_tricount_drawcalls_timestamp.png\n"
+            f"Example: Level1_85000_520_1234567890.png"
+        )
+    
+    try:
+        testcase = parts[0]
+        tricount = int(parts[1])
+        drawcalls = int(parts[2])
+        timestamp = int(parts[3])
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid numeric values in filename: {filename}\n"
+            f"Triangle count, draw calls, and timestamp must be integers.\n"
+            f"Error: {e}"
+        )
+    
+    if tricount < 0 or drawcalls < 0:
+        raise ValueError(f"Triangle count and draw calls must be non-negative: {filename}")
+    
     return {
         'testcase': testcase,
         'tris': tricount,
@@ -132,6 +266,89 @@ def format_number(n, decimals=1):
     return f"{n:,.{decimals}f}"
 
 
+class LLMCache:
+    """Cache for LLM responses to avoid redundant API calls."""
+    
+    def __init__(self, cache_dir: Path, enabled: bool = True):
+        self.cache_dir = cache_dir
+        self.enabled = enabled
+        if enabled:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _get_cache_key(self, prompt: str, data_table: str, model: str) -> str:
+        """Generate cache key from inputs."""
+        content = f"{prompt}|{data_table}|{model}"
+        return hashlib.sha256(content.encode()).hexdigest()
+    
+    def get(self, prompt: str, data_table: str, model: str) -> Optional[str]:
+        """Retrieve cached response if it exists."""
+        if not self.enabled:
+            return None
+        
+        cache_key = self._get_cache_key(prompt, data_table, model)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        if cache_file.exists():
+            try:
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get('response')
+            except Exception as e:
+                log_warning(f"Failed to read cache file {cache_file}: {e}")
+                return None
+        
+        return None
+    
+    def set(self, prompt: str, data_table: str, model: str, response: str):
+        """Store response in cache."""
+        if not self.enabled:
+            return
+        
+        cache_key = self._get_cache_key(prompt, data_table, model)
+        cache_file = self.cache_dir / f"{cache_key}.json"
+        
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'prompt_hash': cache_key,
+                    'model': model,
+                    'response': response,
+                    'timestamp': datetime.now().isoformat()
+                }, f, indent=2)
+        except Exception as e:
+            log_warning(f"Failed to write cache file {cache_file}: {e}")
+    
+    def clear(self):
+        """Clear all cached responses."""
+        if not self.enabled or not self.cache_dir.exists():
+            return
+        
+        count = 0
+        for cache_file in self.cache_dir.glob("*.json"):
+            try:
+                cache_file.unlink()
+                count += 1
+            except Exception as e:
+                log_warning(f"Failed to delete cache file {cache_file}: {e}")
+        
+        log_success(f"Cleared {count} cached responses")
+
+
+# Global cache instance
+_cache_instance: Optional[LLMCache] = None
+
+
+def get_cache() -> Optional[LLMCache]:
+    """Get the global cache instance."""
+    return _cache_instance
+
+
+def init_cache(config: ReportConfig):
+    """Initialize the global cache instance."""
+    global _cache_instance
+    _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache)
+
+
 def format_data_table(data_points: List[Dict[str, Any]], max_rows: int = None) -> str:
     """Format data points as a markdown table for LLM."""
     if max_rows:
@@ -176,6 +393,26 @@ def call_llm(prompt: str, data_table: str = None, config: ReportConfig = None, m
     if not config:
         raise ValueError("ReportConfig is required")
     
+    # Combine prompt with data table if provided
+    full_prompt = prompt
+    if data_table:
+        full_prompt = f"""{prompt}
+
+Data Table:
+{data_table}"""
+    
+    # Check cache first
+    cache = get_cache()
+    if cache:
+        cached_response = cache.get(full_prompt, data_table or "", config.openai_model)
+        if cached_response:
+            log_verbose(f"Using cached LLM response", config)
+            return cached_response
+    
+    # Dry run mode - return placeholder
+    if config.dry_run:
+        return "<p>Dry run mode - LLM analysis would appear here</p>"
+    
     if not config.openai_api_key:
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
@@ -185,13 +422,7 @@ def call_llm(prompt: str, data_table: str = None, config: ReportConfig = None, m
     
     client = openai.OpenAI(api_key=api_key)
     
-    # Combine prompt with data table if provided
-    full_prompt = prompt
-    if data_table:
-        full_prompt = f"""{prompt}
-
-Data Table:
-{data_table}"""
+    log_verbose(f"Calling LLM API (model: {config.openai_model})", config)
     
     # Retry logic with exponential backoff
     for attempt in range(max_retries):
@@ -203,7 +434,13 @@ Data Table:
                 max_tokens=2000
             )
             # Clean the response to remove markdown code fences
-            return clean_llm_response(response.choices[0].message.content)
+            result = clean_llm_response(response.choices[0].message.content)
+            
+            # Cache the response
+            if cache:
+                cache.set(full_prompt, data_table or "", config.openai_model, result)
+            
+            return result
         
         except openai.RateLimitError as e:
             error_str = str(e).lower()
@@ -623,12 +860,31 @@ def generate_html(data_points, stats, images_dir_rel, output_path, config: Repor
     # Convert relative image path to absolute for LLM functions
     images_dir_abs = (output_path.parent / images_dir_rel).resolve() if images_dir_rel else output_path.parent
     
-    print("Generating LLM content...")
-    exec_summary = generate_executive_summary(data_points, stats, config, str(images_dir_abs))
-    metric_content = generate_metric_deep_dive(data_points, stats, config, str(images_dir_abs))
-    zones_content = generate_zones_hotspots(data_points, stats, config, str(images_dir_abs))
-    optimization_content = generate_optimization_checklist(data_points, stats, config, str(images_dir_abs))
-    system_recs = generate_system_recommendations(data_points, stats, config, str(images_dir_abs))
+    log_info("Generating LLM content...", config)
+    
+    sections = [
+        ("Executive Summary", lambda: generate_executive_summary(data_points, stats, config, str(images_dir_abs))),
+        ("Metric Deep Dive", lambda: generate_metric_deep_dive(data_points, stats, config, str(images_dir_abs))),
+        ("Zones & Hotspots", lambda: generate_zones_hotspots(data_points, stats, config, str(images_dir_abs))),
+        ("Optimization Checklist", lambda: generate_optimization_checklist(data_points, stats, config, str(images_dir_abs))),
+        ("System Recommendations", lambda: generate_system_recommendations(data_points, stats, config, str(images_dir_abs)))
+    ]
+    
+    if TQDM_AVAILABLE and not config.quiet:
+        iterator = tqdm(sections, desc="Generating sections")
+    else:
+        iterator = sections
+    
+    results = {}
+    for section_name, generate_func in iterator:
+        log_verbose(f"Generating: {section_name}", config)
+        results[section_name] = generate_func()
+    
+    exec_summary = results["Executive Summary"]
+    metric_content = results["Metric Deep Dive"]
+    zones_content = results["Zones & Hotspots"]
+    optimization_content = results["Optimization Checklist"]
+    system_recs = results["System Recommendations"]
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1311,17 +1567,25 @@ Examples:
   python generate_performance_report.py --dir ./screenshots --title "My Level Analysis" \\
     --draw-hard-cap 700 --tri-hard-cap 150000 --location "City District"
 
-  # Use LLM to generate contextual content (requires OpenAI API key)
-  python generate_performance_report.py --dir ./screenshots \\
-    --openai-key sk-... --title "AI-Generated Analysis"
+  # Use cached responses (much faster)
+  python generate_performance_report.py --dir ./screenshots --use-cache
+
+  # Dry run to test without calling LLM
+  python generate_performance_report.py --dir ./screenshots --dry-run
+
+  # Process only a random sample
+  python generate_performance_report.py --dir ./screenshots --sample 50
 
   # Or set OPENAI_API_KEY environment variable
   export OPENAI_API_KEY=sk-...
   python generate_performance_report.py --dir ./screenshots
 
-  # Disable recommendations section
-  python generate_performance_report.py --dir ./screenshots --no-recommendations
+  # Clear cache and regenerate
+  python generate_performance_report.py --dir ./screenshots --clear-cache
         """
+    )
+    parser.add_argument(
+        '--version', action='version', version=f'%(prog)s {__version__}'
     )
     parser.add_argument(
         '--dir', type=str, default='.',
@@ -1400,11 +1664,55 @@ Examples:
         help='LLM temperature for generation (default: 0.7)'
     )
     
+    # Caching options
+    parser.add_argument(
+        '--cache-dir', type=str, default='.perf_cache',
+        help='Directory for caching LLM responses (default: .perf_cache)'
+    )
+    parser.add_argument(
+        '--use-cache', action='store_true', default=True,
+        help='Use cached LLM responses when available (default: enabled)'
+    )
+    parser.add_argument(
+        '--no-cache', action='store_false', dest='use_cache',
+        help='Disable caching and always call LLM'
+    )
+    parser.add_argument(
+        '--clear-cache', action='store_true',
+        help='Clear all cached responses before running'
+    )
+    
+    # Execution options
+    parser.add_argument(
+        '--dry-run', action='store_true',
+        help='Analyze data but skip LLM calls (generates placeholder content)'
+    )
+    parser.add_argument(
+        '--sample', type=int, default=None, dest='sample_size',
+        help='Process only N random samples (for testing)'
+    )
+    
+    # Output options
+    parser.add_argument(
+        '--verbose', '-v', action='store_true',
+        help='Enable verbose output (debug information)'
+    )
+    parser.add_argument(
+        '--quiet', '-q', action='store_true',
+        help='Suppress all output except errors'
+    )
+    
     args = parser.parse_args()
     
-    # Check for OpenAI API key
+    # Handle quiet + verbose conflict
+    if args.quiet and args.verbose:
+        parser.error("Cannot use both --quiet and --verbose")
+    
+    start_time = time.time()
+    
+    # Check for OpenAI API key (unless dry run)
     openai_key = args.openai_key or os.getenv('OPENAI_API_KEY')
-    if not openai_key:
+    if not openai_key and not args.dry_run:
         parser.error("OpenAI API key is required. Set OPENAI_API_KEY environment variable or use --openai-key")
     
     # Build configuration
@@ -1424,38 +1732,96 @@ Examples:
         openai_api_key=openai_key,
         openai_model=args.openai_model,
         llm_temperature=args.llm_temperature,
-        image_chunk_size=args.image_chunk_size
+        image_chunk_size=args.image_chunk_size,
+        cache_dir=Path(args.cache_dir),
+        use_cache=args.use_cache and not args.dry_run,
+        clear_cache=args.clear_cache,
+        dry_run=args.dry_run,
+        sample_size=args.sample_size,
+        verbose=args.verbose,
+        quiet=args.quiet
     )
+    
+    # Validate configuration
+    validation_errors = validate_config(config)
+    if validation_errors:
+        log_error("Configuration validation failed:")
+        for error in validation_errors:
+            log_error(f"  - {error}")
+        return 1
+    
+    # Initialize cache
+    init_cache(config)
+    
+    # Clear cache if requested
+    if config.clear_cache:
+        cache = get_cache()
+        if cache:
+            cache.clear()
+    
+    if config.dry_run:
+        log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
     # Find PNG files
     input_dir = Path(args.dir).resolve()
+    
+    if not input_dir.exists():
+        log_error(f"Directory not found: {input_dir}")
+        return 1
+    
+    if not input_dir.is_dir():
+        log_error(f"Path is not a directory: {input_dir}")
+        return 1
+    
+    log_info(f"Scanning directory: {input_dir}", config)
     png_files = [f for f in os.listdir(input_dir) if f.lower().endswith('.png')]
     
     if not png_files:
-        print(f"Error: No PNG files found in {input_dir}")
+        log_error(f"No PNG files found in {input_dir}")
+        log_info("Expected filename format: TestCase_tricount_drawcalls_timestamp.png", config)
+        log_info("Example: Level1_85000_520_1234567890.png", config)
         return 1
     
-    print(f"Found {len(png_files)} PNG files")
+    log_success(f"Found {len(png_files)} PNG file(s)", config)
     
     # Parse data
     data_points = []
-    for png_file in png_files:
+    parse_errors = 0
+    
+    iterator = tqdm(png_files, desc="Parsing files", disable=config.quiet) if TQDM_AVAILABLE else png_files
+    
+    for png_file in iterator:
         try:
             data_points.append(parse_filename(png_file))
         except (ValueError, IndexError) as e:
-            print(f"Warning: Skipping {png_file} - {e}")
+            log_warning(f"Skipping {png_file} - {e}", config)
+            parse_errors += 1
             continue
     
     if not data_points:
-        print("Error: No valid data points found")
+        log_error("No valid data points found after parsing")
+        log_info(f"Skipped {parse_errors} file(s) due to parsing errors", config)
         return 1
+    
+    if parse_errors > 0:
+        log_warning(f"Successfully parsed {len(data_points)}/{len(png_files)} files ({parse_errors} errors)", config)
+    
+    # Apply sampling if requested
+    original_count = len(data_points)
+    if config.sample_size and config.sample_size < len(data_points):
+        log_info(f"Sampling {config.sample_size} random data points from {len(data_points)}", config)
+        data_points = random.sample(data_points, config.sample_size)
     
     # Sort by timestamp
     data_points.sort(key=lambda x: x['ts'])
     
     # Calculate statistics
-    print("Analyzing data...")
+    log_info("Analyzing performance data...", config)
     stats = analyze_data(data_points, config)
+    
+    log_verbose(f"Statistics calculated: {stats['count']} samples", config)
+    log_verbose(f"  Draw calls - Min: {stats['draws']['min']}, Max: {stats['draws']['max']}, Mean: {format_number(stats['draws']['mean'], 1)}", config)
+    log_verbose(f"  Triangles - Min: {format_number(stats['tris']['min'])}, Max: {format_number(stats['tris']['max'])}, Mean: {format_number(stats['tris']['mean'], 1)}", config)
     
     # Determine image directory path
     output_path = Path(args.output).resolve()
@@ -1468,15 +1834,46 @@ Examples:
             images_dir_rel = os.path.relpath(input_dir, output_path.parent).replace(os.sep, '/')
     
     # Generate HTML
-    print(f"Generating report: {output_path}")
-    html = generate_html(data_points, stats, images_dir_rel, output_path, config)
+    log_info(f"Generating report: {output_path}", config)
+    
+    if config.dry_run:
+        log_info("Dry run mode: Generating report with placeholder LLM content", config)
+    elif config.use_cache:
+        log_info("Using cache when available for LLM responses", config)
+    
+    try:
+        html = generate_html(data_points, stats, images_dir_rel, output_path, config)
+    except Exception as e:
+        log_error(f"Failed to generate HTML report: {e}")
+        if config.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
     
     # Write output
-    output_path.write_text(html, encoding='utf-8')
-    print(f"Success! Report written to {output_path}")
-    print(f"  - {stats['count']} samples analyzed")
-    print(f"  - {len(stats['high_load'])} high-load frames identified")
-    print(f"  - Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(html, encoding='utf-8')
+    except Exception as e:
+        log_error(f"Failed to write output file: {e}")
+        return 1
+    
+    elapsed_time = time.time() - start_time
+    
+    # Print summary
+    log_success(f"Report written to: {output_path}", config)
+    log_info(f"📊 Summary:", config)
+    log_info(f"  • {stats['count']} samples analyzed", config)
+    log_info(f"  • {len(stats['high_load'])} high-load frames identified", config)
+    log_info(f"  • Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
+    
+    if config.sample_size and config.sample_size < original_count:
+        log_info(f"  • Sampled {config.sample_size} of {original_count} total samples", config)
+    
+    if config.dry_run:
+        log_warning(f"  • Dry run mode - no actual LLM calls made", config)
+    
+    log_info(f"⏱️  Completed in {elapsed_time:.1f}s", config)
     
     return 0
 

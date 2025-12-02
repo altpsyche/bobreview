@@ -1,0 +1,13 @@
+# Core dependencies
+openai>=1.0.0
+
+# Optional dependencies for enhanced UX
+tqdm>=4.65.0  # Progress bars
+colorama>=0.4.6  # Colored terminal output
+
+# For future phases
+# pandas>=2.0.0  # CSV/data manipulation (Phase 2)
+# PyYAML>=6.0  # Config file support (Phase 3)
+# weasyprint>=60.0  # PDF export (Phase 4)
+# pytest>=7.4.0  # Testing (Phase 6)
+

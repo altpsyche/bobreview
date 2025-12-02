@@ -21,11 +21,17 @@ This tool analyzes performance data extracted from PNG screenshot files and gene
 - Python 3.7+
 - OpenAI Python library: `pip install openai`
 - OpenAI API key (required)
+- Optional: `tqdm` for progress bars, `colorama` for colored output
 
 ## Installation
 
 1. Clone or download this repository
 2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   
+   Or install just the essentials:
    ```bash
    pip install openai
    ```
@@ -63,11 +69,38 @@ Where:
 python generate_performance_report.py --dir ./screenshots --openai-key sk-... --output report.html
 ```
 
-### With Environment Variable
+### With Environment Variable (Recommended)
 
 ```bash
 export OPENAI_API_KEY=sk-...
 python generate_performance_report.py --dir ./screenshots --output report.html
+```
+
+### Using Cache (Much Faster!)
+
+```bash
+# First run - calls LLM and caches responses
+python generate_performance_report.py --dir ./screenshots
+
+# Subsequent runs - uses cache
+python generate_performance_report.py --dir ./screenshots --use-cache
+
+# Clear cache and regenerate
+python generate_performance_report.py --dir ./screenshots --clear-cache
+```
+
+### Dry Run (Test Without LLM Calls)
+
+```bash
+# Analyze data without calling expensive LLM API
+python generate_performance_report.py --dir ./screenshots --dry-run
+```
+
+### Sample Mode (For Testing)
+
+```bash
+# Process only 50 random samples
+python generate_performance_report.py --dir ./screenshots --sample 50
 ```
 
 ### Custom Configuration
@@ -81,12 +114,18 @@ python generate_performance_report.py \
   --location "City District" \
   --draw-hard-cap 700 \
   --tri-hard-cap 150000 \
-  --image-chunk-size 15
+  --image-chunk-size 15 \
+  --verbose
 ```
 
 ## Command Line Arguments
 
-### Required Arguments
+### General Options
+
+- `--version`: Show version and exit
+- `--help`: Show help message and exit
+
+### Required (Unless Dry Run)
 
 - `--openai-key`: OpenAI API key (or set `OPENAI_API_KEY` environment variable)
 
@@ -138,13 +177,20 @@ The generated HTML report includes:
 3. **Statistical Analysis**: Calculates comprehensive statistics including outliers and performance zones
 4. **Data Table Generation**: Formats relevant data points as markdown tables
 5. **LLM Processing**: Sends data tables to OpenAI API in configurable chunks for analysis
-6. **Report Generation**: Combines LLM-generated content with statistics into a styled HTML report
+6. **Caching**: Stores LLM responses locally to avoid redundant API calls
+7. **Report Generation**: Combines LLM-generated content with statistics into a styled HTML report
 
-## Performance Considerations
+## Performance & Cost Optimization
 
 - **Token Efficiency**: The script sends structured data tables instead of images, significantly reducing token usage
+- **Intelligent Caching**: LLM responses are cached locally (default: `.perf_cache/` directory)
+  - Subsequent runs with the same data are nearly instant
+  - Cache is automatically invalidated when data or configuration changes
+  - Saves significant API costs on re-runs
 - **Chunked Processing**: Large datasets are processed in chunks (default: 10 samples per call) to manage API limits
-- **Error Handling**: The script raises clear errors if the API key is missing or LLM calls fail
+- **Dry Run Mode**: Test your configuration without making expensive API calls
+- **Sampling**: Process a subset of data for quick testing with `--sample N`
+- **Error Handling**: Robust error handling with retry logic for transient failures
 
 ## Example Output
 
@@ -160,14 +206,32 @@ The generated report includes:
 ### "OpenAI API key not found"
 - Set the `OPENAI_API_KEY` environment variable, or
 - Use the `--openai-key` command line argument
+- Or use `--dry-run` to test without an API key
 
 ### "No PNG files found"
 - Ensure PNG files are in the specified directory
 - Verify filenames match the required format: `TestCase_tricount_drawcalls_timestamp.png`
+- Check directory path is correct
 
 ### "Invalid filename format"
 - Check that filenames follow the exact format: `TestCase_tricount_drawcalls_timestamp.png`
 - Ensure all components are present and numeric values are valid integers
+- Trianglecount, drawcalls, and timestamp must be non-negative integers
+
+### "Configuration validation failed"
+- Check that soft caps are <= hard caps
+- Ensure outlier_sigma > 0
+- Verify temperature is between 0 and 2
+
+### Slow performance
+- Use `--use-cache` on subsequent runs (enabled by default)
+- Use `--sample N` to process a subset for testing
+- Consider using a smaller chunk size with `--image-chunk-size`
+
+### High API costs
+- Enable caching with `--use-cache` (default)
+- Use `--dry-run` for testing configuration
+- Process a sample first with `--sample` to verify output
 
 ## License
 
