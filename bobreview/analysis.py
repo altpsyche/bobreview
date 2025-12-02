@@ -24,6 +24,9 @@ def analyze_data(data_points: List[Dict[str, Any]], config) -> Dict[str, Any]:
             - critical: Critical hotspot (worst frame)
             - count: Total number of samples
     """
+    if not data_points:
+        raise ValueError("analyze_data requires at least one data point")
+    
     draws = [p['draws'] for p in data_points]
     tris = [p['tris'] for p in data_points]
     
