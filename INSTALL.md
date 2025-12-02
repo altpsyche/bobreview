@@ -58,8 +58,16 @@ python --version
 
 # 2. Check dependencies
 python -c "import openai; print('OpenAI:', openai.__version__)"
-python -c "import tqdm; print('tqdm: installed')" 2>/dev/null || echo "tqdm: not installed (optional)"
-python -c "import colorama; print('colorama: installed')" 2>/dev/null || echo "colorama: not installed (optional)"
+python -c "try:
+    import tqdm
+    print('tqdm: installed')
+except ImportError:
+    print('tqdm: not installed (optional)')"
+python -c "try:
+    import colorama
+    print('colorama: installed')
+except ImportError:
+    print('colorama: not installed (optional)')"
 
 # 3. Check API key (without revealing it)
 python -c "import os; print('API Key:', 'SET' if os.getenv('OPENAI_API_KEY') else 'NOT SET')"

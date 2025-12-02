@@ -78,12 +78,17 @@ python generate_performance_report.py --dir ./screenshots --output report.html
 
 ### Using Cache
 
+Caching is **enabled by default** to save API costs and speed up subsequent runs:
+
 ```bash
-# First run - calls LLM and caches responses
+# First run - calls LLM and caches responses (caching enabled by default)
 python generate_performance_report.py --dir ./screenshots
 
-# Subsequent runs - uses cache
-python generate_performance_report.py --dir ./screenshots --use-cache
+# Subsequent runs - automatically uses cache (no flag needed)
+python generate_performance_report.py --dir ./screenshots
+
+# Disable caching for this run
+python generate_performance_report.py --dir ./screenshots --no-cache
 
 # Clear cache and regenerate
 python generate_performance_report.py --dir ./screenshots --clear-cache
@@ -158,6 +163,12 @@ python generate_performance_report.py \
 #### Report Options
 - `--no-recommendations`: Disable system-level recommendations section
 
+#### Caching Options
+- `--use-cache`: Use cached LLM responses when available (enabled by default)
+- `--no-cache`: Disable caching and always call LLM
+- `--cache-dir`: Directory for caching LLM responses (default: `.perf_cache`)
+- `--clear-cache`: Clear all cached responses before running
+
 ## Report Sections
 
 The generated HTML report includes:
@@ -183,10 +194,12 @@ The generated HTML report includes:
 ## Performance & Cost Optimization
 
 - **Token Efficiency**: The script sends structured data tables instead of images, significantly reducing token usage
-- **Intelligent Caching**: LLM responses are cached locally (default: `.perf_cache/` directory)
+- **Intelligent Caching**: LLM responses are cached locally by default (cache directory: `.perf_cache/`)
+  - Caching is **enabled by default** - no flags needed
   - Subsequent runs with the same data are nearly instant
   - Cache is automatically invalidated when data or configuration changes
   - Saves significant API costs on re-runs
+  - Use `--no-cache` to disable caching for a specific run
 - **Chunked Processing**: Large datasets are processed in chunks (default: 10 samples per call) to manage API limits
 - **Dry Run Mode**: Test your configuration without making expensive API calls
 - **Sampling**: Process a subset of data for quick testing with `--sample N`
@@ -224,14 +237,15 @@ The generated report includes:
 - Verify temperature is between 0 and 2
 
 ### Slow performance
-- Use `--use-cache` on subsequent runs (enabled by default)
+- Caching is enabled by default - subsequent runs will use cached responses automatically
 - Use `--sample N` to process a subset for testing
 - Consider using a smaller chunk size with `--image-chunk-size`
 
 ### High API costs
-- Enable caching with `--use-cache` (default)
+- Caching is enabled by default - cached responses are reused automatically on subsequent runs
 - Use `--dry-run` for testing configuration
 - Process a sample first with `--sample` to verify output
+- Use `--clear-cache` only when you need to regenerate LLM content
 
 ## License
 
