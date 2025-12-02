@@ -51,11 +51,12 @@ def call_llm(prompt: str, data_table: str = None, config=None, max_retries: int 
         RuntimeError: If OpenAI library is unavailable, API key is missing, quota is exceeded, rate limits persist after retries, or other OpenAI/API errors occur.
         ValueError: If `config` is not provided.
     """
-    if not OPENAI_AVAILABLE:
-        raise RuntimeError("OpenAI library not available. Install with: pip install openai")
-    
     if not config:
         raise ValueError("ReportConfig is required")
+    
+    # Dry run mode - return placeholder (check before OpenAI availability to allow pipeline validation)
+    if config.dry_run:
+        return "<p>Dry run mode - LLM analysis would appear here</p>"
     
     # Combine prompt with data table if provided
     full_prompt = prompt
@@ -73,9 +74,9 @@ Data Table:
             log_verbose(f"Using cached LLM response", config)
             return cached_response
     
-    # Dry run mode - return placeholder
-    if config.dry_run:
-        return "<p>Dry run mode - LLM analysis would appear here</p>"
+    # Check OpenAI availability (only needed for actual API calls)
+    if not OPENAI_AVAILABLE:
+        raise RuntimeError("OpenAI library not available. Install with: pip install openai")
     
     if not config.openai_api_key:
         api_key = os.getenv('OPENAI_API_KEY')
