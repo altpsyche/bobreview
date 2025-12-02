@@ -40,7 +40,9 @@ except ImportError:
     TQDM_AVAILABLE = False
     # Fallback: create a simple passthrough wrapper
     class tqdm:
+        """Fallback no-op tqdm for when the library is not installed."""
         def __init__(self, iterable=None, desc=None, total=None, **kwargs):
+            # Accept all tqdm parameters for API compatibility
             self.iterable = iterable
             self.desc = desc
         def __iter__(self):
@@ -269,9 +271,10 @@ def format_number(n, decimals=1):
 class LLMCache:
     """Cache for LLM responses to avoid redundant API calls."""
     
-    def __init__(self, cache_dir: Path, enabled: bool = True):
+    def __init__(self, cache_dir: Path, enabled: bool = True, config: Optional[ReportConfig] = None):
         self.cache_dir = cache_dir
         self.enabled = enabled
+        self.config = config
         if enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
     
@@ -294,7 +297,7 @@ class LLMCache:
                     data = json.load(f)
                     return data.get('response')
             except Exception as e:
-                log_warning(f"Failed to read cache file {cache_file}: {e}")
+                log_warning(f"Failed to read cache file {cache_file}: {e}", self.config)
                 return None
         
         return None
@@ -316,7 +319,7 @@ class LLMCache:
                     'timestamp': datetime.now().isoformat()
                 }, f, indent=2)
         except Exception as e:
-            log_warning(f"Failed to write cache file {cache_file}: {e}")
+            log_warning(f"Failed to write cache file {cache_file}: {e}", self.config)
     
     def clear(self):
         """Clear all cached responses."""
@@ -329,9 +332,9 @@ class LLMCache:
                 cache_file.unlink()
                 count += 1
             except Exception as e:
-                log_warning(f"Failed to delete cache file {cache_file}: {e}")
+                log_warning(f"Failed to delete cache file {cache_file}: {e}", self.config)
         
-        log_success(f"Cleared {count} cached responses")
+        log_success(f"Cleared {count} cached responses", self.config)
 
 
 # Global cache instance
@@ -346,7 +349,7 @@ def get_cache() -> Optional[LLMCache]:
 def init_cache(config: ReportConfig):
     """Initialize the global cache instance."""
     global _cache_instance
-    _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache)
+    _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
 
 
 def format_data_table(data_points: List[Dict[str, Any]], max_rows: int = None) -> str:
@@ -454,7 +457,10 @@ Data Table:
             # Rate limit (but not quota) - retry with backoff
             if attempt < max_retries - 1:
                 wait_time = (2 ** attempt) + (time.time() % 1)  # Exponential backoff with jitter
-                print(f"Rate limit hit, retrying in {wait_time:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
+                log_warning(
+                    f"Rate limit hit, retrying in {wait_time:.1f} seconds... (attempt {attempt + 1}/{max_retries})",
+                    config
+                )
                 time.sleep(wait_time)
             else:
                 raise RuntimeError(
@@ -1567,8 +1573,11 @@ Examples:
   python generate_performance_report.py --dir ./screenshots --title "My Level Analysis" \\
     --draw-hard-cap 700 --tri-hard-cap 150000 --location "City District"
 
-  # Use cached responses (much faster)
-  python generate_performance_report.py --dir ./screenshots --use-cache
+  # Subsequent runs reuse cache automatically (enabled by default)
+  python generate_performance_report.py --dir ./screenshots
+
+  # Disable caching for this run
+  python generate_performance_report.py --dir ./screenshots --no-cache
 
   # Dry run to test without calling LLM
   python generate_performance_report.py --dir ./screenshots --dry-run
