@@ -43,13 +43,44 @@ except ImportError:
         """Fallback no-op tqdm for when the library is not installed."""
         def __init__(self, iterable=None, desc=None, total=None, **kwargs):
             # Accept all tqdm parameters for API compatibility
+            """
+            Create a no-op progress-bar object compatible with tqdm's constructor.
+            
+            This fallback initializer stores the provided iterable and description and ignores other parameters so callers can use the same API as tqdm when the real package is unavailable. The resulting object is intended to be iterated in place of the original iterable; it does not display progress or manage state.
+            
+            Parameters:
+                iterable (Optional[Iterable]): The iterable to wrap (may be None).
+                desc (Optional[str]): Optional description shown by real tqdm (stored but not displayed).
+                total (Optional[int]): Total number of iterations (accepted for compatibility; ignored).
+                **kwargs: Additional tqdm parameters accepted for API compatibility and ignored.
+            """
             self.iterable = iterable
             self.desc = desc
         def __iter__(self):
+            """
+            Provide an iterator that yields items from the wrapped iterable.
+            
+            Returns:
+                An iterator that yields items from `self.iterable`.
+            """
             return iter(self.iterable)
         def __enter__(self):
+            """
+            Enable use as a context manager by returning the instance.
+            
+            Returns:
+                The instance itself.
+            """
             return self
         def __exit__(self, *args):
+            """
+            Context manager exit handler that performs no action.
+            
+            If an exception occurred in the with-block, it is not suppressed and will propagate normally.
+            
+            Parameters:
+                *args: Exception type, value, and traceback (if an exception was raised); otherwise empty.
+            """
             pass
         def update(self, n=1):
             pass
@@ -96,7 +127,15 @@ class ReportConfig:
 
 
 def log_info(message: str, config: ReportConfig = None):
-    """Print info message unless quiet mode is enabled."""
+    """
+    Log an informational message to standard output unless quiet mode is enabled.
+    
+    If color support is available, the message is prefixed with a cyan "[INFO]" tag; otherwise a plain "[INFO]" tag is used. If a `config` is provided and `config.quiet` is True, the message is suppressed.
+    
+    Parameters:
+    	message (str): The message to log.
+    	config (ReportConfig, optional): Configuration that may suppress output when `config.quiet` is True.
+    """
     if config and config.quiet:
         return
     if COLORAMA_AVAILABLE:
@@ -106,7 +145,16 @@ def log_info(message: str, config: ReportConfig = None):
 
 
 def log_success(message: str, config: ReportConfig = None):
-    """Print success message unless quiet mode is enabled."""
+    """
+    Log a success message to stdout, prefixed with a check mark.
+    
+    If a ReportConfig with `quiet=True` is provided, the message is suppressed.
+    When terminal coloring is available, the check mark is rendered in green.
+    
+    Parameters:
+        message (str): The message to print.
+        config (ReportConfig, optional): Configuration used to determine whether output is suppressed.
+    """
     if config and config.quiet:
         return
     if COLORAMA_AVAILABLE:
@@ -116,7 +164,13 @@ def log_success(message: str, config: ReportConfig = None):
 
 
 def log_warning(message: str, config: ReportConfig = None):
-    """Print warning message unless quiet mode is enabled."""
+    """
+    Print a warning message to stdout unless suppressed by configuration.
+    
+    Parameters:
+        message (str): The warning text to display.
+        config (ReportConfig, optional): If provided and `config.quiet` is True, the warning is not printed.
+    """
     if config and config.quiet:
         return
     if COLORAMA_AVAILABLE:
@@ -126,7 +180,12 @@ def log_warning(message: str, config: ReportConfig = None):
 
 
 def log_error(message: str):
-    """Print error message (always shown)."""
+    """
+    Write an error message to standard error with an "[ERROR]" prefix; when the terminal supports color, the prefix is shown in red.
+    
+    Parameters:
+        message (str): The error text to display.
+    """
     if COLORAMA_AVAILABLE:
         print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} {message}", file=sys.stderr)
     else:
@@ -134,7 +193,15 @@ def log_error(message: str):
 
 
 def log_verbose(message: str, config: ReportConfig = None):
-    """Print verbose message only if verbose mode is enabled."""
+    """
+    Log a debug message when verbose mode is enabled and not suppressed by quiet mode.
+    
+    Prints the provided message to stdout only if `config` is provided, `config.verbose` is True, and `config.quiet` is False. When colorama is available, the log is prefixed with a colored `[DEBUG]` marker.
+    
+    Parameters:
+        message (str): The message to log.
+        config (ReportConfig, optional): Configuration controlling verbosity and quiet suppression. If omitted or falsy, no output is produced.
+    """
     if config and config.verbose and not config.quiet:
         if COLORAMA_AVAILABLE:
             print(f"{Fore.BLUE}[DEBUG]{Style.RESET_ALL} {message}")
@@ -143,7 +210,23 @@ def log_verbose(message: str, config: ReportConfig = None):
 
 
 def validate_config(config: ReportConfig) -> List[str]:
-    """Validate configuration and return list of errors."""
+    """
+    Validate a ReportConfig for logical consistency and return any validation errors.
+    
+    Checks:
+    - draw_soft_cap is less than or equal to draw_hard_cap
+    - tri_soft_cap is less than or equal to tri_hard_cap
+    - outlier_sigma is greater than 0
+    - image_chunk_size is greater than 0
+    - sample_size, if provided, is greater than 0
+    - llm_temperature is between 0 and 2 (inclusive of 0 and 2)
+    
+    Parameters:
+        config (ReportConfig): Configuration to validate.
+    
+    Returns:
+        List[str]: A list of human-readable error messages for each violated constraint; empty if config is valid.
+    """
     errors = []
     
     if config.draw_soft_cap > config.draw_hard_cap:
@@ -168,7 +251,27 @@ def validate_config(config: ReportConfig) -> List[str]:
 
 
 def parse_filename(filename):
-    """Parse filename format: TestCase_tricount_drawcalls_timestamp.png"""
+    """
+    Parse a PNG filename encoding a test case, triangle count, draw calls, and timestamp.
+    
+    The filename must follow the pattern: TestCase_tricount_drawcalls_timestamp.png
+    Example: Level1_85000_520_1234567890.png
+    
+    Parameters:
+        filename (str): The PNG filename to parse.
+    
+    Returns:
+        dict: A dictionary with keys:
+            - 'testcase' (str): Test case name.
+            - 'tris' (int): Triangle count.
+            - 'draws' (int): Draw call count.
+            - 'ts' (int): Timestamp.
+            - 'img' (str): Original filename.
+    
+    Raises:
+        ValueError: If the file is not a PNG, the format is incorrect, numeric fields cannot be parsed,
+                    or any numeric field is negative.
+    """
     if not filename.lower().endswith('.png'):
         raise ValueError(f"File must be a PNG: {filename}")
     
@@ -264,7 +367,16 @@ def analyze_data(data_points, config: ReportConfig):
 
 
 def format_number(n, decimals=1):
-    """Format number with thousand separators."""
+    """
+    Return the number formatted with thousands separators and a fixed number of decimal places.
+    
+    Parameters:
+        n (int | float): The numeric value to format.
+        decimals (int): Number of digits to show after the decimal point. If set to 0, the value is converted to an integer and the fractional part is discarded.
+    
+    Returns:
+        formatted (str): The number as a string with comma separators for thousands and the requested decimal precision.
+    """
     if decimals == 0:
         return f"{int(n):,}"
     return f"{n:,.{decimals}f}"
@@ -274,6 +386,16 @@ class LLMCache:
     """Cache for LLM responses to avoid redundant API calls."""
     
     def __init__(self, cache_dir: Path, enabled: bool = True, config: Optional[ReportConfig] = None):
+        """
+        Initialize the LLMCache.
+        
+        Ensures the cache directory exists when caching is enabled.
+        
+        Parameters:
+        	cache_dir (Path): Filesystem path where cache files will be stored.
+        	enabled (bool): If True, enables caching and creates `cache_dir` if missing.
+        	config (Optional[ReportConfig]): Optional configuration used for logging and behavior; may be None.
+        """
         self.cache_dir = cache_dir
         self.enabled = enabled
         self.config = config
@@ -281,12 +403,28 @@ class LLMCache:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
     
     def _get_cache_key(self, prompt: str, data_table: str, model: str) -> str:
-        """Generate cache key from inputs."""
+        """
+        Create a deterministic SHA-256 cache key representing the combination of prompt, data table, and model.
+        
+        Parameters:
+            prompt (str): The LLM prompt text.
+            data_table (str): The optional formatted data table string included with the prompt.
+            model (str): The model identifier used for the request.
+        
+        Returns:
+            str: Hexadecimal SHA-256 digest suitable for use as a cache filename or key.
+        """
         content = f"{prompt}|{data_table}|{model}"
         return hashlib.sha256(content.encode()).hexdigest()
     
     def get(self, prompt: str, data_table: str, model: str) -> Optional[str]:
-        """Retrieve cached response if it exists."""
+        """
+        Return the cached LLM response for the given prompt and data table when available.
+        
+        Returns:
+            str: Cached response text if present.
+            None: If caching is disabled, no cache entry exists, or the cache file cannot be read.
+        """
         if not self.enabled:
             return None
         
@@ -305,7 +443,11 @@ class LLMCache:
         return None
     
     def set(self, prompt: str, data_table: str, model: str, response: str):
-        """Store response in cache."""
+        """
+        Write the LLM response into the cache directory using a deterministic filename based on the prompt, data table, and model.
+        
+        If caching is disabled, this is a no-op. On I/O or serialization errors the function logs a warning and does not raise.
+        """
         if not self.enabled:
             return
         
@@ -324,7 +466,11 @@ class LLMCache:
             log_warning(f"Failed to write cache file {cache_file}: {e}", self.config)
     
     def clear(self):
-        """Clear all cached responses."""
+        """
+        Remove all JSON cache files from the cache directory.
+        
+        Deletes all files matching `*.json` in the cache directory if it exists. Skips silently when the cache directory is missing; logs a warning for any file deletion errors and logs a success message summarizing how many files were cleared.
+        """
         if not self.cache_dir.exists():
             return
         
@@ -349,13 +495,29 @@ def get_cache() -> Optional[LLMCache]:
 
 
 def init_cache(config: ReportConfig):
-    """Initialize the global cache instance."""
+    """
+    Initialize the module-level LLM cache using values from `config`.
+    
+    Parameters:
+        config (ReportConfig): Configuration containing `cache_dir` and `use_cache`; used to construct the LLMCache instance that will be returned by `get_cache()`.
+    """
     global _cache_instance
     _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
 
 
 def format_data_table(data_points: List[Dict[str, Any]], max_rows: int = None) -> str:
-    """Format data points as a markdown table for LLM."""
+    """
+    Render a list of data points as a markdown table suitable for embedding in prompts.
+    
+    Each data point is expected to be a mapping containing the keys: `testcase`, `draws`, `tris`, and `ts`. When `max_rows` is provided, the output is truncated to at most that many rows and a note is appended when truncation occurs.
+    
+    Parameters:
+        data_points (List[Dict[str, Any]]): Sequence of data point dictionaries with keys `testcase`, `draws`, `tris`, and `ts`.
+        max_rows (int, optional): Maximum number of rows to include; when omitted, all rows are included.
+    
+    Returns:
+        str: A markdown-formatted table with columns "Index", "Test Case", "Draw Calls", "Triangles", and "Timestamp", or the string "No data available." if `data_points` is empty.
+    """
     if max_rows:
         data_points = data_points[:max_rows]
     
@@ -391,7 +553,22 @@ def clean_llm_response(response: str) -> str:
 
 
 def call_llm(prompt: str, data_table: str = None, config: ReportConfig = None, max_retries: int = 3) -> str:
-    """Call OpenAI API to generate text. Raises error if LLM is unavailable or fails."""
+    """
+    Generate LLM text for a prompt (optionally augmented with a data table), using caching, dry-run support, and retry/backoff on rate limits.
+    
+    Parameters:
+        prompt (str): The user-facing prompt to send to the LLM.
+        data_table (str, optional): Optional tabular context appended to the prompt.
+        config (ReportConfig): Report configuration providing OpenAI settings, temperature, caching, and dry-run flags.
+        max_retries (int): Maximum number of retry attempts for rate-limited calls.
+    
+    Returns:
+        str: Cleaned text response from the LLM (code fences removed).
+    
+    Raises:
+        RuntimeError: If OpenAI library is unavailable, API key is missing, quota is exceeded, rate limits persist after retries, or other OpenAI/API errors occur.
+        ValueError: If `config` is not provided.
+    """
     if not OPENAI_AVAILABLE:
         raise RuntimeError("OpenAI library not available. Install with: pip install openai")
     
@@ -844,7 +1021,20 @@ Be specific, actionable, and relevant to the data."""
 
 
 def generate_html(data_points, stats, images_dir_rel, output_path, config: ReportConfig):
-    """Generate the complete HTML report."""
+    """
+    Builds a complete HTML performance report combining analysis, images, and LLM-generated sections.
+    
+    Parameters:
+        data_points (List[dict]): Ordered list of parsed capture records (each with keys like 'ts', 'draws', 'tris', 'img').
+        stats (dict): Aggregated analysis results (expected keys include 'draws', 'tris', 'high_load', 'low_load', 'critical', 'count').
+        images_dir_rel (str): Path to the images directory relative to the output HTML file; used for image src attributes.
+        output_path (Path): Destination file path for the generated HTML; used to resolve absolute image directory when composing prompts.
+        config (ReportConfig): Report configuration (titles, thresholds, caps, LLM/cache options, and rendering flags).
+    
+    Returns:
+        str: A complete HTML document as a string containing styled sections (executive summary, metric deep dive, zones & hotspots,
+        optimization checklist, optional system recommendations), embedded thumbnails, statistical summaries, and a full sample table.
+    """
     
     # Calculate time span
     timestamps = [p['ts'] for p in data_points]
@@ -1563,6 +1753,14 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
 
 
 def main():
+    """
+    Parse CLI arguments, analyze PNG-captured performance data, optionally call an LLM, and write an HTML performance report.
+    
+    This is the script entry point: it builds a ReportConfig from command-line options, validates configuration, initializes (and optionally clears) the LLM response cache, scans and parses PNG files whose filenames encode performance metrics, computes statistics, and generates an HTML report. Depending on options it may sample the input set, run in dry-run mode (skip LLM calls and use placeholder content), and use cached LLM responses. Errors during validation, parsing, analysis, LLM interaction, HTML generation, or file I/O cause a non-zero exit code; verbose and quiet flags control console output.
+    
+    Returns:
+        exit_code (int): 0 on success, 1 on failure.
+    """
     parser = argparse.ArgumentParser(
         description='Generate performance report HTML from captured PNG files',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1891,4 +2089,3 @@ Examples:
 
 if __name__ == '__main__':
     exit(main())
-
