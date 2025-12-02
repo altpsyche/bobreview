@@ -5,8 +5,10 @@ HTML report generation for BobReview.
 
 import statistics
 from datetime import datetime
+from html import escape
 from pathlib import Path
 from typing import Dict, List, Any
+from urllib.parse import quote
 
 from .utils import format_number, log_info, log_verbose
 from .llm_provider import (
@@ -605,8 +607,8 @@ def _generate_html_template(
         html += f"""              <tr>
                 <td>{idx}</td><td>{point['draws']}</td><td>{format_number(point['tris'])}</td>
                 <td>
-                  {point['img']}
-                  <img class="thumb-small" src="{images_dir_rel}/{point['img']}" alt="Index {idx} high-load frame">
+                  {escape(point['img'])}
+                  <img class="thumb-small" src="{images_dir_rel}/{quote(point['img'])}" alt="Index {idx} high-load frame">
                 </td>
               </tr>
 """
@@ -638,8 +640,8 @@ def _generate_html_template(
         html += f"""              <tr>
                 <td>{idx}</td><td>{point['draws']}</td><td>{format_number(point['tris'])}</td>
                 <td>
-                  {point['img']}
-                  <img class="thumb-small" src="{images_dir_rel}/{point['img']}" alt="Index {idx} low-load frame">
+                  {escape(point['img'])}
+                  <img class="thumb-small" src="{images_dir_rel}/{quote(point['img'])}" alt="Index {idx} low-load frame">
                 </td>
               </tr>
 """
@@ -697,12 +699,12 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
 
           <h3>4.2 Critical Hotspot – Index {critical_idx}</h3>
           <div class="callout critical">
-            <div class="callout-title">Index {critical_idx} – {critical_img}</div>
+            <div class="callout-title">Index {critical_idx} – {escape(critical_img)}</div>
             <div>{critical_draws} draw calls &middot; {critical_tris_formatted} triangles</div>
           </div>
           <img
             class="thumb-large"
-            src="{images_dir_rel}/{critical_img}"
+            src="{images_dir_rel}/{quote(critical_img)}"
             alt="Critical hotspot frame (index {critical_idx})"
           />
           {optimization_content['critical']}
@@ -757,8 +759,8 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         html += f"""                <tr>
                   <td>{idx}</td><td>{point['ts']}</td><td>{point['draws']}</td><td>{format_number(point['tris'])}</td>
                   <td>
-                    {point['img']}
-                    <img class="thumb-small" src="{images_dir_rel}/{point['img']}" alt="Index {idx} frame">
+                    {escape(point['img'])}
+                    <img class="thumb-small" src="{images_dir_rel}/{quote(point['img'])}" alt="Index {idx} frame">
                   </td>
                 </tr>
 """
