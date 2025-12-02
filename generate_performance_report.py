@@ -1065,8 +1065,12 @@ def generate_html(data_points, stats, images_dir_rel, output_path, config: Repor
         ("Metric Deep Dive", lambda: generate_metric_deep_dive(data_points, stats, config, str(images_dir_abs))),
         ("Zones & Hotspots", lambda: generate_zones_hotspots(data_points, stats, config, str(images_dir_abs))),
         ("Optimization Checklist", lambda: generate_optimization_checklist(data_points, stats, config, str(images_dir_abs))),
-        ("System Recommendations", lambda: generate_system_recommendations(data_points, stats, config, str(images_dir_abs)))
     ]
+    
+    if config.enable_recommendations:
+        sections.append(
+            ("System Recommendations", lambda: generate_system_recommendations(data_points, stats, config, str(images_dir_abs)))
+        )
     
     if TQDM_AVAILABLE and not config.quiet:
         iterator = tqdm(sections, desc="Generating sections")
@@ -1082,7 +1086,7 @@ def generate_html(data_points, stats, images_dir_rel, output_path, config: Repor
     metric_content = results["Metric Deep Dive"]
     zones_content = results["Zones & Hotspots"]
     optimization_content = results["Optimization Checklist"]
-    system_recs = results["System Recommendations"]
+    system_recs = results.get("System Recommendations", {})
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
