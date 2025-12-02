@@ -52,7 +52,9 @@ def parse_filename(filename: str) -> Dict[str, Any]:
     if not filename.lower().endswith('.png'):
         raise ValueError(f"File must be a PNG: {filename}")
     
-    parts = filename.replace('.png', '').replace('.PNG', '').split('_')
+    # Remove .png extension (case-insensitive, already validated above)
+    base_name = filename[:-4]  # Remove last 4 chars (.png)
+    parts = base_name.split('_')
     if len(parts) < 4:
         raise ValueError(
             f"Invalid filename format: {filename}\n"
