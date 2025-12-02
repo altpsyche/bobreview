@@ -1,10 +1,12 @@
-# Performance Report Automation
+# BobReview
+
+> **Performance Analysis and Review Tool for Game Development**
 
 Generate comprehensive HTML performance reports from game engine performance capture screenshots using LLM-powered analysis.
 
 ## Overview
 
-This tool analyzes performance data extracted from PNG screenshot files and generates a detailed HTML report with statistical analysis, performance hotspots identification, and optimization recommendations. The analysis is powered by OpenAI's GPT models, which process structured data tables to provide insights and actionable recommendations.
+BobReview is a modular, easy-to-use tool that analyzes performance data extracted from PNG screenshot files and generates detailed HTML reports with statistical analysis, performance hotspots identification, and optimization recommendations. The analysis is powered by OpenAI's GPT models, which process structured data tables to provide insights and actionable recommendations.
 
 ## Features
 
@@ -15,6 +17,24 @@ This tool analyzes performance data extracted from PNG screenshot files and gene
 - **Data-Driven Approach**: Sends structured data tables instead of images for efficient token usage
 - **Professional HTML Reports**: Generates beautifully styled, presentation-ready reports
 - **Chunked Processing**: Processes large datasets in configurable chunks for optimal performance
+- **Modular Architecture**: Clean, maintainable codebase with separate modules for different concerns
+
+## Architecture
+
+BobReview is built with a modular architecture:
+
+```
+bobreview/
+├── __init__.py          # Package initialization
+├── config.py            # Configuration and data models
+├── utils.py             # Logging and formatting utilities
+├── cache.py             # LLM response caching
+├── data_parser.py       # File parsing logic
+├── analysis.py          # Statistical analysis
+├── llm_provider.py      # LLM interaction and prompts
+├── report_generator.py  # HTML report generation
+└── cli.py               # Command-line interface
+```
 
 ## Requirements
 
@@ -44,7 +64,7 @@ This tool analyzes performance data extracted from PNG screenshot files and gene
 
 ## File Format
 
-The script expects PNG files with a specific naming format:
+BobReview expects PNG files with a specific naming format:
 
 ```
 TestCase_tricount_drawcalls_timestamp.png
@@ -66,14 +86,14 @@ Where:
 ### Basic Usage
 
 ```bash
-python generate_performance_report.py --dir ./screenshots --openai-key sk-... --output report.html
+python bobreview.py --dir ./screenshots --openai-key sk-... --output report.html
 ```
 
 ### With Environment Variable
 
 ```bash
 export OPENAI_API_KEY=sk-...
-python generate_performance_report.py --dir ./screenshots --output report.html
+python bobreview.py --dir ./screenshots --output report.html
 ```
 
 ### Using Cache
@@ -82,36 +102,36 @@ Caching is **enabled by default** to save API costs and speed up subsequent runs
 
 ```bash
 # First run - calls LLM and caches responses (caching enabled by default)
-python generate_performance_report.py --dir ./screenshots
+python bobreview.py --dir ./screenshots
 
 # Subsequent runs - automatically uses cache (no flag needed)
-python generate_performance_report.py --dir ./screenshots
+python bobreview.py --dir ./screenshots
 
 # Disable caching for this run
-python generate_performance_report.py --dir ./screenshots --no-cache
+python bobreview.py --dir ./screenshots --no-cache
 
 # Clear cache and regenerate
-python generate_performance_report.py --dir ./screenshots --clear-cache
+python bobreview.py --dir ./screenshots --clear-cache
 ```
 
 ### Dry Run Mode
 
 ```bash
 # Analyze data without calling expensive LLM API
-python generate_performance_report.py --dir ./screenshots --dry-run
+python bobreview.py --dir ./screenshots --dry-run
 ```
 
 ### Sample Mode
 
 ```bash
 # Process only 50 random samples
-python generate_performance_report.py --dir ./screenshots --sample 50
+python bobreview.py --dir ./screenshots --sample 50
 ```
 
 ### Custom Configuration
 
 ```bash
-python generate_performance_report.py \
+python bobreview.py \
   --dir ./screenshots \
   --openai-key sk-... \
   --output report.html \
@@ -166,7 +186,7 @@ python generate_performance_report.py \
 #### Caching Options
 - `--use-cache`: Use cached LLM responses when available (enabled by default)
 - `--no-cache`: Disable caching and always call LLM
-- `--cache-dir`: Directory for caching LLM responses (default: `.perf_cache`)
+- `--cache-dir`: Directory for caching LLM responses (default: `.bobreview_cache`)
 - `--clear-cache`: Clear all cached responses before running
 
 ## Report Sections
@@ -194,7 +214,7 @@ The generated HTML report includes:
 ## Performance & Cost Optimization
 
 - **Token Efficiency**: The script sends structured data tables instead of images, significantly reducing token usage
-- **Intelligent Caching**: LLM responses are cached locally by default (cache directory: `.perf_cache/`)
+- **Intelligent Caching**: LLM responses are cached locally by default (cache directory: `.bobreview_cache/`)
   - Caching is **enabled by default** - no flags needed
   - Subsequent runs with the same data are nearly instant
   - Cache is automatically invalidated when data or configuration changes
@@ -247,6 +267,34 @@ The generated report includes:
 - Process a sample first with `--sample` to verify output
 - Use `--clear-cache` only when you need to regenerate LLM content
 
+## Development
+
+### Running from Source
+
+```bash
+# Run the tool
+python bobreview.py --dir ./screenshots
+
+# Or run the module directly
+python -m bobreview.cli --dir ./screenshots
+```
+
+### Module Structure
+
+Each module has a specific responsibility:
+- `config.py`: Configuration data models and validation
+- `utils.py`: Logging and formatting helpers
+- `cache.py`: LLM response caching system
+- `data_parser.py`: PNG filename parsing
+- `analysis.py`: Statistical analysis functions
+- `llm_provider.py`: LLM API interaction and prompt engineering
+- `report_generator.py`: HTML template and report assembly
+- `cli.py`: Command-line interface and orchestration
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
+
 ## License
 
 This project is provided as-is for performance analysis automation.
@@ -255,3 +303,6 @@ This project is provided as-is for performance analysis automation.
 
 Feel free to submit issues or pull requests for improvements.
 
+---
+
+**BobReview** - Making performance reviews easy and insightful! 🚀
