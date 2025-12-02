@@ -5,7 +5,7 @@ Quick guide to get the Performance Report Automation tool running.
 ## Prerequisites
 
 - **Python 3.7 or higher**
-- **OpenAI API key** (get one at https://platform.openai.com/api-keys)
+- **OpenAI API key** (get one at [OpenAI API Keys](https://platform.openai.com/api-keys))
 
 ## Quick Install
 
@@ -18,7 +18,8 @@ pip install -r requirements.txt
 
 ### 2. Set API Key
 
-**Option A: Environment variable (recommended)**
+#### Option A: Environment variable (recommended)
+
 ```bash
 # Linux/Mac
 export OPENAI_API_KEY=sk-your-key-here
@@ -30,7 +31,8 @@ $env:OPENAI_API_KEY="sk-your-key-here"
 set OPENAI_API_KEY=sk-your-key-here
 ```
 
-**Option B: Command-line flag**
+#### Option B: Command-line flag
+
 ```bash
 python generate_performance_report.py --openai-key sk-your-key-here --dir ./data
 ```

@@ -1,9 +1,9 @@
 # Core dependencies
-openai>=1.0.0
+openai>=1.0.0,<2.0.0
 
 # Optional dependencies for enhanced UX
-tqdm>=4.65.0  # Progress bars
-colorama>=0.4.6  # Colored terminal output
+tqdm>=4.65.0,<5.0.0  # Progress bars
+colorama>=0.4.6,<1.0.0  # Colored terminal output
 
 # For future phases
 # pandas>=2.0.0  # CSV/data manipulation (Phase 2)

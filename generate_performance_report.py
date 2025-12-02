@@ -1862,18 +1862,18 @@ Examples:
     
     # Print summary
     log_success(f"Report written to: {output_path}", config)
-    log_info(f"📊 Summary:", config)
-    log_info(f"  • {stats['count']} samples analyzed", config)
-    log_info(f"  • {len(stats['high_load'])} high-load frames identified", config)
-    log_info(f"  • Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
+    log_info(f"Summary:", config)
+    log_info(f"  - {stats['count']} samples analyzed", config)
+    log_info(f"  - {len(stats['high_load'])} high-load frames identified", config)
+    log_info(f"  - Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
     
     if config.sample_size and config.sample_size < original_count:
-        log_info(f"  • Sampled {config.sample_size} of {original_count} total samples", config)
+        log_info(f"  - Sampled {config.sample_size} of {original_count} total samples", config)
     
     if config.dry_run:
-        log_warning(f"  • Dry run mode - no actual LLM calls made", config)
+        log_warning(f"  - Dry run mode - no actual LLM calls made", config)
     
-    log_info(f"⏱️  Completed in {elapsed_time:.1f}s", config)
+    log_info(f"Completed in {elapsed_time:.1f}s", config)
     
     return 0
 

@@ -69,14 +69,14 @@ Where:
 python generate_performance_report.py --dir ./screenshots --openai-key sk-... --output report.html
 ```
 
-### With Environment Variable (Recommended)
+### With Environment Variable
 
 ```bash
 export OPENAI_API_KEY=sk-...
 python generate_performance_report.py --dir ./screenshots --output report.html
 ```
 
-### Using Cache (Much Faster!)
+### Using Cache
 
 ```bash
 # First run - calls LLM and caches responses
@@ -89,14 +89,14 @@ python generate_performance_report.py --dir ./screenshots --use-cache
 python generate_performance_report.py --dir ./screenshots --clear-cache
 ```
 
-### Dry Run (Test Without LLM Calls)
+### Dry Run Mode
 
 ```bash
 # Analyze data without calling expensive LLM API
 python generate_performance_report.py --dir ./screenshots --dry-run
 ```
 
-### Sample Mode (For Testing)
+### Sample Mode
 
 ```bash
 # Process only 50 random samples
