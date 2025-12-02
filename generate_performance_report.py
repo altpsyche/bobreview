@@ -188,7 +188,7 @@ def parse_filename(filename):
             f"Invalid numeric values in filename: {filename}\n"
             f"Triangle count, draw calls, and timestamp must be integers.\n"
             f"Error: {e}"
-        )
+        ) from e
     
     if tricount < 0 or drawcalls < 0:
         raise ValueError(f"Triangle count and draw calls must be non-negative: {filename}")
