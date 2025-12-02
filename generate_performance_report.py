@@ -192,8 +192,10 @@ def parse_filename(filename):
             f"Error: {e}"
         ) from e
     
-    if tricount < 0 or drawcalls < 0:
-        raise ValueError(f"Triangle count and draw calls must be non-negative: {filename}")
+    if tricount < 0 or drawcalls < 0 or timestamp < 0:
+        raise ValueError(
+            f"Triangle count, draw calls, and timestamp must be non-negative: {filename}"
+        )
     
     return {
         'testcase': testcase,
@@ -323,7 +325,7 @@ class LLMCache:
     
     def clear(self):
         """Clear all cached responses."""
-        if not self.enabled or not self.cache_dir.exists():
+        if not self.cache_dir.exists():
             return
         
         count = 0
