@@ -1,13 +1,23 @@
-# Core dependencies
-openai>=1.0.0,<2.0.0
+# BobReview Dependencies
+# ========================
+# This is the SINGLE SOURCE OF TRUTH for all runtime dependencies.
+# setup.py and pyproject.toml read from this file.
+#
+# To add a dependency: Add it here, then run: pip install -e .
+# To update: Change version here, then run: pip install --upgrade -e .
 
-# Optional dependencies for enhanced UX
-tqdm>=4.65.0,<5.0.0  # Progress bars
-colorama>=0.4.6,<1.0.0  # Colored terminal output
+# Required Dependencies
+# ---------------------
+openai>=1.0.0,<2.0.0     # OpenAI API client for LLM-powered analysis
 
-# For future phases
-# pandas>=2.0.0  # CSV/data manipulation (Phase 2)
-# PyYAML>=6.0  # Config file support (Phase 3)
-# weasyprint>=60.0  # PDF export (Phase 4)
-# pytest>=7.4.0  # Testing (Phase 6)
+# Optional Dependencies (Recommended)
+# -----------------------------------
+tqdm>=4.65.0,<5.0.0      # Progress bars for better UX
+colorama>=0.4.6,<1.0.0   # Colored terminal output
 
+# Future Dependencies (Planned - uncomment when needed)
+# ------------------------------------------------------
+# pandas>=2.0.0          # CSV/data manipulation (Phase 2)
+# PyYAML>=6.0            # Config file support (Phase 3)
+# weasyprint>=60.0       # PDF export (Phase 4)
+# pytest>=7.4.0          # Testing framework (Phase 6)

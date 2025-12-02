@@ -1,308 +1,620 @@
 # BobReview
 
-> **Performance Analysis and Review Tool for Game Development**
+**Performance Analysis and Review Tool for Game Development**
 
 Generate comprehensive HTML performance reports from game engine performance capture screenshots using LLM-powered analysis.
 
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [File Format](#file-format)
+- [Configuration](#configuration)
+- [Report Structure](#report-structure)
+- [Performance Optimization](#performance-optimization)
+- [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
+
+---
+
 ## Overview
 
-BobReview is a modular, easy-to-use tool that analyzes performance data extracted from PNG screenshot files and generates detailed HTML reports with statistical analysis, performance hotspots identification, and optimization recommendations. The analysis is powered by OpenAI's GPT models, which process structured data tables to provide insights and actionable recommendations.
+BobReview analyzes performance data extracted from PNG screenshot files and generates detailed HTML reports with statistical analysis, performance hotspots identification, and LLM-powered optimization recommendations.
+
+**Key Feature:** Sends structured data tables to the LLM instead of images, significantly reducing token usage and costs by approximately 90%.
+
+---
 
 ## Features
 
-- **Automated Data Extraction**: Parses performance metrics from PNG filenames
-- **Statistical Analysis**: Calculates mean, median, quartiles, outliers, and standard deviation
-- **Hotspot Identification**: Automatically identifies high-load and low-load performance zones
-- **LLM-Powered Insights**: Uses OpenAI GPT models to generate contextual analysis and recommendations
-- **Data-Driven Approach**: Sends structured data tables instead of images for efficient token usage
-- **Professional HTML Reports**: Generates beautifully styled, presentation-ready reports
-- **Chunked Processing**: Processes large datasets in configurable chunks for optimal performance
-- **Modular Architecture**: Clean, maintainable codebase with separate modules for different concerns
+- **Automated Data Extraction** - Parse performance metrics from PNG filenames
+- **Statistical Analysis** - Calculate comprehensive statistics and identify patterns
+- **Hotspot Identification** - Automatically find high-load and low-load performance zones
+- **LLM-Powered Insights** - Generate contextual analysis using OpenAI GPT models
+- **Professional Reports** - Generate presentation-ready HTML reports
+- **Intelligent Caching** - Cache LLM responses to reduce costs
+- **Modular Architecture** - Clean, maintainable codebase
+- **Global CLI Command** - Run from any directory after installation
+
+---
 
 ## Architecture
 
-BobReview is built with a modular architecture:
+BobReview uses a modular architecture with clear separation of concerns:
 
 ```
 bobreview/
-├── __init__.py          # Package initialization
-├── config.py            # Configuration and data models
-├── utils.py             # Logging and formatting utilities
-├── cache.py             # LLM response caching
-├── data_parser.py       # File parsing logic
-├── analysis.py          # Statistical analysis
-├── llm_provider.py      # LLM interaction and prompts
-├── report_generator.py  # HTML report generation
-└── cli.py               # Command-line interface
+├── bobreview/              # Main package
+│   ├── __init__.py         # Public API exports
+│   ├── config.py           # Configuration and validation
+│   ├── utils.py            # Logging and formatting
+│   ├── cache.py            # LLM response caching
+│   ├── data_parser.py      # PNG filename parsing
+│   ├── analysis.py         # Statistical analysis
+│   ├── llm_provider.py     # LLM API interaction
+│   ├── report_generator.py # HTML generation
+│   └── cli.py              # Command-line interface
+│
+├── bobreview.py            # Entry point script
+├── requirements.txt        # Dependencies (single source of truth)
+├── setup.py                # Package installer
+└── pyproject.toml          # Package configuration
 ```
 
-## Requirements
+**Design Principles:**
+- Single Responsibility - Each module has one clear purpose
+- Dependency Injection - Configuration passed through parameters
+- No Circular Dependencies - Clean import hierarchy
+- Testable - Each module can be tested independently
 
-- Python 3.7+
-- OpenAI Python library: `pip install openai`
-- OpenAI API key (required)
-- Optional: `tqdm` for progress bars, `colorama` for colored output
+---
 
 ## Installation
 
-1. Clone or download this repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   
-   Or install just the essentials:
-   ```bash
-   pip install openai
-   ```
+### Quick Install (Recommended)
 
-3. Set up your OpenAI API key:
-   ```bash
-   export OPENAI_API_KEY=sk-your-api-key-here
-   ```
-   Or pass it via command line argument (see Usage below)
+Install BobReview as a global CLI command:
 
-## File Format
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/bobreview.git
+cd bobreview
 
-BobReview expects PNG files with a specific naming format:
+# Install BobReview
+pip install .
 
+# Set up your OpenAI API key
+export OPENAI_API_KEY=sk-your-api-key-here
+
+# Run from any directory
+cd /path/to/screenshots
+bobreview --dir .
 ```
-TestCase_tricount_drawcalls_timestamp.png
+
+After installation, the `bobreview` command is available globally.
+
+### Development Install
+
+For developers modifying BobReview:
+
+```bash
+# Install in editable mode
+pip install -e .
+
+# Or with development dependencies
+pip install -e ".[dev]"
 ```
+
+Changes to source code take effect immediately without reinstalling.
+
+### Manual Install
+
+Run without installing the package:
+
+```bash
+# Install dependencies only
+pip install -r requirements.txt
+
+# Run from source directory
+python bobreview.py --dir /path/to/screenshots
+```
+
+**Important:** When using `bobreview.py` directly:
+- All features work normally
+- Must run from the BobReview source directory
+- The `bobreview` command is not available globally
 
 **Example:**
-```
-Level1_85000_520_1234567890.png
+```bash
+# Must be in BobReview source directory
+cd /path/to/bobreview-source
+
+# Analyze any folder
+python bobreview.py --dir /path/to/screenshots
+
+# Won't work from other directories
+cd /some/other/directory
+python bobreview.py --dir .  # Error: file not found
 ```
 
-Where:
-- `TestCase`: Test case or level name (e.g., "Level1")
-- `tricount`: Triangle count (integer)
-- `drawcalls`: Draw call count (integer)
-- `timestamp`: Unix timestamp (integer)
+See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+
+---
+
+## Quick Start
+
+### 1. Install
+```bash
+pip install .
+```
+
+### 2. Set API Key
+```bash
+export OPENAI_API_KEY=sk-your-api-key-here
+```
+
+### 3. Run
+```bash
+cd /path/to/screenshots
+bobreview --dir .
+```
+
+### 4. View Report
+```bash
+open performance_report.html
+```
+
+See [QUICKSTART.md](QUICKSTART.md) for a complete guide.
+
+---
 
 ## Usage
 
 ### Basic Usage
 
 ```bash
-python bobreview.py --dir ./screenshots --openai-key sk-... --output report.html
+# From any directory (after installation)
+bobreview --dir /path/to/screenshots
+
+# With custom output
+bobreview --dir ./screenshots --output report.html
+
+# Custom title and location
+bobreview --dir ./screenshots \
+  --title "Forest Level Performance" \
+  --location "Dark Forest Area"
 ```
 
-### With Environment Variable
+### Common Operations
 
 ```bash
-export OPENAI_API_KEY=sk-...
-python bobreview.py --dir ./screenshots --output report.html
+# Test without LLM API calls
+bobreview --dir ./screenshots --dry-run
+
+# Process subset of data
+bobreview --dir ./screenshots --sample 20
+
+# Verbose output
+bobreview --dir ./screenshots --verbose
+
+# Custom thresholds
+bobreview --dir ./screenshots \
+  --draw-hard-cap 700 \
+  --tri-hard-cap 150000
 ```
 
-### Using Cache
+### Caching
 
-Caching is **enabled by default** to save API costs and speed up subsequent runs:
+Caching is enabled by default to reduce costs:
 
 ```bash
-# First run - calls LLM and caches responses (caching enabled by default)
-python bobreview.py --dir ./screenshots
+# First run - calls LLM and caches
+bobreview --dir ./screenshots
 
-# Subsequent runs - automatically uses cache (no flag needed)
-python bobreview.py --dir ./screenshots
-
-# Disable caching for this run
-python bobreview.py --dir ./screenshots --no-cache
+# Second run - uses cache (instant)
+bobreview --dir ./screenshots
 
 # Clear cache and regenerate
-python bobreview.py --dir ./screenshots --clear-cache
+bobreview --dir ./screenshots --clear-cache
+
+# Disable caching
+bobreview --dir ./screenshots --no-cache
 ```
 
-### Dry Run Mode
+### Python API
+
+Use BobReview as a library:
+
+```python
+from bobreview import ReportConfig, parse_filename, analyze_data, generate_html_report
+from pathlib import Path
+
+# Parse data
+data_points = [parse_filename("Level1_85000_520_1234567890.png")]
+
+# Configure
+config = ReportConfig(
+    title="Performance Analysis",
+    location="Test Level",
+    openai_api_key="sk-...",
+)
+
+# Analyze
+stats = analyze_data(data_points, config)
+
+# Generate report
+html = generate_html_report(
+    data_points, stats, "./screenshots", Path("report.html"), config
+)
+
+# Save
+Path("report.html").write_text(html, encoding='utf-8')
+```
+
+---
+
+## File Format
+
+BobReview expects PNG files with performance data encoded in the filename:
+
+### Format
+```
+TestCase_tricount_drawcalls_timestamp.png
+```
+
+### Example
+```
+Level1_85000_520_1234567890.png
+```
+
+**Components:**
+- `Level1` - Test case or level name
+- `85000` - Triangle count (integer)
+- `520` - Draw call count (integer)
+- `1234567890` - Unix timestamp (integer)
+
+### Valid Examples
+```
+ForestArea_95000_580_1701234567.png
+City_120000_650_1701234568.png
+Boss_85000_520_1701234569.png
+```
+
+### Invalid Examples
+```
+screenshot.png                    # Missing data
+Level1_85000_520.png             # Missing timestamp
+Level1_abc_520_1234567890.png   # Non-numeric values
+```
+
+---
+
+## Configuration
+
+### Command-Line Options
+
+**Essential:**
+```bash
+--dir PATH              # Directory with PNG files
+--output FILE           # Output HTML filename
+--title TEXT            # Report title
+--location TEXT         # Level/scene name
+```
+
+**Performance Thresholds:**
+```bash
+--draw-soft-cap N       # Soft limit for draw calls (default: 550)
+--draw-hard-cap N       # Hard limit for draw calls (default: 600)
+--tri-soft-cap N        # Soft limit for triangles (default: 100000)
+--tri-hard-cap N        # Hard limit for triangles (default: 120000)
+--high-load-draws N     # High-load threshold for draws
+--high-load-tris N      # High-load threshold for triangles
+--low-load-draws N      # Low-load threshold for draws (default: 400)
+--low-load-tris N       # Low-load threshold for triangles (default: 50000)
+--outlier-sigma N       # Outlier detection sigma (default: 2.0)
+```
+
+**LLM Configuration:**
+```bash
+--openai-key KEY        # OpenAI API key
+--openai-model MODEL    # Model to use (default: gpt-4o)
+--llm-temperature N     # Temperature 0-2 (default: 0.7)
+--image-chunk-size N    # Samples per LLM call (default: 10)
+--no-recommendations    # Disable system recommendations
+```
+
+**Caching:**
+```bash
+--cache-dir PATH        # Cache directory (default: .bobreview_cache)
+--use-cache            # Use cached responses (default: enabled)
+--no-cache             # Disable caching
+--clear-cache          # Clear cache before run
+```
+
+**Execution:**
+```bash
+--dry-run              # Skip LLM calls
+--sample N             # Process N random samples
+--verbose, -v          # Detailed output
+--quiet, -q            # Errors only
+--version              # Show version
+--help                 # Show help
+```
+
+---
+
+## Report Structure
+
+Generated HTML reports include:
+
+### 1. Executive Summary
+- Overall performance assessment
+- Key metrics overview
+- Peak hotspot identification
+- Variance analysis
+
+### 2. Metric Deep Dive
+- Draw calls analysis (min, max, mean, median, quartiles, std dev)
+- Triangle count analysis
+- Temporal behavior analysis
+- Correlation analysis
+
+### 3. Performance Zones and Hotspots
+- High-load frame identification
+- Low-load baseline frames
+- Pattern analysis
+- Common characteristics
+
+### 4. Optimization Checklist
+- Critical hotspot analysis
+- High-geometry optimization recommendations
+- High-draw call optimization strategies
+- Actionable next steps
+
+### 5. System-Level Recommendations (Optional)
+- LOD system improvements
+- Occlusion and visibility optimizations
+- Lighting and shadow strategies
+- Material and texture recommendations
+
+### 6. Statistical Summary
+- Complete statistical breakdown
+- Distribution analysis
+- Outlier identification
+
+### 7. Full Sample Table
+- All captures with thumbnails
+- Sortable data table
+- Complete traceability
+
+---
+
+## Performance Optimization
+
+### Token Efficiency
+- Sends structured data tables instead of images
+- Reduces token usage by approximately 90% vs image analysis
+- Lower costs per analysis
+
+### Caching Strategy
+- Enabled by default (directory: `.bobreview_cache/`)
+- Subsequent runs with same data are instant
+- Cache invalidated automatically on data/config changes
+- Significant cost savings on repeated analyses
+
+### Chunked Processing
+- Large datasets processed in chunks (default: 10 samples)
+- Prevents API rate limits
+- Better token management
+
+### Cost Optimization
 
 ```bash
-# Analyze data without calling expensive LLM API
-python bobreview.py --dir ./screenshots --dry-run
+# Use cache (default behavior)
+bobreview --dir ./screenshots
+
+# Test with dry-run
+bobreview --dir ./screenshots --dry-run
+
+# Use sampling for quick tests
+bobreview --dir ./screenshots --sample 20
+
+# Adjust chunk size if needed
+bobreview --dir ./screenshots --image-chunk-size 5
 ```
 
-### Sample Mode
-
-```bash
-# Process only 50 random samples
-python bobreview.py --dir ./screenshots --sample 50
-```
-
-### Custom Configuration
-
-```bash
-python bobreview.py \
-  --dir ./screenshots \
-  --openai-key sk-... \
-  --output report.html \
-  --title "City District Performance Analysis" \
-  --location "City District" \
-  --draw-hard-cap 700 \
-  --tri-hard-cap 150000 \
-  --image-chunk-size 15 \
-  --verbose
-```
-
-## Command Line Arguments
-
-### General Options
-
-- `--version`: Show version and exit
-- `--help`: Show help message and exit
-
-### Required (Unless Dry Run)
-
-- `--openai-key`: OpenAI API key (or set `OPENAI_API_KEY` environment variable)
-
-### Optional Arguments
-
-#### Input/Output
-- `--dir`: Directory containing PNG files (default: current directory)
-- `--output`: Output HTML file path (default: `performance_report.html`)
-- `--images-dir`: Relative path to images directory from output (auto-detected if not specified)
-
-#### Report Configuration
-- `--title`: Report title (default: "Performance Analysis Report")
-- `--location`: Location/level name (default: "Unknown Location")
-
-#### Performance Thresholds
-- `--draw-soft-cap`: Soft cap for draw calls (default: 550)
-- `--draw-hard-cap`: Hard cap for draw calls (default: 600)
-- `--tri-soft-cap`: Soft cap for triangles (default: 100000)
-- `--tri-hard-cap`: Hard cap for triangles (default: 120000)
-- `--high-load-draws`: High-load threshold for draw calls (default: same as draw-hard-cap)
-- `--high-load-tris`: High-load threshold for triangles (default: same as tri-hard-cap)
-- `--low-load-draws`: Low-load threshold for draw calls (default: 400)
-- `--low-load-tris`: Low-load threshold for triangles (default: 50000)
-- `--outlier-sigma`: Sigma multiplier for outlier detection (default: 2.0)
-
-#### LLM Configuration
-- `--openai-model`: OpenAI model to use (default: `gpt-4o`)
-- `--llm-temperature`: LLM temperature for generation (default: 0.7)
-
-#### Report Options
-- `--no-recommendations`: Disable system-level recommendations section
-
-#### Caching Options
-- `--use-cache`: Use cached LLM responses when available (enabled by default)
-- `--no-cache`: Disable caching and always call LLM
-- `--cache-dir`: Directory for caching LLM responses (default: `.bobreview_cache`)
-- `--clear-cache`: Clear all cached responses before running
-
-## Report Sections
-
-The generated HTML report includes:
-
-1. **Executive Summary**: High-level overview with key metrics and performance health assessment
-2. **Metric Deep Dive**: Detailed statistical analysis of draw calls and triangle counts
-3. **Performance Zones and Hotspots**: Identification of high-load and low-load frames
-4. **Optimization Checklist**: Actionable recommendations for critical hotspots
-5. **System-Level Recommendations**: Broader optimization strategies (optional)
-6. **Statistical Summary**: Complete statistical breakdown
-7. **Full Sample Table**: Complete capture list with thumbnails
-
-## How It Works
-
-1. **Data Extraction**: The script scans the specified directory for PNG files matching the naming format
-2. **Parsing**: Extracts performance metrics (draw calls, triangles, timestamps) from filenames
-3. **Statistical Analysis**: Calculates comprehensive statistics including outliers and performance zones
-4. **Data Table Generation**: Formats relevant data points as markdown tables
-5. **LLM Processing**: Sends data tables to OpenAI API in configurable chunks for analysis
-6. **Caching**: Stores LLM responses locally to avoid redundant API calls
-7. **Report Generation**: Combines LLM-generated content with statistics into a styled HTML report
-
-## Performance & Cost Optimization
-
-- **Token Efficiency**: The script sends structured data tables instead of images, significantly reducing token usage
-- **Intelligent Caching**: LLM responses are cached locally by default (cache directory: `.bobreview_cache/`)
-  - Caching is **enabled by default** - no flags needed
-  - Subsequent runs with the same data are nearly instant
-  - Cache is automatically invalidated when data or configuration changes
-  - Saves significant API costs on re-runs
-  - Use `--no-cache` to disable caching for a specific run
-- **Chunked Processing**: Large datasets are processed in chunks (default: 10 samples per call) to manage API limits
-- **Dry Run Mode**: Test your configuration without making expensive API calls
-- **Sampling**: Process a subset of data for quick testing with `--sample N`
-- **Error Handling**: Robust error handling with retry logic for transient failures
-
-## Example Output
-
-The generated report includes:
-- Color-coded performance indicators (OK/Warning/Danger)
-- Interactive tables with thumbnails
-- Professional dark-themed styling
-- Mobile-responsive design
-- Navigation links between sections
+---
 
 ## Troubleshooting
 
-### "OpenAI API key not found"
-- Set the `OPENAI_API_KEY` environment variable, or
-- Use the `--openai-key` command line argument
-- Or use `--dry-run` to test without an API key
+### Command Not Found
 
-### "No PNG files found"
-- Ensure PNG files are in the specified directory
-- Verify filenames match the required format: `TestCase_tricount_drawcalls_timestamp.png`
-- Check directory path is correct
+**Error:** `bobreview: command not found`
 
-### "Invalid filename format"
-- Check that filenames follow the exact format: `TestCase_tricount_drawcalls_timestamp.png`
-- Ensure all components are present and numeric values are valid integers
-- Trianglecount, drawcalls, and timestamp must be non-negative integers
-
-### "Configuration validation failed"
-- Check that soft caps are <= hard caps
-- Ensure outlier_sigma > 0
-- Verify temperature is between 0 and 2
-
-### Slow performance
-- Caching is enabled by default - subsequent runs will use cached responses automatically
-- Use `--sample N` to process a subset for testing
-- Consider using a smaller chunk size with `--image-chunk-size`
-
-### High API costs
-- Caching is enabled by default - cached responses are reused automatically on subsequent runs
-- Use `--dry-run` for testing configuration
-- Process a sample first with `--sample` to verify output
-- Use `--clear-cache` only when you need to regenerate LLM content
-
-## Development
-
-### Running from Source
-
+**Solutions:**
 ```bash
-# Run the tool
-python bobreview.py --dir ./screenshots
+# Reinstall
+pip install .
 
-# Or run the module directly
+# Or use Python module syntax
 python -m bobreview.cli --dir ./screenshots
+
+# Or use script directly
+cd /path/to/bobreview-source
+python bobreview.py --dir /path/to/screenshots
 ```
 
-### Module Structure
+### API Key Not Found
 
-Each module has a specific responsibility:
-- `config.py`: Configuration data models and validation
-- `utils.py`: Logging and formatting helpers
-- `cache.py`: LLM response caching system
-- `data_parser.py`: PNG filename parsing
-- `analysis.py`: Statistical analysis functions
-- `llm_provider.py`: LLM API interaction and prompt engineering
-- `report_generator.py`: HTML template and report assembly
-- `cli.py`: Command-line interface and orchestration
+**Error:** `OpenAI API key not found`
 
-## Roadmap
+**Solutions:**
+```bash
+# Set environment variable
+export OPENAI_API_KEY=sk-your-api-key-here
 
-See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
+# Or use command-line argument
+bobreview --dir ./screenshots --openai-key sk-your-api-key-here
+
+# Add to shell profile for persistence
+echo 'export OPENAI_API_KEY=sk-your-key' >> ~/.bashrc
+```
+
+### No PNG Files Found
+
+**Error:** `No PNG files found`
+
+**Solutions:**
+- Verify PNG files exist in directory
+- Check filename format: `TestCase_tricount_drawcalls_timestamp.png`
+- Ensure correct directory path
+
+### Invalid Filename Format
+
+**Error:** `Invalid filename format`
+
+**Solutions:**
+- Use correct format: `TestCase_tricount_drawcalls_timestamp.png`
+- All numeric fields must be integers
+- All values must be non-negative
+- File must have `.png` extension
+
+### Configuration Validation Failed
+
+**Error:** `Configuration validation failed`
+
+**Solutions:**
+- Ensure `draw_soft_cap <= draw_hard_cap`
+- Ensure `tri_soft_cap <= tri_hard_cap`
+- Ensure `outlier_sigma > 0`
+- Ensure `llm_temperature` between 0 and 2
+
+### Slow Performance
+
+First run with LLM API calls takes time. This is normal.
+
+**Solutions:**
+- Subsequent runs use cache and are instant
+- Use `--sample N` for quick testing
+- Use `--dry-run` to test configuration
+
+### High API Costs
+
+**Prevention:**
+- Cache is enabled by default
+- Test with `--dry-run` first
+- Use `--sample` for testing
+- Only use `--clear-cache` when necessary
+
+---
+
+## Requirements
+
+### Python
+- Python 3.7 or higher
+- Tested on Python 3.8, 3.9, 3.10, 3.11, 3.12
+
+### Dependencies
+**Required:**
+- `openai>=1.0.0,<2.0.0` - OpenAI API client
+
+**Optional (Recommended):**
+- `tqdm>=4.65.0,<5.0.0` - Progress bars
+- `colorama>=0.4.6,<1.0.0` - Colored terminal output
+
+### System
+- Internet connection for LLM API calls
+- OpenAI API key
+- Approximately 50MB disk space
+
+---
+
+## Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide
+- **[INSTALL.md](INSTALL.md)** - Detailed installation instructions
+- **[ROADMAP.md](ROADMAP.md)** - Future plans and features
+
+---
+
+## Examples
+
+### Basic Workflow
+```bash
+pip install .
+export OPENAI_API_KEY=sk-your-key
+cd /path/to/screenshots
+bobreview --dir .
+open performance_report.html
+```
+
+### CI/CD Integration
+```yaml
+# .github/workflows/performance.yml
+name: Performance Analysis
+on: [push]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install BobReview
+        run: pip install .
+      - name: Analyze Performance
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: bobreview --dir ./captures --output report.html
+      - name: Upload Report
+        uses: actions/upload-artifact@v2
+        with:
+          name: performance-report
+          path: report.html
+```
+
+---
+
+## Contributing
+
+Contributions are welcome. To contribute:
+
+1. Check [ROADMAP.md](ROADMAP.md) for planned features
+2. Create a branch: `git checkout -b feature-name`
+3. Make changes in appropriate module
+4. Test thoroughly
+5. Submit pull request
+
+### Development Setup
+
+```bash
+git clone https://github.com/yourusername/bobreview.git
+cd bobreview
+pip install -e ".[dev]"
+```
+
+---
 
 ## License
 
 This project is provided as-is for performance analysis automation.
 
-## Contributing
+---
 
-Feel free to submit issues or pull requests for improvements.
+## Version
+
+**Current:** v1.0.0
+
+**Features:**
+- Modular architecture
+- Global CLI command
+- Intelligent caching
+- Complete documentation
 
 ---
 
-**BobReview** - Making performance reviews easy and insightful! 🚀
+BobReview - Performance analysis and review tool for game development.
