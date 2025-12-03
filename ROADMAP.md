@@ -42,6 +42,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Sample mode (`--sample N`)
 - **COMPLETE** - Color-coded console output (colorama)
 - **COMPLETE** - Summary statistics display
+- **COMPLETE** - Base64 image embedding (default enabled) for standalone HTML sharing
 
 ### Architecture
 - **COMPLETE** - Modular architecture (9 focused modules)
@@ -285,10 +286,13 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 ## Release Strategy
 
 **v1.0 - Foundation Release (Current)**
+- v1.0.0 - Initial stable release
+- v1.0.1 - Base64 image embedding + bug fix (syntax error in llm_provider.py)
 - Core refactoring complete
 - Caching implemented
 - Modular architecture
 - Comprehensive documentation
+- Standalone HTML reports with embedded images
 
 **v2.0 - Enterprise Release**
 - Alternative LLM support
@@ -334,5 +338,5 @@ Contributions are welcome. Consider:
 ---
 
 Last updated: December 3, 2025
-Current version: 1.0.0
+Current version: 1.0.1
 Next milestone: v2.0 Enterprise Release

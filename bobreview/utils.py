@@ -4,6 +4,8 @@ Utility functions for BobReview including logging and formatting.
 """
 
 import sys
+import base64
+from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -120,4 +122,38 @@ def format_number(n, decimals=1):
     if decimals == 0:
         return f"{int(n):,}"
     return f"{n:,.{decimals}f}"
+
+
+def image_to_base64(image_path: Path) -> Optional[str]:
+    """
+    Convert an image file to a base64-encoded data URI.
+    
+    Parameters:
+        image_path (Path): Path to the image file.
+    
+    Returns:
+        str | None: A data URI string (e.g., "data:image/png;base64,iVBORw0KG...") 
+                    or None if the file cannot be read.
+    """
+    try:
+        with open(image_path, 'rb') as img_file:
+            img_data = img_file.read()
+            b64_data = base64.b64encode(img_data).decode('utf-8')
+            
+            # Determine MIME type from extension
+            ext = image_path.suffix.lower()
+            mime_type = {
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.gif': 'image/gif',
+                '.bmp': 'image/bmp',
+                '.webp': 'image/webp',
+                '.svg': 'image/svg+xml'
+            }.get(ext, 'image/png')  # Default to PNG
+            
+            return f"data:{mime_type};base64,{b64_data}"
+    except Exception as e:
+        log_error(f"Failed to encode image {image_path}: {e}")
+        return None
 

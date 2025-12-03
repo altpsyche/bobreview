@@ -118,6 +118,13 @@ bobreview --dir ./screenshots \
   --tri-hard-cap 150000
 ```
 
+### Standalone HTML (Embedded Images)
+```bash
+bobreview --dir ./screenshots
+```
+
+Creates a single HTML file with all images embedded (no separate image folder needed).
+
 ---
 
 ## Caching
@@ -306,6 +313,7 @@ bobreview --dir PATH [OPTIONS]
 --verbose                  # Detailed output
 --quiet                    # Errors only
 --clear-cache              # Clear LLM cache
+--no-embed-images          # Use external image files
 --openai-key KEY           # OpenAI API key
 ```
 
