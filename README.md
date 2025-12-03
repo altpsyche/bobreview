@@ -634,7 +634,7 @@ pip install -e ".[dev]"
 
 ## License
 
-This project is provided as-is for performance analysis automation.
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ---
 

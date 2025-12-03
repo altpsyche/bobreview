@@ -314,7 +314,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 ## Contributing
 
 Contributions are welcome. Consider:
-- Open-source license (MIT/Apache)
+- MIT License (see [LICENSE.md](LICENSE.md))
 - Contributor guidelines
 - Issue templates
 - Pull request templates
