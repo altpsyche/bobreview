@@ -924,9 +924,9 @@ def _generate_html_template(
         <section id="zones" class="panel section-anchor">
           <h2>3. Performance Zones and Hotspots</h2>
 
-          <h3>3.1 High‑Load Frames</h3>
+          <h3>3.1 High-Load Frames</h3>
           <p class="body-text">
-            High‑load is defined as <strong>draw calls ≥ {config.high_load_draw_threshold}</strong> or
+            High-load is defined as <strong>draw calls ≥ {config.high_load_draw_threshold}</strong> or
             <strong>triangle count ≥ {format_number(config.high_load_tri_threshold, 0)}</strong>.
           </p>
           <table>
@@ -957,9 +957,9 @@ def _generate_html_template(
           </table>
           {zones_content['high_load']}
 
-          <h3>3.2 Low‑Load Baselines</h3>
+          <h3>3.2 Low-Load Baselines</h3>
           <p class="body-text">
-            Low‑load frames (<strong>draws &lt; {config.low_load_draw_threshold}</strong> and <strong>tris &lt; {format_number(config.low_load_tri_threshold, 0)}</strong>)
+            Low-load frames (<strong>draws &lt; {config.low_load_draw_threshold}</strong> and <strong>tris &lt; {format_number(config.low_load_tri_threshold, 0)}</strong>)
             represent baseline performance and are useful design references.
           </p>
           {zones_content['low_load']}
@@ -1219,7 +1219,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
             for optimization work.
           </p>
 
-          <h3>5.2 Critical Hotspot – Index {critical_idx}</h3>
+          <h3>5.2 Critical Hotspot - Index {critical_idx}</h3>
           <div class="callout critical">
             <div class="callout-title">Index {critical_idx} – {escape(critical_img)}</div>
             <div>{critical_draws} draw calls &middot; {critical_tris_formatted} triangles</div>
@@ -1231,13 +1231,13 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
           />
           {optimization_content['critical']}
 
-          <h3>5.3 High‑Geometry Hotspots</h3>
+          <h3>5.3 High-Geometry Hotspots</h3>
           <p class="body-text">
             Affects {len([p for _, p in stats['high_load'] if p['tris'] >= config.high_load_tri_threshold])} frame(s) above {format_number(config.high_load_tri_threshold, 0)} triangles.
           </p>
           {optimization_content['high_geometry']}
 
-          <h3>5.4 High‑Draw Hotspots</h3>
+          <h3>5.4 High-Draw Hotspots</h3>
           <p class="body-text">
             Focus on frames with draws ≥ {config.high_load_draw_threshold}.
           </p>
@@ -1251,7 +1251,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
     if config.enable_recommendations and system_recs.get('full'):
         html += f"""
         <section id="system-recs" class="panel section-anchor">
-          <h2>6. System‑Level Recommendations</h2>
+          <h2>6. System-Level Recommendations</h2>
           {system_recs['full']}
         </section>
 """

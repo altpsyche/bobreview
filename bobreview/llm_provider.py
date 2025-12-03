@@ -412,7 +412,7 @@ Write 2-3 paragraphs:
 2. Performance trends over time (are things improving, stable, or degrading?)
 3. Draw calls vs triangle correlation and its implications
 
-Use HTML paragraph tags. Include a heading <h3>2.4 Temporal & Correlation Analysis</h3> before your analysis."""
+Use HTML paragraph tags. Include a heading <h3>Temporal & Correlation Analysis</h3> before your analysis."""
     
     results['temporal'] = call_llm_chunked(prompt, corr_samples, config)
     
