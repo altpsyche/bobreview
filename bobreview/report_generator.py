@@ -133,14 +133,16 @@ def _get_image_src(img_name: str, images_dir_rel: str, image_data_uris: Dict[str
     """
     if img_name in image_data_uris:
         return image_data_uris[img_name]
-    return f"{images_dir_rel}/{quote(img_name)}"
+    if images_dir_rel:
+        return f"{images_dir_rel}/{quote(img_name)}"
+    return quote(img_name)
 
 
 def _generate_html_template(
     config, stats, data_points, images_dir_rel,
     critical_idx, critical_draws, critical_tris_formatted, critical_img,
     exec_summary, metric_content, zones_content, optimization_content, system_recs,
-    image_data_uris: Dict[str, str] = None
+    image_data_uris: Optional[Dict[str, str]] = None
 ) -> str:
     """Generate the HTML template with all content."""
     if image_data_uris is None:
