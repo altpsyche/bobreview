@@ -53,6 +53,24 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Public API exports
 - **COMPLETE** - Comprehensive documentation
 
+### Visual Charts & Graphs
+- **COMPLETE** - Chart.js library integration
+- **COMPLETE** - Timeline charts (draw calls over time)
+- **COMPLETE** - Timeline charts (triangles over time)
+- **COMPLETE** - Scatter plots (draws vs triangles)
+- **COMPLETE** - Distribution histograms (draw calls, triangles)
+- **COMPLETE** - Performance zone heatmaps (color-coded data points)
+- **COMPLETE** - Interactive charts (zoom, pan, hover tooltips)
+
+### Statistical Enhancements
+- **COMPLETE** - Percentile analysis (P50, P90, P95, P99)
+- **COMPLETE** - Confidence intervals (accurate t-distribution with scipy)
+- **COMPLETE** - Trend detection (improving/degrading/stable classification)
+- **COMPLETE** - Frame time calculation from timestamps with anomaly detection
+- **COMPLETE** - Variance and coefficient of variation
+- **COMPLETE** - Multiple outlier detection algorithms (IQR, MAD, Z-score)
+- **COMPLETE** - Input validation for statistical functions
+
 ---
 
 ## Planned Features
@@ -72,23 +90,10 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - Fallback chain: sidecar → EXIF → filename
 - Enhanced data validation
 
-### Visual Charts & Graphs (HIGH PRIORITY)
-- Chart.js library integration
-- Timeline charts (draw calls over time)
-- Timeline charts (triangles over time)
-- Scatter plots (draws vs triangles)
-- Distribution histograms (draw calls, triangles)
-- Performance zone heatmaps
-- Chart export as PNG
-- Interactive charts (zoom, pan, hover)
-
-### Statistical Enhancements
-- Percentile analysis (P50, P90, P95, P99)
-- Confidence intervals
-- Trend detection (improving/degrading)
-- Frame time calculation from timestamps
-- Variance and coefficient of variation
-- Improved outlier detection algorithms
+### Visual Enhancements
+- Chart export as PNG from browser
+- Additional chart types (radar charts, box plots)
+- Chart customization options
 
 ### Configuration Files
 - PyYAML dependency
@@ -206,25 +211,28 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 ## Priority
 
 ### High Priority
-1. Visual Charts & Graphs
-2. Alternative LLM Support
-3. Configuration Files
-4. Multiple Data Sources
+1. Alternative LLM Support
+2. Configuration Files
+3. Multiple Data Sources
 
 ### Medium Priority
-5. Statistical Enhancements
-6. Export Options
-7. Batch Processing
-8. Regression Detection
+4. Export Options
+5. Batch Processing
+6. Regression Detection
 
 ### Low Priority
-9. Template System
-10. GPU Metrics
-11. Testing & Quality
-12. Web Dashboard
-13. Image Analysis
+7. Template System
+8. GPU Metrics
+9. Testing & Quality
+10. Web Dashboard
+11. Image Analysis
 
 ---
+
+## Dependencies Added
+
+**For Statistics:**
+- scipy (accurate t-distribution for confidence intervals)
 
 ## Dependencies to Add
 
@@ -288,11 +296,14 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 **v1.0 - Foundation Release (Current)**
 - v1.0.0 - Initial stable release
 - v1.0.1 - Base64 image embedding + bug fix (syntax error in llm_provider.py)
+- v1.0.2 - Statistical enhancements + interactive charts (planned)
 - Core refactoring complete
 - Caching implemented
 - Modular architecture
 - Comprehensive documentation
 - Standalone HTML reports with embedded images
+- Interactive Chart.js visualizations
+- Advanced statistical analysis (percentiles, confidence intervals, outlier detection)
 
 **v2.0 - Enterprise Release**
 - Alternative LLM support
@@ -338,5 +349,5 @@ Contributions are welcome. Consider:
 ---
 
 Last updated: December 3, 2025
-Current version: 1.0.1
-Next milestone: v2.0 Enterprise Release
+Current version: 1.0.1 (preparing v1.0.2)
+Next milestone: v1.0.2 Visual Charts and Statistical Enhancements Release

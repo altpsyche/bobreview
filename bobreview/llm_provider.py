@@ -234,10 +234,25 @@ def generate_executive_summary(
 
 Location: {config.location}
 Total samples: {stats['count']}
-Average draw calls: {format_number(stats['draws']['mean'], 0)}
-Average triangles: {format_number(stats['tris']['mean'], 0)}
-Median draw calls: {format_number(stats['draws']['median'], 0)}
-Median triangles: {format_number(stats['tris']['median'], 0)}
+
+Draw Calls:
+- Mean: {format_number(stats['draws']['mean'], 0)}, Median: {format_number(stats['draws']['median'], 0)}
+- P90: {format_number(stats['draws']['p90'], 0)}, P95: {format_number(stats['draws']['p95'], 0)}, P99: {format_number(stats['draws']['p99'], 0)}
+- CV (variability): {format_number(stats['draws']['cv'], 1)}%
+- 95% CI: [{format_number(stats['confidence_intervals']['draws'][0], 0)}, {format_number(stats['confidence_intervals']['draws'][1], 0)}]
+- Trend: {stats['trends']['draws']['direction']} (slope: {format_number(stats['trends']['draws']['slope'], 3)})
+
+Triangles:
+- Mean: {format_number(stats['tris']['mean'], 0)}, Median: {format_number(stats['tris']['median'], 0)}
+- P90: {format_number(stats['tris']['p90'], 0)}, P95: {format_number(stats['tris']['p95'], 0)}, P99: {format_number(stats['tris']['p99'], 0)}
+- CV (variability): {format_number(stats['tris']['cv'], 1)}%
+- 95% CI: [{format_number(stats['confidence_intervals']['tris'][0], 0)}, {format_number(stats['confidence_intervals']['tris'][1], 0)}]
+- Trend: {stats['trends']['tris']['direction']} (slope: {format_number(stats['trends']['tris']['slope'], 1)})
+
+Frame Time Analysis:
+- Mean interval: {format_number(stats['frame_times']['mean'], 1)}s, Median: {format_number(stats['frame_times']['median'], 1)}s
+- Anomalies (hitches): {len(stats['frame_times']['anomalies'])} detected
+
 Peak hotspot: {peak_hotspot_desc}
 High-load frames: {len(stats['high_load'])} (threshold: ≥{config.high_load_draw_threshold} draws or ≥{format_number(config.high_load_tri_threshold, 0)} tris)
 Low-load frames: {len(stats['low_load'])} (threshold: <{config.low_load_draw_threshold} draws and <{format_number(config.low_load_tri_threshold, 0)} tris)
@@ -245,12 +260,13 @@ Low-load frames: {len(stats['low_load'])} (threshold: <{config.low_load_draw_thr
 Analyze the provided data table to understand performance patterns across different samples.
 
 Write a professional executive summary that:
-1. Summarizes overall performance health
-2. Highlights key concerns (if any)
+1. Summarizes overall performance health (reference P90/P95 values for realistic expectations)
+2. Highlights key concerns based on trends and variability (CV indicates consistency)
 3. Mentions the peak hotspot and its impact
-4. Provides a brief assessment of variance
+4. Assesses variance and trend direction (improving/stable/degrading)
+5. Comments on frame time stability if anomalies exist
 
-Use HTML paragraph tags (<p>) for formatting. Be concise and data-driven."""
+Use HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics (percentiles, trends, CV)."""
 
     return call_llm_chunked(prompt, sample_data, config)
 
@@ -284,24 +300,34 @@ def generate_metric_deep_dive(
     # Draw Calls section
     prompt = f"""Analyze draw call performance data and write 2-3 paragraphs:
 
-Statistics:
+Basic Statistics:
 - Samples: {stats['count']}
 - Min: {stats['draws']['min']}, Max: {stats['draws']['max']}
 - Q1: {format_number(stats['draws']['q1'], 0)}, Median: {format_number(stats['draws']['median'], 0)}, Q3: {format_number(stats['draws']['q3'], 0)}
 - Mean: {format_number(stats['draws']['mean'], 1)}, Std Dev: {format_number(stats['draws']['stdev'], 1)}
-- High outliers (>2 std dev): {len(stats['draws']['outliers_high'])} frames at indices {', '.join([str(i) for i, _ in stats['draws']['outliers_high']])}
-- Low outliers (>2 std dev): {len(stats['draws']['outliers_low'])} frames at indices {', '.join([str(i) for i, _ in stats['draws']['outliers_low']])}
+
+Advanced Metrics:
+- P90: {format_number(stats['draws']['p90'], 0)}, P95: {format_number(stats['draws']['p95'], 0)}, P99: {format_number(stats['draws']['p99'], 0)}
+- Variance: {format_number(stats['draws']['variance'], 1)}, CV: {format_number(stats['draws']['cv'], 1)}%
+- 95% Confidence Interval: [{format_number(stats['confidence_intervals']['draws'][0], 0)}, {format_number(stats['confidence_intervals']['draws'][1], 0)}]
+- Trend: {stats['trends']['draws']['direction']} (slope: {format_number(stats['trends']['draws']['slope'], 3)})
+
+Outlier Detection (Multiple Methods):
+- Sigma method (>2σ): {len(stats['draws']['outliers_high'])} high, {len(stats['draws']['outliers_low'])} low
+- IQR method: {len(stats['outliers_iqr']['draws'])} outliers
+- MAD method (robust): {len(stats['outliers_mad']['draws'])} outliers
 - Hard cap threshold: {config.draw_hard_cap}
 
 Analyze the provided data table to understand patterns in high and low draw call frames.
 
 Write analysis covering:
-1. Typical performance range (Q1-Q3)
-2. Significance of outliers
-3. Comparison to thresholds
-4. What the distribution suggests
+1. Typical performance range (Q1-Q3) and P90/P95 expectations
+2. Variability assessment (CV < 10% = consistent, 10-30% = moderate, >30% = high variance)
+3. Trend direction and its implications (improving vs degrading)
+4. Significance of outliers detected by different methods
+5. Comparison to thresholds and confidence intervals
 
-Use HTML paragraph tags. Be technical but accessible."""
+Use HTML paragraph tags. Be technical but accessible. Reference the advanced metrics."""
     
     results['draws'] = call_llm_chunked(prompt, draw_samples, config)
     
@@ -313,23 +339,35 @@ Use HTML paragraph tags. Be technical but accessible."""
     
     prompt = f"""Analyze triangle count performance data and write 2-3 paragraphs:
 
-Statistics:
+Basic Statistics:
 - Samples: {stats['count']}
 - Min: {format_number(stats['tris']['min'])}, Max: {format_number(stats['tris']['max'])}
 - Q1: {format_number(stats['tris']['q1'])}, Median: {format_number(stats['tris']['median'])}, Q3: {format_number(stats['tris']['q3'])}
 - Mean: {format_number(stats['tris']['mean'], 1)}, Std Dev: {format_number(stats['tris']['stdev'], 1)}
-- High outliers (>2 std dev): {len(stats['tris']['outliers_high'])} frames at indices {', '.join([str(i) for i, _ in stats['tris']['outliers_high']])}
+
+Advanced Metrics:
+- P90: {format_number(stats['tris']['p90'], 0)}, P95: {format_number(stats['tris']['p95'], 0)}, P99: {format_number(stats['tris']['p99'], 0)}
+- Variance: {format_number(stats['tris']['variance'], 0)}, CV: {format_number(stats['tris']['cv'], 1)}%
+- 95% Confidence Interval: [{format_number(stats['confidence_intervals']['tris'][0], 0)}, {format_number(stats['confidence_intervals']['tris'][1], 0)}]
+- Trend: {stats['trends']['tris']['direction']} (slope: {format_number(stats['trends']['tris']['slope'], 1)})
+
+Outlier Detection (Multiple Methods):
+- Sigma method (>2σ): {len(stats['tris']['outliers_high'])} high outliers
+- IQR method: {len(stats['outliers_iqr']['tris'])} outliers
+- MAD method (robust): {len(stats['outliers_mad']['tris'])} outliers
 - Hard cap threshold: {format_number(config.tri_hard_cap, 0)}
 
 Analyze the provided data table to understand patterns in high triangle count frames.
 
 Write analysis covering:
-1. Distribution characteristics
-2. Impact of high outliers
-3. Comparison to thresholds
-4. Geometry complexity assessment
+1. Distribution characteristics and P90/P95 expectations
+2. Variability assessment using CV (coefficient of variation)
+3. Trend direction (improving/stable/degrading) and implications for geometry budget
+4. Impact of high outliers detected by different methods
+5. Comparison to thresholds and confidence intervals
+6. Geometry complexity assessment
 
-Use HTML paragraph tags. Be technical but accessible."""
+Use HTML paragraph tags. Be technical but accessible. Reference the advanced metrics."""
     
     results['tris'] = call_llm_chunked(prompt, tri_samples, config)
     
@@ -350,22 +388,31 @@ Use HTML paragraph tags. Be technical but accessible."""
     
     prompt = f"""Analyze temporal behavior and correlation between draw calls and triangle counts:
 
-Temporal:
+Temporal Analysis:
 - Time span: {time_span} seconds ({time_span/60:.1f} minutes)
 - Average interval: {avg_interval:.1f} seconds
 - No missing samples
 
-Correlation:
+Frame Time Analysis:
+- Min frame time: {stats['frame_times']['min']}s, Max: {stats['frame_times']['max']}s
+- Mean: {format_number(stats['frame_times']['mean'], 1)}s, Median: {format_number(stats['frame_times']['median'], 1)}s
+- Frame time anomalies (>3x median): {len(stats['frame_times']['anomalies'])} detected
+{f"- Anomaly indices: {', '.join([str(i) for i, _ in stats['frame_times']['anomalies'][:5]])}" if stats['frame_times']['anomalies'] else "- No significant frame time spikes"}
+
+Correlation Analysis:
 - Low draw call frames (bottom 10): avg {format_number(low_draw_tris, 0)} triangles
 - High draw call frames (top 10): avg {format_number(high_draw_tris, 0)} triangles
+- Draw calls trend: {stats['trends']['draws']['direction']}
+- Triangles trend: {stats['trends']['tris']['direction']}
 
 Analyze the provided data table showing low-draw and high-draw frames to understand the correlation.
 
-Write 2 paragraphs:
-1. Temporal behavior analysis
-2. Draw calls vs triangle correlation and its implications
+Write 2-3 paragraphs:
+1. Temporal behavior analysis including frame time stability (mention anomalies if present)
+2. Performance trends over time (are things improving, stable, or degrading?)
+3. Draw calls vs triangle correlation and its implications
 
-Use HTML paragraph tags. Include a heading <h3>2.4 Draw Calls vs Triangle Correlation</h3> before the second paragraph."""
+Use HTML paragraph tags. Include a heading <h3>Temporal & Correlation Analysis</h3> before your analysis."""
     
     results['temporal'] = call_llm_chunked(prompt, corr_samples, config)
     
@@ -546,22 +593,31 @@ def generate_system_recommendations(
             sample_data.append(data_points[idx])
             seen_indices.add(idx)
     
-    prompt = f"""Generate system-level performance optimization recommendations based on this analysis:
+    prompt = f"""Generate system-level performance optimization recommendations based on this comprehensive analysis:
 
 Location: {config.location}
 Total samples: {stats['count']}
-High-load frames: {len(stats['high_load'])}
-Peak: {stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris
-Thresholds: {config.draw_hard_cap} draws, {format_number(config.tri_hard_cap, 0)} tris
+
+Performance Summary:
+- Draw Calls: Mean {format_number(stats['draws']['mean'], 0)}, P90 {format_number(stats['draws']['p90'], 0)}, P95 {format_number(stats['draws']['p95'], 0)}
+- Triangles: Mean {format_number(stats['tris']['mean'], 0)}, P90 {format_number(stats['tris']['p90'], 0)}, P95 {format_number(stats['tris']['p95'], 0)}
+- Variability: Draw CV {format_number(stats['draws']['cv'], 1)}%, Tris CV {format_number(stats['tris']['cv'], 1)}%
+- Trends: Draws {stats['trends']['draws']['direction']}, Tris {stats['trends']['tris']['direction']}
+
+Critical Metrics:
+- Peak hotspot: {stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris
+- High-load frames: {len(stats['high_load'])}
+- Frame time anomalies: {len(stats['frame_times']['anomalies'])}
+- Thresholds: {config.draw_hard_cap} draws, {format_number(config.tri_hard_cap, 0)} tris
 
 Analyze the provided data table representing different performance zones (critical hotspots, high-load, and low-load frames) to understand patterns.
 
 Generate recommendations organized by category:
-1. LOD System (3-4 points)
-2. Occlusion and Visibility (3-4 points)
+1. LOD System (3-4 points) - prioritize if triangles trend is degrading or CV is high
+2. Occlusion and Visibility (3-4 points) - prioritize if draw calls are high
 3. Lighting and Shadows (3-4 points)
-4. Materials and Textures (3-4 points)
-5. Capture and Regression (3-4 points)
+4. Materials and Textures (3-4 points) - prioritize if draw call CV is high
+5. Capture and Regression (3-4 points) - emphasize trend monitoring if trends are degrading
 
 Format each category as:
 <h3>Category Name</h3>
@@ -571,9 +627,85 @@ Format each category as:
   ...
 </ul>
 
-Be specific, actionable, and relevant to the data."""
+Be specific, actionable, and relevant to the data. Reference the trends and variability metrics when making recommendations."""
     
     results['full'] = call_llm_chunked(prompt, sample_data, config)
     
     return results
+
+
+def generate_visual_analysis(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> str:
+    """Generate visual analysis interpretation for distribution charts."""
+    
+    prompt = f"""Analyze the distribution patterns in this performance data and write 2 paragraphs:
+
+Draw Calls Distribution:
+- Mean: {format_number(stats['draws']['mean'], 0)}, Median: {format_number(stats['draws']['median'], 0)}
+- P90: {format_number(stats['draws']['p90'], 0)}, P95: {format_number(stats['draws']['p95'], 0)}, P99: {format_number(stats['draws']['p99'], 0)}
+- Range: {stats['draws']['min']} to {stats['draws']['max']}
+- Variance: {format_number(stats['draws']['variance'], 1)}, CV: {format_number(stats['draws']['cv'], 1)}%
+- Trend: {stats['trends']['draws']['direction']}
+
+Triangle Distribution:
+- Mean: {format_number(stats['tris']['mean'], 0)}, Median: {format_number(stats['tris']['median'], 0)}
+- P90: {format_number(stats['tris']['p90'], 0)}, P95: {format_number(stats['tris']['p95'], 0)}, P99: {format_number(stats['tris']['p99'], 0)}
+- Range: {format_number(stats['tris']['min'])} to {format_number(stats['tris']['max'])}
+- Variance: {format_number(stats['tris']['variance'], 0)}, CV: {format_number(stats['tris']['cv'], 1)}%
+- Trend: {stats['trends']['tris']['direction']}
+
+Write analysis covering:
+1. What the distribution shape suggests (normal, skewed, bimodal, etc.)
+2. Interpretation of the percentiles (P90/P95/P99 tell us about tail behavior)
+3. Whether the distributions are consistent or highly variable (using CV)
+4. What the trends indicate about performance trajectory
+
+Use HTML paragraph tags (<p>). Be insightful and reference the specific metrics."""
+
+    return call_llm(prompt, data_table=None, config=config)
+
+
+def generate_statistical_interpretation(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> str:
+    """Generate interpretation of advanced statistical metrics."""
+    
+    prompt = f"""Provide a concise interpretation (2 paragraphs) of these advanced performance statistics:
+
+Variability Analysis:
+- Draw Calls CV: {format_number(stats['draws']['cv'], 1)}% (< 10% = consistent, 10-30% = moderate, > 30% = high variance)
+- Triangles CV: {format_number(stats['tris']['cv'], 1)}%
+
+Confidence Intervals (95%):
+- Draw Calls: [{format_number(stats['confidence_intervals']['draws'][0], 0)}, {format_number(stats['confidence_intervals']['draws'][1], 0)}]
+- Triangles: [{format_number(stats['confidence_intervals']['tris'][0], 0)}, {format_number(stats['confidence_intervals']['tris'][1], 0)}]
+
+Trend Analysis:
+- Draw Calls: {stats['trends']['draws']['direction']} (slope: {format_number(stats['trends']['draws']['slope'], 3)})
+- Triangles: {stats['trends']['tris']['direction']} (slope: {format_number(stats['trends']['tris']['slope'], 1)})
+
+Frame Time Analysis:
+- Mean: {format_number(stats['frame_times']['mean'], 1)}s, Median: {format_number(stats['frame_times']['median'], 1)}s
+- Anomalies detected: {len(stats['frame_times']['anomalies'])}
+
+Outlier Detection Consensus:
+- Draws: Sigma method ({len(stats['draws']['outliers_high']) + len(stats['draws']['outliers_low'])}), IQR ({len(stats['outliers_iqr']['draws'])}), MAD ({len(stats['outliers_mad']['draws'])})
+- Triangles: Sigma method ({len(stats['tris']['outliers_high'])}), IQR ({len(stats['outliers_iqr']['tris'])}), MAD ({len(stats['outliers_mad']['tris'])})
+
+Write interpretation covering:
+1. Overall performance consistency and predictability (based on CV and confidence intervals)
+2. Performance trajectory and whether action is needed (based on trends)
+3. Frame time stability and any concerns (based on anomalies)
+4. Reliability of outlier detection (consensus across methods)
+
+Use HTML paragraph tags (<p>). Be practical and actionable."""
+
+    return call_llm(prompt, data_table=None, config=config)
 

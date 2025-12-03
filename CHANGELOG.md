@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2025-12-03
+
+### Added
+
+#### Interactive Visual Charts
+- **Chart.js Integration**: Added Chart.js 4.5.1 for interactive data visualizations
+  - Timeline charts for draw calls with color-coded performance zones (red/yellow/green)
+  - Timeline charts for triangles with color-coded performance zones
+  - Scatter plots showing draw calls vs triangles correlation
+  - Distribution histograms for both draw calls and triangles (20 bins)
+  - Interactive features: zoom, pan, and hover tooltips on all charts
+  - Dark theme styling matching report design
+  - Responsive chart sizing (2.5:1 aspect ratio)
+
+#### Statistical Enhancements
+- **Percentile Analysis**: P50 (median), P90, P95, and P99 calculations
+  - Uses `statistics.quantiles(data, n=100)` for accurate percentile computation
+  - Included for both draw calls and triangles
+- **Accurate Confidence Intervals**: Replaced linear t-distribution approximation with scipy
+  - Now uses `scipy.stats.t.ppf()` for precise critical values
+  - Properly utilizes the `confidence` parameter (was previously unused)
+  - Dramatically improved accuracy for small samples:
+    - n=2: t-value now 12.706 (was incorrectly 2.84, error of 9.87)
+    - n=5: t-value now 2.776 (was incorrectly 2.75)
+    - n=10: t-value now 2.262 (was incorrectly 2.60)
+- **Trend Detection**: Automatic classification of performance trends
+  - Linear regression analysis on temporal data
+  - Classifies trends as: improving, stable, or degrading
+  - Normalized slope calculations relative to data variability
+- **Frame Time Analysis**: Enhanced timestamp analysis with anomaly detection
+  - Calculates frame deltas from consecutive timestamps
+  - Detects anomalies (frame times >3x median) as potential hitches
+  - Returns detailed tuples: (frame_index, delta_time, timestamp)
+  - Preserves original frame indices for accurate correlation
+- **Variance & Coefficient of Variation**: Additional statistical metrics
+  - Variance calculation using `statistics.variance()`
+  - Coefficient of Variation (CV): (stdev / mean) × 100
+  - Helps assess relative data spread
+- **Multiple Outlier Detection Methods**: Three complementary approaches
+  - **IQR Method**: Interquartile Range (Q1 - 1.5×IQR, Q3 + 1.5×IQR)
+  - **MAD Method**: Median Absolute Deviation with modified z-scores
+  - **Z-Score Method**: Standard deviation based (existing)
+  - Input validation ensures values and indices match length
+  - Uses `zip()` for safe paired iteration
+
+### Fixed
+
+#### Critical Fixes
+- **Frame Index Preservation**: Fixed timestamp sorting bug in `_calculate_frame_times()`
+  - **Impact**: Anomaly detection now correctly identifies which specific frames experienced hitches
+  - Previously, sorting broke the association between indices and original data
+- **Chart Initialization**: Fixed canvas error handling in JavaScript (5 locations)
+  - Changed `return;` to `throw new Error('Canvas not found');`
+  - **Impact**: All charts now initialize even if one fails
+  - Previously, a missing canvas would exit the entire event handler, blocking subsequent charts
+- **Histogram Edge Case**: Fixed inconsistent return key when all values are identical
+  - Now returns `'labels'` key instead of `'bins'` key
+  - **Impact**: Prevents Chart.js errors in edge cases
+
+#### Code Quality Fixes
+- **Simplified Percentile Code**: Removed redundant conditionals
+  - `statistics.quantiles(data, n=100)` always returns exactly 99 elements
+  - Cleaner, more readable code
+- **Removed Unused Import**: Removed unused `math` import from report_generator.py
+- **Corrected Comment**: Fixed misleading comment about performance zone logic
+  - Changed "both must be high for red" to "either draws or tris high = red"
+  - Now accurately describes OR logic
+
+### Changed
+- **Dependencies**: Added scipy for statistical accuracy
+  - `scipy>=1.11.0,<2.0.0` added to requirements.txt
+  - Used for accurate t-distribution in confidence interval calculations
+  - ~54 MB installation size increase
+
+### Technical Details
+- Chart.js loaded via CDN: `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js`
+- All statistical improvements in `bobreview/analysis.py`
+- All chart implementations in `bobreview/report_generator.py`
+- Input validation added to `_detect_outliers_iqr()` and `_detect_outliers_mad()`
+- Frame time anomaly format changed from `(index, delta)` to `(index, delta, timestamp)`
+
+---
+
 ## [1.0.1] - 2025-12-03
 
 ### Added
@@ -100,10 +183,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Release Notes
 
 ### Version History
+- **1.0.2** - Feature release: Interactive visual charts + statistical enhancements
 - **1.0.1** - Feature release: Base64 image embedding + bug fix (syntax error in llm_provider.py)
 - **1.0.0** - Initial stable release with comprehensive features and documentation
 
 ### Upgrade Instructions
+
+#### From 1.0.1 to 1.0.2
+```bash
+cd /path/to/bobreview
+git pull origin main
+pip install --upgrade .
+```
+
+**New dependency**: scipy>=1.11.0 will be installed automatically.
+
+No breaking changes. Existing cache and configuration remain compatible.
+Reports now include interactive charts and enhanced statistical analysis.
 
 #### From 1.0.0 to 1.0.1
 ```bash
@@ -116,6 +212,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.2]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/DiggingNebula8/bobreview/releases/tag/v1.0.0
 

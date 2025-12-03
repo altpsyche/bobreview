@@ -9,6 +9,7 @@
 # Required Dependencies
 # ---------------------
 openai>=1.0.0,<2.0.0     # OpenAI API client for LLM-powered analysis
+scipy>=1.11.0,<2.0.0     # Statistical functions for accurate t-distribution
 
 # Optional Dependencies (Recommended)
 # -----------------------------------

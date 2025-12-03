@@ -6,7 +6,7 @@ A comprehensive tool for analyzing game performance captures and generating
 detailed reports with LLM-powered insights.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "BobReview Contributors"
 __description__ = "Performance analysis and review tool for game development"
 
