@@ -633,3 +633,79 @@ Be specific, actionable, and relevant to the data. Reference the trends and vari
     
     return results
 
+
+def generate_visual_analysis(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> str:
+    """Generate visual analysis interpretation for distribution charts."""
+    
+    prompt = f"""Analyze the distribution patterns in this performance data and write 2 paragraphs:
+
+Draw Calls Distribution:
+- Mean: {format_number(stats['draws']['mean'], 0)}, Median: {format_number(stats['draws']['median'], 0)}
+- P90: {format_number(stats['draws']['p90'], 0)}, P95: {format_number(stats['draws']['p95'], 0)}, P99: {format_number(stats['draws']['p99'], 0)}
+- Range: {stats['draws']['min']} to {stats['draws']['max']}
+- Variance: {format_number(stats['draws']['variance'], 1)}, CV: {format_number(stats['draws']['cv'], 1)}%
+- Trend: {stats['trends']['draws']['direction']}
+
+Triangle Distribution:
+- Mean: {format_number(stats['tris']['mean'], 0)}, Median: {format_number(stats['tris']['median'], 0)}
+- P90: {format_number(stats['tris']['p90'], 0)}, P95: {format_number(stats['tris']['p95'], 0)}, P99: {format_number(stats['tris']['p99'], 0)}
+- Range: {format_number(stats['tris']['min'])} to {format_number(stats['tris']['max'])}
+- Variance: {format_number(stats['tris']['variance'], 0)}, CV: {format_number(stats['tris']['cv'], 1)}%
+- Trend: {stats['trends']['tris']['direction']}
+
+Write analysis covering:
+1. What the distribution shape suggests (normal, skewed, bimodal, etc.)
+2. Interpretation of the percentiles (P90/P95/P99 tell us about tail behavior)
+3. Whether the distributions are consistent or highly variable (using CV)
+4. What the trends indicate about performance trajectory
+
+Use HTML paragraph tags (<p>). Be insightful and reference the specific metrics."""
+
+    return call_llm(prompt, data_table=None, config=config)
+
+
+def generate_statistical_interpretation(
+    data_points: List[Dict[str, Any]],
+    stats: Dict[str, Any],
+    config,
+    _images_dir_rel: str,
+) -> str:
+    """Generate interpretation of advanced statistical metrics."""
+    
+    prompt = f"""Provide a concise interpretation (2 paragraphs) of these advanced performance statistics:
+
+Variability Analysis:
+- Draw Calls CV: {format_number(stats['draws']['cv'], 1)}% (< 10% = consistent, 10-30% = moderate, > 30% = high variance)
+- Triangles CV: {format_number(stats['tris']['cv'], 1)}%
+
+Confidence Intervals (95%):
+- Draw Calls: [{format_number(stats['confidence_intervals']['draws'][0], 0)}, {format_number(stats['confidence_intervals']['draws'][1], 0)}]
+- Triangles: [{format_number(stats['confidence_intervals']['tris'][0], 0)}, {format_number(stats['confidence_intervals']['tris'][1], 0)}]
+
+Trend Analysis:
+- Draw Calls: {stats['trends']['draws']['direction']} (slope: {format_number(stats['trends']['draws']['slope'], 3)})
+- Triangles: {stats['trends']['tris']['direction']} (slope: {format_number(stats['trends']['tris']['slope'], 1)})
+
+Frame Time Analysis:
+- Mean: {format_number(stats['frame_times']['mean'], 1)}s, Median: {format_number(stats['frame_times']['median'], 1)}s
+- Anomalies detected: {len(stats['frame_times']['anomalies'])}
+
+Outlier Detection Consensus:
+- Draws: Sigma method ({len(stats['draws']['outliers_high']) + len(stats['draws']['outliers_low'])}), IQR ({len(stats['outliers_iqr']['draws'])}), MAD ({len(stats['outliers_mad']['draws'])})
+- Triangles: Sigma method ({len(stats['tris']['outliers_high'])}), IQR ({len(stats['outliers_iqr']['tris'])}), MAD ({len(stats['outliers_mad']['tris'])})
+
+Write interpretation covering:
+1. Overall performance consistency and predictability (based on CV and confidence intervals)
+2. Performance trajectory and whether action is needed (based on trends)
+3. Frame time stability and any concerns (based on anomalies)
+4. Reliability of outlier detection (consensus across methods)
+
+Use HTML paragraph tags (<p>). Be practical and actionable."""
+
+    return call_llm(prompt, data_table=None, config=config)
+

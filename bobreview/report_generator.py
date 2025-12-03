@@ -17,7 +17,9 @@ from .llm_provider import (
     generate_metric_deep_dive,
     generate_zones_hotspots,
     generate_optimization_checklist,
-    generate_system_recommendations
+    generate_system_recommendations,
+    generate_visual_analysis,
+    generate_statistical_interpretation
 )
 
 # Check for tqdm availability
@@ -220,6 +222,8 @@ def generate_html_report(
         ("Executive Summary", lambda: generate_executive_summary(data_points, stats, config, str(images_dir_abs))),
         ("Metric Deep Dive", lambda: generate_metric_deep_dive(data_points, stats, config, str(images_dir_abs))),
         ("Zones & Hotspots", lambda: generate_zones_hotspots(data_points, stats, config, str(images_dir_abs))),
+        ("Visual Analysis", lambda: generate_visual_analysis(data_points, stats, config, str(images_dir_abs))),
+        ("Statistical Interpretation", lambda: generate_statistical_interpretation(data_points, stats, config, str(images_dir_abs))),
         ("Optimization Checklist", lambda: generate_optimization_checklist(data_points, stats, config, str(images_dir_abs))),
     ]
     
@@ -241,13 +245,16 @@ def generate_html_report(
     exec_summary = results["Executive Summary"]
     metric_content = results["Metric Deep Dive"]
     zones_content = results["Zones & Hotspots"]
+    visual_analysis_content = results["Visual Analysis"]
+    statistical_interpretation = results["Statistical Interpretation"]
     optimization_content = results["Optimization Checklist"]
     system_recs = results.get("System Recommendations", {})
     
     html = _generate_html_template(
         config, stats, data_points, images_dir_rel,
         critical_idx, critical_draws, critical_tris_formatted, critical_img,
-        exec_summary, metric_content, zones_content, optimization_content, system_recs,
+        exec_summary, metric_content, zones_content, visual_analysis_content, 
+        statistical_interpretation, optimization_content, system_recs,
         image_data_uris,
         timeline_draws_data, timeline_tris_data, scatter_data,
         histogram_draws, histogram_tris
@@ -278,7 +285,8 @@ def _get_image_src(img_name: str, images_dir_rel: str, image_data_uris: Dict[str
 def _generate_html_template(
     config, stats, data_points, images_dir_rel,
     critical_idx, critical_draws, critical_tris_formatted, critical_img,
-    exec_summary, metric_content, zones_content, optimization_content, system_recs,
+    exec_summary, metric_content, zones_content, visual_analysis_content,
+    statistical_interpretation, optimization_content, system_recs,
     image_data_uris: Optional[Dict[str, str]] = None,
     timeline_draws_data: str = "[]",
     timeline_tris_data: str = "[]",
@@ -986,6 +994,7 @@ def _generate_html_template(
 
         <section id="visual-analysis" class="panel section-anchor">
           <h2>4. Visual Analysis - Distribution Charts</h2>
+          {visual_analysis_content}
           
           <h3>4.1 Draw Calls Distribution</h3>
           <div class="chart-container">
@@ -1008,6 +1017,8 @@ def _generate_html_template(
 
         <section id="stats" class="panel section-anchor">
           <h2>7. Statistical Summary</h2>
+          {statistical_interpretation}
+          
           <h3>7.1 Draw Calls</h3>
           <div class="code-block">Minimum:    {stats['draws']['min']}
 Q1:        {format_number(stats['draws']['q1'], 0)}
