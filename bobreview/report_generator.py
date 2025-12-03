@@ -307,7 +307,7 @@ def _generate_html_template(
   <meta charset="UTF-8" />
   <title>{config.title}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <style>
     :root {{
       --bg: #070b10;
