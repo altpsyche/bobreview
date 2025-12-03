@@ -664,7 +664,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.1
+**Current:** v1.0.2
 
 **Features:**
 - Modular architecture
