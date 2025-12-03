@@ -109,8 +109,6 @@ Data Table:
             # Cache the response
             if cache:
                 cache.set(full_prompt, data_table or "", config.openai_model, result)
-            
-            return result
         
         except openai.RateLimitError as e:
             error_str = str(e).lower()
@@ -142,6 +140,8 @@ Data Table:
         except Exception as e:
             # For unexpected errors, don't retry
             raise RuntimeError(f"Unexpected error calling OpenAI API: {e}") from e
+        else:
+            return result
     
     raise RuntimeError(f"Failed to call OpenAI API after {max_retries} attempts")
 
@@ -182,7 +182,7 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
         # Ask LLM to combine the chunked results
         combine_prompt = f"""You have analyzed performance data in {len(results)} chunks. Combine these analyses into a single coherent response:
 
-{chr(10).join([f"Chunk {i+1}:{chr(10)}{result}" for i, result in enumerate(results)])}
+{'\n'.join([f"Chunk {i+1}:\n{result}" for i, result in enumerate(results)])}
 
 Provide a unified analysis that integrates all the information from these chunks."""
         return call_llm(combine_prompt, data_table=None, config=config)
@@ -203,9 +203,11 @@ def generate_executive_summary(
     seen_indices: set[int] = set()
     
     # Include critical hotspot when index is valid
+    critical_valid = False
     if 0 <= critical_idx < len(data_points):
         sample_data.append(data_points[critical_idx])
         seen_indices.add(critical_idx)
+        critical_valid = True
     else:
         log_warning(f"Critical index {critical_idx} out of range for {len(data_points)} samples", config)
     
@@ -220,6 +222,12 @@ def generate_executive_summary(
             sample_data.append(data_points[idx])
             seen_indices.add(idx)
     
+    # Build peak hotspot description
+    peak_hotspot_desc = (
+        f"Index {critical_idx} with {critical_point['draws']} draws and {format_number(critical_point['tris'])} triangles"
+        if critical_valid else "Data not available"
+    )
+    
     prompt = f"""You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:
 
 Location: {config.location}
@@ -228,7 +236,7 @@ Average draw calls: {format_number(stats['draws']['mean'], 0)}
 Average triangles: {format_number(stats['tris']['mean'], 0)}
 Median draw calls: {format_number(stats['draws']['median'], 0)}
 Median triangles: {format_number(stats['tris']['median'], 0)}
-Peak hotspot: Index {critical_idx} with {critical_point['draws']} draws and {format_number(critical_point['tris'])} triangles
+Peak hotspot: {peak_hotspot_desc}
 High-load frames: {len(stats['high_load'])} (threshold: ≥{config.high_load_draw_threshold} draws or ≥{format_number(config.high_load_tri_threshold, 0)} tris)
 Low-load frames: {len(stats['low_load'])} (threshold: <{config.low_load_draw_threshold} draws and <{format_number(config.low_load_tri_threshold, 0)} tris)
 
@@ -254,7 +262,7 @@ def generate_metric_deep_dive(
     """
     Generate metric deep dive sections using LLM.
     
-    Precondition: data_points must be non-empty (enforced by caller).
+    Returns an empty dict if data_points is empty.
     """
     results: Dict[str, str] = {}
     
