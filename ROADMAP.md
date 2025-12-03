@@ -217,15 +217,15 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 
 ### Medium Priority
 4. Export Options
-7. Batch Processing
-8. Regression Detection
+5. Batch Processing
+6. Regression Detection
 
 ### Low Priority
-9. Template System
-10. GPU Metrics
-11. Testing & Quality
-12. Web Dashboard
-13. Image Analysis
+7. Template System
+8. GPU Metrics
+9. Testing & Quality
+10. Web Dashboard
+11. Image Analysis
 
 ---
 
@@ -296,7 +296,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 **v1.0 - Foundation Release (Current)**
 - v1.0.0 - Initial stable release
 - v1.0.1 - Base64 image embedding + bug fix (syntax error in llm_provider.py)
-- v1.1.0 - Statistical enhancements + interactive charts (planned)
+- v1.0.2 - Statistical enhancements + interactive charts (planned)
 - Core refactoring complete
 - Caching implemented
 - Modular architecture
@@ -349,5 +349,5 @@ Contributions are welcome. Consider:
 ---
 
 Last updated: December 3, 2025
-Current version: 1.0.1 (preparing v1.1.0)
-Next milestone: v1.1.0 Statistical Enhancements Release, then v2.0 Enterprise Release
+Current version: 1.0.1 (preparing v1.0.2)
+Next milestone: v1.0.2 Visual Charts and Statistical Enhancements Release
