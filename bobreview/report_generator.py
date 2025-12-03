@@ -123,7 +123,7 @@ def _prepare_histogram_data(values: List[float], num_bins: int = 20) -> Dict[str
         dict: Contains 'bins' (list of bin edges) and 'frequencies' (list of counts)
     """
     if not values:
-        return {'bins': [], 'frequencies': []}
+        return {'labels': [], 'frequencies': []}
     
     min_val = min(values)
     max_val = max(values)
