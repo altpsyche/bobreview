@@ -120,11 +120,10 @@ bobreview --dir ./screenshots \
 
 ### Standalone HTML (Embedded Images)
 ```bash
-# Default behavior - creates standalone HTML with embedded images
 bobreview --dir ./screenshots
 ```
 
-Creates a single HTML file with all images embedded (no separate image folder needed). This is now the **default behavior** for easy sharing.
+Creates a single HTML file with all images embedded (no separate image folder needed).
 
 ---
 
@@ -314,7 +313,7 @@ bobreview --dir PATH [OPTIONS]
 --verbose                  # Detailed output
 --quiet                    # Errors only
 --clear-cache              # Clear LLM cache
---no-embed-images          # Use external image files (default: embedded)
+--no-embed-images          # Use external image files
 --openai-key KEY           # OpenAI API key
 ```
 

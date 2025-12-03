@@ -74,8 +74,6 @@ Examples:
 
   # Use external image files (reduces HTML file size)
   bobreview --dir ./screenshots --no-embed-images
-
-  # Note: Images are embedded by default for easy sharing
         """
     )
     parser.add_argument(
@@ -197,7 +195,7 @@ Examples:
     )
     parser.add_argument(
         '--no-embed-images', action='store_false', dest='embed_images', default=True,
-        help='Use external image files instead of embedding (default: images are embedded as base64 for standalone sharing)'
+        help='Use external image files instead of embedding'
     )
     
     args = parser.parse_args()

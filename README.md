@@ -38,7 +38,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 - **Hotspot Identification** - Automatically find high-load and low-load performance zones
 - **LLM-Powered Insights** - Generate contextual analysis using OpenAI GPT models
 - **Professional Reports** - Generate presentation-ready HTML reports
-- **Standalone HTML** - Images embedded as base64 by default for easy sharing
+- **Standalone HTML** - Images embedded as base64 for easy sharing
 - **Intelligent Caching** - Cache LLM responses to reduce costs
 - **Modular Architecture** - Clean, maintainable codebase
 - **Global CLI Command** - Run from any directory after installation
@@ -242,10 +242,10 @@ bobreview --dir ./screenshots --no-cache
 
 ### Standalone HTML Reports
 
-**By default**, BobReview creates self-contained HTML files with embedded images:
+BobReview creates self-contained HTML files with embedded images:
 
 ```bash
-# Generate standalone HTML (default behavior)
+# Generate standalone HTML
 bobreview --dir ./screenshots
 
 # Result: Single HTML file you can share without image folder
@@ -381,7 +381,7 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --sample N             # Process N random samples
 --verbose, -v          # Detailed output
 --quiet, -q            # Errors only
---no-embed-images      # Use external image files (default: embedded)
+--no-embed-images      # Use external image files
 --version              # Show version
 --help                 # Show help
 ```

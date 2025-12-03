@@ -114,7 +114,7 @@ bobreview --dir . --title "Forest Level" --location "Dark Forest"
 # Custom output filename
 bobreview --dir . --output forest_analysis.html
 
-# Create standalone HTML with embedded images (default behavior)
+# Create standalone HTML with embedded images
 bobreview --dir .
 
 # Test without calling OpenAI API (no cost)
@@ -179,9 +179,9 @@ bobreview --dir . --clear-cache
      ```
 
 5. **Standalone HTML Reports**
-   - By default, creates a single HTML file with all images embedded (base64 encoding)
+   - Creates a single HTML file with all images embedded (base64 encoding)
    - Perfect for sharing via email or messaging apps (no separate image folder needed)
-   - Use `--no-embed-images` flag if you prefer external image files
+   - Use `--no-embed-images` flag for external image files
    - Note: Embedded images increase file size but eliminate external dependencies
 
 6. **Data Privacy**
