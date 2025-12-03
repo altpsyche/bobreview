@@ -38,6 +38,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 - **Hotspot Identification** - Automatically find high-load and low-load performance zones
 - **LLM-Powered Insights** - Generate contextual analysis using OpenAI GPT models
 - **Professional Reports** - Generate presentation-ready HTML reports
+- **Standalone HTML** - Images embedded as base64 by default for easy sharing
 - **Intelligent Caching** - Cache LLM responses to reduce costs
 - **Modular Architecture** - Clean, maintainable codebase
 - **Global CLI Command** - Run from any directory after installation
@@ -239,6 +240,30 @@ bobreview --dir ./screenshots --clear-cache
 bobreview --dir ./screenshots --no-cache
 ```
 
+### Standalone HTML Reports
+
+**By default**, BobReview creates self-contained HTML files with embedded images:
+
+```bash
+# Generate standalone HTML (default behavior)
+bobreview --dir ./screenshots
+
+# Result: Single HTML file you can share without image folder
+# Perfect for email attachments or sharing via messaging apps
+```
+
+To use external image files instead (reduces HTML file size):
+
+```python
+from bobreview import ReportConfig
+
+config = ReportConfig(
+    embed_images=False  # Use external image files
+)
+```
+
+**Note:** Embedded images increase HTML file size but eliminate external dependencies, making sharing much easier.
+
 ### Python API
 
 Use BobReview as a library:
@@ -255,6 +280,7 @@ config = ReportConfig(
     title="Performance Analysis",
     location="Test Level",
     openai_api_key="sk-...",
+    embed_images=True,  # Default: True (standalone HTML with embedded images)
 )
 
 # Analyze
@@ -359,6 +385,7 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --sample N             # Process N random samples
 --verbose, -v          # Detailed output
 --quiet, -q            # Errors only
+--no-embed-images      # Use external image files (default: embedded)
 --version              # Show version
 --help                 # Show help
 ```
@@ -562,6 +589,7 @@ First run with LLM API calls takes time. This is normal.
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide
 - **[INSTALL.md](INSTALL.md)** - Detailed installation instructions
 - **[ROADMAP.md](ROADMAP.md)** - Future plans and features
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
 
 ---
 
@@ -640,7 +668,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.0
+**Current:** v1.0.1
 
 **Features:**
 - Modular architecture

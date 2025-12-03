@@ -71,6 +71,11 @@ Examples:
 
   # Clear cache and regenerate
   bobreview --dir ./screenshots --clear-cache
+
+  # Use external image files (reduces HTML file size)
+  bobreview --dir ./screenshots --no-embed-images
+
+  # Note: Images are embedded by default for easy sharing
         """
     )
     parser.add_argument(
@@ -190,6 +195,10 @@ Examples:
         '--quiet', '-q', action='store_true',
         help='Suppress all output except errors'
     )
+    parser.add_argument(
+        '--no-embed-images', action='store_false', dest='embed_images', default=True,
+        help='Use external image files instead of embedding (default: images are embedded as base64 for standalone sharing)'
+    )
     
     args = parser.parse_args()
     
@@ -228,7 +237,8 @@ Examples:
         dry_run=args.dry_run,
         sample_size=args.sample_size,
         verbose=args.verbose,
-        quiet=args.quiet
+        quiet=args.quiet,
+        embed_images=args.embed_images
     )
     
     # Validate configuration
@@ -355,6 +365,9 @@ Examples:
     log_info(f"  - {stats['count']} samples analyzed", config)
     log_info(f"  - {len(stats['high_load'])} high-load frames identified", config)
     log_info(f"  - Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
+    
+    if config.embed_images:
+        log_info(f"  - Images embedded as base64 (standalone HTML)", config)
     
     if config.sample_size and config.sample_size < original_count:
         log_info(f"  - Sampled {config.sample_size} of {original_count} total samples", config)

@@ -34,6 +34,7 @@ class ReportConfig:
     sample_size: Optional[int] = None
     verbose: bool = False
     quiet: bool = False
+    embed_images: bool = True  # Embed images as base64 in HTML for standalone sharing
 
 
 def validate_config(config: ReportConfig) -> List[str]:

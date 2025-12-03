@@ -6,10 +6,10 @@ HTML report generation for BobReview.
 from datetime import datetime
 from html import escape
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from urllib.parse import quote
 
-from .utils import format_number, log_info, log_verbose
+from .utils import format_number, log_info, log_verbose, log_warning, image_to_base64
 from .llm_provider import (
     generate_executive_summary,
     generate_metric_deep_dive,
@@ -65,6 +65,20 @@ def generate_html_report(
     # Convert relative image path to absolute for LLM functions
     images_dir_abs = (output_path.parent / images_dir_rel).resolve() if images_dir_rel else output_path.parent
     
+    # Pre-encode all images to base64 if embed_images is enabled
+    image_data_uris = {}
+    if config.embed_images:
+        log_info("Embedding images as base64 data URIs...", config)
+        unique_images = set(point['img'] for point in data_points)
+        for img_name in unique_images:
+            img_path = images_dir_abs / img_name
+            data_uri = image_to_base64(img_path)
+            if data_uri:
+                image_data_uris[img_name] = data_uri
+            else:
+                log_warning(f"Could not encode image: {img_name}", config)
+        log_verbose(f"Encoded {len(image_data_uris)} images to base64", config)
+    
     log_info("Generating LLM content...", config)
     
     sections = [
@@ -98,18 +112,39 @@ def generate_html_report(
     html = _generate_html_template(
         config, stats, data_points, images_dir_rel,
         critical_idx, critical_draws, critical_tris_formatted, critical_img,
-        exec_summary, metric_content, zones_content, optimization_content, system_recs
+        exec_summary, metric_content, zones_content, optimization_content, system_recs,
+        image_data_uris
     )
     
     return html
 
 
+def _get_image_src(img_name: str, images_dir_rel: str, image_data_uris: Dict[str, str]) -> str:
+    """
+    Return the image source attribute value - either a base64 data URI or a relative file path.
+    
+    Parameters:
+        img_name (str): The image filename.
+        images_dir_rel (str): Relative path to images directory.
+        image_data_uris (dict): Mapping of image names to base64 data URIs.
+    
+    Returns:
+        str: Either a data URI or a relative file path for use in img src attribute.
+    """
+    if img_name in image_data_uris:
+        return image_data_uris[img_name]
+    return f"{images_dir_rel}/{quote(img_name)}"
+
+
 def _generate_html_template(
     config, stats, data_points, images_dir_rel,
     critical_idx, critical_draws, critical_tris_formatted, critical_img,
-    exec_summary, metric_content, zones_content, optimization_content, system_recs
+    exec_summary, metric_content, zones_content, optimization_content, system_recs,
+    image_data_uris: Dict[str, str] = None
 ) -> str:
     """Generate the HTML template with all content."""
+    if image_data_uris is None:
+        image_data_uris = {}
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -592,11 +627,12 @@ def _generate_html_template(
     
     # High-load table
     for idx, point in stats['high_load']:
+        img_src = _get_image_src(point['img'], images_dir_rel, image_data_uris)
         html += f"""              <tr>
                 <td>{idx}</td><td>{point['draws']}</td><td>{format_number(point['tris'])}</td>
                 <td>
                   {escape(point['img'])}
-                  <img class="thumb-small" src="{images_dir_rel}/{quote(point['img'])}" alt="Index {idx} high-load frame">
+                  <img class="thumb-small" src="{img_src}" alt="Index {idx} high-load frame">
                 </td>
               </tr>
 """
@@ -625,11 +661,12 @@ def _generate_html_template(
     
     # Low-load table
     for idx, point in stats['low_load']:
+        img_src = _get_image_src(point['img'], images_dir_rel, image_data_uris)
         html += f"""              <tr>
                 <td>{idx}</td><td>{point['draws']}</td><td>{format_number(point['tris'])}</td>
                 <td>
                   {escape(point['img'])}
-                  <img class="thumb-small" src="{images_dir_rel}/{quote(point['img'])}" alt="Index {idx} low-load frame">
+                  <img class="thumb-small" src="{img_src}" alt="Index {idx} low-load frame">
                 </td>
               </tr>
 """
@@ -692,7 +729,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
           </div>
           <img
             class="thumb-large"
-            src="{images_dir_rel}/{quote(critical_img)}"
+            src="{_get_image_src(critical_img, images_dir_rel, image_data_uris)}"
             alt="Critical hotspot frame (index {critical_idx})"
           />
           {optimization_content['critical']}
@@ -744,11 +781,12 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
     
     # Full table
     for idx, point in enumerate(data_points):
+        img_src = _get_image_src(point['img'], images_dir_rel, image_data_uris)
         html += f"""                <tr>
                   <td>{idx}</td><td>{point['ts']}</td><td>{point['draws']}</td><td>{format_number(point['tris'])}</td>
                   <td>
                     {escape(point['img'])}
-                    <img class="thumb-small" src="{images_dir_rel}/{quote(point['img'])}" alt="Index {idx} frame">
+                    <img class="thumb-small" src="{img_src}" alt="Index {idx} frame">
                   </td>
                 </tr>
 """
