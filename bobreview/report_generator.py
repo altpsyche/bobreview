@@ -4,7 +4,6 @@ HTML report generation for BobReview.
 """
 
 import json
-import math
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -92,7 +91,7 @@ def _prepare_scatter_data(data_points: List[Dict[str, Any]], config) -> str:
         draws = point['draws']
         tris = point['tris']
         
-        # Classify by performance zone (both must be high for red)
+        # Classify by performance zone (either draws or tris high = red)
         if (draws >= config.high_load_draw_threshold or 
             tris >= config.high_load_tri_threshold):
             color = 'rgba(255, 92, 92, 0.7)'
@@ -132,7 +131,7 @@ def _prepare_histogram_data(values: List[float], num_bins: int = 20) -> Dict[str
     # Handle edge case where all values are the same
     if min_val == max_val:
         return {
-            'bins': [min_val],
+            'labels': [min_val],
             'frequencies': [len(values)]
         }
     
@@ -1323,7 +1322,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         const canvasDraws = document.getElementById('timeline-draws-chart');
         if (!canvasDraws) {{
           console.error('Canvas element timeline-draws-chart not found');
-          return;
+          throw new Error('Canvas not found');
         }}
         
         const ctxDraws = canvasDraws.getContext('2d');
@@ -1384,7 +1383,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         const canvasTris = document.getElementById('timeline-tris-chart');
         if (!canvasTris) {{
           console.error('Canvas element timeline-tris-chart not found');
-          return;
+          throw new Error('Canvas not found');
         }}
         
         const ctxTris = canvasTris.getContext('2d');
@@ -1450,7 +1449,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         const canvasScatter = document.getElementById('scatter-chart');
         if (!canvasScatter) {{
           console.error('Canvas element scatter-chart not found');
-          return;
+          throw new Error('Canvas not found');
         }}
         
         const ctxScatter = canvasScatter.getContext('2d');
@@ -1514,7 +1513,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         const canvasHistDraws = document.getElementById('histogram-draws-chart');
         if (!canvasHistDraws) {{
           console.error('Canvas element histogram-draws-chart not found');
-          return;
+          throw new Error('Canvas not found');
         }}
         
         const ctxHistDraws = canvasHistDraws.getContext('2d');
@@ -1574,7 +1573,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         const canvasHistTris = document.getElementById('histogram-tris-chart');
         if (!canvasHistTris) {{
           console.error('Canvas element histogram-tris-chart not found');
-          return;
+          throw new Error('Canvas not found');
         }}
         
         const ctxHistTris = canvasHistTris.getContext('2d');
