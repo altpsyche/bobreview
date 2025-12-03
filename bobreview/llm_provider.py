@@ -23,10 +23,10 @@ except ImportError:
 def clean_llm_response(response: str) -> str:
     """Clean LLM response by removing markdown code fences and extra formatting."""
     # Remove markdown code fences (```html, ```, etc.)
-    # Remove opening code fence with optional language
-    response = re.sub(r'^```[\w]*\s*\n?', '', response, flags=re.MULTILINE)
-    # Remove closing code fence
-    response = re.sub(r'\n?```\s*$', '', response, flags=re.MULTILINE)
+    # Remove opening code fence with optional leading spaces and language
+    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
+    # Remove closing code fence (also tolerating leading spaces)
+    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
     # Remove any remaining standalone code fences
     response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
     response = re.sub(r'\n```\s*\n', '\n', response)
@@ -56,7 +56,7 @@ def call_llm(
         RuntimeError: If OpenAI library is unavailable, API key is missing, quota is exceeded, rate limits persist after retries, or other OpenAI/API errors occur.
         ValueError: If `config` is not provided.
     """
-    if not config:
+    if config is None:
         raise ValueError("ReportConfig is required")
     
     # Dry run mode - return placeholder (check before OpenAI availability to allow pipeline validation)
@@ -243,8 +243,16 @@ def generate_metric_deep_dive(
     config,
     _images_dir_rel: str,
 ) -> Dict[str, str]:
-    """Generate metric deep dive sections using LLM."""
-    results = {}
+    """
+    Generate metric deep dive sections using LLM.
+    
+    Precondition: data_points must be non-empty (enforced by caller).
+    """
+    results: Dict[str, str] = {}
+    
+    if not data_points:
+        log_warning("No data points available for metric deep dive; skipping LLM sections.", config)
+        return results
     
     # Gather sample data points for draw calls analysis
     draw_samples = []

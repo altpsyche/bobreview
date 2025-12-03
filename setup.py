@@ -20,7 +20,7 @@ def read_requirements():
     requirements_file = Path(__file__).parent / "requirements.txt"
     if not requirements_file.exists():
         import warnings
-        warnings.warn("requirements.txt not found; no dependencies will be installed")
+        warnings.warn("requirements.txt not found; no dependencies will be installed", stacklevel=2)
         return []
     
     requirements = []
