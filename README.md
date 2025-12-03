@@ -254,12 +254,9 @@ bobreview --dir ./screenshots
 
 To use external image files instead (reduces HTML file size):
 
-```python
-from bobreview import ReportConfig
-
-config = ReportConfig(
-    embed_images=False  # Use external image files
-)
+```bash
+# Use the --no-embed-images flag
+bobreview --dir ./screenshots --no-embed-images
 ```
 
 **Note:** Embedded images increase HTML file size but eliminate external dependencies, making sharing much easier.
@@ -280,7 +277,6 @@ config = ReportConfig(
     title="Performance Analysis",
     location="Test Level",
     openai_api_key="sk-...",
-    embed_images=True,  # Default: True (standalone HTML with embedded images)
 )
 
 # Analyze

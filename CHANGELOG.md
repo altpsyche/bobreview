@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enables single-file sharing without external image dependencies
   - Automatically detects image MIME types (PNG, JPG, GIF, BMP, WebP, SVG)
   - **Enabled by default** for convenience (creates standalone HTML files)
-  - Use `--no-embed-images` flag or `embed_images=False` in config to use external image files
+  - Use `--no-embed-images` flag to use external image files instead
   - Adds `embed_images` configuration option in `ReportConfig` (defaults to `True`)
   - New utility function `image_to_base64()` for image encoding
 
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Default behavior**: Reports now embed images by default
   - Creates standalone HTML files that can be shared without image directories
-  - Use `--no-embed-images` flag or set `embed_images=False` in `ReportConfig` to use external image files
+  - Use `--no-embed-images` flag to use external image files instead
 
 ### Technical Details
 - Extracted the `join` operation into a separate variable before using it in the f-string to avoid backslash in expression

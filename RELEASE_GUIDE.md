@@ -181,7 +181,7 @@ bobreview --dir . --clear-cache
 5. **Standalone HTML Reports**
    - By default, creates a single HTML file with all images embedded (base64 encoding)
    - Perfect for sharing via email or messaging apps (no separate image folder needed)
-   - Set `embed_images=False` in config if you prefer external image files
+   - Use `--no-embed-images` flag if you prefer external image files
    - Note: Embedded images increase file size but eliminate external dependencies
 
 6. **Data Privacy**
