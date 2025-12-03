@@ -2,7 +2,7 @@
 
 ## Performance Analysis Tool for Game Development
 
-Version 1.0.1
+Version 1.0.2
 
 ---
 
@@ -56,7 +56,7 @@ export OPENAI_API_KEY=sk-your-api-key-here
 bobreview --version
 ```
 
-You should see: `BobReview version 1.0.1`
+You should see: `BobReview version 1.0.2`
 
 ---
 
@@ -271,6 +271,6 @@ python -c "from bobreview import ReportConfig; print('OK')"
 
 ---
 
-**BobReview v1.0.1** - Performance analysis and review tool for game development  
+**BobReview v1.0.2** - Performance analysis and review tool for game development  
 MIT License | Optimized for cost-effective LLM-powered analysis
 
