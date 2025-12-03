@@ -6,11 +6,12 @@ Statistical analysis utilities for BobReview.
 import math
 import statistics
 from typing import Dict, List, Any, Tuple
+from scipy import stats
 
 
 def _calculate_confidence_interval(values: List[float], confidence: float = 0.95) -> Tuple[float, float]:
     """
-    Calculate confidence interval for the mean using t-distribution approximation.
+    Calculate confidence interval for the mean using t-distribution.
     
     Parameters:
         values: List of numeric values
@@ -27,14 +28,12 @@ def _calculate_confidence_interval(values: List[float], confidence: float = 0.95
     mean_val = statistics.mean(values)
     stdev_val = statistics.stdev(values)
     
-    # Use t-distribution critical value approximation
-    # For 95% CI and n>30, t ≈ 1.96; for smaller n, use approximation
-    if n > 30:
-        t_critical = 1.96
-    else:
-        # Rough approximation: t_critical increases as n decreases
-        # t(df=29, 0.975) ≈ 2.045, t(df=9, 0.975) ≈ 2.262, t(df=4, 0.975) ≈ 2.776
-        t_critical = 2.0 + (30 - n) * 0.03
+    # Use scipy's accurate t-distribution critical value
+    # For a confidence level (e.g., 0.95), we need the (1 + confidence)/2 quantile
+    # e.g., for 95% CI, we need the 0.975 quantile (two-tailed test)
+    alpha = 1 - confidence
+    df = n - 1
+    t_critical = stats.t.ppf(1 - alpha / 2, df)
     
     margin_of_error = t_critical * (stdev_val / math.sqrt(n))
     return (mean_val - margin_of_error, mean_val + margin_of_error)
