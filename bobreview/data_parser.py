@@ -32,7 +32,8 @@ def parse_filename(filename: str) -> Dict[str, Any]:
     Parse a PNG filename encoding a test case, triangle count, draw calls, and timestamp.
     
     The filename must follow the pattern: TestCase_tricount_drawcalls_timestamp.png
-    Example: Level1_85000_520_1234567890.png
+    The test case name can contain underscores; the last 3 underscore-separated parts are numeric fields.
+    Example: Level1_85000_520_1234567890.png or Dark_Forest_Level_85000_520_1234567890.png
     
     Parameters:
         filename (str): The PNG filename to parse.
@@ -59,18 +60,20 @@ def parse_filename(filename: str) -> Dict[str, Any]:
         raise ValueError(
             f"Invalid filename format: {filename}\n"
             f"Expected format: TestCase_tricount_drawcalls_timestamp.png\n"
-            f"Example: Level1_85000_520_1234567890.png"
+            f"Example: Level1_85000_520_1234567890.png or Dark_Forest_85000_520_1234567890.png\n"
+            f"Note: Test case names can contain underscores; last 3 parts must be numeric."
         )
     
     try:
-        testcase = parts[0]
-        tricount = int(parts[1])
-        drawcalls = int(parts[2])
-        timestamp = int(parts[3])
+        # Last 3 parts are tricount, drawcalls, timestamp; rest is testcase
+        testcase = '_'.join(parts[:-3])
+        tricount = int(parts[-3])
+        drawcalls = int(parts[-2])
+        timestamp = int(parts[-1])
     except ValueError as e:
         raise ValueError(
             f"Invalid numeric values in filename: {filename}\n"
-            f"Fields: tricount={parts[1]}, drawcalls={parts[2]}, timestamp={parts[3]}\n"
+            f"Fields: tricount={parts[-3]}, drawcalls={parts[-2]}, timestamp={parts[-1]}\n"
             f"Triangle count, draw calls, and timestamp must be integers.\n"
             f"Error: {e}"
         ) from e
