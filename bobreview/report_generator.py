@@ -1245,7 +1245,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         </section>
 """
     
-    html += """
+    html += f"""
         <section id="table" class="panel section-anchor">
           <h2>8. Full Sample Table</h2>
           <p class="body-text">
@@ -1277,7 +1277,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
                 </tr>
 """
     
-    html += """              </tbody>
+    html += f"""              </tbody>
             </table>
           </div>
 
@@ -1290,16 +1290,33 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
   </div>
 
   <script>
-    // Chart.js default configuration
-    Chart.defaults.color = '#a8b3c5';
-    Chart.defaults.borderColor = '#1e2835';
-    Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-    Chart.defaults.font.size = 12;
+    // Wait for DOM and Chart.js to be ready
+    window.addEventListener('load', function() {{
+      // Check if Chart.js is loaded
+      if (typeof Chart === 'undefined') {{
+        console.error('Chart.js failed to load');
+        return;
+      }}
 
-    // Timeline - Draw Calls
-    const timelineDrawsData = {timeline_draws_data};
-    const ctxDraws = document.getElementById('timeline-draws-chart').getContext('2d');
-    new Chart(ctxDraws, {{
+      // Chart.js default configuration
+      Chart.defaults.color = '#a8b3c5';
+      Chart.defaults.borderColor = '#1e2835';
+      Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      Chart.defaults.font.size = 12;
+
+      // Timeline - Draw Calls
+      try {{
+        const timelineDrawsData = {timeline_draws_data};
+        console.log('Timeline draws data loaded:', timelineDrawsData.length, 'points');
+        
+        const canvasDraws = document.getElementById('timeline-draws-chart');
+        if (!canvasDraws) {{
+          console.error('Canvas element timeline-draws-chart not found');
+          return;
+        }}
+        
+        const ctxDraws = canvasDraws.getContext('2d');
+        new Chart(ctxDraws, {{
       type: 'line',
       data: {{
         labels: timelineDrawsData.map((d, i) => i),
@@ -1344,11 +1361,23 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         }}
       }}
     }});
+      }} catch (error) {{
+        console.error('Error creating timeline draws chart:', error);
+      }}
 
-    // Timeline - Triangles
-    const timelineTrisData = {timeline_tris_data};
-    const ctxTris = document.getElementById('timeline-tris-chart').getContext('2d');
-    new Chart(ctxTris, {{
+      // Timeline - Triangles
+      try {{
+        const timelineTrisData = {timeline_tris_data};
+        console.log('Timeline tris data loaded:', timelineTrisData.length, 'points');
+        
+        const canvasTris = document.getElementById('timeline-tris-chart');
+        if (!canvasTris) {{
+          console.error('Canvas element timeline-tris-chart not found');
+          return;
+        }}
+        
+        const ctxTris = canvasTris.getContext('2d');
+        new Chart(ctxTris, {{
       type: 'line',
       data: {{
         labels: timelineTrisData.map((d, i) => i),
@@ -1398,11 +1427,23 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         }}
       }}
     }});
+      }} catch (error) {{
+        console.error('Error creating timeline tris chart:', error);
+      }}
 
-    // Scatter Plot - Draws vs Triangles
-    const scatterData = {scatter_data};
-    const ctxScatter = document.getElementById('scatter-chart').getContext('2d');
-    new Chart(ctxScatter, {{
+      // Scatter Plot - Draws vs Triangles
+      try {{
+        const scatterData = {scatter_data};
+        console.log('Scatter data loaded:', scatterData.length, 'points');
+        
+        const canvasScatter = document.getElementById('scatter-chart');
+        if (!canvasScatter) {{
+          console.error('Canvas element scatter-chart not found');
+          return;
+        }}
+        
+        const ctxScatter = canvasScatter.getContext('2d');
+        new Chart(ctxScatter, {{
       type: 'scatter',
       data: {{
         datasets: [{{
@@ -1449,12 +1490,24 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         }}
       }}
     }});
+      }} catch (error) {{
+        console.error('Error creating scatter chart:', error);
+      }}
 
-    // Histogram - Draw Calls Distribution
-    const histogramDrawsLabels = {json.dumps(histogram_draws['labels'])};
-    const histogramDrawsFreq = {json.dumps(histogram_draws['frequencies'])};
-    const ctxHistDraws = document.getElementById('histogram-draws-chart').getContext('2d');
-    new Chart(ctxHistDraws, {{
+      // Histogram - Draw Calls Distribution
+      try {{
+        const histogramDrawsLabels = {json.dumps(histogram_draws['labels'])};
+        const histogramDrawsFreq = {json.dumps(histogram_draws['frequencies'])};
+        console.log('Histogram draws data loaded:', histogramDrawsLabels.length, 'bins');
+        
+        const canvasHistDraws = document.getElementById('histogram-draws-chart');
+        if (!canvasHistDraws) {{
+          console.error('Canvas element histogram-draws-chart not found');
+          return;
+        }}
+        
+        const ctxHistDraws = canvasHistDraws.getContext('2d');
+        new Chart(ctxHistDraws, {{
       type: 'bar',
       data: {{
         labels: histogramDrawsLabels.map(x => Math.round(x)),
@@ -1497,12 +1550,24 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         }}
       }}
     }});
+      }} catch (error) {{
+        console.error('Error creating histogram draws chart:', error);
+      }}
 
-    // Histogram - Triangles Distribution
-    const histogramTrisLabels = {json.dumps(histogram_tris['labels'])};
-    const histogramTrisFreq = {json.dumps(histogram_tris['frequencies'])};
-    const ctxHistTris = document.getElementById('histogram-tris-chart').getContext('2d');
-    new Chart(ctxHistTris, {{
+      // Histogram - Triangles Distribution
+      try {{
+        const histogramTrisLabels = {json.dumps(histogram_tris['labels'])};
+        const histogramTrisFreq = {json.dumps(histogram_tris['frequencies'])};
+        console.log('Histogram tris data loaded:', histogramTrisLabels.length, 'bins');
+        
+        const canvasHistTris = document.getElementById('histogram-tris-chart');
+        if (!canvasHistTris) {{
+          console.error('Canvas element histogram-tris-chart not found');
+          return;
+        }}
+        
+        const ctxHistTris = canvasHistTris.getContext('2d');
+        new Chart(ctxHistTris, {{
       type: 'bar',
       data: {{
         labels: histogramTrisLabels.map(x => Math.round(x)),
@@ -1552,6 +1617,12 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
         }}
       }}
     }});
+      }} catch (error) {{
+        console.error('Error creating histogram tris chart:', error);
+      }}
+
+      console.log('All charts initialized successfully');
+    }}); // End of window.addEventListener('load')
   </script>
 </body>
 </html>
