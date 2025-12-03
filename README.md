@@ -90,7 +90,12 @@ cd bobreview
 pip install .
 
 # Set up your OpenAI API key
+# Linux/macOS:
 export OPENAI_API_KEY=sk-your-api-key-here
+# Windows PowerShell:
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+# Windows Command Prompt:
+set OPENAI_API_KEY=sk-your-api-key-here
 
 # Run from any directory
 cd /path/to/screenshots
@@ -156,7 +161,14 @@ pip install .
 
 ### 2. Set API Key
 ```bash
+# Linux/macOS
 export OPENAI_API_KEY=sk-your-api-key-here
+
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+
+# Windows Command Prompt
+set OPENAI_API_KEY=sk-your-api-key-here
 ```
 
 ### 3. Run
@@ -460,13 +472,19 @@ python bobreview.py --dir /path/to/screenshots
 
 **Solutions:**
 ```bash
-# Set environment variable
+# Set environment variable (Linux/macOS)
 export OPENAI_API_KEY=sk-your-api-key-here
 
-# Or use command-line argument
+# Set environment variable (Windows PowerShell)
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+
+# Set environment variable (Windows Command Prompt)
+set OPENAI_API_KEY=sk-your-api-key-here
+
+# Or use command-line argument (all platforms)
 bobreview --dir ./screenshots --openai-key sk-your-api-key-here
 
-# Add to shell profile for persistence
+# Add to shell profile for persistence (Linux/macOS)
 echo 'export OPENAI_API_KEY=sk-your-key' >> ~/.bashrc
 ```
 
@@ -551,11 +569,22 @@ First run with LLM API calls takes time. This is normal.
 
 ### Basic Workflow
 ```bash
+# Install
 pip install .
-export OPENAI_API_KEY=sk-your-key
+
+# Set API key (choose based on your platform)
+export OPENAI_API_KEY=sk-your-key              # Linux/macOS
+$env:OPENAI_API_KEY="sk-your-key"              # Windows PowerShell
+set OPENAI_API_KEY=sk-your-key                 # Windows Command Prompt
+
+# Run analysis
 cd /path/to/screenshots
 bobreview --dir .
-open performance_report.html
+
+# Open report
+open performance_report.html                   # macOS
+start performance_report.html                  # Windows
+xdg-open performance_report.html               # Linux
 ```
 
 ### CI/CD Integration

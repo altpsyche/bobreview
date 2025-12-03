@@ -341,6 +341,12 @@ python -m site --user-base
 # Add to PATH (Linux/macOS)
 export PATH="$PATH:$HOME/.local/bin"
 
+# Add to PATH (Windows PowerShell - temporary)
+$env:PATH += ";$env:APPDATA\Python\Python3X\Scripts"
+
+# Add to PATH (Windows - permanent)
+# Use System Properties > Environment Variables to add Python Scripts directory
+
 # Solution 2: Use Python module syntax
 python -m bobreview.cli --dir screenshots
 
@@ -391,8 +397,11 @@ pip install --user .
 **Solution:**
 
 ```bash
-# Use cache directory
+# Use cache directory (Linux/macOS)
 pip install --cache-dir ~/.pip_cache .
+
+# Use cache directory (Windows)
+pip install --cache-dir %TEMP%\pip_cache .
 ```
 
 ---

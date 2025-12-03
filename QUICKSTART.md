@@ -24,10 +24,19 @@ The `bobreview` command is now available globally.
 Set your OpenAI API key:
 
 ```bash
+# Linux/macOS
 export OPENAI_API_KEY=sk-your-api-key-here
+
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+
+# Windows Command Prompt
+set OPENAI_API_KEY=sk-your-api-key-here
 ```
 
-For persistence, add to your shell profile (`~/.bashrc` or `~/.zshrc`).
+**For persistence:**
+- Linux/macOS: Add to `~/.bashrc` or `~/.zshrc`
+- Windows: See [INSTALL.md](INSTALL.md) for permanent setup instructions
 
 ---
 
@@ -131,14 +140,19 @@ bobreview --dir ./screenshots --clear-cache
 ## Workflow Example
 
 ```bash
-# Navigate to project
+# Navigate to project (Linux/macOS)
 cd ~/MyGame/PerformanceCaptures/Level_Forest
+
+# Navigate to project (Windows)
+cd C:\Users\YourName\MyGame\PerformanceCaptures\Level_Forest
 
 # Run BobReview
 bobreview --dir . --title "Forest Level" --location "Dark Forest Section"
 
 # Review report
-open performance_report.html
+open performance_report.html     # macOS
+start performance_report.html    # Windows
+xdg-open performance_report.html # Linux
 
 # Regenerate uses cache (instant)
 bobreview --dir .
@@ -152,20 +166,49 @@ bobreview --dir . --clear-cache
 ## Tips
 
 ### Set Default API Key
-Add to `~/.bashrc`, `~/.zshrc`, or `~/.bash_profile`:
 
+**Linux/macOS:**
+Add to `~/.bashrc`, `~/.zshrc`, or `~/.bash_profile`:
 ```bash
 export OPENAI_API_KEY=sk-your-api-key-here
 ```
 
+**Windows PowerShell:**
+Add to your PowerShell profile:
+```powershell
+Add-Content $PROFILE "`n`$env:OPENAI_API_KEY='sk-your-api-key-here'"
+```
+
+**Windows Command Prompt:**
+Set via System Properties → Environment Variables
+
 ### Create Aliases
+
+**Linux/macOS:**
+Add to `~/.bashrc` or `~/.zshrc`:
 ```bash
 alias bob="bobreview --verbose"
 alias bobtest="bobreview --dry-run --verbose"
 alias bobquick="bobreview --sample 10"
 ```
 
-Usage:
+**Windows PowerShell:**
+Add to your PowerShell profile:
+```powershell
+function bob { bobreview --verbose @args }
+function bobtest { bobreview --dry-run --verbose @args }
+function bobquick { bobreview --sample 10 @args }
+```
+
+**Windows Command Prompt:**
+Create batch files in a directory in your PATH:
+```cmd
+@echo off
+:: bob.bat
+bobreview --verbose %*
+```
+
+Usage (all platforms):
 ```bash
 bob --dir ./screenshots
 bobtest --dir ./screenshots
@@ -173,10 +216,24 @@ bobquick --dir ./screenshots
 ```
 
 ### Batch Processing
+
+**Linux/macOS:**
 ```bash
 for dir in Level_*; do
   bobreview --dir "$dir" --output "${dir}_report.html" --location "$dir"
 done
+```
+
+**Windows PowerShell:**
+```powershell
+Get-ChildItem -Directory Level_* | ForEach-Object {
+  bobreview --dir $_.Name --output "$($_.Name)_report.html" --location $_.Name
+}
+```
+
+**Windows Command Prompt:**
+```cmd
+for /D %d in (Level_*) do bobreview --dir "%d" --output "%d_report.html" --location "%d"
 ```
 
 ---
@@ -194,7 +251,14 @@ python -m bobreview.cli --dir ./screenshots
 
 ### API Key Not Found
 ```bash
+# Linux/macOS
 export OPENAI_API_KEY=sk-your-api-key-here
+
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+
+# Windows Command Prompt
+set OPENAI_API_KEY=sk-your-api-key-here
 ```
 
 ### No PNG Files Found
