@@ -82,6 +82,9 @@ def _detect_outliers_iqr(values: List[float], indices: List[int]) -> List[Tuple[
     Returns:
         list: List of (index, value) tuples for outliers
     """
+    if len(values) != len(indices):
+        raise ValueError("values and indices must have the same length")
+    
     if len(values) < 4:
         return []
     
@@ -92,8 +95,8 @@ def _detect_outliers_iqr(values: List[float], indices: List[int]) -> List[Tuple[
     lower_bound = q1 - 1.5 * iqr
     upper_bound = q3 + 1.5 * iqr
     
-    outliers = [(indices[i], values[i]) for i in range(len(values)) 
-                if values[i] < lower_bound or values[i] > upper_bound]
+    outliers = [(idx, val) for idx, val in zip(indices, values)
+                if val < lower_bound or val > upper_bound]
     
     return outliers
 
@@ -111,6 +114,9 @@ def _detect_outliers_mad(values: List[float], indices: List[int], threshold: flo
     Returns:
         list: List of (index, value) tuples for outliers
     """
+    if len(values) != len(indices):
+        raise ValueError("values and indices must have the same length")
+    
     if len(values) < 3:
         return []
     
@@ -123,10 +129,10 @@ def _detect_outliers_mad(values: List[float], indices: List[int], threshold: flo
         return []
     
     # Modified z-scores
-    modified_z_scores = [0.6745 * (values[i] - median_val) / mad for i in range(len(values))]
+    modified_z_scores = [0.6745 * (val - median_val) / mad for val in values]
     
-    outliers = [(indices[i], values[i]) for i in range(len(values)) 
-                if abs(modified_z_scores[i]) > threshold]
+    outliers = [(idx, val) for idx, val, z_score in zip(indices, values, modified_z_scores)
+                if abs(z_score) > threshold]
     
     return outliers
 
@@ -136,10 +142,12 @@ def _calculate_frame_times(timestamps: List[int]) -> Dict[str, Any]:
     Calculate frame time statistics from timestamps.
     
     Parameters:
-        timestamps: List of timestamps (sorted)
+        timestamps: List of timestamps in temporal order (should be monotonically increasing)
     
     Returns:
-        dict: Frame time statistics including min, max, mean, median, and anomalies
+        dict: Frame time statistics including min, max, mean, median, and anomalies.
+              Anomalies are tuples of (frame_index, delta_time, timestamp) for frames
+              with unusually long frame times (>3x median).
     """
     if len(timestamps) < 2:
         return {
@@ -150,13 +158,14 @@ def _calculate_frame_times(timestamps: List[int]) -> Dict[str, Any]:
             'anomalies': []
         }
     
-    # Calculate deltas between consecutive frames
-    deltas = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)]
+    # Calculate deltas between consecutive frames with original indices
+    deltas_with_info = []
+    for i in range(len(timestamps) - 1):
+        delta = timestamps[i+1] - timestamps[i]
+        if delta >= 0:  # Only include valid (non-negative) deltas
+            deltas_with_info.append((i, delta, timestamps[i]))
     
-    # Remove negative deltas (in case timestamps aren't properly sorted)
-    deltas = [d for d in deltas if d >= 0]
-    
-    if not deltas:
+    if not deltas_with_info:
         return {
             'min': 0,
             'max': 0,
@@ -165,13 +174,14 @@ def _calculate_frame_times(timestamps: List[int]) -> Dict[str, Any]:
             'anomalies': []
         }
     
+    deltas = [d[1] for d in deltas_with_info]
     mean_delta = statistics.mean(deltas)
     median_delta = statistics.median(deltas)
     
     # Detect anomalies: frame times > 3x median (potential hitches)
     anomaly_threshold = median_delta * 3 if median_delta > 0 else mean_delta * 3
-    anomalies = [(i, deltas[i]) for i in range(len(deltas)) 
-                 if deltas[i] > anomaly_threshold and anomaly_threshold > 0]
+    anomalies = [(idx, delta, ts) for idx, delta, ts in deltas_with_info
+                 if delta > anomaly_threshold and anomaly_threshold > 0]
     
     return {
         'min': min(deltas),
@@ -254,16 +264,12 @@ def analyze_data(data_points: List[Dict[str, Any]], config) -> Dict[str, Any]:
     
     # Percentile analysis
     if n > 1:
+        # statistics.quantiles(data, n=100) returns exactly 99 elements (P1 to P99)
         draw_percentiles = statistics.quantiles(draws, n=100)
-        # P90 is at index 89 (90th percentile), P95 at 94, P99 at 98
-        draw_p90 = draw_percentiles[89] if len(draw_percentiles) >= 90 else max(draws)
-        draw_p95 = draw_percentiles[94] if len(draw_percentiles) >= 95 else max(draws)
-        draw_p99 = draw_percentiles[98] if len(draw_percentiles) >= 99 else max(draws)
+        draw_p90, draw_p95, draw_p99 = draw_percentiles[89], draw_percentiles[94], draw_percentiles[98]
         
         tri_percentiles = statistics.quantiles(tris, n=100)
-        tri_p90 = tri_percentiles[89] if len(tri_percentiles) >= 90 else max(tris)
-        tri_p95 = tri_percentiles[94] if len(tri_percentiles) >= 95 else max(tris)
-        tri_p99 = tri_percentiles[98] if len(tri_percentiles) >= 99 else max(tris)
+        tri_p90, tri_p95, tri_p99 = tri_percentiles[89], tri_percentiles[94], tri_percentiles[98]
     else:
         draw_p90 = draw_p95 = draw_p99 = draws[0]
         tri_p90 = tri_p95 = tri_p99 = tris[0]
@@ -272,8 +278,8 @@ def analyze_data(data_points: List[Dict[str, Any]], config) -> Dict[str, Any]:
     draw_ci = _calculate_confidence_interval(draws)
     tri_ci = _calculate_confidence_interval(tris)
     
-    # Frame time analysis
-    frame_times = _calculate_frame_times(sorted(timestamps))
+    # Frame time analysis (timestamps should already be in temporal order)
+    frame_times = _calculate_frame_times(timestamps)
     
     # Trend detection (using index as x-axis for temporal order)
     draw_slope, draw_intercept = _calculate_linear_regression(
