@@ -1,6 +1,7 @@
 # BobReview - Release Guide
 
-**Performance Analysis Tool for Game Development**  
+## Performance Analysis Tool for Game Development
+
 Version 1.0.1
 
 ---
@@ -10,7 +11,7 @@ Version 1.0.1
 ### 1. Extract the Files
 
 Extract the zip file to any location on your machine:
-```
+```text
 C:\Tools\bobreview\          (Windows)
 ~/Tools/bobreview/           (macOS/Linux)
 ```
@@ -66,12 +67,12 @@ You should see: `BobReview version 1.0.1`
 BobReview analyzes PNG screenshot files with performance data in the filename:
 
 **Format:**
-```
+```text
 TestCase_tricount_drawcalls_timestamp.png
 ```
 
 **Example:**
-```
+```text
 Level1_85000_520_1234567890.png
 ```
 
@@ -250,6 +251,7 @@ bobreview --dir /path/to/screenshots
 --sample N               # Process N random samples
 --verbose                # Show detailed output
 --clear-cache            # Force fresh analysis
+--no-embed-images        # Use external image files instead of embedding
 --help                   # Show all options
 
 # Check version

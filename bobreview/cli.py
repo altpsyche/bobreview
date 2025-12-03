@@ -365,7 +365,7 @@ Examples:
     log_info(f"  - Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
     
     if config.embed_images:
-        log_info(f"  - Images embedded as base64 (standalone HTML)", config)
+        log_info("  - Images embedded as base64 (standalone HTML)", config)
     
     if config.sample_size and config.sample_size < original_count:
         log_info(f"  - Sampled {config.sample_size} of {original_count} total samples", config)
