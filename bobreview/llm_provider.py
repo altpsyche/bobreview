@@ -4,6 +4,7 @@ LLM provider and prompt generation for BobReview.
 
 import os
 import re
+import statistics
 import time
 from typing import Dict, List, Any, Optional
 
@@ -307,13 +308,12 @@ Use HTML paragraph tags. Be technical but accessible."""
     results['tris'] = call_llm_chunked(prompt, tri_samples, config)
     
     # Temporal and Correlation sections
-    import statistics as stat
     timestamps = [p['ts'] for p in data_points]
     time_span = max(timestamps) - min(timestamps)
     avg_interval = time_span / (len(data_points) - 1) if len(data_points) > 1 else 0
     sorted_by_draws = sorted(data_points, key=lambda x: x['draws'])
-    low_draw_tris = stat.mean([p['tris'] for p in sorted_by_draws[:10]])
-    high_draw_tris = stat.mean([p['tris'] for p in sorted_by_draws[-10:]])
+    low_draw_tris = statistics.mean([p['tris'] for p in sorted_by_draws[:10]])
+    high_draw_tris = statistics.mean([p['tris'] for p in sorted_by_draws[-10:]])
     
     # Gather correlation data samples
     corr_samples = []

@@ -4,7 +4,7 @@ Statistical analysis utilities for BobReview.
 """
 
 import statistics
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any
 
 
 def analyze_data(data_points: List[Dict[str, Any]], config) -> Dict[str, Any]:
@@ -106,10 +106,11 @@ def format_data_table(
     from .utils import format_number
     
     total_samples = len(data_points)
+    display_points = data_points
     if max_rows is not None:
-        data_points = data_points[:max_rows]
+        display_points = data_points[:max_rows]
     
-    if not data_points:
+    if not display_points:
         return "No data available."
     
     # Create table header
@@ -117,7 +118,7 @@ def format_data_table(
     table += "|-------|-----------|------------|-----------|----------|\n"
     
     # Add rows
-    for idx, point in enumerate(data_points):
+    for idx, point in enumerate(display_points):
         table += f"| {idx} | {point['testcase']} | {point['draws']} | {format_number(point['tris'])} | {point['ts']} |\n"
     
     if max_rows is not None and total_samples > max_rows:

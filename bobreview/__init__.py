@@ -21,15 +21,15 @@ from .cli import main as cli_main
 generate_html = generate_html_report
 
 __all__ = [
-    '__version__',
     '__author__',
     '__description__',
-    'ReportConfig',
-    'parse_filename',
+    '__version__',
     'DataPoint',
+    'ReportConfig',
     'analyze_data',
-    'generate_html_report',
-    'generate_html',  # Legacy name
     'cli_main',
+    'generate_html',  # Legacy name
+    'generate_html_report',
+    'parse_filename',
 ]
 

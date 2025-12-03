@@ -25,9 +25,8 @@ try:
 except ImportError:
     TQDM_AVAILABLE = False
     class tqdm:
-        def __init__(self, iterable=None, desc=None, total=None, **kwargs):
+        def __init__(self, iterable=None, _desc=None, _total=None, **_kwargs):
             self.iterable = iterable
-            self.desc = desc
         def __iter__(self):
             return iter(self.iterable)
 

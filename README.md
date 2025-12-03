@@ -264,12 +264,14 @@ Path("report.html").write_text(html, encoding='utf-8')
 BobReview expects PNG files with performance data encoded in the filename:
 
 ### Format
-```
+
+```text
 TestCase_tricount_drawcalls_timestamp.png
 ```
 
 ### Example
-```
+
+```text
 Level1_85000_520_1234567890.png
 ```
 
@@ -280,14 +282,16 @@ Level1_85000_520_1234567890.png
 - `1234567890` - Unix timestamp (integer)
 
 ### Valid Examples
-```
+
+```text
 ForestArea_95000_580_1701234567.png
 City_120000_650_1701234568.png
 Boss_85000_520_1701234569.png
 ```
 
 ### Invalid Examples
-```
+
+```text
 screenshot.png                    # Missing data
 Level1_85000_520.png             # Missing timestamp
 Level1_abc_520_1234567890.png   # Non-numeric values
@@ -563,7 +567,7 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install BobReview
         run: pip install .
       - name: Analyze Performance
@@ -571,7 +575,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: bobreview --dir ./captures --output report.html
       - name: Upload Report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: performance-report
           path: report.html
