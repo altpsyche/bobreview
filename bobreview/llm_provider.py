@@ -198,21 +198,27 @@ def generate_executive_summary(
     critical_idx, critical_point = stats['critical']
     
     # Gather sample data points for context (critical, high-load, low-load)
+    # Use a set to track seen indices and avoid duplicates
     sample_data: List[Dict[str, Any]] = []
+    seen_indices: set[int] = set()
+    
     # Include critical hotspot when index is valid
     if 0 <= critical_idx < len(data_points):
         sample_data.append(data_points[critical_idx])
+        seen_indices.add(critical_idx)
     else:
         log_warning(f"Critical index {critical_idx} out of range for {len(data_points)} samples", config)
     
     # Include a few high-load and low-load samples
     for idx, _ in stats['high_load'][:2]:
-        if idx != critical_idx and idx < len(data_points):
+        if idx < len(data_points) and idx not in seen_indices:
             sample_data.append(data_points[idx])
+            seen_indices.add(idx)
     
     for idx, _ in stats['low_load'][:1]:
-        if idx < len(data_points):
+        if idx < len(data_points) and idx not in seen_indices:
             sample_data.append(data_points[idx])
+            seen_indices.add(idx)
     
     prompt = f"""You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:
 
@@ -454,12 +460,12 @@ Format as HTML with <ul> and <li> tags. Be specific and actionable."""
 
     results['critical'] = call_llm_chunked(prompt, critical_samples, config)
     
-    # High-geometry hotspots
-    high_geo_count = len([p for _, p in stats['high_load'] if p['tris'] >= config.high_load_tri_threshold])
-    high_geo_samples = []
+    # High-geometry hotspots - collect count and samples in single pass
+    high_geo_samples: List[Dict[str, Any]] = []
     for idx, point in stats['high_load']:
         if point['tris'] >= config.high_load_tri_threshold and idx < len(data_points):
             high_geo_samples.append(data_points[idx])
+    high_geo_count = len(high_geo_samples)
     
     prompt = f"""Generate optimization recommendations for high-geometry hotspots:
 
@@ -506,23 +512,29 @@ def generate_system_recommendations(
     results = {}
     
     # Gather representative data points from different performance zones
+    # Use a set to track seen indices and avoid duplicates
     sample_data: List[Dict[str, Any]] = []
+    seen_indices: set[int] = set()
+    
     # Critical hotspot
     critical_idx = stats['critical'][0]
     if 0 <= critical_idx < len(data_points):
         sample_data.append(data_points[critical_idx])
+        seen_indices.add(critical_idx)
     else:
         log_warning(f"Critical index {critical_idx} out of range for {len(data_points)} samples", config)
     
     # High-load samples
     for idx, _ in stats['high_load'][:3]:
-        if idx < len(data_points) and idx != critical_idx:
+        if idx < len(data_points) and idx not in seen_indices:
             sample_data.append(data_points[idx])
+            seen_indices.add(idx)
     
     # Low-load samples
     for idx, _ in stats['low_load'][:2]:
-        if idx < len(data_points):
+        if idx < len(data_points) and idx not in seen_indices:
             sample_data.append(data_points[idx])
+            seen_indices.add(idx)
     
     prompt = f"""Generate system-level performance optimization recommendations based on this analysis:
 
