@@ -23,7 +23,7 @@ Standard installation for most users:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/bobreview.git
+git clone https://github.com/DiggingNebula8/bobreview.git
 cd bobreview
 
 # Install
@@ -54,7 +54,7 @@ For developers modifying BobReview:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/bobreview.git
+git clone https://github.com/DiggingNebula8/bobreview.git
 cd bobreview
 
 # Install in editable mode

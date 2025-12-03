@@ -8,7 +8,7 @@ Get started with BobReview in 5 minutes.
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/bobreview.git
+git clone https://github.com/DiggingNebula8/bobreview.git
 cd bobreview
 
 # Install

@@ -83,7 +83,7 @@ Install BobReview as a global CLI command:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/bobreview.git
+git clone https://github.com/DiggingNebula8/bobreview.git
 cd bobreview
 
 # Install BobReview
@@ -592,7 +592,7 @@ Contributions are welcome. To contribute:
 ### Development Setup
 
 ```bash
-git clone https://github.com/yourusername/bobreview.git
+git clone https://github.com/DiggingNebula8/bobreview.git
 cd bobreview
 pip install -e ".[dev]"
 ```
