@@ -26,8 +26,11 @@ def read_requirements():
     requirements = []
     for line in requirements_file.read_text(encoding="utf-8").splitlines():
         line = line.strip()
+        # Remove inline comments
+        if "#" in line:
+            line = line.split("#")[0].strip()
         # Skip empty lines and comments
-        if line and not line.startswith("#"):
+        if line:
             requirements.append(line)
     
     return requirements
