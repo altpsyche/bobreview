@@ -195,13 +195,15 @@ def generate_executive_summary(
     _images_dir_rel: str,
 ) -> str:
     """Generate executive summary using LLM."""
-    critical_idx = stats['critical'][0]
-    critical_point = stats['critical'][1]
+    critical_idx, critical_point = stats['critical']
     
     # Gather sample data points for context (critical, high-load, low-load)
-    sample_data = []
-    # Include critical hotspot
-    sample_data.append(data_points[critical_idx])
+    sample_data: List[Dict[str, Any]] = []
+    # Include critical hotspot when index is valid
+    if 0 <= critical_idx < len(data_points):
+        sample_data.append(data_points[critical_idx])
+    else:
+        log_warning(f"Critical index {critical_idx} out of range for {len(data_points)} samples", config)
     
     # Include a few high-load and low-load samples
     for idx, _ in stats['high_load'][:2]:
@@ -422,11 +424,14 @@ def generate_optimization_checklist(
     """Generate optimization checklist using LLM."""
     results = {}
     
-    critical_idx = stats['critical'][0]
-    critical_point = stats['critical'][1]
+    critical_idx, critical_point = stats['critical']
     
     # Critical hotspot analysis - use the critical data point
-    critical_samples = [data_points[critical_idx]] if critical_idx < len(data_points) else []
+    critical_samples: List[Dict[str, Any]] = []
+    if 0 <= critical_idx < len(data_points):
+        critical_samples.append(data_points[critical_idx])
+    else:
+        log_warning(f"Critical index {critical_idx} out of range for {len(data_points)} samples", config)
     
     prompt = f"""Generate optimization recommendations for a critical performance hotspot:
 
@@ -501,11 +506,13 @@ def generate_system_recommendations(
     results = {}
     
     # Gather representative data points from different performance zones
-    sample_data = []
+    sample_data: List[Dict[str, Any]] = []
     # Critical hotspot
     critical_idx = stats['critical'][0]
-    if critical_idx < len(data_points):
+    if 0 <= critical_idx < len(data_points):
         sample_data.append(data_points[critical_idx])
+    else:
+        log_warning(f"Critical index {critical_idx} out of range for {len(data_points)} samples", config)
     
     # High-load samples
     for idx, _ in stats['high_load'][:3]:
