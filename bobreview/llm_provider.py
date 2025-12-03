@@ -180,9 +180,11 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
         return results[0]
     else:
         # Ask LLM to combine the chunked results
+        # Build the chunks text separately to avoid backslash in f-string expression
+        chunks_text = '\n'.join([f"Chunk {i+1}:\n{result}" for i, result in enumerate(results)])
         combine_prompt = f"""You have analyzed performance data in {len(results)} chunks. Combine these analyses into a single coherent response:
 
-{'\n'.join([f"Chunk {i+1}:\n{result}" for i, result in enumerate(results)])}
+{chunks_text}
 
 Provide a unified analysis that integrates all the information from these chunks."""
         return call_llm(combine_prompt, data_table=None, config=config)
