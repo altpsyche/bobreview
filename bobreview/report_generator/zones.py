@@ -4,13 +4,12 @@ Zones and hotspots page generator for performance analysis.
 """
 
 from html import escape
-from typing import Dict, List, Any
+from typing import Dict, Any
 from .base import get_html_template, get_page_header, get_image_src
 from ..utils import format_number
 
 
 def generate_zones_page(
-    data_points: List[Dict[str, Any]], 
     stats: Dict[str, Any], 
     images_dir_rel: str,
     image_data_uris: Dict[str, str],
@@ -21,7 +20,6 @@ def generate_zones_page(
     Generate the zones and hotspots analysis page.
     
     Parameters:
-        data_points: List of parsed capture records
         stats: Aggregated analysis results
         images_dir_rel: Relative path to images directory
         image_data_uris: Mapping of image names to base64 data URIs

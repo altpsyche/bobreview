@@ -135,7 +135,7 @@ def generate_html_report(
     pages = [
         ("index.html", lambda: generate_homepage(stats, config, exec_summary)),
         ("metrics.html", lambda: generate_metrics_page(data_points, stats, config, metric_content)),
-        ("zones.html", lambda: generate_zones_page(data_points, stats, images_dir_rel, image_data_uris, config, zones_content)),
+        ("zones.html", lambda: generate_zones_page(stats, images_dir_rel, image_data_uris, config, zones_content)),
         ("visuals.html", lambda: generate_visuals_page(data_points, stats, config, visual_analysis_content)),
         ("optimization.html", lambda: generate_optimization_page(data_points, stats, images_dir_rel, image_data_uris, config, optimization_content, system_recs)),
         ("stats.html", lambda: generate_stats_page(data_points, stats, images_dir_rel, image_data_uris, config, statistical_interpretation)),
