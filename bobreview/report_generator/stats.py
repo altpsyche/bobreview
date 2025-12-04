@@ -337,5 +337,7 @@ register_page(PageDefinition(
     llm_section='Statistical Interpretation',
     page_generator=generate_stats_page,
     requires_images=True,
-    requires_data_points=True
+    requires_data_points=True,
+    card_icon='fa-calculator',
+    card_description='Comprehensive statistical analysis including percentiles, confidence intervals, and outlier detection.'
 ))

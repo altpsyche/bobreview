@@ -104,7 +104,7 @@ Data Table:
                 model=config.openai_model,
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=config.llm_temperature,
-                max_tokens=2000
+                max_tokens=config.llm_max_tokens
             )
             # Clean the response to remove markdown code fences
             result = clean_llm_response(response.choices[0].message.content)

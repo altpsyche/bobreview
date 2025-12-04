@@ -23,6 +23,8 @@ class PageDefinition:
         page_generator: Function that generates the page HTML
         requires_images: Whether this page needs image data
         requires_data_points: Whether this page needs raw data points
+        card_icon: FontAwesome icon class for homepage card (e.g., 'fa-chart-line')
+        card_description: Short description for homepage card
     """
     id: str
     filename: str
@@ -32,6 +34,8 @@ class PageDefinition:
     page_generator: Callable[..., str]
     requires_images: bool = False
     requires_data_points: bool = False
+    card_icon: str = "fa-file"  # Default icon
+    card_description: str = ""  # For homepage feature cards
 
 
 # Global registry of all pages

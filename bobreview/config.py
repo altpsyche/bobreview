@@ -22,10 +22,12 @@ class ReportConfig:
     low_load_draw_threshold: int = 400
     low_load_tri_threshold: int = 50000
     outlier_sigma: float = 2.0
+    mad_threshold: float = 3.5  # MAD threshold for outlier detection
     enable_recommendations: bool = True
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o"
     llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000  # Max tokens for LLM responses
     image_chunk_size: int = 10  # Number of data samples to send per LLM call
     cache_dir: Path = Path(".bobreview_cache")
     use_cache: bool = True

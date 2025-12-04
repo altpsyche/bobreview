@@ -208,5 +208,7 @@ register_page(PageDefinition(
     llm_section='Zones & Hotspots',
     page_generator=generate_zones_page,
     requires_images=True,
-    requires_data_points=False
+    requires_data_points=False,
+    card_icon='fa-fire',
+    card_description='Identify high-load and low-load frames, critical hotspots, and performance zones requiring optimization.'
 ))

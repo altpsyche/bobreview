@@ -311,5 +311,7 @@ register_page(PageDefinition(
     llm_section='Metric Deep Dive',
     page_generator=generate_metrics_page,
     requires_images=False,
-    requires_data_points=True
+    requires_data_points=True,
+    card_icon='fa-chart-line',
+    card_description='Detailed statistical analysis of draw calls and triangle counts with interactive timelines and correlation charts.'
 ))

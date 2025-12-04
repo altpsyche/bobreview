@@ -289,5 +289,7 @@ register_page(PageDefinition(
     llm_section='Visual Analysis',
     page_generator=generate_visuals_page,
     requires_images=False,
-    requires_data_points=True
+    requires_data_points=True,
+    card_icon='fa-chart-bar',
+    card_description='Distribution histograms and visual breakdowns showing performance patterns across all captures.'
 ))

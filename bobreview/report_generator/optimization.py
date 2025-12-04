@@ -228,5 +228,7 @@ register_page(PageDefinition(
     llm_section='Optimization Checklist',
     page_generator=generate_optimization_page,
     requires_images=True,
-    requires_data_points=True
+    requires_data_points=True,
+    card_icon='fa-tasks',
+    card_description='Actionable recommendations for addressing critical hotspots and high-load frames with budget guidelines.'
 ))

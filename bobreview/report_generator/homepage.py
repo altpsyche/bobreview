@@ -12,8 +12,42 @@ from .base import (
     render_stat_card,
     render_stats_item
 )
-from .registry import register_page, PageDefinition, get_nav_items
+from .registry import register_page, PageDefinition, get_nav_items, get_enabled_pages
 from ..utils import format_number
+
+
+def _generate_feature_cards(stats: Dict[str, Any]) -> str:
+    """
+    Generate feature cards dynamically from the page registry.
+    Excludes the homepage itself.
+    """
+    cards = []
+    for page in get_enabled_pages():
+        if page.id == 'home':  # Skip homepage
+            continue
+        if not page.card_description:  # Skip pages without card info
+            continue
+        
+        # Build dynamic pills based on page type
+        pills = ""
+        if page.id == 'zones':
+            pills = f'''<div class="pill-row" style="margin-top: 12px;">
+                <span class="pill danger">{len(stats['high_load'])} high-load</span>
+                <span class="pill ok">{len(stats['low_load'])} low-load</span>
+              </div>'''
+        
+        cards.append(f'''
+        <a href="{page.filename}" style="text-decoration: none;">
+          <div class="feature-card">
+            <div class="icon"><i class="fas {page.card_icon}"></i></div>
+            <h3>{page.nav_label}</h3>
+            <p>{page.card_description}</p>
+            {pills}
+          </div>
+        </a>''')
+    
+    return '\n'.join(cards)
+
 
 
 def generate_homepage(
@@ -119,71 +153,8 @@ def generate_homepage(
       <p class="body-text">Explore different aspects of the performance analysis:</p>
       
       <div class="card-grid">
-        <a href="metrics.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-chart-line"></i></div>
-            <h3>Metric Deep Dive</h3>
-            <p>Detailed statistical analysis of draw calls and triangle counts with interactive timelines and correlation charts.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Timeline charts</span>
-              <span class="pill">Scatter plots</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="zones.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-fire"></i></div>
-            <h3>Zones & Hotspots</h3>
-            <p>Identify high-load and low-load frames, critical hotspots, and performance zones requiring optimization.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill danger">{len(stats['high_load'])} high-load</span>
-              <span class="pill ok">{len(stats['low_load'])} low-load</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="visuals.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-chart-bar"></i></div>
-            <h3>Visual Analysis</h3>
-            <p>Distribution histograms and visual breakdowns showing performance patterns across all captures.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Histograms</span>
-              <span class="pill">Distributions</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="optimization.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-tasks"></i></div>
-            <h3>Optimization Checklist</h3>
-            <p>Actionable recommendations for addressing critical hotspots and high-load frames with budget guidelines.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Budgets</span>
-              <span class="pill">Recommendations</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="stats.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-calculator"></i></div>
-            <h3>Statistical Summary</h3>
-            <p>Comprehensive statistical analysis including percentiles, confidence intervals, and outlier detection.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Percentiles</span>
-              <span class="pill">Outliers</span>
-            </div>
-          </div>
-        </a>
-        
-        <div class="feature-card" style="opacity: 0.6; cursor: default;">
-          <div class="icon"><i class="fas fa-table"></i></div>
-          <h3>Full Sample Table</h3>
-          <p>Complete capture list with all frames. View all {stats['count']} captures with timestamps, metrics, and thumbnails.</p>
-        </div>
+        {_generate_feature_cards(stats)}
+      </div>
       </div>
     </section>
     
