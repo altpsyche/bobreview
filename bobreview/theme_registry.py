@@ -97,7 +97,7 @@ def register_theme(theme: ReportTheme) -> None:
     _THEME_REGISTRY[theme.id] = theme
 
 
-def get_theme(theme_id: str = None) -> ReportTheme:
+def get_theme(theme_id: Optional[str] = None) -> ReportTheme:
     """
     Get a theme by ID.
     
@@ -127,7 +127,7 @@ def get_all_themes() -> Dict[str, ReportTheme]:
     return _THEME_REGISTRY.copy()
 
 
-def get_theme_css_variables(theme_id: str = None) -> str:
+def get_theme_css_variables(theme_id: Optional[str] = None) -> str:
     """
     Generate CSS :root block with theme variables.
     

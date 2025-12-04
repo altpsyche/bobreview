@@ -123,13 +123,27 @@ def copy_css_to_output(output_dir: Path) -> Path:
     
     Returns:
         Path: Path to the copied CSS file
+    
+    Raises:
+        FileNotFoundError: If source CSS file doesn't exist
+        PermissionError: If insufficient permissions to write to output directory
+        OSError: If other filesystem errors occur (disk full, etc.)
     """
     import shutil
     from pathlib import Path
     
     source = get_css_source_path()
     dest = Path(output_dir) / "styles.css"
-    shutil.copy2(source, dest)
+    
+    try:
+        shutil.copy2(source, dest)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"CSS source file not found: {source}") from e
+    except PermissionError as e:
+        raise PermissionError(f"Permission denied writing CSS to: {dest}") from e
+    except OSError as e:
+        raise OSError(f"Failed to copy CSS file from {source} to {dest}: {e}") from e
+    
     return dest
 
 

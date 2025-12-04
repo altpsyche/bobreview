@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..config import ReportConfig
+    from .config import ReportConfig
 
 
 # Type alias for generator function signature

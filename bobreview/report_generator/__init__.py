@@ -166,9 +166,16 @@ def generate_html_report(
     # Copy CSS file if using linked CSS mode
     if config.linked_css:
         from .base import copy_css_to_output
-        css_path = copy_css_to_output(output_dir)
-        generated_files.append(str(css_path))
-        log_info(f"Created external CSS: {css_path}", config)
+        try:
+            css_path = copy_css_to_output(output_dir)
+            generated_files.append(str(css_path))
+            log_info(f"Created external CSS: {css_path}", config)
+        except FileNotFoundError as e:
+            log_warning(f"CSS file copy failed: {e}. Pages may not display correctly.", config)
+        except PermissionError as e:
+            log_warning(f"CSS file copy failed: {e}. Check directory permissions.", config)
+        except OSError as e:
+            log_warning(f"CSS file copy failed: {e}. Pages may not display correctly.", config)
     
     log_info(f"Generated {len(generated_files)} files in {output_dir}", config)
     
