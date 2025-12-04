@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config-Based Thresholds**: Moved hardcoded values to `ReportConfig`
   - `mad_threshold: float = 3.5` for MAD outlier detection
   - `llm_max_tokens: int = 2000` for LLM response limits
+  - `theme_id: str = 'dark'` for centralized theme selection
+
+- **Theme CLI Option**: New `--theme` flag
+  - `bobreview --dir . --theme light`
+  - Options: dark (default), light, high_contrast
 
 ### Changed
 - **LLM Prompt Categories**: All 7 generators now use configurable `PromptCategory` lists

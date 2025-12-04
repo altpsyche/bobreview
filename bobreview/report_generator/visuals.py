@@ -151,7 +151,7 @@ def generate_visuals_page(
         }}
 
         // Chart.js default configuration
-        {get_chart_defaults_js()}
+        {get_chart_defaults_js(config.theme_id)}
 
         // Histogram - Draw Calls Distribution
         try {{
@@ -275,7 +275,7 @@ def generate_visuals_page(
     </script>
 """
     
-    return get_html_template(f"{config.title} - Visual Analysis", body_content, include_chartjs=True, linked_css=config.linked_css)
+    return get_html_template(f"{config.title} - Visual Analysis", body_content, include_chartjs=True, linked_css=config.linked_css, theme_id=config.theme_id)
 
 
 # Register this page

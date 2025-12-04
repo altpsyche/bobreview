@@ -16,7 +16,7 @@ from .base import (
 )
 from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
-from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart, get_chart_theme
+from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart
 
 
 def generate_metrics_page(
@@ -117,7 +117,7 @@ def generate_metrics_page(
         }}
 
         // Chart.js default configuration
-        {get_chart_defaults_js()}
+        {get_chart_defaults_js(config.theme_id)}
 
         // Timeline - Draw Calls
         try {{
@@ -297,7 +297,7 @@ def generate_metrics_page(
     </script>
 """
     
-    return get_html_template(f"{config.title} - Metrics", body_content, include_chartjs=True, linked_css=config.linked_css)
+    return get_html_template(f"{config.title} - Metrics", body_content, include_chartjs=True, linked_css=config.linked_css, theme_id=config.theme_id)
 
 
 # Register this page

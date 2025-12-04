@@ -5,9 +5,8 @@ This module provides a registry pattern for chart configurations,
 allowing centralized theme management and chart type definitions.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
-import json
+from dataclasses import dataclass
+from typing import Dict, Optional
 
 
 @dataclass

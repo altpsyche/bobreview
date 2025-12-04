@@ -325,7 +325,7 @@ IQR:       {format_number(stats['tris']['q3'] - stats['tris']['q1'])}</div>
     </div>
 """
     
-    return get_html_template(f"{config.title} - Statistics", body_content, include_chartjs=False, linked_css=config.linked_css)
+    return get_html_template(f"{config.title} - Statistics", body_content, include_chartjs=False, linked_css=config.linked_css, theme_id=config.theme_id)
 
 
 # Register this page

@@ -9,6 +9,7 @@ Version 1.0.3
 - **LLM Generator Registry**: Self-registration pattern for AI content generators with configurable prompt categories
 - **Chart Configuration Registry**: Centralized Chart.js datasets and configs, auto-syncs with report theme
 - **Report Theme Registry**: 3 themes (dark, light, high_contrast) with 17 CSS variable mappings
+- **Theme CLI Option**: New `--theme` flag to switch report appearance
 - **Dynamic Homepage Navigation**: Cards auto-generated from page registry with icons and descriptions
 - **Config-Based Thresholds**: MAD threshold and LLM max tokens now configurable via `ReportConfig`
 
@@ -131,6 +132,9 @@ bobreview --dir . --dry-run
 
 # Process only 20 random samples (for quick testing)
 bobreview --dir . --sample 20
+
+# Use light theme
+bobreview --dir . --theme light
 
 # See all available options
 bobreview --help
@@ -261,6 +265,7 @@ bobreview --dir /path/to/screenshots
 --clear-cache            # Force fresh analysis
 --no-embed-images        # Use external image files instead of embedding
 --linked-css             # Use external CSS file (styles.css)
+--theme THEME            # Report theme: dark (default), light, high_contrast
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --help                   # Show all options
 

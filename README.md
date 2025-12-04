@@ -784,28 +784,37 @@ register_llm_generator(LLMGeneratorDefinition(
 
 ### Customizing Report Appearance
 
-Reports use the theme registry for colors, fonts, and styling:
+**Set theme in config (recommended):**
 
 ```python
-from bobreview.theme_registry import register_theme, get_theme, ReportTheme
+from bobreview import ReportConfig
 
-# Use a built-in theme: 'dark' (default), 'light', or 'high_contrast'
-theme = get_theme('light')
+# Built-in themes: 'dark' (default), 'light', 'high_contrast'
+config = ReportConfig(theme_id='light')
+```
 
-# Or create a custom theme
+**Or via CLI:**
+```bash
+bobreview --dir . --theme light
+```
+
+**Create a custom theme:**
+
+```python
+from bobreview.theme_registry import register_theme, ReportTheme
+
 register_theme(ReportTheme(
     id='brand',
     name='Brand Theme',
     bg='#1a1a2e',
-    bg_elevated='#16213e',
     accent='#e94560',
     text_main='#ffffff',
     text_soft='#aaaaaa',
-    border_subtle='#333333',
-    danger='#ff4444',
-    warn='#ffaa00',
-    ok='#00cc66'
+    border_subtle='#333333'
 ))
+
+# Then use it
+config = ReportConfig(theme_id='brand')
 ```
 
 **Available CSS variables**: `bg`, `bg_elevated`, `bg_soft`, `accent`, `accent_soft`, `accent_strong`, `text_main`, `text_soft`, `border_subtle`, `danger`, `warn`, `ok`, `font_mono`, `font_sans`, `radius_lg`, `radius_md`, `shadow_soft`

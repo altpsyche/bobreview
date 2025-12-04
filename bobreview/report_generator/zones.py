@@ -196,7 +196,7 @@ def generate_zones_page(
     </div>
 """
     
-    return get_html_template(f"{config.title} - Zones & Hotspots", body_content, include_chartjs=False, linked_css=config.linked_css)
+    return get_html_template(f"{config.title} - Zones & Hotspots", body_content, include_chartjs=False, linked_css=config.linked_css, theme_id=config.theme_id)
 
 
 # Register this page

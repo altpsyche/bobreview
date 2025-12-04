@@ -118,6 +118,12 @@ bobreview --dir ./screenshots \
   --tri-hard-cap 150000
 ```
 
+### Change Theme
+```bash
+bobreview --dir ./screenshots --theme light
+# Options: dark (default), light, high_contrast
+```
+
 ### Standalone HTML (Embedded Images)
 ```bash
 bobreview --dir ./screenshots
