@@ -155,7 +155,6 @@ def generate_homepage(
       <div class="card-grid">
         {_generate_feature_cards(stats)}
       </div>
-      </div>
     </section>
     
     <!-- Quick Stats Section -->

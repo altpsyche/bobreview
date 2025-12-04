@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from .cache import get_cache
 from .utils import log_verbose, log_warning, format_number
 from .analysis import format_data_table
+from .llm_registry import register_llm_generator, LLMGeneratorDefinition
 
 # Check for OpenAI availability
 try:
@@ -712,3 +713,46 @@ Use HTML paragraph tags (<p>). Be practical and actionable."""
 
     return call_llm(prompt, data_table=None, config=config)
 
+
+# Register all LLM generators
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Executive Summary',
+    generator_func=generate_executive_summary,
+    description='High-level performance overview and key findings'
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Metric Deep Dive',
+    generator_func=generate_metric_deep_dive,
+    description='Detailed draw calls and triangle count analysis'
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Zones & Hotspots',
+    generator_func=generate_zones_hotspots,
+    description='High-load and low-load frame analysis'
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Visual Analysis',
+    generator_func=generate_visual_analysis,
+    description='Distribution chart interpretation'
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Statistical Interpretation',
+    generator_func=generate_statistical_interpretation,
+    description='Advanced statistical metrics interpretation'
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Optimization Checklist',
+    generator_func=generate_optimization_checklist,
+    description='Actionable optimization recommendations'
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='System Recommendations',
+    generator_func=generate_system_recommendations,
+    description='System-level architecture improvements'
+))

@@ -10,18 +10,13 @@ from pathlib import Path
 from typing import Dict, List, Any
 
 from ..utils import log_info, log_verbose, image_to_base64, log_warning
-from ..llm_provider import (
-    generate_executive_summary,
-    generate_metric_deep_dive,
-    generate_zones_hotspots,
-    generate_optimization_checklist,
-    generate_system_recommendations,
-    generate_visual_analysis,
-    generate_statistical_interpretation
-)
 
 # Import registry
 from .registry import get_enabled_pages, get_all_pages, set_disabled_pages
+from ..llm_registry import get_llm_generator, has_llm_generator
+
+# Import llm_provider to trigger LLM generator registrations
+from .. import llm_provider  # noqa: F401
 
 # Import all page modules to trigger their registration
 from . import homepage
@@ -42,18 +37,6 @@ except ImportError:
             self.iterable = iterable
         def __iter__(self):
             return iter(self.iterable)
-
-
-# Mapping from llm_section names to generator functions
-LLM_GENERATORS = {
-    'Executive Summary': generate_executive_summary,
-    'Metric Deep Dive': generate_metric_deep_dive,
-    'Zones & Hotspots': generate_zones_hotspots,
-    'Visual Analysis': generate_visual_analysis,
-    'Statistical Interpretation': generate_statistical_interpretation,
-    'Optimization Checklist': generate_optimization_checklist,
-    'System Recommendations': generate_system_recommendations,
-}
 
 
 def generate_html_report(
@@ -114,9 +97,9 @@ def generate_html_report(
     log_info("Generating LLM content for enabled pages...", config)
     
     sections = [
-        (section_name, lambda s=section_name: LLM_GENERATORS[s](data_points, stats, config, str(images_dir_abs)))
+        (section_name, lambda s=section_name: get_llm_generator(s)(data_points, stats, config, str(images_dir_abs)))
         for section_name in needed_sections
-        if section_name in LLM_GENERATORS
+        if has_llm_generator(section_name)
     ]
     
     if TQDM_AVAILABLE and not config.quiet:
@@ -162,7 +145,7 @@ def generate_html_report(
             kwargs['zones_content'] = llm_content
         elif page.id == 'visuals':
             kwargs['data_points'] = data_points
-            kwargs['visual_analysis_content'] = llm_content  # Fixed: was 'visual_content'
+            kwargs['visual_analysis_content'] = llm_content
         elif page.id == 'optimization':
             kwargs['data_points'] = data_points
             kwargs['images_dir_rel'] = images_dir_rel
@@ -173,7 +156,7 @@ def generate_html_report(
             kwargs['data_points'] = data_points
             kwargs['images_dir_rel'] = images_dir_rel
             kwargs['image_data_uris'] = image_data_uris
-            kwargs['statistical_interpretation'] = llm_content  # Fixed: was 'stats_content'
+            kwargs['statistical_interpretation'] = llm_content
         
         html_content = page.page_generator(**kwargs)
         page_path.write_text(html_content, encoding='utf-8')
