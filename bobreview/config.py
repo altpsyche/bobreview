@@ -39,7 +39,7 @@ class ReportConfig:
     embed_images: bool = True  # Embed images as base64 in HTML for standalone sharing
     linked_css: bool = False  # Use external CSS file instead of embedding
     theme_id: str = 'dark'  # Report theme: 'dark', 'light', 'high_contrast', or custom
-    disabled_pages: List[str] = None  # List of page IDs to exclude (e.g., ['stats', 'visuals'])
+    disabled_pages: Optional[List[str]] = None  # List of page IDs to exclude (e.g., ['stats', 'visuals'])
     
     def __post_init__(self):
         """Initialize mutable defaults."""
