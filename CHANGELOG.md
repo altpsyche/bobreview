@@ -19,18 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 7 LLM generators now self-register with configurable categories
   
 - **Chart Configuration Registry** (`chart_registry.py`): Centralized Chart.js configuration
-  - `ChartTheme` dataclass with `grid_opacity` for controllable transparency
   - `ChartDataset` dataclass for dataset colors and point styles
   - `ChartConfig` dataclass for chart type, axis labels, and aspect ratios
-  - `get_chart_theme()` auto-syncs with report theme - no pre-registration needed
   - Pre-registered: 4 datasets (draws, tris, histograms), 5 chart configs
   - Helper functions: `get_chart_defaults_js()`, `get_dataset()`, `get_chart()`
+  - Chart colors pulled directly from `ReportTheme`
 
 - **Report Theme Registry** (`theme_registry.py`): Centralized HTML report styling
-  - `ReportTheme` dataclass with 17 CSS variable mappings (colors, fonts, borders)
+  - `ReportTheme` dataclass with 18 properties (colors, fonts, borders, chart_grid_opacity)
   - 3 pre-registered themes: dark (default), light, high_contrast
   - `get_theme_css_variables()` generates CSS :root block for theme switching
-  - Chart registry auto-syncs colors from active report theme
+  - Charts read colors directly from active report theme
 
 - **Dynamic Homepage Navigation**: Homepage cards now generated from page registry
   - Extended `PageDefinition` with `card_icon` and `card_description` fields
@@ -57,9 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - System Recommendations: 5 categories (lod, occlusion, lighting, materials, regression)
 
 - **Chart.js Defaults**: Moved from hardcoded in metrics.py/visuals.py to chart registry
-  - Chart themes auto-sync from report theme registry
-  - Configurable `grid_opacity` parameter (0.0-1.0)
-  - Custom overrides via `register_chart_theme()`
+  - Chart colors/fonts read directly from report theme
+  - `chart_grid_opacity` property on ReportTheme (0.0-1.0)
 
 ### Technical Details
 - New files: `bobreview/llm_registry.py`, `bobreview/chart_registry.py`, `bobreview/theme_registry.py`

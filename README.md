@@ -817,37 +817,24 @@ register_theme(ReportTheme(
 config = ReportConfig(theme_id='brand')
 ```
 
-**Available CSS variables**: `bg`, `bg_elevated`, `bg_soft`, `accent`, `accent_soft`, `accent_strong`, `text_main`, `text_soft`, `border_subtle`, `danger`, `warn`, `ok`, `font_mono`, `font_sans`, `radius_lg`, `radius_md`, `shadow_soft`
+**Available properties**: `bg`, `bg_elevated`, `bg_soft`, `accent`, `accent_soft`, `accent_strong`, `text_main`, `text_soft`, `border_subtle`, `danger`, `warn`, `ok`, `font_mono`, `font_sans`, `radius_lg`, `radius_md`, `shadow_soft`, `chart_grid_opacity`
 
 ### Customizing Chart Appearance
 
-Chart themes auto-sync from the report theme registry. To customize:
+Charts use colors directly from `ReportTheme`. To customize:
 
 ```python
-# Option 1: Override chart theme specifically
-from bobreview.chart_registry import register_chart_theme, ChartTheme
-
-register_chart_theme(ChartTheme(
-    id='dark',
-    text_color='#cccccc',
-    border_color='#444444',
-    grid_color='#444444',
-    grid_opacity=0.3  # Control grid transparency (0.0-1.0)
-))
-
-# Option 2: Use a different report theme (charts auto-sync)
 from bobreview.theme_registry import register_theme, ReportTheme
 
+# Custom theme with adjusted chart grid opacity
 register_theme(ReportTheme(
     id='custom',
     name='Custom Theme',
-    bg='#1a1a2e',
-    accent='#e94560',
-    text_main='#ffffff',
-    text_soft='#aaaaaa',
-    border_subtle='#333333'
+    text_soft='#aaaaaa',      # Chart text color
+    border_subtle='#333333',  # Chart grid color
+    chart_grid_opacity=0.3    # Subtle grid lines (0.0-1.0)
 ))
-# Charts using 'custom' theme will auto-sync these colors
+```
 
 # Add custom dataset styles
 from bobreview.chart_registry import register_dataset, ChartDataset

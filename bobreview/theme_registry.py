@@ -80,6 +80,9 @@ class ReportTheme:
     # Fonts
     font_mono: str = '"SF Mono", Menlo, Consolas, monospace'
     font_sans: str = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    
+    # Chart styling
+    chart_grid_opacity: float = 0.5
 
 
 # Global theme registry

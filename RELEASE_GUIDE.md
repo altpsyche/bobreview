@@ -7,8 +7,8 @@ Version 1.0.3
 ### What's New in v1.0.3
 
 - **LLM Generator Registry**: Self-registration pattern for AI content generators with configurable prompt categories
-- **Chart Configuration Registry**: Centralized Chart.js datasets and configs, auto-syncs with report theme
-- **Report Theme Registry**: 3 themes (dark, light, high_contrast) with 17 CSS variable mappings
+- **Chart Configuration Registry**: Centralized Chart.js datasets and configs
+- **Report Theme Registry**: 3 themes (dark, light, high_contrast) with 18 properties including `chart_grid_opacity`
 - **Theme CLI Option**: New `--theme` flag to switch report appearance
 - **Dynamic Homepage Navigation**: Cards auto-generated from page registry with icons and descriptions
 - **Config-Based Thresholds**: MAD threshold and LLM max tokens now configurable via `ReportConfig`
