@@ -577,14 +577,14 @@ def get_page_header(title: str, subtitle: str = "", nav_items: Optional[List[tup
         nav_links = []
         for label, url, is_active in nav_items:
             active_class = ' class="active"' if is_active else ''
-            nav_links.append(f'<a href="{url}"{active_class}>{label}</a>')
+            nav_links.append(f'<a href="{escape(url)}"{active_class}>{escape(label)}</a>')
         nav_html = f'<div class="nav-links">{" ".join(nav_links)}</div>'
     
-    subtitle_html = f'<div class="meta"><span>{subtitle}</span></div>' if subtitle else ''
+    subtitle_html = f'<div class="meta"><span>{escape(subtitle)}</span></div>' if subtitle else ''
     
     return f"""
     <header>
-      <h1>{title}</h1>
+      <h1>{escape(title)}</h1>
       {subtitle_html}
     </header>
     {nav_html}
@@ -611,7 +611,7 @@ def get_html_template(title: str, body_content: str, include_chartjs: bool = Fal
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>{title}</title>
+  <title>{escape(title)}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   {chartjs_script}
