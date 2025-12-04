@@ -187,7 +187,7 @@ IQR:       {format_number(stats['tris']['q3'] - stats['tris']['q1'])}</div>
       <div class="stats-grid">
         <div class="stats-item">
           <div class="stats-item-label">Sigma Method (±{config.outlier_sigma}σ)</div>
-          <div class="stats-item-value">{len(stats['tris']['outliers_high'])} outliers</div>
+          <div class="stats-item-value">{len(stats['tris']['outliers_high']) + len(stats['tris']['outliers_low'])} outliers</div>
         </div>
         <div class="stats-item">
           <div class="stats-item-label">IQR Method</div>
