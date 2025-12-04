@@ -352,7 +352,7 @@ Advanced Metrics:
 - Trend: {stats['trends']['tris']['direction']} (slope: {format_number(stats['trends']['tris']['slope'], 1)})
 
 Outlier Detection (Multiple Methods):
-- Sigma method (>2 sigma): {len(stats['tris']['outliers_high'])} high outliers
+- Sigma method (>2 sigma): {len(stats['tris']['outliers_high'])} high, {len(stats['tris']['outliers_low'])} low
 - IQR method: {len(stats['outliers_iqr']['tris'])} outliers
 - MAD method (robust): {len(stats['outliers_mad']['tris'])} outliers
 - Hard cap threshold: {format_number(config.tri_hard_cap, 0)}
@@ -697,7 +697,7 @@ Frame Time Analysis:
 
 Outlier Detection Consensus:
 - Draws: Sigma method ({len(stats['draws']['outliers_high']) + len(stats['draws']['outliers_low'])}), IQR ({len(stats['outliers_iqr']['draws'])}), MAD ({len(stats['outliers_mad']['draws'])})
-- Triangles: Sigma method ({len(stats['tris']['outliers_high'])}), IQR ({len(stats['outliers_iqr']['tris'])}), MAD ({len(stats['outliers_mad']['tris'])})
+- Triangles: Sigma method ({len(stats['tris']['outliers_high']) + len(stats['tris']['outliers_low'])}), IQR ({len(stats['outliers_iqr']['tris'])}), MAD ({len(stats['outliers_mad']['tris'])})
 
 Write interpretation covering:
 1. Overall performance consistency and predictability (based on CV and confidence intervals)
