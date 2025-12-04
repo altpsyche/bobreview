@@ -6,7 +6,10 @@ import os
 import re
 import statistics
 import time
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config import ReportConfig
 
 from .cache import get_cache
 from .utils import log_verbose, log_warning, format_number
@@ -37,7 +40,7 @@ def clean_llm_response(response: str) -> str:
 def call_llm(
     prompt: str,
     data_table: str | None = None,
-    config=None,
+    config: "Optional[ReportConfig]" = None,
     max_retries: int = 3,
 ) -> str:
     """
@@ -149,7 +152,7 @@ Data Table:
 def call_llm_chunked(
     prompt_base: str,
     data_points: List[Dict[str, Any]],
-    config,
+    config: "ReportConfig",
     chunk_size: int | None = None,
 ) -> str:
     """Call LLM with data points in chunks and combine results."""
@@ -193,7 +196,7 @@ Provide a unified analysis that integrates all the information from these chunks
 def generate_executive_summary(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> str:
     """Generate executive summary using LLM."""
@@ -274,7 +277,7 @@ Use HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and refer
 def generate_metric_deep_dive(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> Dict[str, str]:
     """
@@ -422,7 +425,7 @@ Use HTML paragraph tags. Include a heading <h3>Temporal & Correlation Analysis</
 def generate_zones_hotspots(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> Dict[str, str]:
     """Generate zones and hotspots analysis using LLM."""
@@ -481,7 +484,7 @@ Use HTML paragraph tags."""
 def generate_optimization_checklist(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> Dict[str, str]:
     """Generate optimization checklist using LLM."""
@@ -562,7 +565,7 @@ Format as HTML <ul> with <li> tags."""
 def generate_system_recommendations(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> Dict[str, str]:
     """Generate system-level recommendations using LLM."""
@@ -637,7 +640,7 @@ Be specific, actionable, and relevant to the data. Reference the trends and vari
 def generate_visual_analysis(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> str:
     """Generate visual analysis interpretation for distribution charts."""
@@ -672,7 +675,7 @@ Use HTML paragraph tags (<p>). Be insightful and reference the specific metrics.
 def generate_statistical_interpretation(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config,
+    config: "ReportConfig",
     _images_dir_rel: str,
 ) -> str:
     """Generate interpretation of advanced statistical metrics."""
