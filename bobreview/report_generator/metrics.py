@@ -338,5 +338,5 @@ def generate_metrics_page(
     </script>
 """
     
-    return get_html_template(f"{config.title} - Metrics", body_content, include_chartjs=True)
+    return get_html_template(f"{config.title} - Metrics", body_content, include_chartjs=True, linked_css=config.linked_css)
 

@@ -197,6 +197,10 @@ Examples:
         '--no-embed-images', action='store_false', dest='embed_images', default=True,
         help='Use external image files instead of embedding'
     )
+    parser.add_argument(
+        '--linked-css', action='store_true', default=False,
+        help='Use external CSS file instead of embedding (creates styles.css in output directory)'
+    )
     
     args = parser.parse_args()
     
@@ -236,7 +240,8 @@ Examples:
         sample_size=args.sample_size,
         verbose=args.verbose,
         quiet=args.quiet,
-        embed_images=args.embed_images
+        embed_images=args.embed_images,
+        linked_css=args.linked_css
     )
     
     # Validate configuration

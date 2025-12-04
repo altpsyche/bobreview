@@ -149,7 +149,14 @@ def generate_html_report(
         generated_files.append(str(page_path))
         log_verbose(f"Created: {page_path}", config)
     
-    log_info(f"Generated {len(generated_files)} HTML files in {output_dir}", config)
+    # Copy CSS file if using linked CSS mode
+    if config.linked_css:
+        from .base import copy_css_to_output
+        css_path = copy_css_to_output(output_dir)
+        generated_files.append(str(css_path))
+        log_info(f"Created external CSS: {css_path}", config)
+    
+    log_info(f"Generated {len(generated_files)} files in {output_dir}", config)
     
     # Return the path to index.html as the main entry point
     return str(output_dir / "index.html")

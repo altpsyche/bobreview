@@ -210,5 +210,5 @@ def generate_homepage(
     </div>
 """
     
-    return get_html_template(f"{config.title} - Home", body_content, include_chartjs=False)
+    return get_html_template(f"{config.title} - Home", body_content, include_chartjs=False, linked_css=config.linked_css)
 
