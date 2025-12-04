@@ -4,6 +4,13 @@
 
 Version 1.0.3
 
+### What's New in v1.0.3
+
+- **LLM Generator Registry**: Self-registration pattern for AI content generators with configurable prompt categories
+- **Chart Configuration Registry**: Centralized Chart.js theming and dataset configuration  
+- **Dynamic Homepage Navigation**: Cards auto-generated from page registry with icons and descriptions
+- **Config-Based Thresholds**: MAD threshold and LLM max tokens now configurable via `ReportConfig`
+
 ---
 
 ## Installation

@@ -7,7 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.3] - 2025-12-03
+## [1.0.3] - 2025-12-05
+
+### Added
+
+#### Registry-Based Modularization
+- **LLM Generator Registry** (`llm_registry.py`): Self-registration pattern for LLM content generators
+  - `LLMGeneratorDefinition` dataclass with section_name, generator_func, description, and categories
+  - `PromptCategory` dataclass for configurable prompt sections (id, title, focus, priority)
+  - Functions: `register_llm_generator()`, `get_llm_generator()`, `get_generator_categories()`
+  - All 7 LLM generators now self-register with configurable categories
+  
+- **Chart Configuration Registry** (`chart_registry.py`): Centralized Chart.js configuration
+  - `ChartTheme` dataclass for colors, fonts, and grid styling
+  - `ChartDataset` dataclass for dataset colors and point styles
+  - `ChartConfig` dataclass for chart type, axis labels, and aspect ratios
+  - Pre-registered: dark theme, 4 datasets (draws, tris, histograms), 5 chart configs
+  - Helper functions: `get_chart_defaults_js()`, `get_theme()`, `get_dataset()`, `get_chart()`
+
+- **Dynamic Homepage Navigation**: Homepage cards now generated from page registry
+  - Extended `PageDefinition` with `card_icon` and `card_description` fields
+  - `_generate_feature_cards()` helper dynamically builds navigation cards
+  - Special pill badges for zones page showing high/low load counts
+
+- **Config-Based Thresholds**: Moved hardcoded values to `ReportConfig`
+  - `mad_threshold: float = 3.5` for MAD outlier detection
+  - `llm_max_tokens: int = 2000` for LLM response limits
+
+### Changed
+- **LLM Prompt Categories**: All 7 generators now use configurable `PromptCategory` lists
+  - Executive Summary: 5 categories (health, concerns, hotspot, variance, frametime)
+  - Metric Deep Dive: 5 categories (distribution, variability, trend, outliers, thresholds)
+  - Zones & Hotspots: 3 categories (critical, highload, lowload)
+  - Visual Analysis: 3 categories (shape, peaks, outliers)
+  - Statistical Interpretation: 4 categories (consistency, trajectory, frametime, detection)
+  - Optimization Checklist: 4 categories (geometry, drawcalls, lighting, verification)
+  - System Recommendations: 5 categories (lod, occlusion, lighting, materials, regression)
+
+- **Chart.js Defaults**: Moved from hardcoded in metrics.py/visuals.py to chart registry
+  - Single source of truth for chart theming
+  - Easy customization via `register_theme()`
+
+### Technical Details
+- New files: `bobreview/llm_registry.py`, `bobreview/chart_registry.py`
+- Modified: `llm_provider.py`, `report_generator/__init__.py`, `metrics.py`, `visuals.py`, `homepage.py`
+- No breaking changes - all registrations happen at module import time
+- Backward compatible with existing configurations
+
+---
+
+## [1.0.2] - 2025-12-03
 
 ### Added
 
@@ -183,11 +232,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Release Notes
 
 ### Version History
+- **1.0.3** - Feature release: Registry-based modularization (LLM generators, charts, homepage)
 - **1.0.2** - Feature release: Interactive visual charts + statistical enhancements
 - **1.0.1** - Feature release: Base64 image embedding + bug fix (syntax error in llm_provider.py)
 - **1.0.0** - Initial stable release with comprehensive features and documentation
 
 ### Upgrade Instructions
+
+#### From 1.0.2 to 1.0.3
+```bash
+cd /path/to/bobreview
+git pull origin main
+pip install --upgrade .
+```
+
+No breaking changes. New files added:
+- `bobreview/llm_registry.py` - LLM generator registry
+- `bobreview/chart_registry.py` - Chart configuration registry
+
+Existing cache and configuration remain compatible.
 
 #### From 1.0.1 to 1.0.2
 ```bash
@@ -212,6 +275,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.3]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/DiggingNebula8/bobreview/releases/tag/v1.0.0
