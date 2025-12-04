@@ -834,7 +834,6 @@ register_theme(ReportTheme(
     border_subtle='#333333',  # Chart grid color
     chart_grid_opacity=0.3    # Subtle grid lines (0.0-1.0)
 ))
-```
 
 # Add custom dataset styles
 from bobreview.chart_registry import register_dataset, ChartDataset
