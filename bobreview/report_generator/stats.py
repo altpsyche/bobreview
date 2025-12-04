@@ -5,7 +5,7 @@ Statistical summary page generator with comprehensive metrics.
 
 from html import escape
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_image_src, get_trend_icon
+from .base import get_html_template, get_page_header, get_image_src, get_trend_icon, sanitize_llm_html
 from ..utils import format_number
 
 
@@ -70,7 +70,7 @@ def generate_stats_page(
         dispersion, percentiles, and confidence intervals.
       </p>
       
-      {statistical_interpretation}
+      {sanitize_llm_html(statistical_interpretation)}
     </section>
     
     <section class="panel" style="margin-top: 20px;">

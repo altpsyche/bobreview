@@ -11,7 +11,8 @@ from .base import (
     get_page_header, 
     prepare_timeline_data, 
     prepare_scatter_data,
-    prepare_histogram_data
+    prepare_histogram_data,
+    sanitize_llm_html
 )
 from ..utils import format_number
 
@@ -79,7 +80,7 @@ def generate_metrics_page(
           <tr><td>CV (Coefficient of Variation)</td><td>{format_number(stats['draws']['cv'], 1)}%</td></tr>
         </tbody>
       </table>
-      {metric_content.get('draws', '')}
+      {sanitize_llm_html(metric_content.get('draws', ''))}
       
       <h3>Triangle Count</h3>
       <table>
@@ -102,7 +103,7 @@ def generate_metrics_page(
           <tr><td>CV (Coefficient of Variation)</td><td>{format_number(stats['tris']['cv'], 1)}%</td></tr>
         </tbody>
       </table>
-      {metric_content.get('tris', '')}
+      {sanitize_llm_html(metric_content.get('tris', ''))}
     </section>
     
     <section class="panel" style="margin-top: 20px;">
@@ -139,7 +140,7 @@ def generate_metrics_page(
         <canvas id="scatter-chart"></canvas>
       </div>
       
-      {metric_content.get('temporal', '')}
+      {sanitize_llm_html(metric_content.get('temporal', ''))}
     </section>
     
     <div class="footer">

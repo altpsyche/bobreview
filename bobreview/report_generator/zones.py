@@ -5,7 +5,7 @@ Zones and hotspots page generator for performance analysis.
 
 from html import escape
 from typing import Dict, Any
-from .base import get_html_template, get_page_header, get_image_src
+from .base import get_html_template, get_page_header, get_image_src, sanitize_llm_html
 from ..utils import format_number
 
 
@@ -122,7 +122,7 @@ def generate_zones_page(
         These frames require immediate attention and optimization.
       </p>
       
-      {zones_content.get('high_load', '')}
+      {sanitize_llm_html(zones_content.get('high_load', ''))}
       
       <table>
         <thead>
@@ -147,7 +147,7 @@ def generate_zones_page(
         represent baseline performance and are useful design references for optimal scenes.
       </p>
       
-      {zones_content.get('low_load', '')}
+      {sanitize_llm_html(zones_content.get('low_load', ''))}
       
       <table>
         <thead>

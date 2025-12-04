@@ -5,7 +5,7 @@ Optimization checklist page generator with actionable recommendations.
 
 from html import escape
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_image_src
+from .base import get_html_template, get_page_header, get_image_src, sanitize_llm_html
 from ..utils import format_number
 
 
@@ -63,7 +63,7 @@ def generate_optimization_page(
       <p class="body-text">
         Strategic recommendations for improving overall performance architecture and workflow.
       </p>
-      {system_recs['full']}
+      {sanitize_llm_html(system_recs['full'])}
     </section>
 """
     
@@ -130,7 +130,7 @@ def generate_optimization_page(
         style="max-width: 100%; margin-top: 12px;"
       />
       
-      {optimization_content.get('critical', '')}
+      {sanitize_llm_html(optimization_content.get('critical', ''))}
       
       <div class="callout" style="margin-top: 12px;">
         <div class="callout-title">Recommended Actions</div>
@@ -151,7 +151,7 @@ def generate_optimization_page(
         Affects <strong>{high_geometry_count} frame(s)</strong>.
       </p>
       
-      {optimization_content.get('high_geometry', '')}
+      {sanitize_llm_html(optimization_content.get('high_geometry', ''))}
       
       <div class="callout" style="margin-top: 12px;">
         <div class="callout-title">Geometry Optimization Strategies</div>
@@ -172,7 +172,7 @@ def generate_optimization_page(
         Affects <strong>{high_draw_count} frame(s)</strong>.
       </p>
       
-      {optimization_content.get('high_draw', '')}
+      {sanitize_llm_html(optimization_content.get('high_draw', ''))}
       
       <div class="callout" style="margin-top: 12px;">
         <div class="callout-title">Draw Call Optimization Strategies</div>

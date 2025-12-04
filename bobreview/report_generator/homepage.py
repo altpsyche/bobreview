@@ -5,7 +5,7 @@ Homepage generator for BobReview multi-page reports.
 
 from datetime import datetime
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_trend_icon
+from .base import get_html_template, get_page_header, get_trend_icon, sanitize_llm_html
 from ..utils import format_number
 
 
@@ -86,7 +86,7 @@ def generate_homepage(
         <span style="font-size: 12px; color: var(--text-soft); margin-left: 8px;">CV: {format_number(stats['draws']['cv'], 1)}% draws / {format_number(stats['tris']['cv'], 1)}% tris</span>
       </div>
       
-      {exec_summary}
+      {sanitize_llm_html(exec_summary)}
       
       <div class="pill-row">
         <span class="pill ok">Average: {format_number(stats['draws']['mean'], 0)} draws / {format_number(stats['tris']['mean'], 0)} tris</span>

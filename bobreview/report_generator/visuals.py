@@ -5,7 +5,7 @@ Visual analysis page generator with distribution charts.
 
 import json
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, prepare_histogram_data
+from .base import get_html_template, get_page_header, prepare_histogram_data, sanitize_llm_html
 from ..utils import format_number
 
 
@@ -53,7 +53,7 @@ def generate_visuals_page(
         are distributed across all captures. This helps identify clustering, outliers, and overall performance characteristics.
       </p>
       
-      {visual_analysis_content}
+      {sanitize_llm_html(visual_analysis_content)}
       
       <div class="summary-grid" style="margin-top: 16px;">
         <div class="stat-card">

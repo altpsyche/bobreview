@@ -4,9 +4,44 @@ Base HTML utilities and shared components for BobReview reports.
 """
 
 import json
+import re
 from html import escape
 from typing import Dict, Any, Optional, List
 from urllib.parse import quote
+
+
+def sanitize_llm_html(content: str) -> str:
+    """
+    Sanitize LLM-generated HTML to prevent XSS while preserving safe formatting tags.
+    
+    Allows: p, strong, em, b, i, u, ul, ol, li, br, span, div
+    Removes: script, iframe, object, embed, and dangerous attributes
+    
+    Parameters:
+        content: HTML content from LLM
+    
+    Returns:
+        Sanitized HTML string
+    """
+    if not content:
+        return ""
+    
+    # Remove script tags and content
+    content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.IGNORECASE | re.DOTALL)
+    
+    # Remove dangerous tags
+    dangerous_tags = ['iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta', 'style']
+    for tag in dangerous_tags:
+        content = re.sub(f'<{tag}[^>]*>.*?</{tag}>', '', content, flags=re.IGNORECASE | re.DOTALL)
+        content = re.sub(f'<{tag}[^>]*/?>', '', content, flags=re.IGNORECASE)
+    
+    # Remove dangerous attributes (on*, javascript:, data:)
+    content = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'\s+on\w+\s*=\s*[^\s>]+', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'(href|src)\s*=\s*["\']?\s*javascript:', r'\1="', content, flags=re.IGNORECASE)
+    content = re.sub(r'(href|src)\s*=\s*["\']?\s*data:', r'\1="', content, flags=re.IGNORECASE)
+    
+    return content.strip()
 
 
 def get_trend_icon(direction: str) -> str:
