@@ -98,7 +98,6 @@ def get_shared_css() -> str:
     Returns:
         str: Complete CSS content for embedding in HTML
     """
-    from pathlib import Path
     css_path = Path(__file__).parent / "styles.css"
     return css_path.read_text(encoding='utf-8')
 
@@ -110,7 +109,6 @@ def get_css_source_path() -> Path:
     Returns:
         Path: Absolute path to styles.css in the package
     """
-    from pathlib import Path
     return Path(__file__).parent / "styles.css"
 
 
@@ -130,7 +128,6 @@ def copy_css_to_output(output_dir: Path) -> Path:
         OSError: If other filesystem errors occur (disk full, etc.)
     """
     import shutil
-    from pathlib import Path
     
     source = get_css_source_path()
     dest = Path(output_dir) / "styles.css"
