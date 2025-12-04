@@ -5,6 +5,7 @@ Statistical summary page generator with comprehensive metrics.
 from html import escape
 from typing import Dict, List, Any
 from .base import get_html_template, get_page_header, get_image_src, get_trend_icon, sanitize_llm_html
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
@@ -30,14 +31,7 @@ def generate_stats_page(
     Returns:
         Complete HTML document for the statistics page
     """
-    nav_items = [
-        ("Home", "index.html", False),
-        ("Metrics", "metrics.html", False),
-        ("Zones & Hotspots", "zones.html", False),
-        ("Visual Analysis", "visuals.html", False),
-        ("Optimization", "optimization.html", False),
-        ("Statistics", "stats.html", True),
-    ]
+    nav_items = get_nav_items('stats.html')
     
     header = get_page_header("Statistical Summary", f"{stats['count']} captures · {config.location}", nav_items)
     
@@ -331,5 +325,19 @@ IQR:       {format_number(stats['tris']['q3'] - stats['tris']['q1'])}</div>
     </div>
 """
     
-    return get_html_template(f"{config.title} - Statistics", body_content, include_chartjs=False)
+    return get_html_template(f"{config.title} - Statistics", body_content, include_chartjs=False, linked_css=config.linked_css, theme_id=config.theme_id)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='stats',
+    filename='stats.html',
+    nav_label='Statistics',
+    nav_order=60,
+    llm_section='Statistical Interpretation',
+    page_generator=generate_stats_page,
+    requires_images=True,
+    requires_data_points=True,
+    card_icon='fa-calculator',
+    card_description='Comprehensive statistical analysis including percentiles, confidence intervals, and outlier detection.'
+))

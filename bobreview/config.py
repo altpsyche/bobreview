@@ -22,10 +22,12 @@ class ReportConfig:
     low_load_draw_threshold: int = 400
     low_load_tri_threshold: int = 50000
     outlier_sigma: float = 2.0
+    mad_threshold: float = 3.5  # MAD threshold for outlier detection
     enable_recommendations: bool = True
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o"
     llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000  # Max tokens for LLM responses
     image_chunk_size: int = 10  # Number of data samples to send per LLM call
     cache_dir: Path = Path(".bobreview_cache")
     use_cache: bool = True
@@ -35,6 +37,14 @@ class ReportConfig:
     verbose: bool = False
     quiet: bool = False
     embed_images: bool = True  # Embed images as base64 in HTML for standalone sharing
+    linked_css: bool = False  # Use external CSS file instead of embedding
+    theme_id: str = 'dark'  # Report theme: 'dark', 'light', 'high_contrast', or custom
+    disabled_pages: Optional[List[str]] = None  # List of page IDs to exclude (e.g., ['stats', 'visuals'])
+    
+    def __post_init__(self):
+        """Initialize mutable defaults."""
+        if self.disabled_pages is None:
+            self.disabled_pages = []
 
 
 def validate_config(config: ReportConfig) -> List[str]:
@@ -46,7 +56,9 @@ def validate_config(config: ReportConfig) -> List[str]:
     - tri_soft_cap is less than or equal to tri_hard_cap
     - All threshold values (caps and load thresholds) are non-negative
     - outlier_sigma is greater than 0
+    - mad_threshold is greater than 0
     - image_chunk_size is greater than 0
+    - llm_max_tokens is greater than 0
     - sample_size, if provided, is greater than 0
     - llm_temperature is between 0 and 2 (inclusive of 0 and 2)
     
@@ -93,8 +105,14 @@ def validate_config(config: ReportConfig) -> List[str]:
     if config.outlier_sigma <= 0:
         errors.append("outlier_sigma must be > 0")
     
+    if config.mad_threshold <= 0:
+        errors.append("mad_threshold must be > 0")
+    
     if config.image_chunk_size <= 0:
         errors.append("image_chunk_size must be > 0")
+    
+    if config.llm_max_tokens <= 0:
+        errors.append("llm_max_tokens must be > 0")
     
     if config.sample_size is not None and config.sample_size <= 0:
         errors.append("sample_size must be > 0")

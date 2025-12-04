@@ -59,11 +59,23 @@ bobreview/
 │   ├── data_parser.py      # PNG filename parsing
 │   ├── analysis.py         # Statistical analysis
 │   ├── llm_provider.py     # LLM API interaction
-│   ├── report_generator.py # HTML generation
-│   └── cli.py              # Command-line interface
+│   ├── llm_registry.py     # LLM generator registration
+│   ├── chart_registry.py   # Chart configuration registry
+│   ├── theme_registry.py   # Report theme registry (NEW)
+│   ├── cli.py              # Command-line interface
+│   └── report_generator/   # Modular HTML generation
+│       ├── __init__.py     # Report orchestration
+│       ├── base.py         # Shared utilities & templates
+│       ├── registry.py     # Page registration system
+│       ├── homepage.py     # Index page
+│       ├── metrics.py      # Metrics analysis page
+│       ├── zones.py        # Zones & hotspots page
+│       ├── visuals.py      # Visual analysis page
+│       ├── optimization.py # Optimization page
+│       └── stats.py        # Statistics page
 │
 ├── bobreview.py            # Entry point script
-├── requirements.txt        # Dependencies (single source of truth)
+├── requirements.txt        # Dependencies
 ├── setup.py                # Package installer
 └── pyproject.toml          # Package configuration
 ```
@@ -73,6 +85,18 @@ bobreview/
 - Dependency Injection - Configuration passed through parameters
 - No Circular Dependencies - Clean import hierarchy
 - Testable - Each module can be tested independently
+- Registry Pattern - Self-registration for pages, LLM generators, and charts
+
+### Registry Systems
+
+BobReview uses three registry patterns for extensibility:
+
+| Registry | File | Purpose |
+|----------|------|--------|
+| Page Registry | `report_generator/registry.py` | HTML page registration |
+| LLM Generator Registry | `llm_registry.py` | LLM content generators with categories |
+| Chart Registry | `chart_registry.py` | Chart.js datasets and configs |
+| Theme Registry | `theme_registry.py` | Report colors, fonts, and CSS variables |
 
 ---
 
@@ -382,6 +406,8 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --verbose, -v          # Detailed output
 --quiet, -q            # Errors only
 --no-embed-images      # Use external image files
+--linked-css           # Use external CSS file (styles.css)
+--disable-page ID      # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --version              # Show version
 --help                 # Show help
 ```
@@ -654,6 +680,172 @@ cd bobreview
 pip install -e ".[dev]"
 ```
 
+### Adding New Report Pages
+
+BobReview uses a modular page registry system. To add a new page:
+
+**1. Create a new page module** in `bobreview/report_generator/`:
+
+```python
+# bobreview/report_generator/custom_page.py
+"""Custom analysis page."""
+
+from typing import Dict, List, Any
+from .base import get_html_template, get_page_header, sanitize_llm_html
+from .registry import register_page, PageDefinition, get_nav_items
+
+
+def generate_custom_page(
+    stats: Dict[str, Any],
+    config,
+    custom_content: str
+) -> str:
+    """Generate the custom analysis page."""
+    nav_items = get_nav_items('custom.html')
+    header = get_page_header("Custom Analysis", f"{stats['count']} captures", nav_items)
+    
+    body_content = f"""{header}
+    <section class="panel">
+      <h2>Custom Analysis</h2>
+      {sanitize_llm_html(custom_content)}
+    </section>
+"""
+    return get_html_template(f"{config.title} - Custom", body_content, linked_css=config.linked_css)
+
+
+# Register the page
+register_page(PageDefinition(
+    id='custom',
+    filename='custom.html',
+    nav_label='Custom',
+    nav_order=70,  # After stats (60)
+    llm_section='Custom Analysis',
+    page_generator=generate_custom_page,
+    requires_images=False,
+    requires_data_points=False
+))
+```
+
+**2. Import the module** in `bobreview/report_generator/__init__.py`:
+
+```python
+# Add with other imports
+from . import custom_page
+```
+
+**3. Add LLM generator** (optional) in `bobreview/llm_provider.py` if you need AI-generated content.
+
+**4. Done!** Navigation auto-updates and the page is generated with all reports.
+
+**Page Definition Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier (used with `--disable-page`) |
+| `filename` | Output HTML filename |
+| `nav_label` | Navigation menu label |
+| `nav_order` | Sort order (10=Home, 20=Metrics, etc.) |
+| `llm_section` | LLM content key from `llm_provider.py` |
+| `page_generator` | Function that returns HTML |
+| `requires_images` | Whether page needs image data |
+| `requires_data_points` | Whether page needs raw data |
+| `card_icon` | Font Awesome icon for homepage card |
+| `card_description` | Description for homepage navigation card |
+
+### Adding LLM Generators with Categories
+
+LLM generators use a registry pattern with configurable prompt categories:
+
+```python
+# bobreview/llm_provider.py
+from .llm_registry import register_llm_generator, LLMGeneratorDefinition, PromptCategory
+
+def generate_custom_analysis(data_points, stats, config, images_dir):
+    """Generate custom analysis content."""
+    prompt = f"""Analyze data covering:
+{_build_category_prompt('Custom Analysis')}
+"""
+    return call_llm(prompt, config=config)
+
+# Register with categories
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Custom Analysis',
+    generator_func=generate_custom_analysis,
+    description='Custom performance analysis',
+    categories=[
+        PromptCategory('overview', 'Performance Overview', 'general assessment', priority=10),
+        PromptCategory('issues', 'Key Issues', 'main problems found', priority=20),
+        PromptCategory('actions', 'Action Items', 'recommended next steps', priority=30),
+    ]
+))
+```
+
+**To modify categories**: Just edit the `categories` list - prompts update automatically.
+
+### Customizing Report Appearance
+
+**Set theme in config (recommended):**
+
+```python
+from bobreview import ReportConfig
+
+# Built-in themes: 'dark' (default), 'light', 'high_contrast'
+config = ReportConfig(theme_id='light')
+```
+
+**Or via CLI:**
+```bash
+bobreview --dir . --theme light
+```
+
+**Create a custom theme:**
+
+```python
+from bobreview.theme_registry import register_theme, ReportTheme
+
+register_theme(ReportTheme(
+    id='brand',
+    name='Brand Theme',
+    bg='#1a1a2e',
+    accent='#e94560',
+    text_main='#ffffff',
+    text_soft='#aaaaaa',
+    border_subtle='#333333'
+))
+
+# Then use it
+config = ReportConfig(theme_id='brand')
+```
+
+**Available properties**: `bg`, `bg_elevated`, `bg_soft`, `accent`, `accent_soft`, `accent_strong`, `text_main`, `text_soft`, `border_subtle`, `danger`, `warn`, `ok`, `font_mono`, `font_sans`, `radius_lg`, `radius_md`, `shadow_soft`, `chart_grid_opacity`
+
+### Customizing Chart Appearance
+
+Charts use colors directly from `ReportTheme`. To customize:
+
+```python
+from bobreview.theme_registry import register_theme, ReportTheme
+
+# Custom theme with adjusted chart grid opacity
+register_theme(ReportTheme(
+    id='custom',
+    name='Custom Theme',
+    text_soft='#aaaaaa',      # Chart text color
+    border_subtle='#333333',  # Chart grid color
+    chart_grid_opacity=0.3    # Subtle grid lines (0.0-1.0)
+))
+
+# Add custom dataset styles
+from bobreview.chart_registry import register_dataset, ChartDataset
+
+register_dataset(ChartDataset(
+    id='custom_metric',
+    label='Custom Metric',
+    primary_color='rgba(255, 0, 128, 0.8)',
+    secondary_color='rgba(255, 0, 128, 1)'
+))
+```
+
 ---
 
 ## License
@@ -664,13 +856,16 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.2
+**Current:** v1.0.3
 
 **Features:**
 - Modular architecture
 - Global CLI command
 - Intelligent caching
 - Complete documentation
+- Registry pattern for pages, LLM generators, and charts
+- Configurable prompt categories for LLM content
+- Dynamic homepage navigation from page registry
 
 ---
 

@@ -310,9 +310,9 @@ def analyze_data(data_points: List[Dict[str, Any]], config: "ReportConfig") -> D
     draw_outliers_iqr = _detect_outliers_iqr(draws, indices)
     tri_outliers_iqr = _detect_outliers_iqr(tris, indices)
     
-    # MAD outlier detection
-    draw_outliers_mad = _detect_outliers_mad(draws, indices)
-    tri_outliers_mad = _detect_outliers_mad(tris, indices)
+    # MAD outlier detection (using config threshold)
+    draw_outliers_mad = _detect_outliers_mad(draws, indices, config.mad_threshold)
+    tri_outliers_mad = _detect_outliers_mad(tris, indices, config.mad_threshold)
     
     # High-load frames: configurable thresholds
     high_load = [(i, p) for i, p in enumerate(data_points) 

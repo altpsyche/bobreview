@@ -118,6 +118,12 @@ bobreview --dir ./screenshots \
   --tri-hard-cap 150000
 ```
 
+### Change Theme
+```bash
+bobreview --dir ./screenshots --theme light
+# Options: dark (default), light, high_contrast
+```
+
 ### Standalone HTML (Embedded Images)
 ```bash
 bobreview --dir ./screenshots
@@ -314,6 +320,8 @@ bobreview --dir PATH [OPTIONS]
 --quiet                    # Errors only
 --clear-cache              # Clear LLM cache
 --no-embed-images          # Use external image files
+--linked-css               # Use external CSS file
+--disable-page ID          # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --openai-key KEY           # OpenAI API key
 ```
 

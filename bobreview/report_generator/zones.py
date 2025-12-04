@@ -1,15 +1,22 @@
 """
-Zones and hotspots page generator for performance analysis.
+Zones and hotspots page generator for BobReview reports.
 """
 
 from html import escape
-from typing import Dict, Any
-from .base import get_html_template, get_page_header, get_image_src, sanitize_llm_html
+from typing import Dict, List, Any
+from .base import (
+    get_html_template, 
+    get_page_header, 
+    get_image_src, 
+    sanitize_llm_html,
+    render_stat_card
+)
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
 def generate_zones_page(
-    stats: Dict[str, Any], 
+    stats: Dict[str, Any],
     images_dir_rel: str,
     image_data_uris: Dict[str, str],
     config,
@@ -23,19 +30,12 @@ def generate_zones_page(
         images_dir_rel: Relative path to images directory
         image_data_uris: Mapping of image names to base64 data URIs
         config: Report configuration
-        zones_content: Zones analysis content from LLM
+        zones_content: Zone analysis content from LLM
     
     Returns:
         Complete HTML document for the zones page
     """
-    nav_items = [
-        ("Home", "index.html", False),
-        ("Metrics", "metrics.html", False),
-        ("Zones & Hotspots", "zones.html", True),
-        ("Visual Analysis", "visuals.html", False),
-        ("Optimization", "optimization.html", False),
-        ("Statistics", "stats.html", False),
-    ]
+    nav_items = get_nav_items('zones.html')
     
     header = get_page_header("Performance Zones and Hotspots", f"{stats['count']} captures · {config.location}", nav_items)
     
@@ -114,6 +114,15 @@ def generate_zones_page(
     </section>
 """
     
+    # Build stat cards using component
+    high_pct = (len(stats['high_load']) / stats['count'] * 100) if stats['count'] > 0 else 0.0
+    low_pct = (len(stats['low_load']) / stats['count'] * 100) if stats['count'] > 0 else 0.0
+    medium_count = stats['count'] - len(stats['high_load']) - len(stats['low_load'])
+    
+    high_card = render_stat_card("High-Load Frames", str(len(stats['high_load'])), f"{high_pct:.1f}% of captures", "danger")
+    medium_card = render_stat_card("Medium-Load Frames", str(medium_count), "Between thresholds", "warn")
+    low_card = render_stat_card("Low-Load Frames", str(len(stats['low_load'])), f"{low_pct:.1f}% of captures", "ok")
+    
     body_content = f"""{header}
     
     <section class="panel">
@@ -124,23 +133,9 @@ def generate_zones_page(
       </p>
       
       <div class="summary-grid">
-        <div class="stat-card danger">
-          <div class="stat-label">High-Load Frames</div>
-          <div class="stat-value">{len(stats['high_load'])}</div>
-          <div class="stat-sub">{((len(stats['high_load']) / stats['count'] * 100) if stats['count'] > 0 else 0.0):.1f}% of captures</div>
-        </div>
-        
-        <div class="stat-card warn">
-          <div class="stat-label">Medium-Load Frames</div>
-          <div class="stat-value">{stats['count'] - len(stats['high_load']) - len(stats['low_load'])}</div>
-          <div class="stat-sub">Between thresholds</div>
-        </div>
-        
-        <div class="stat-card ok">
-          <div class="stat-label">Low-Load Frames</div>
-          <div class="stat-value">{len(stats['low_load'])}</div>
-          <div class="stat-sub">{((len(stats['low_load']) / stats['count'] * 100) if stats['count'] > 0 else 0.0):.1f}% of captures</div>
-        </div>
+        {high_card}
+        {medium_card}
+        {low_card}
       </div>
     </section>
     
@@ -201,5 +196,19 @@ def generate_zones_page(
     </div>
 """
     
-    return get_html_template(f"{config.title} - Zones & Hotspots", body_content, include_chartjs=False)
+    return get_html_template(f"{config.title} - Zones & Hotspots", body_content, include_chartjs=False, linked_css=config.linked_css, theme_id=config.theme_id)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='zones',
+    filename='zones.html',
+    nav_label='Zones & Hotspots',
+    nav_order=30,
+    llm_section='Zones & Hotspots',
+    page_generator=generate_zones_page,
+    requires_images=True,
+    requires_data_points=False,
+    card_icon='fa-fire',
+    card_description='Identify high-load and low-load frames, critical hotspots, and performance zones requiring optimization.'
+))

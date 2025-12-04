@@ -7,6 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2025-12-05
+
+### Added
+
+#### Registry-Based Modularization
+- **LLM Generator Registry** (`llm_registry.py`): Self-registration pattern for LLM content generators
+  - `LLMGeneratorDefinition` dataclass with section_name, generator_func, description, and categories
+  - `PromptCategory` dataclass for configurable prompt sections (id, title, focus, priority)
+  - Functions: `register_llm_generator()`, `get_llm_generator()`, `get_generator_categories()`
+  - All 7 LLM generators now self-register with configurable categories
+  
+- **Chart Configuration Registry** (`chart_registry.py`): Centralized Chart.js configuration
+  - `ChartDataset` dataclass for dataset colors and point styles
+  - `ChartConfig` dataclass for chart type, axis labels, and aspect ratios
+  - Pre-registered: 4 datasets (draws, tris, histograms), 5 chart configs
+  - Helper functions: `get_chart_defaults_js()`, `get_dataset()`, `get_chart()`
+  - Chart colors pulled directly from `ReportTheme`
+
+- **Report Theme Registry** (`theme_registry.py`): Centralized HTML report styling
+  - `ReportTheme` dataclass with 18 properties (colors, fonts, borders, chart_grid_opacity)
+  - 3 pre-registered themes: dark (default), light, high_contrast
+  - `get_theme_css_variables()` generates CSS :root block for theme switching
+  - Charts read colors directly from active report theme
+
+- **Dynamic Homepage Navigation**: Homepage cards now generated from page registry
+  - Extended `PageDefinition` with `card_icon` and `card_description` fields
+  - `_generate_feature_cards()` helper dynamically builds navigation cards
+  - Special pill badges for zones page showing high/low load counts
+
+- **Config-Based Thresholds**: Moved hardcoded values to `ReportConfig`
+  - `mad_threshold: float = 3.5` for MAD outlier detection
+  - `llm_max_tokens: int = 2000` for LLM response limits
+  - `theme_id: str = 'dark'` for centralized theme selection
+
+- **New CLI Flags**: Enhanced control over report generation
+  - `--theme THEME`: Choose report theme (dark, light, high_contrast)
+    - Example: `bobreview --dir . --theme light`
+  - `--linked-css`: Use external CSS file instead of embedding
+    - Creates `styles.css` in output directory for better maintainability
+    - Reduces HTML file size, enables shared CSS across multiple reports
+    - Example: `bobreview --dir . --linked-css`
+  - `--disable-page PAGE_ID`: Exclude specific pages from report
+    - Can be used multiple times to disable multiple pages
+    - Valid IDs: home, metrics, zones, visuals, optimization, stats
+    - Example: `bobreview --dir . --disable-page stats --disable-page visuals`
+
+- **CSS Handling Improvements**:
+  - External CSS file support via `linked_css` config option
+  - `copy_css_to_output()` function with comprehensive error handling
+  - Graceful degradation if CSS copy fails (warns but continues)
+  - Catches FileNotFoundError, PermissionError, OSError with descriptive messages
+
+### Fixed
+- **Missing Type Import**: Added `Path` import in `base.py` to fix type annotation errors
+  - `get_css_source_path()` and `copy_css_to_output()` now have proper type hints
+- **CSS Copy Error Handling**: Added comprehensive exception handling for CSS file operations
+  - Catches FileNotFoundError, PermissionError, OSError
+  - Provides descriptive error messages with file paths
+  - Report generation continues with warning if CSS copy fails
+- **Dead Code Removal**: Removed unused navigation functions from `base.py`
+  - Deleted unused `NAV_PAGES` constant
+  - Deleted unused `get_nav_items()` function
+  - Navigation now centralized in `registry.py`
+
+### Changed
+- **LLM Prompt Categories**: All 7 generators now use configurable `PromptCategory` lists
+  - Executive Summary: 5 categories (health, concerns, hotspot, variance, frametime)
+  - Metric Deep Dive: 5 categories (distribution, variability, trend, outliers, thresholds)
+  - Zones & Hotspots: 3 categories (critical, highload, lowload)
+  - Visual Analysis: 3 categories (shape, peaks, outliers)
+  - Statistical Interpretation: 4 categories (consistency, trajectory, frametime, detection)
+  - Optimization Checklist: 4 categories (geometry, drawcalls, lighting, verification)
+  - System Recommendations: 5 categories (lod, occlusion, lighting, materials, regression)
+
+- **Chart.js Defaults**: Moved from hardcoded in metrics.py/visuals.py to chart registry
+  - Chart colors/fonts read directly from report theme
+  - `chart_grid_opacity` property on ReportTheme (0.0-1.0)
+
+### Technical Details
+- **New files**: `bobreview/llm_registry.py`, `bobreview/chart_registry.py`, `bobreview/theme_registry.py`
+- **Modified files**: 
+  - `llm_provider.py` - LLM generator registrations
+  - `report_generator/__init__.py` - Registry integration, CSS error handling
+  - `metrics.py`, `visuals.py` - Chart registry integration
+  - `homepage.py` - Dynamic card generation from page registry
+  - `base.py` - CSS handling improvements, removed unused navigation functions
+  - `config.py` - New validation rules for `mad_threshold` and `llm_max_tokens`
+  - `cli.py` - New CLI flags for theme, linked CSS, and page disabling
+- **Code Quality Improvements**:
+  - Added `Path` type import in `base.py` (fixes missing type hint)
+  - Removed unused `NAV_PAGES` constant and `get_nav_items()` function from `base.py`
+  - Enhanced error handling in `copy_css_to_output()` with specific exception types
+  - Updated `get_html_template()` to use `Optional[str]` for `theme_id` parameter
+- **Validation Enhancements**:
+  - `validate_config()` now checks `mad_threshold > 0`
+  - `validate_config()` now checks `llm_max_tokens > 0`
+- No breaking changes - all registrations happen at module import time
+- Backward compatible with existing configurations
+
+---
+
 ## [1.0.2] - 2025-12-03
 
 ### Added
@@ -183,11 +284,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Release Notes
 
 ### Version History
+- **1.0.3** - Feature release: Registry-based modularization (LLM generators, charts, homepage)
 - **1.0.2** - Feature release: Interactive visual charts + statistical enhancements
 - **1.0.1** - Feature release: Base64 image embedding + bug fix (syntax error in llm_provider.py)
 - **1.0.0** - Initial stable release with comprehensive features and documentation
 
 ### Upgrade Instructions
+
+#### From 1.0.2 to 1.0.3
+```bash
+cd /path/to/bobreview
+git pull origin main
+pip install --upgrade .
+```
+
+**No breaking changes.** Existing cache and configuration remain fully compatible.
+
+**New Files Added:**
+- `bobreview/llm_registry.py` - LLM generator registry
+- `bobreview/chart_registry.py` - Chart configuration registry  
+- `bobreview/theme_registry.py` - Report theme registry
+
+**New ReportConfig Fields** (with backward-compatible defaults):
+- `mad_threshold: float = 3.5` - MAD outlier detection threshold (configurable, previously hardcoded)
+- `llm_max_tokens: int = 2000` - Maximum tokens for LLM responses (configurable, previously hardcoded)
+- `linked_css: bool = False` - Use external CSS file instead of embedding (default: embedded)
+- `theme_id: str = 'dark'` - Report theme selection (options: 'dark', 'light', 'high_contrast')
+- `disabled_pages: List[str] = []` - List of page IDs to exclude from report
+
+**New CLI Flags:**
+- `--theme {dark,light,high_contrast}` - Choose report theme
+- `--linked-css` - Use external CSS file (creates styles.css in output directory)
+- `--disable-page PAGE_ID` - Disable specific pages (can be used multiple times)
+
+**Configuration Updates:**
+- Existing config files/code do NOT need updates
+- All new fields have sensible defaults
+- New validations added for `mad_threshold` and `llm_max_tokens` (must be > 0)
+- If using ReportConfig programmatically, you can optionally use new fields for more control
 
 #### From 1.0.1 to 1.0.2
 ```bash
@@ -212,6 +346,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.3]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/DiggingNebula8/bobreview/releases/tag/v1.0.0

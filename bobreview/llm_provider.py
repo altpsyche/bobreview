@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from .cache import get_cache
 from .utils import log_verbose, log_warning, format_number
 from .analysis import format_data_table
+from .llm_registry import register_llm_generator, LLMGeneratorDefinition, PromptCategory, get_generator_categories
 
 # Check for OpenAI availability
 try:
@@ -21,6 +22,26 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+
+def _build_category_prompt(section_name: str) -> str:
+    """
+    Build the category portion of a prompt from registered categories.
+    
+    Parameters:
+        section_name: The LLM section to get categories for
+    
+    Returns:
+        Formatted string of numbered categories with their focus areas
+    """
+    categories = get_generator_categories(section_name)
+    if not categories:
+        return "Generate 3-5 relevant categories based on the data."
+    
+    lines = []
+    for i, cat in enumerate(categories, 1):
+        lines.append(f"{i}. {cat.title} (3-4 points) - {cat.focus}")
+    return '\n'.join(lines)
 
 
 def clean_llm_response(response: str) -> str:
@@ -104,7 +125,7 @@ Data Table:
                 model=config.openai_model,
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=config.llm_temperature,
-                max_tokens=2000
+                max_tokens=config.llm_max_tokens
             )
             # Clean the response to remove markdown code fences
             result = clean_llm_response(response.choices[0].message.content)
@@ -262,12 +283,8 @@ Low-load frames: {len(stats['low_load'])} (threshold: <{config.low_load_draw_thr
 
 Analyze the provided data table to understand performance patterns across different samples.
 
-Write a professional executive summary that:
-1. Summarizes overall performance health (reference P90/P95 values for realistic expectations)
-2. Highlights key concerns based on trends and variability (CV indicates consistency)
-3. Mentions the peak hotspot and its impact
-4. Assesses variance and trend direction (improving/stable/degrading)
-5. Comments on frame time stability if anomalies exist
+Write a professional executive summary that covers:
+{_build_category_prompt('Executive Summary')}
 
 Use HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics (percentiles, trends, CV)."""
 
@@ -616,11 +633,7 @@ Critical Metrics:
 Analyze the provided data table representing different performance zones (critical hotspots, high-load, and low-load frames) to understand patterns.
 
 Generate recommendations organized by category:
-1. LOD System (3-4 points) - prioritize if triangles trend is degrading or CV is high
-2. Occlusion and Visibility (3-4 points) - prioritize if draw calls are high
-3. Lighting and Shadows (3-4 points)
-4. Materials and Textures (3-4 points) - prioritize if draw call CV is high
-5. Capture and Regression (3-4 points) - emphasize trend monitoring if trends are degrading
+{_build_category_prompt('System Recommendations')}
 
 Format each category as:
 <h3>Category Name</h3>
@@ -712,3 +725,89 @@ Use HTML paragraph tags (<p>). Be practical and actionable."""
 
     return call_llm(prompt, data_table=None, config=config)
 
+
+# Register all LLM generators with their categories
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Executive Summary',
+    generator_func=generate_executive_summary,
+    description='High-level performance overview and key findings',
+    categories=[
+        PromptCategory('health', 'Overall performance health', 'reference P90/P95 values for realistic expectations', priority=10),
+        PromptCategory('concerns', 'Key concerns', 'based on trends and variability (CV indicates consistency)', priority=20),
+        PromptCategory('hotspot', 'Peak hotspot impact', 'mention the peak hotspot and its severity', priority=30),
+        PromptCategory('variance', 'Variance and trends', 'direction (improving/stable/degrading)', priority=40),
+        PromptCategory('frametime', 'Frame time stability', 'comment if anomalies exist', priority=50),
+    ]
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Metric Deep Dive',
+    generator_func=generate_metric_deep_dive,
+    description='Detailed draw calls and triangle count analysis',
+    categories=[
+        PromptCategory('distribution', 'Distribution characteristics', 'P90/P95 expectations', priority=10),
+        PromptCategory('variability', 'Variability assessment', 'using CV (coefficient of variation)', priority=20),
+        PromptCategory('trend', 'Trend direction', 'improving/stable/degrading and implications', priority=30),
+        PromptCategory('outliers', 'Outlier impact', 'detected by different methods', priority=40),
+        PromptCategory('thresholds', 'Threshold comparison', 'vs thresholds and confidence intervals', priority=50),
+    ]
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Zones & Hotspots',
+    generator_func=generate_zones_hotspots,
+    description='High-load and low-load frame analysis',
+    categories=[
+        PromptCategory('critical', 'Critical hotspot', 'peak performance bottleneck analysis', priority=10),
+        PromptCategory('highload', 'High-load frames', 'patterns above thresholds', priority=20),
+        PromptCategory('lowload', 'Low-load frames', 'baseline and optimization opportunities', priority=30),
+    ]
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Visual Analysis',
+    generator_func=generate_visual_analysis,
+    description='Distribution chart interpretation',
+    categories=[
+        PromptCategory('shape', 'Distribution shape', 'bimodal, skewed, normal patterns', priority=10),
+        PromptCategory('peaks', 'Peak analysis', 'primary and secondary modes', priority=20),
+        PromptCategory('outliers', 'Outlier patterns', 'tail behavior and extreme values', priority=30),
+    ]
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Statistical Interpretation',
+    generator_func=generate_statistical_interpretation,
+    description='Advanced statistical metrics interpretation',
+    categories=[
+        PromptCategory('consistency', 'Performance consistency', 'based on CV and confidence intervals', priority=10),
+        PromptCategory('trajectory', 'Performance trajectory', 'whether action is needed based on trends', priority=20),
+        PromptCategory('frametime', 'Frame time stability', 'concerns based on anomalies', priority=30),
+        PromptCategory('detection', 'Outlier detection reliability', 'consensus across methods', priority=40),
+    ]
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Optimization Checklist',
+    generator_func=generate_optimization_checklist,
+    description='Actionable optimization recommendations',
+    categories=[
+        PromptCategory('geometry', 'Geometry optimizations', 'LOD, mesh complexity, vertex count', priority=10),
+        PromptCategory('drawcalls', 'Draw call optimizations', 'batching, instancing, materials', priority=20),
+        PromptCategory('lighting', 'Lighting/shadow optimizations', 'shadow quality, light count', priority=30),
+        PromptCategory('verification', 'Verification steps', 'testing and validation', priority=40),
+    ]
+))
+
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='System Recommendations',
+    generator_func=generate_system_recommendations,
+    description='System-level architecture improvements',
+    categories=[
+        PromptCategory('lod', 'LOD System', 'prioritize if triangles trend is degrading or CV is high', priority=10),
+        PromptCategory('occlusion', 'Occlusion and Visibility', 'prioritize if draw calls are high', priority=20),
+        PromptCategory('lighting', 'Lighting and Shadows', 'shadow quality, dynamic vs baked lighting', priority=30),
+        PromptCategory('materials', 'Materials and Textures', 'prioritize if draw call CV is high', priority=40),
+        PromptCategory('regression', 'Capture and Regression', 'emphasize trend monitoring if trends are degrading', priority=50),
+    ]
+))

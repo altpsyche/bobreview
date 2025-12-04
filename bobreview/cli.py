@@ -197,6 +197,20 @@ Examples:
         '--no-embed-images', action='store_false', dest='embed_images', default=True,
         help='Use external image files instead of embedding'
     )
+    parser.add_argument(
+        '--linked-css', action='store_true', default=False,
+        help='Use external CSS file instead of embedding (creates styles.css in output directory)'
+    )
+    parser.add_argument(
+        '--theme', type=str, default='dark', dest='theme_id',
+        choices=['dark', 'light', 'high_contrast'],
+        help='Report theme (default: dark). Options: dark, light, high_contrast'
+    )
+    parser.add_argument(
+        '--disable-page', action='append', dest='disabled_pages', default=[],
+        metavar='PAGE_ID',
+        help='Disable a page by ID (can be used multiple times). Valid IDs: home, metrics, zones, visuals, optimization, stats'
+    )
     
     args = parser.parse_args()
     
@@ -236,7 +250,10 @@ Examples:
         sample_size=args.sample_size,
         verbose=args.verbose,
         quiet=args.quiet,
-        embed_images=args.embed_images
+        embed_images=args.embed_images,
+        linked_css=args.linked_css,
+        theme_id=args.theme_id,
+        disabled_pages=args.disabled_pages
     )
     
     # Validate configuration

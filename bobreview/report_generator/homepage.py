@@ -4,8 +4,50 @@ Homepage generator for BobReview multi-page reports.
 
 from datetime import datetime
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_trend_icon, sanitize_llm_html
+from .base import (
+    get_html_template, 
+    get_page_header, 
+    get_trend_icon, 
+    sanitize_llm_html,
+    render_stat_card,
+    render_stats_item
+)
+from .registry import register_page, PageDefinition, get_nav_items, get_enabled_pages
 from ..utils import format_number
+
+
+def _generate_feature_cards(stats: Dict[str, Any]) -> str:
+    """
+    Generate feature cards dynamically from the page registry.
+    Excludes the homepage itself.
+    """
+    cards = []
+    for page in get_enabled_pages():
+        if page.id == 'home':  # Skip homepage
+            continue
+        if not page.card_description:  # Skip pages without card info
+            continue
+        
+        # Build dynamic pills based on page type
+        pills = ""
+        if page.id == 'zones':
+            pills = f'''<div class="pill-row" style="margin-top: 12px;">
+                <span class="pill danger">{len(stats['high_load'])} high-load</span>
+                <span class="pill ok">{len(stats['low_load'])} low-load</span>
+              </div>'''
+        
+        cards.append(f'''
+        <a href="{page.filename}" style="text-decoration: none;">
+          <div class="feature-card">
+            <div class="icon"><i class="fas {page.card_icon}"></i></div>
+            <h3>{page.nav_label}</h3>
+            <p>{page.card_description}</p>
+            {pills}
+          </div>
+        </a>''')
+    
+    return '\n'.join(cards)
+
 
 
 def generate_homepage(
@@ -29,16 +71,41 @@ def generate_homepage(
     critical_draws = critical_point['draws']
     critical_tris = format_number(critical_point['tris'])
     
-    nav_items = [
-        ("Home", "index.html", True),
-        ("Metrics", "metrics.html", False),
-        ("Zones & Hotspots", "zones.html", False),
-        ("Visual Analysis", "visuals.html", False),
-        ("Optimization", "optimization.html", False),
-        ("Statistics", "stats.html", False),
-    ]
+    nav_items = get_nav_items('index.html')
     
     header = get_page_header(config.title, f"{stats['count']} captures · {config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}", nav_items)
+    
+    # Build stat cards
+    avg_card = render_stat_card(
+        "Average Performance",
+        f"{format_number(stats['draws']['mean'], 0)} draws",
+        f"{format_number(stats['tris']['mean'], 0)} triangles &middot; median {format_number(stats['draws']['median'], 0)} / {format_number(stats['tris']['median'], 0)}",
+        "ok"
+    )
+    
+    peak_card = render_stat_card(
+        "Peak Hotspot",
+        f"{critical_draws} draws",
+        f"{critical_tris} triangles (index {critical_idx})",
+        "danger"
+    )
+    
+    highload_card = render_stat_card(
+        "High-Load Frames",
+        str(len(stats['high_load'])),
+        f"Draws ≥ {config.high_load_draw_threshold} or tris ≥ {format_number(config.high_load_tri_threshold, 0)}",
+        "warn"
+    )
+    
+    # Build stats items
+    stats_items = [
+        render_stats_item("Total Captures", str(stats['count'])),
+        render_stats_item("Draw Calls Range", f"{stats['draws']['min']} - {stats['draws']['max']}"),
+        render_stats_item("Triangles Range", f"{format_number(stats['tris']['min'])} - {format_number(stats['tris']['max'])}"),
+        render_stats_item("High-Load Frames", str(len(stats['high_load']))),
+        render_stats_item("Low-Load Frames", str(len(stats['low_load']))),
+        render_stats_item("Performance Variance", f"{format_number(stats['draws']['cv'], 1)}%"),
+    ]
     
     body_content = f"""{header}
     
@@ -47,23 +114,9 @@ def generate_homepage(
       <h2>Executive Summary</h2>
       
       <div class="summary-grid">
-        <div class="stat-card ok">
-          <div class="stat-label">Average Performance</div>
-          <div class="stat-value">{format_number(stats['draws']['mean'], 0)} draws</div>
-          <div class="stat-sub">{format_number(stats['tris']['mean'], 0)} triangles &middot; median {format_number(stats['draws']['median'], 0)} / {format_number(stats['tris']['median'], 0)}</div>
-        </div>
-        
-        <div class="stat-card danger">
-          <div class="stat-label">Peak Hotspot</div>
-          <div class="stat-value">{critical_draws} draws</div>
-          <div class="stat-sub">{critical_tris} triangles (index {critical_idx})</div>
-        </div>
-        
-        <div class="stat-card warn">
-          <div class="stat-label">High-Load Frames</div>
-          <div class="stat-value">{len(stats['high_load'])}</div>
-          <div class="stat-sub">Draws ≥ {config.high_load_draw_threshold} or tris ≥ {format_number(config.high_load_tri_threshold, 0)}</div>
-        </div>
+        {avg_card}
+        {peak_card}
+        {highload_card}
       </div>
       
       <div style="margin-top: 12px;">
@@ -100,71 +153,7 @@ def generate_homepage(
       <p class="body-text">Explore different aspects of the performance analysis:</p>
       
       <div class="card-grid">
-        <a href="metrics.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-chart-line"></i></div>
-            <h3>Metric Deep Dive</h3>
-            <p>Detailed statistical analysis of draw calls and triangle counts with interactive timelines and correlation charts.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Timeline charts</span>
-              <span class="pill">Scatter plots</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="zones.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-fire"></i></div>
-            <h3>Zones & Hotspots</h3>
-            <p>Identify high-load and low-load frames, critical hotspots, and performance zones requiring optimization.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill danger">{len(stats['high_load'])} high-load</span>
-              <span class="pill ok">{len(stats['low_load'])} low-load</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="visuals.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-chart-bar"></i></div>
-            <h3>Visual Analysis</h3>
-            <p>Distribution histograms and visual breakdowns showing performance patterns across all captures.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Histograms</span>
-              <span class="pill">Distributions</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="optimization.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-tasks"></i></div>
-            <h3>Optimization Checklist</h3>
-            <p>Actionable recommendations for addressing critical hotspots and high-load frames with budget guidelines.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Budgets</span>
-              <span class="pill">Recommendations</span>
-            </div>
-          </div>
-        </a>
-        
-        <a href="stats.html" style="text-decoration: none;">
-          <div class="feature-card">
-            <div class="icon"><i class="fas fa-calculator"></i></div>
-            <h3>Statistical Summary</h3>
-            <p>Comprehensive statistical analysis including percentiles, confidence intervals, and outlier detection.</p>
-            <div class="pill-row" style="margin-top: 12px;">
-              <span class="pill">Percentiles</span>
-              <span class="pill">Outliers</span>
-            </div>
-          </div>
-        </a>
-        
-        <div class="feature-card" style="opacity: 0.6; cursor: default;">
-          <div class="icon"><i class="fas fa-table"></i></div>
-          <h3>Full Sample Table</h3>
-          <p>Complete capture list with all frames. View all {stats['count']} captures with timestamps, metrics, and thumbnails.</p>
-        </div>
+        {_generate_feature_cards(stats)}
       </div>
     </section>
     
@@ -173,35 +162,7 @@ def generate_homepage(
       <h2>Quick Statistics</h2>
       
       <div class="stats-grid">
-        <div class="stats-item">
-          <div class="stats-item-label">Total Captures</div>
-          <div class="stats-item-value">{stats['count']}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Draw Calls Range</div>
-          <div class="stats-item-value">{stats['draws']['min']} - {stats['draws']['max']}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Triangles Range</div>
-          <div class="stats-item-value">{format_number(stats['tris']['min'])} - {format_number(stats['tris']['max'])}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">High-Load Frames</div>
-          <div class="stats-item-value">{len(stats['high_load'])}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Low-Load Frames</div>
-          <div class="stats-item-value">{len(stats['low_load'])}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Performance Variance</div>
-          <div class="stats-item-value">{format_number(stats['draws']['cv'], 1)}%</div>
-        </div>
+        {''.join(stats_items)}
       </div>
     </section>
     
@@ -210,5 +171,17 @@ def generate_homepage(
     </div>
 """
     
-    return get_html_template(f"{config.title} - Home", body_content, include_chartjs=False)
+    return get_html_template(f"{config.title} - Home", body_content, include_chartjs=False, linked_css=config.linked_css, theme_id=config.theme_id)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='home',
+    filename='index.html',
+    nav_label='Home',
+    nav_order=10,
+    llm_section='Executive Summary',
+    page_generator=generate_homepage,
+    requires_images=False,
+    requires_data_points=False
+))

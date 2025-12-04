@@ -5,7 +5,9 @@ Visual analysis page generator with distribution charts.
 import json
 from typing import Dict, List, Any
 from .base import get_html_template, get_page_header, prepare_histogram_data, sanitize_llm_html
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
+from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart
 
 
 def generate_visuals_page(
@@ -26,14 +28,7 @@ def generate_visuals_page(
     Returns:
         Complete HTML document for the visual analysis page
     """
-    nav_items = [
-        ("Home", "index.html", False),
-        ("Metrics", "metrics.html", False),
-        ("Zones & Hotspots", "zones.html", False),
-        ("Visual Analysis", "visuals.html", True),
-        ("Optimization", "optimization.html", False),
-        ("Statistics", "stats.html", False),
-    ]
+    nav_items = get_nav_items('visuals.html')
     
     header = get_page_header("Visual Analysis - Distribution Charts", f"{stats['count']} captures · {config.location}", nav_items)
     
@@ -156,10 +151,7 @@ def generate_visuals_page(
         }}
 
         // Chart.js default configuration
-        Chart.defaults.color = '#a8b3c5';
-        Chart.defaults.borderColor = '#1e2835';
-        Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-        Chart.defaults.font.size = 12;
+        {get_chart_defaults_js(config.theme_id)}
 
         // Histogram - Draw Calls Distribution
         try {{
@@ -283,5 +275,19 @@ def generate_visuals_page(
     </script>
 """
     
-    return get_html_template(f"{config.title} - Visual Analysis", body_content, include_chartjs=True)
+    return get_html_template(f"{config.title} - Visual Analysis", body_content, include_chartjs=True, linked_css=config.linked_css, theme_id=config.theme_id)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='visuals',
+    filename='visuals.html',
+    nav_label='Visual Analysis',
+    nav_order=40,
+    llm_section='Visual Analysis',
+    page_generator=generate_visuals_page,
+    requires_images=False,
+    requires_data_points=True,
+    card_icon='fa-chart-bar',
+    card_description='Distribution histograms and visual breakdowns showing performance patterns across all captures.'
+))

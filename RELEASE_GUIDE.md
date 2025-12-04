@@ -2,7 +2,16 @@
 
 ## Performance Analysis Tool for Game Development
 
-Version 1.0.2
+Version 1.0.3
+
+### What's New in v1.0.3
+
+- **LLM Generator Registry**: Self-registration pattern for AI content generators with configurable prompt categories
+- **Chart Configuration Registry**: Centralized Chart.js datasets and configs
+- **Report Theme Registry**: 3 themes (dark, light, high_contrast) with 18 properties including `chart_grid_opacity`
+- **Theme CLI Option**: New `--theme` flag to switch report appearance
+- **Dynamic Homepage Navigation**: Cards auto-generated from page registry with icons and descriptions
+- **Config-Based Thresholds**: MAD threshold and LLM max tokens now configurable via `ReportConfig`
 
 ---
 
@@ -56,7 +65,7 @@ export OPENAI_API_KEY=sk-your-api-key-here
 bobreview --version
 ```
 
-You should see: `BobReview version 1.0.2`
+You should see: `BobReview version 1.0.3`
 
 ---
 
@@ -123,6 +132,9 @@ bobreview --dir . --dry-run
 
 # Process only 20 random samples (for quick testing)
 bobreview --dir . --sample 20
+
+# Use light theme
+bobreview --dir . --theme light
 
 # See all available options
 bobreview --help
@@ -252,6 +264,9 @@ bobreview --dir /path/to/screenshots
 --verbose                # Show detailed output
 --clear-cache            # Force fresh analysis
 --no-embed-images        # Use external image files instead of embedding
+--linked-css             # Use external CSS file (styles.css)
+--theme THEME            # Report theme: dark (default), light, high_contrast
+--disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --help                   # Show all options
 
 # Check version
@@ -271,6 +286,6 @@ python -c "from bobreview import ReportConfig; print('OK')"
 
 ---
 
-**BobReview v1.0.2** - Performance analysis and review tool for game development  
+**BobReview v1.0.3** - Performance analysis and review tool for game development  
 MIT License | Optimized for cost-effective LLM-powered analysis
 
