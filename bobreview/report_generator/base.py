@@ -134,37 +134,6 @@ def copy_css_to_output(output_dir: Path) -> Path:
 
 
 # =============================================================================
-# Navigation Component
-# =============================================================================
-
-# Navigation structure - single source of truth
-NAV_PAGES = [
-    ("Home", "index.html"),
-    ("Metrics", "metrics.html"),
-    ("Zones & Hotspots", "zones.html"),
-    ("Visual Analysis", "visuals.html"),
-    ("Optimization", "optimization.html"),
-    ("Statistics", "stats.html"),
-]
-
-
-def get_nav_items(active_page: str) -> List[tuple]:
-    """
-    Generate navigation items with the specified page marked as active.
-    
-    This is the single source of truth for navigation structure.
-    Pass the filename (e.g., 'index.html', 'metrics.html') to mark it active.
-    
-    Parameters:
-        active_page: Filename of the currently active page
-    
-    Returns:
-        List of (label, url, is_active) tuples for navigation
-    """
-    return [(label, url, url == active_page) for label, url in NAV_PAGES]
-
-
-# =============================================================================
 # HTML Component Builders
 # =============================================================================
 
