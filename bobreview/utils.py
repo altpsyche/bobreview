@@ -57,9 +57,9 @@ def log_success(message: str, config: "Optional[ReportConfig]" = None):
     if config and config.quiet:
         return
     if COLORAMA_AVAILABLE:
-        print(f"{Fore.GREEN}✓{Style.RESET_ALL} {message}")
+        print(f"{Fore.GREEN}[OK]{Style.RESET_ALL} {message}")
     else:
-        print(f"✓ {message}")
+        print(f"[OK] {message}")
 
 
 def log_warning(message: str, config: "Optional[ReportConfig]" = None):
