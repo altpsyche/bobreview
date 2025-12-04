@@ -7,7 +7,10 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config import ReportConfig
 
 from .utils import log_warning, log_success, log_verbose, log_info
 
@@ -15,7 +18,11 @@ from .utils import log_warning, log_success, log_verbose, log_info
 class LLMCache:
     """Cache for LLM responses to avoid redundant API calls."""
     
-    def __init__(self, cache_dir: Path, enabled: bool = True, config=None):
+    cache_dir: Path
+    enabled: bool
+    config: "Optional[ReportConfig]"
+    
+    def __init__(self, cache_dir: Path, enabled: bool = True, config: "Optional[ReportConfig]" = None):
         """
         Initialize the LLMCache.
         
@@ -127,7 +134,7 @@ def get_cache() -> Optional[LLMCache]:
     return _cache_instance
 
 
-def init_cache(config):
+def init_cache(config: "ReportConfig"):
     """
     Initialize the module-level LLM cache using values from `config`.
     

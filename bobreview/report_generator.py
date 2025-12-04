@@ -7,8 +7,11 @@ import json
 from datetime import datetime
 from html import escape
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from urllib.parse import quote
+
+if TYPE_CHECKING:
+    from .config import ReportConfig
 
 from .utils import format_number, log_info, log_verbose, log_warning, image_to_base64
 from .llm_provider import (
@@ -34,7 +37,7 @@ except ImportError:
             return iter(self.iterable)
 
 
-def _prepare_timeline_data(data_points: List[Dict[str, Any]], metric: str, config) -> str:
+def _prepare_timeline_data(data_points: List[Dict[str, Any]], metric: str, config: "ReportConfig") -> str:
     """
     Prepare timeline chart data for Chart.js.
     
@@ -75,7 +78,7 @@ def _prepare_timeline_data(data_points: List[Dict[str, Any]], metric: str, confi
     return json.dumps(data)
 
 
-def _prepare_scatter_data(data_points: List[Dict[str, Any]], config) -> str:
+def _prepare_scatter_data(data_points: List[Dict[str, Any]], config: "ReportConfig") -> str:
     """
     Prepare scatter plot data (draws vs tris) for Chart.js.
     
@@ -161,7 +164,7 @@ def generate_html_report(
     stats: Dict[str, Any], 
     images_dir_rel: str, 
     output_path: Path, 
-    config
+    config: "ReportConfig"
 ) -> str:
     """
     Builds a complete HTML performance report combining analysis, images, and LLM-generated sections.

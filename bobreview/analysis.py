@@ -5,8 +5,11 @@ Statistical analysis utilities for BobReview.
 
 import math
 import statistics
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, TYPE_CHECKING
 from scipy import stats
+
+if TYPE_CHECKING:
+    from .config import ReportConfig
 
 
 def _calculate_confidence_interval(values: List[float], confidence: float = 0.95) -> Tuple[float, float]:
@@ -219,7 +222,7 @@ def _classify_trend(slope: float, stdev: float, mean: float) -> str:
         return 'stable'
 
 
-def analyze_data(data_points: List[Dict[str, Any]], config) -> Dict[str, Any]:
+def analyze_data(data_points: List[Dict[str, Any]], config: "ReportConfig") -> Dict[str, Any]:
     """
     Calculate statistics and identify hotspots from performance data.
     
