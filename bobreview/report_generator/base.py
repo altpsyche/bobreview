@@ -256,7 +256,7 @@ def get_page_header(title: str, subtitle: str = "", nav_items: Optional[List[tup
     """
 
 
-def get_html_template(title: str, body_content: str, include_chartjs: bool = False, linked_css: bool = False, theme_id: str = None) -> str:
+def get_html_template(title: str, body_content: str, include_chartjs: bool = False, linked_css: bool = False, theme_id: Optional[str] = None) -> str:
     """
     Generate a complete HTML document with shared styles.
     
