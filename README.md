@@ -59,6 +59,8 @@ bobreview/
 │   ├── data_parser.py      # PNG filename parsing
 │   ├── analysis.py         # Statistical analysis
 │   ├── llm_provider.py     # LLM API interaction
+│   ├── llm_registry.py     # LLM generator registration (NEW)
+│   ├── chart_registry.py   # Chart configuration registry (NEW)
 │   ├── cli.py              # Command-line interface
 │   └── report_generator/   # Modular HTML generation
 │       ├── __init__.py     # Report orchestration
@@ -82,6 +84,17 @@ bobreview/
 - Dependency Injection - Configuration passed through parameters
 - No Circular Dependencies - Clean import hierarchy
 - Testable - Each module can be tested independently
+- Registry Pattern - Self-registration for pages, LLM generators, and charts
+
+### Registry Systems
+
+BobReview uses three registry patterns for extensibility:
+
+| Registry | File | Purpose |
+|----------|------|--------|
+| Page Registry | `report_generator/registry.py` | HTML page registration |
+| LLM Generator Registry | `llm_registry.py` | LLM content generators with categories |
+| Chart Registry | `chart_registry.py` | Chart.js themes, datasets, and configs |
 
 ---
 
@@ -734,6 +747,64 @@ from . import custom_page
 | `page_generator` | Function that returns HTML |
 | `requires_images` | Whether page needs image data |
 | `requires_data_points` | Whether page needs raw data |
+| `card_icon` | Font Awesome icon for homepage card |
+| `card_description` | Description for homepage navigation card |
+
+### Adding LLM Generators with Categories
+
+LLM generators use a registry pattern with configurable prompt categories:
+
+```python
+# bobreview/llm_provider.py
+from .llm_registry import register_llm_generator, LLMGeneratorDefinition, PromptCategory
+
+def generate_custom_analysis(data_points, stats, config, images_dir):
+    """Generate custom analysis content."""
+    prompt = f"""Analyze data covering:
+{_build_category_prompt('Custom Analysis')}
+"""
+    return call_llm(prompt, config=config)
+
+# Register with categories
+register_llm_generator(LLMGeneratorDefinition(
+    section_name='Custom Analysis',
+    generator_func=generate_custom_analysis,
+    description='Custom performance analysis',
+    categories=[
+        PromptCategory('overview', 'Performance Overview', 'general assessment', priority=10),
+        PromptCategory('issues', 'Key Issues', 'main problems found', priority=20),
+        PromptCategory('actions', 'Action Items', 'recommended next steps', priority=30),
+    ]
+))
+```
+
+**To modify categories**: Just edit the `categories` list - prompts update automatically.
+
+### Customizing Chart Appearance
+
+Chart configurations are managed via the chart registry:
+
+```python
+# Custom theme
+from bobreview.chart_registry import register_theme, register_dataset, ChartTheme, ChartDataset
+
+# Register a light theme
+register_theme(ChartTheme(
+    id='light',
+    text_color='#333333',
+    border_color='#cccccc',
+    grid_color='rgba(0, 0, 0, 0.1)',
+    font_size=14
+))
+
+# Register custom dataset style
+register_dataset(ChartDataset(
+    id='custom_metric',
+    label='Custom Metric',
+    primary_color='rgba(255, 0, 128, 0.8)',
+    secondary_color='rgba(255, 0, 128, 1)'
+))
+```
 
 ---
 
@@ -745,13 +816,16 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.2
+**Current:** v1.0.3
 
 **Features:**
 - Modular architecture
 - Global CLI command
 - Intelligent caching
 - Complete documentation
+- Registry pattern for pages, LLM generators, and charts
+- Configurable prompt categories for LLM content
+- Dynamic homepage navigation from page registry
 
 ---
 
