@@ -59,11 +59,20 @@ bobreview/
 │   ├── data_parser.py      # PNG filename parsing
 │   ├── analysis.py         # Statistical analysis
 │   ├── llm_provider.py     # LLM API interaction
-│   ├── report_generator.py # HTML generation
-│   └── cli.py              # Command-line interface
+│   ├── cli.py              # Command-line interface
+│   └── report_generator/   # Modular HTML generation
+│       ├── __init__.py     # Report orchestration
+│       ├── base.py         # Shared utilities & templates
+│       ├── registry.py     # Page registration system
+│       ├── homepage.py     # Index page
+│       ├── metrics.py      # Metrics analysis page
+│       ├── zones.py        # Zones & hotspots page
+│       ├── visuals.py      # Visual analysis page
+│       ├── optimization.py # Optimization page
+│       └── stats.py        # Statistics page
 │
 ├── bobreview.py            # Entry point script
-├── requirements.txt        # Dependencies (single source of truth)
+├── requirements.txt        # Dependencies
 ├── setup.py                # Package installer
 └── pyproject.toml          # Package configuration
 ```
@@ -382,6 +391,8 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --verbose, -v          # Detailed output
 --quiet, -q            # Errors only
 --no-embed-images      # Use external image files
+--linked-css           # Use external CSS file (styles.css)
+--disable-page ID      # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --version              # Show version
 --help                 # Show help
 ```
@@ -653,6 +664,76 @@ git clone https://github.com/DiggingNebula8/bobreview.git
 cd bobreview
 pip install -e ".[dev]"
 ```
+
+### Adding New Report Pages
+
+BobReview uses a modular page registry system. To add a new page:
+
+**1. Create a new page module** in `bobreview/report_generator/`:
+
+```python
+# bobreview/report_generator/custom_page.py
+"""Custom analysis page."""
+
+from typing import Dict, List, Any
+from .base import get_html_template, get_page_header, sanitize_llm_html
+from .registry import register_page, PageDefinition, get_nav_items
+
+
+def generate_custom_page(
+    stats: Dict[str, Any],
+    config,
+    custom_content: str
+) -> str:
+    """Generate the custom analysis page."""
+    nav_items = get_nav_items('custom.html')
+    header = get_page_header("Custom Analysis", f"{stats['count']} captures", nav_items)
+    
+    body_content = f"""{header}
+    <section class="panel">
+      <h2>Custom Analysis</h2>
+      {sanitize_llm_html(custom_content)}
+    </section>
+"""
+    return get_html_template(f"{config.title} - Custom", body_content, linked_css=config.linked_css)
+
+
+# Register the page
+register_page(PageDefinition(
+    id='custom',
+    filename='custom.html',
+    nav_label='Custom',
+    nav_order=70,  # After stats (60)
+    llm_section='Custom Analysis',
+    page_generator=generate_custom_page,
+    requires_images=False,
+    requires_data_points=False
+))
+```
+
+**2. Import the module** in `bobreview/report_generator/__init__.py`:
+
+```python
+# Add with other imports
+from . import custom_page
+```
+
+**3. Add LLM generator** (optional) in `bobreview/llm_provider.py` if you need AI-generated content.
+
+**4. Done!** Navigation auto-updates and the page is generated with all reports.
+
+**Page Definition Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier (used with `--disable-page`) |
+| `filename` | Output HTML filename |
+| `nav_label` | Navigation menu label |
+| `nav_order` | Sort order (10=Home, 20=Metrics, etc.) |
+| `llm_section` | LLM content key from `llm_provider.py` |
+| `page_generator` | Function that returns HTML |
+| `requires_images` | Whether page needs image data |
+| `requires_data_points` | Whether page needs raw data |
 
 ---
 

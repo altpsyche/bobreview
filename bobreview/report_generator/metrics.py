@@ -12,9 +12,9 @@ from .base import (
     prepare_scatter_data,
     prepare_histogram_data,
     sanitize_llm_html,
-    get_nav_items,
     render_metric_table
 )
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
@@ -301,3 +301,15 @@ def generate_metrics_page(
     
     return get_html_template(f"{config.title} - Metrics", body_content, include_chartjs=True, linked_css=config.linked_css)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='metrics',
+    filename='metrics.html',
+    nav_label='Metrics',
+    nav_order=20,
+    llm_section='Metric Deep Dive',
+    page_generator=generate_metrics_page,
+    requires_images=False,
+    requires_data_points=True
+))

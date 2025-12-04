@@ -201,6 +201,11 @@ Examples:
         '--linked-css', action='store_true', default=False,
         help='Use external CSS file instead of embedding (creates styles.css in output directory)'
     )
+    parser.add_argument(
+        '--disable-page', action='append', dest='disabled_pages', default=[],
+        metavar='PAGE_ID',
+        help='Disable a page by ID (can be used multiple times). Valid IDs: home, metrics, zones, visuals, optimization, stats'
+    )
     
     args = parser.parse_args()
     
@@ -241,7 +246,8 @@ Examples:
         verbose=args.verbose,
         quiet=args.quiet,
         embed_images=args.embed_images,
-        linked_css=args.linked_css
+        linked_css=args.linked_css,
+        disabled_pages=args.disabled_pages
     )
     
     # Validate configuration

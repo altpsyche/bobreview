@@ -36,6 +36,12 @@ class ReportConfig:
     quiet: bool = False
     embed_images: bool = True  # Embed images as base64 in HTML for standalone sharing
     linked_css: bool = False  # Use external CSS file instead of embedding
+    disabled_pages: List[str] = None  # List of page IDs to exclude (e.g., ['stats', 'visuals'])
+    
+    def __post_init__(self):
+        """Initialize mutable defaults."""
+        if self.disabled_pages is None:
+            self.disabled_pages = []
 
 
 def validate_config(config: ReportConfig) -> List[str]:

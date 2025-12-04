@@ -4,7 +4,8 @@ Visual analysis page generator with distribution charts.
 
 import json
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, prepare_histogram_data, sanitize_llm_html, get_nav_items
+from .base import get_html_template, get_page_header, prepare_histogram_data, sanitize_llm_html
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
@@ -278,3 +279,15 @@ def generate_visuals_page(
     
     return get_html_template(f"{config.title} - Visual Analysis", body_content, include_chartjs=True, linked_css=config.linked_css)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='visuals',
+    filename='visuals.html',
+    nav_label='Visual Analysis',
+    nav_order=40,
+    llm_section='Visual Analysis',
+    page_generator=generate_visuals_page,
+    requires_images=False,
+    requires_data_points=True
+))

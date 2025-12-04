@@ -314,6 +314,8 @@ bobreview --dir PATH [OPTIONS]
 --quiet                    # Errors only
 --clear-cache              # Clear LLM cache
 --no-embed-images          # Use external image files
+--linked-css               # Use external CSS file
+--disable-page ID          # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --openai-key KEY           # OpenAI API key
 ```
 

@@ -252,6 +252,8 @@ bobreview --dir /path/to/screenshots
 --verbose                # Show detailed output
 --clear-cache            # Force fresh analysis
 --no-embed-images        # Use external image files instead of embedding
+--linked-css             # Use external CSS file (styles.css)
+--disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 --help                   # Show all options
 
 # Check version

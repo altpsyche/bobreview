@@ -9,9 +9,9 @@ from .base import (
     get_page_header, 
     get_image_src, 
     sanitize_llm_html,
-    get_nav_items,
     render_stat_card
 )
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
@@ -197,3 +197,16 @@ def generate_zones_page(
 """
     
     return get_html_template(f"{config.title} - Zones & Hotspots", body_content, include_chartjs=False, linked_css=config.linked_css)
+
+
+# Register this page
+register_page(PageDefinition(
+    id='zones',
+    filename='zones.html',
+    nav_label='Zones & Hotspots',
+    nav_order=30,
+    llm_section='Zones & Hotspots',
+    page_generator=generate_zones_page,
+    requires_images=True,
+    requires_data_points=False
+))

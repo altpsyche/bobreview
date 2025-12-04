@@ -4,7 +4,8 @@ Optimization checklist page generator with actionable recommendations.
 
 from html import escape
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_image_src, sanitize_llm_html, get_nav_items
+from .base import get_html_template, get_page_header, get_image_src, sanitize_llm_html
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
@@ -217,3 +218,15 @@ def generate_optimization_page(
     
     return get_html_template(f"{config.title} - Optimization", body_content, include_chartjs=False, linked_css=config.linked_css)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='optimization',
+    filename='optimization.html',
+    nav_label='Optimization',
+    nav_order=50,
+    llm_section='Optimization Checklist',
+    page_generator=generate_optimization_page,
+    requires_images=True,
+    requires_data_points=True
+))

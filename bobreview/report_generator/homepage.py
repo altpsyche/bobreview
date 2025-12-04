@@ -9,10 +9,10 @@ from .base import (
     get_page_header, 
     get_trend_icon, 
     sanitize_llm_html,
-    get_nav_items,
     render_stat_card,
     render_stats_item
 )
+from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
 
 
@@ -203,3 +203,15 @@ def generate_homepage(
     
     return get_html_template(f"{config.title} - Home", body_content, include_chartjs=False, linked_css=config.linked_css)
 
+
+# Register this page
+register_page(PageDefinition(
+    id='home',
+    filename='index.html',
+    nav_label='Home',
+    nav_order=10,
+    llm_section='Executive Summary',
+    page_generator=generate_homepage,
+    requires_images=False,
+    requires_data_points=False
+))
