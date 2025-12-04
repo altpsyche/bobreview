@@ -132,6 +132,115 @@ def copy_css_to_output(output_dir: "Path") -> "Path":
     return dest
 
 
+# =============================================================================
+# Navigation Component
+# =============================================================================
+
+# Navigation structure - single source of truth
+NAV_PAGES = [
+    ("Home", "index.html"),
+    ("Metrics", "metrics.html"),
+    ("Zones & Hotspots", "zones.html"),
+    ("Visual Analysis", "visuals.html"),
+    ("Optimization", "optimization.html"),
+    ("Statistics", "stats.html"),
+]
+
+
+def get_nav_items(active_page: str) -> List[tuple]:
+    """
+    Generate navigation items with the specified page marked as active.
+    
+    This is the single source of truth for navigation structure.
+    Pass the filename (e.g., 'index.html', 'metrics.html') to mark it active.
+    
+    Parameters:
+        active_page: Filename of the currently active page
+    
+    Returns:
+        List of (label, url, is_active) tuples for navigation
+    """
+    return [(label, url, url == active_page) for label, url in NAV_PAGES]
+
+
+# =============================================================================
+# HTML Component Builders
+# =============================================================================
+
+def render_stat_card(label: str, value: str, subtitle: str = "", variant: str = "") -> str:
+    """
+    Render a stat-card HTML component.
+    
+    Parameters:
+        label: Small label text at top (e.g., "Average Performance")
+        value: Large value text (e.g., "450 draws")
+        subtitle: Optional smaller text below value
+        variant: CSS variant class - 'ok', 'warn', 'danger', or '' for default
+    
+    Returns:
+        HTML string for the stat-card component
+    """
+    variant_class = f" {variant}" if variant else ""
+    subtitle_html = f'<div class="stat-sub">{subtitle}</div>' if subtitle else ""
+    
+    return f'''<div class="stat-card{variant_class}">
+  <div class="stat-label">{label}</div>
+  <div class="stat-value">{value}</div>
+  {subtitle_html}
+</div>'''
+
+
+def render_stats_item(label: str, value: str) -> str:
+    """
+    Render a stats-item HTML component.
+    
+    Parameters:
+        label: Label text (e.g., "Total Captures")
+        value: Value text (e.g., "150")
+    
+    Returns:
+        HTML string for the stats-item component
+    """
+    return f'''<div class="stats-item">
+  <div class="stats-item-label">{label}</div>
+  <div class="stats-item-value">{value}</div>
+</div>'''
+
+
+def render_metric_table(metric_name: str, stats: Dict[str, Any], format_fn) -> str:
+    """
+    Render a metric statistics table (for draws or tris).
+    
+    Parameters:
+        metric_name: Display name (e.g., "Draw Calls", "Triangle Count")
+        stats: Dictionary with keys: min, max, q1, median, q3, mean, stdev, variance, cv
+        format_fn: Function to format numbers (typically format_number from utils)
+    
+    Returns:
+        HTML string for the metric table
+    """
+    return f'''<h3>{metric_name}</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Metric</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Min</td><td>{format_fn(stats['min'])}</td></tr>
+    <tr><td>Q1 (25th percentile)</td><td>{format_fn(stats['q1'], 0)}</td></tr>
+    <tr><td>Median (50th percentile)</td><td>{format_fn(stats['median'], 0)}</td></tr>
+    <tr><td>Q3 (75th percentile)</td><td>{format_fn(stats['q3'], 0)}</td></tr>
+    <tr><td>Max</td><td>{format_fn(stats['max'])}</td></tr>
+    <tr><td>Mean</td><td>{format_fn(stats['mean'], 1)}</td></tr>
+    <tr><td>Std Dev</td><td>{format_fn(stats['stdev'], 1)}</td></tr>
+    <tr><td>Variance</td><td>{format_fn(stats['variance'], 1)}</td></tr>
+    <tr><td>CV (Coefficient of Variation)</td><td>{format_fn(stats['cv'], 1)}%</td></tr>
+  </tbody>
+</table>'''
+
+
 def get_page_header(title: str, subtitle: str = "", nav_items: Optional[List[tuple]] = None) -> str:
     """
     Generate a page header with navigation.

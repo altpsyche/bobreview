@@ -11,7 +11,9 @@ from .base import (
     prepare_timeline_data, 
     prepare_scatter_data,
     prepare_histogram_data,
-    sanitize_llm_html
+    sanitize_llm_html,
+    get_nav_items,
+    render_metric_table
 )
 from ..utils import format_number
 
@@ -34,14 +36,7 @@ def generate_metrics_page(
     Returns:
         Complete HTML document for the metrics page
     """
-    nav_items = [
-        ("Home", "index.html", False),
-        ("Metrics", "metrics.html", True),
-        ("Zones & Hotspots", "zones.html", False),
-        ("Visual Analysis", "visuals.html", False),
-        ("Optimization", "optimization.html", False),
-        ("Statistics", "stats.html", False),
-    ]
+    nav_items = get_nav_items('metrics.html')
     
     header = get_page_header("Metric Deep Dive", f"{stats['count']} captures · {config.location}", nav_items)
     
@@ -49,6 +44,10 @@ def generate_metrics_page(
     timeline_draws_data = prepare_timeline_data(data_points, 'draws', config)
     timeline_tris_data = prepare_timeline_data(data_points, 'tris', config)
     scatter_data = prepare_scatter_data(data_points, config)
+    
+    # Render metric tables using component
+    draws_table = render_metric_table("Draw Calls", stats['draws'], format_number)
+    tris_table = render_metric_table("Triangle Count", stats['tris'], format_number)
     
     body_content = f"""{header}
     
@@ -58,50 +57,12 @@ def generate_metrics_page(
         Detailed analysis of draw calls and triangle counts with statistical breakdowns and temporal patterns.
       </p>
       
-      <h3>Draw Calls</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Metric</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Samples</td><td>{stats['count']}</td></tr>
-          <tr><td>Min</td><td>{stats['draws']['min']}</td></tr>
-          <tr><td>Q1 (25th percentile)</td><td>{format_number(stats['draws']['q1'], 0)}</td></tr>
-          <tr><td>Median (50th percentile)</td><td>{format_number(stats['draws']['median'], 0)}</td></tr>
-          <tr><td>Q3 (75th percentile)</td><td>{format_number(stats['draws']['q3'], 0)}</td></tr>
-          <tr><td>Max</td><td>{stats['draws']['max']}</td></tr>
-          <tr><td>Mean</td><td>{format_number(stats['draws']['mean'], 1)}</td></tr>
-          <tr><td>Std Dev</td><td>{format_number(stats['draws']['stdev'], 1)}</td></tr>
-          <tr><td>Variance</td><td>{format_number(stats['draws']['variance'], 1)}</td></tr>
-          <tr><td>CV (Coefficient of Variation)</td><td>{format_number(stats['draws']['cv'], 1)}%</td></tr>
-        </tbody>
-      </table>
+      <p class="body-text"><strong>Samples:</strong> {stats['count']}</p>
+      
+      {draws_table}
       {sanitize_llm_html(metric_content.get('draws', ''))}
       
-      <h3>Triangle Count</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Metric</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Samples</td><td>{stats['count']}</td></tr>
-          <tr><td>Min</td><td>{format_number(stats['tris']['min'])}</td></tr>
-          <tr><td>Q1 (25th percentile)</td><td>{format_number(stats['tris']['q1'])}</td></tr>
-          <tr><td>Median (50th percentile)</td><td>{format_number(stats['tris']['median'])}</td></tr>
-          <tr><td>Q3 (75th percentile)</td><td>{format_number(stats['tris']['q3'])}</td></tr>
-          <tr><td>Max</td><td>{format_number(stats['tris']['max'])}</td></tr>
-          <tr><td>Mean</td><td>{format_number(stats['tris']['mean'], 1)}</td></tr>
-          <tr><td>Std Dev</td><td>{format_number(stats['tris']['stdev'], 1)}</td></tr>
-          <tr><td>Variance</td><td>{format_number(stats['tris']['variance'], 0)}</td></tr>
-          <tr><td>CV (Coefficient of Variation)</td><td>{format_number(stats['tris']['cv'], 1)}%</td></tr>
-        </tbody>
-      </table>
+      {tris_table}
       {sanitize_llm_html(metric_content.get('tris', ''))}
     </section>
     

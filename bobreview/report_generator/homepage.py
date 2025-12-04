@@ -4,7 +4,15 @@ Homepage generator for BobReview multi-page reports.
 
 from datetime import datetime
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_trend_icon, sanitize_llm_html
+from .base import (
+    get_html_template, 
+    get_page_header, 
+    get_trend_icon, 
+    sanitize_llm_html,
+    get_nav_items,
+    render_stat_card,
+    render_stats_item
+)
 from ..utils import format_number
 
 
@@ -29,16 +37,41 @@ def generate_homepage(
     critical_draws = critical_point['draws']
     critical_tris = format_number(critical_point['tris'])
     
-    nav_items = [
-        ("Home", "index.html", True),
-        ("Metrics", "metrics.html", False),
-        ("Zones & Hotspots", "zones.html", False),
-        ("Visual Analysis", "visuals.html", False),
-        ("Optimization", "optimization.html", False),
-        ("Statistics", "stats.html", False),
-    ]
+    nav_items = get_nav_items('index.html')
     
     header = get_page_header(config.title, f"{stats['count']} captures · {config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}", nav_items)
+    
+    # Build stat cards
+    avg_card = render_stat_card(
+        "Average Performance",
+        f"{format_number(stats['draws']['mean'], 0)} draws",
+        f"{format_number(stats['tris']['mean'], 0)} triangles &middot; median {format_number(stats['draws']['median'], 0)} / {format_number(stats['tris']['median'], 0)}",
+        "ok"
+    )
+    
+    peak_card = render_stat_card(
+        "Peak Hotspot",
+        f"{critical_draws} draws",
+        f"{critical_tris} triangles (index {critical_idx})",
+        "danger"
+    )
+    
+    highload_card = render_stat_card(
+        "High-Load Frames",
+        str(len(stats['high_load'])),
+        f"Draws ≥ {config.high_load_draw_threshold} or tris ≥ {format_number(config.high_load_tri_threshold, 0)}",
+        "warn"
+    )
+    
+    # Build stats items
+    stats_items = [
+        render_stats_item("Total Captures", str(stats['count'])),
+        render_stats_item("Draw Calls Range", f"{stats['draws']['min']} - {stats['draws']['max']}"),
+        render_stats_item("Triangles Range", f"{format_number(stats['tris']['min'])} - {format_number(stats['tris']['max'])}"),
+        render_stats_item("High-Load Frames", str(len(stats['high_load']))),
+        render_stats_item("Low-Load Frames", str(len(stats['low_load']))),
+        render_stats_item("Performance Variance", f"{format_number(stats['draws']['cv'], 1)}%"),
+    ]
     
     body_content = f"""{header}
     
@@ -47,23 +80,9 @@ def generate_homepage(
       <h2>Executive Summary</h2>
       
       <div class="summary-grid">
-        <div class="stat-card ok">
-          <div class="stat-label">Average Performance</div>
-          <div class="stat-value">{format_number(stats['draws']['mean'], 0)} draws</div>
-          <div class="stat-sub">{format_number(stats['tris']['mean'], 0)} triangles &middot; median {format_number(stats['draws']['median'], 0)} / {format_number(stats['tris']['median'], 0)}</div>
-        </div>
-        
-        <div class="stat-card danger">
-          <div class="stat-label">Peak Hotspot</div>
-          <div class="stat-value">{critical_draws} draws</div>
-          <div class="stat-sub">{critical_tris} triangles (index {critical_idx})</div>
-        </div>
-        
-        <div class="stat-card warn">
-          <div class="stat-label">High-Load Frames</div>
-          <div class="stat-value">{len(stats['high_load'])}</div>
-          <div class="stat-sub">Draws ≥ {config.high_load_draw_threshold} or tris ≥ {format_number(config.high_load_tri_threshold, 0)}</div>
-        </div>
+        {avg_card}
+        {peak_card}
+        {highload_card}
       </div>
       
       <div style="margin-top: 12px;">
@@ -173,35 +192,7 @@ def generate_homepage(
       <h2>Quick Statistics</h2>
       
       <div class="stats-grid">
-        <div class="stats-item">
-          <div class="stats-item-label">Total Captures</div>
-          <div class="stats-item-value">{stats['count']}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Draw Calls Range</div>
-          <div class="stats-item-value">{stats['draws']['min']} - {stats['draws']['max']}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Triangles Range</div>
-          <div class="stats-item-value">{format_number(stats['tris']['min'])} - {format_number(stats['tris']['max'])}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">High-Load Frames</div>
-          <div class="stats-item-value">{len(stats['high_load'])}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Low-Load Frames</div>
-          <div class="stats-item-value">{len(stats['low_load'])}</div>
-        </div>
-        
-        <div class="stats-item">
-          <div class="stats-item-label">Performance Variance</div>
-          <div class="stats-item-value">{format_number(stats['draws']['cv'], 1)}%</div>
-        </div>
+        {''.join(stats_items)}
       </div>
     </section>
     
