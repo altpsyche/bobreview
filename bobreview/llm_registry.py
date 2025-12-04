@@ -20,6 +20,23 @@ GeneratorFunc = Callable[
 
 
 @dataclass
+class PromptCategory:
+    """
+    Defines a category for structured LLM prompts.
+    
+    Attributes:
+        id: Unique identifier for the category (e.g., 'lod', 'occlusion')
+        title: Display title (e.g., 'LOD & Detail Management')
+        focus: What the LLM should focus on for this category
+        priority: Optional priority for ordering (lower = higher priority)
+    """
+    id: str
+    title: str
+    focus: str
+    priority: int = 50
+
+
+@dataclass
 class LLMGeneratorDefinition:
     """
     Defines an LLM generator with metadata for content generation.
@@ -28,10 +45,18 @@ class LLMGeneratorDefinition:
         section_name: Unique name matching PageDefinition.llm_section (e.g., 'Executive Summary')
         generator_func: Function that generates the LLM content
         description: Human-readable description of what this generator produces
+        categories: Optional list of PromptCategory for structured generators
+        prompt_template: Optional base prompt template (generator can use or ignore)
     """
     section_name: str
     generator_func: GeneratorFunc
     description: str = ""
+    categories: List[PromptCategory] = None
+    prompt_template: str = ""
+    
+    def __post_init__(self):
+        if self.categories is None:
+            self.categories = []
 
 
 # Global registry of all LLM generators
@@ -80,3 +105,24 @@ def has_llm_generator(section_name: str) -> bool:
 def clear_llm_registry() -> None:
     """Clear all registered LLM generators. Mainly used for testing."""
     _LLM_REGISTRY.clear()
+
+
+def get_generator_categories(section_name: str) -> List[PromptCategory]:
+    """
+    Get the categories for a given generator.
+    
+    Parameters:
+        section_name: The name of the LLM section
+    
+    Returns:
+        List of PromptCategory sorted by priority, or empty list if none
+    """
+    gen = _LLM_REGISTRY.get(section_name)
+    if gen and gen.categories:
+        return sorted(gen.categories, key=lambda c: c.priority)
+    return []
+
+
+def get_generator_definition(section_name: str) -> Optional[LLMGeneratorDefinition]:
+    """Get the full generator definition for a section."""
+    return _LLM_REGISTRY.get(section_name)
