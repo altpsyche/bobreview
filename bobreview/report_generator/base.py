@@ -3,18 +3,26 @@ Base HTML utilities and shared components for BobReview reports.
 """
 
 import json
-import re
 from html import escape
 from typing import Dict, Any, Optional, List
 from urllib.parse import quote
+
+try:
+    import bleach
+    BLEACH_AVAILABLE = True
+except ImportError:
+    BLEACH_AVAILABLE = False
 
 
 def sanitize_llm_html(content: str) -> str:
     """
     Sanitize LLM-generated HTML to prevent XSS while preserving safe formatting tags.
     
-    Allows: p, strong, em, b, i, u, ul, ol, li, br, span, div
-    Removes: script, iframe, object, embed, and dangerous attributes
+    Uses the bleach library (whitelist-based approach) when available, otherwise
+    returns escaped HTML as a fallback.
+    
+    Allowed tags: p, strong, em, b, i, u, ul, ol, li, br, span, div, h1-h6
+    Allowed attributes: class (on span/div), href (on a)
     
     Parameters:
         content: HTML content from LLM
@@ -25,22 +33,39 @@ def sanitize_llm_html(content: str) -> str:
     if not content:
         return ""
     
-    # Remove script tags and content
-    content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.IGNORECASE | re.DOTALL)
+    if not BLEACH_AVAILABLE:
+        # Fallback: escape all HTML if bleach is not available
+        return escape(content)
     
-    # Remove dangerous tags
-    dangerous_tags = ['iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta', 'style']
-    for tag in dangerous_tags:
-        content = re.sub(f'<{tag}[^>]*>.*?</{tag}>', '', content, flags=re.IGNORECASE | re.DOTALL)
-        content = re.sub(f'<{tag}[^>]*/?>', '', content, flags=re.IGNORECASE)
+    # Whitelist of safe tags
+    allowed_tags = [
+        'p', 'strong', 'em', 'b', 'i', 'u', 
+        'ul', 'ol', 'li', 'br', 'span', 'div',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'a', 'code', 'pre', 'blockquote'
+    ]
     
-    # Remove dangerous attributes (on*, javascript:, data:)
-    content = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', content, flags=re.IGNORECASE)
-    content = re.sub(r'\s+on\w+\s*=\s*[^\s>]+', '', content, flags=re.IGNORECASE)
-    content = re.sub(r'(href|src)\s*=\s*["\']?\s*javascript:', r'\1="', content, flags=re.IGNORECASE)
-    content = re.sub(r'(href|src)\s*=\s*["\']?\s*data:', r'\1="', content, flags=re.IGNORECASE)
+    # Whitelist of safe attributes
+    allowed_attributes = {
+        'span': ['class'],
+        'div': ['class'],
+        'a': ['href'],
+        'code': ['class']
+    }
     
-    return content.strip()
+    # Whitelist of safe protocols for links
+    allowed_protocols = ['http', 'https', 'mailto']
+    
+    # Sanitize using bleach
+    sanitized = bleach.clean(
+        content,
+        tags=allowed_tags,
+        attributes=allowed_attributes,
+        protocols=allowed_protocols,
+        strip=True  # Strip disallowed tags instead of escaping them
+    )
+    
+    return sanitized.strip()
 
 
 def get_trend_icon(direction: str) -> str:

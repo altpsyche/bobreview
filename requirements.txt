@@ -10,6 +10,7 @@
 # ---------------------
 openai>=1.0.0,<2.0.0     # OpenAI API client for LLM-powered analysis
 scipy>=1.11.0,<2.0.0     # Statistical functions for accurate t-distribution
+bleach>=6.0.0,<7.0.0     # HTML sanitization for LLM-generated content
 
 # Optional Dependencies (Recommended)
 # -----------------------------------
