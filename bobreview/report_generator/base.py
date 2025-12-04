@@ -4,6 +4,7 @@ Base HTML utilities and shared components for BobReview reports.
 
 import json
 from html import escape
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from urllib.parse import quote
 
@@ -102,7 +103,7 @@ def get_shared_css() -> str:
     return css_path.read_text(encoding='utf-8')
 
 
-def get_css_source_path() -> "Path":
+def get_css_source_path() -> Path:
     """
     Get the path to the source styles.css file.
     
@@ -113,7 +114,7 @@ def get_css_source_path() -> "Path":
     return Path(__file__).parent / "styles.css"
 
 
-def copy_css_to_output(output_dir: "Path") -> "Path":
+def copy_css_to_output(output_dir: Path) -> Path:
     """
     Copy styles.css to the output directory.
     
