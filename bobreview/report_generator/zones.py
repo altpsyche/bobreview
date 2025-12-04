@@ -99,7 +99,7 @@ def generate_zones_page(
         <div class="stat-card danger">
           <div class="stat-label">High-Load Frames</div>
           <div class="stat-value">{len(stats['high_load'])}</div>
-          <div class="stat-sub">{(len(stats['high_load']) / stats['count'] * 100):.1f}% of captures</div>
+          <div class="stat-sub">{(len(stats['high_load']) / stats['count'] * 100):.1f if stats['count'] > 0 else 0.0}% of captures</div>
         </div>
         
         <div class="stat-card warn">
@@ -111,7 +111,7 @@ def generate_zones_page(
         <div class="stat-card ok">
           <div class="stat-label">Low-Load Frames</div>
           <div class="stat-value">{len(stats['low_load'])}</div>
-          <div class="stat-sub">{(len(stats['low_load']) / stats['count'] * 100):.1f}% of captures</div>
+          <div class="stat-sub">{(len(stats['low_load']) / stats['count'] * 100):.1f if stats['count'] > 0 else 0.0}% of captures</div>
         </div>
       </div>
     </section>
