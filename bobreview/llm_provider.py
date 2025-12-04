@@ -313,7 +313,7 @@ Advanced Metrics:
 - Trend: {stats['trends']['draws']['direction']} (slope: {format_number(stats['trends']['draws']['slope'], 3)})
 
 Outlier Detection (Multiple Methods):
-- Sigma method (>2σ): {len(stats['draws']['outliers_high'])} high, {len(stats['draws']['outliers_low'])} low
+- Sigma method (>2 sigma): {len(stats['draws']['outliers_high'])} high, {len(stats['draws']['outliers_low'])} low
 - IQR method: {len(stats['outliers_iqr']['draws'])} outliers
 - MAD method (robust): {len(stats['outliers_mad']['draws'])} outliers
 - Hard cap threshold: {config.draw_hard_cap}
@@ -352,7 +352,7 @@ Advanced Metrics:
 - Trend: {stats['trends']['tris']['direction']} (slope: {format_number(stats['trends']['tris']['slope'], 1)})
 
 Outlier Detection (Multiple Methods):
-- Sigma method (>2σ): {len(stats['tris']['outliers_high'])} high outliers
+- Sigma method (>2 sigma): {len(stats['tris']['outliers_high'])} high outliers
 - IQR method: {len(stats['outliers_iqr']['tris'])} outliers
 - MAD method (robust): {len(stats['outliers_mad']['tris'])} outliers
 - Hard cap threshold: {format_number(config.tri_hard_cap, 0)}

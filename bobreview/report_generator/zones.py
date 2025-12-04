@@ -171,7 +171,7 @@ def generate_zones_page(
       </p>
       
       <div class="callout critical">
-        <div class="callout-title">Index {stats['critical'][0]} – {escape(stats['critical'][1]['img'])}</div>
+        <div class="callout-title">Index {stats['critical'][0]} - {escape(stats['critical'][1]['img'])}</div>
         <div>{stats['critical'][1]['draws']} draw calls &middot; {format_number(stats['critical'][1]['tris'])} triangles</div>
       </div>
       

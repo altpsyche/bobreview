@@ -115,7 +115,7 @@ IQR:       {format_number(stats['draws']['q3'] - stats['draws']['q1'], 0)}</div>
       <h3>Outlier Detection</h3>
       <div class="stats-grid">
         <div class="stats-item">
-          <div class="stats-item-label">Sigma Method (±{config.outlier_sigma}σ)</div>
+          <div class="stats-item-label">Sigma Method (+/-{config.outlier_sigma} sigma)</div>
           <div class="stats-item-value">{len(stats['draws']['outliers_high']) + len(stats['draws']['outliers_low'])} outliers</div>
         </div>
         <div class="stats-item">
@@ -176,7 +176,7 @@ IQR:       {format_number(stats['tris']['q3'] - stats['tris']['q1'])}</div>
       <h3>Outlier Detection</h3>
       <div class="stats-grid">
         <div class="stats-item">
-          <div class="stats-item-label">Sigma Method (±{config.outlier_sigma}σ)</div>
+          <div class="stats-item-label">Sigma Method (+/-{config.outlier_sigma} sigma)</div>
           <div class="stats-item-value">{len(stats['tris']['outliers_high']) + len(stats['tris']['outliers_low'])} outliers</div>
         </div>
         <div class="stats-item">
