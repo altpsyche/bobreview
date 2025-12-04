@@ -16,7 +16,7 @@ from .base import (
 )
 from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
-from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart, get_theme
+from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart, get_chart_theme
 
 
 def generate_metrics_page(

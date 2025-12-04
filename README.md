@@ -59,8 +59,9 @@ bobreview/
 │   ├── data_parser.py      # PNG filename parsing
 │   ├── analysis.py         # Statistical analysis
 │   ├── llm_provider.py     # LLM API interaction
-│   ├── llm_registry.py     # LLM generator registration (NEW)
-│   ├── chart_registry.py   # Chart configuration registry (NEW)
+│   ├── llm_registry.py     # LLM generator registration
+│   ├── chart_registry.py   # Chart configuration registry
+│   ├── theme_registry.py   # Report theme registry (NEW)
 │   ├── cli.py              # Command-line interface
 │   └── report_generator/   # Modular HTML generation
 │       ├── __init__.py     # Report orchestration
@@ -94,7 +95,8 @@ BobReview uses three registry patterns for extensibility:
 |----------|------|--------|
 | Page Registry | `report_generator/registry.py` | HTML page registration |
 | LLM Generator Registry | `llm_registry.py` | LLM content generators with categories |
-| Chart Registry | `chart_registry.py` | Chart.js themes, datasets, and configs |
+| Chart Registry | `chart_registry.py` | Chart.js datasets and configs |
+| Theme Registry | `theme_registry.py` | Report colors, fonts, and CSS variables |
 
 ---
 
@@ -780,24 +782,67 @@ register_llm_generator(LLMGeneratorDefinition(
 
 **To modify categories**: Just edit the `categories` list - prompts update automatically.
 
-### Customizing Chart Appearance
+### Customizing Report Appearance
 
-Chart configurations are managed via the chart registry:
+Reports use the theme registry for colors, fonts, and styling:
 
 ```python
-# Custom theme
-from bobreview.chart_registry import register_theme, register_dataset, ChartTheme, ChartDataset
+from bobreview.theme_registry import register_theme, get_theme, ReportTheme
 
-# Register a light theme
-register_theme(ChartTheme(
-    id='light',
-    text_color='#333333',
-    border_color='#cccccc',
-    grid_color='rgba(0, 0, 0, 0.1)',
-    font_size=14
+# Use a built-in theme: 'dark' (default), 'light', or 'high_contrast'
+theme = get_theme('light')
+
+# Or create a custom theme
+register_theme(ReportTheme(
+    id='brand',
+    name='Brand Theme',
+    bg='#1a1a2e',
+    bg_elevated='#16213e',
+    accent='#e94560',
+    text_main='#ffffff',
+    text_soft='#aaaaaa',
+    border_subtle='#333333',
+    danger='#ff4444',
+    warn='#ffaa00',
+    ok='#00cc66'
+))
+```
+
+**Available CSS variables**: `bg`, `bg_elevated`, `bg_soft`, `accent`, `accent_soft`, `accent_strong`, `text_main`, `text_soft`, `border_subtle`, `danger`, `warn`, `ok`, `font_mono`, `font_sans`, `radius_lg`, `radius_md`, `shadow_soft`
+
+### Customizing Chart Appearance
+
+Chart themes auto-sync from the report theme registry. To customize:
+
+```python
+# Option 1: Override chart theme specifically
+from bobreview.chart_registry import register_chart_theme, ChartTheme
+
+register_chart_theme(ChartTheme(
+    id='dark',
+    text_color='#cccccc',
+    border_color='#444444',
+    grid_color='#444444',
+    grid_opacity=0.3  # Control grid transparency (0.0-1.0)
 ))
 
-# Register custom dataset style
+# Option 2: Use a different report theme (charts auto-sync)
+from bobreview.theme_registry import register_theme, ReportTheme
+
+register_theme(ReportTheme(
+    id='custom',
+    name='Custom Theme',
+    bg='#1a1a2e',
+    accent='#e94560',
+    text_main='#ffffff',
+    text_soft='#aaaaaa',
+    border_subtle='#333333'
+))
+# Charts using 'custom' theme will auto-sync these colors
+
+# Add custom dataset styles
+from bobreview.chart_registry import register_dataset, ChartDataset
+
 register_dataset(ChartDataset(
     id='custom_metric',
     label='Custom Metric',

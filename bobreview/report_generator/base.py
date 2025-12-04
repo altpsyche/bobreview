@@ -272,7 +272,7 @@ def get_page_header(title: str, subtitle: str = "", nav_items: Optional[List[tup
     """
 
 
-def get_html_template(title: str, body_content: str, include_chartjs: bool = False, linked_css: bool = False) -> str:
+def get_html_template(title: str, body_content: str, include_chartjs: bool = False, linked_css: bool = False, theme_id: str = None) -> str:
     """
     Generate a complete HTML document with shared styles.
     
@@ -281,10 +281,13 @@ def get_html_template(title: str, body_content: str, include_chartjs: bool = Fal
         body_content: HTML content for the body
         include_chartjs: Whether to include Chart.js library
         linked_css: If True, link to external styles.css; if False, embed CSS inline
+        theme_id: Optional theme ID to use (default: 'dark')
     
     Returns:
         Complete HTML document as string
     """
+    from ..theme_registry import get_theme_css_variables
+    
     chartjs_script = ""
     if include_chartjs:
         chartjs_script = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>'
@@ -295,6 +298,13 @@ def get_html_template(title: str, body_content: str, include_chartjs: bool = Fal
     else:
         css_section = f'<style>\n{get_shared_css()}\n  </style>'
     
+    # Add theme override if non-default theme
+    theme_override = ''
+    if theme_id and theme_id != 'dark':
+        theme_css = get_theme_css_variables(theme_id)
+        if theme_css:
+            theme_override = f'<style>\n{theme_css}\n  </style>'
+    
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -304,6 +314,7 @@ def get_html_template(title: str, body_content: str, include_chartjs: bool = Fal
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   {chartjs_script}
   {css_section}
+  {theme_override}
 </head>
 <body>
   <div class="page">

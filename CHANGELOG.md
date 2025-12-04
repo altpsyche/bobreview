@@ -19,11 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 7 LLM generators now self-register with configurable categories
   
 - **Chart Configuration Registry** (`chart_registry.py`): Centralized Chart.js configuration
-  - `ChartTheme` dataclass for colors, fonts, and grid styling
+  - `ChartTheme` dataclass with `grid_opacity` for controllable transparency
   - `ChartDataset` dataclass for dataset colors and point styles
   - `ChartConfig` dataclass for chart type, axis labels, and aspect ratios
-  - Pre-registered: dark theme, 4 datasets (draws, tris, histograms), 5 chart configs
-  - Helper functions: `get_chart_defaults_js()`, `get_theme()`, `get_dataset()`, `get_chart()`
+  - `get_chart_theme()` auto-syncs with report theme - no pre-registration needed
+  - Pre-registered: 4 datasets (draws, tris, histograms), 5 chart configs
+  - Helper functions: `get_chart_defaults_js()`, `get_dataset()`, `get_chart()`
+
+- **Report Theme Registry** (`theme_registry.py`): Centralized HTML report styling
+  - `ReportTheme` dataclass with 17 CSS variable mappings (colors, fonts, borders)
+  - 3 pre-registered themes: dark (default), light, high_contrast
+  - `get_theme_css_variables()` generates CSS :root block for theme switching
+  - Chart registry auto-syncs colors from active report theme
 
 - **Dynamic Homepage Navigation**: Homepage cards now generated from page registry
   - Extended `PageDefinition` with `card_icon` and `card_description` fields
@@ -45,12 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - System Recommendations: 5 categories (lod, occlusion, lighting, materials, regression)
 
 - **Chart.js Defaults**: Moved from hardcoded in metrics.py/visuals.py to chart registry
-  - Single source of truth for chart theming
-  - Easy customization via `register_theme()`
+  - Chart themes auto-sync from report theme registry
+  - Configurable `grid_opacity` parameter (0.0-1.0)
+  - Custom overrides via `register_chart_theme()`
 
 ### Technical Details
-- New files: `bobreview/llm_registry.py`, `bobreview/chart_registry.py`
-- Modified: `llm_provider.py`, `report_generator/__init__.py`, `metrics.py`, `visuals.py`, `homepage.py`
+- New files: `bobreview/llm_registry.py`, `bobreview/chart_registry.py`, `bobreview/theme_registry.py`
+- Modified: `llm_provider.py`, `report_generator/__init__.py`, `metrics.py`, `visuals.py`, `homepage.py`, `base.py`
 - No breaking changes - all registrations happen at module import time
 - Backward compatible with existing configurations
 

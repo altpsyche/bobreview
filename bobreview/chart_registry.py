@@ -19,16 +19,26 @@ class ChartTheme:
         id: Unique identifier for the theme
         text_color: Default text color (e.g., '#a8b3c5')
         border_color: Default border color (e.g., '#1e2835')
-        grid_color: Grid line color (e.g., 'rgba(30, 40, 53, 0.5)')
+        grid_color: Grid line color (hex or rgba)
+        grid_opacity: Grid line opacity (0.0 to 1.0)
         font_family: Font family string
         font_size: Base font size in pixels
     """
     id: str
     text_color: str = '#a8b3c5'
     border_color: str = '#1e2835'
-    grid_color: str = 'rgba(30, 40, 53, 0.5)'
+    grid_color: str = '#1e2835'
+    grid_opacity: float = 0.5
     font_family: str = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     font_size: int = 12
+    
+    def get_grid_color_with_opacity(self) -> str:
+        """Get grid color with opacity applied as hex alpha."""
+        alpha_hex = format(int(self.grid_opacity * 255), '02x')
+        color = self.grid_color.lstrip('#')
+        if len(color) == 6:
+            return f'#{color}{alpha_hex}'
+        return self.grid_color
 
 
 @dataclass
@@ -80,24 +90,14 @@ class ChartConfig:
 
 
 # Global registries
-_THEME_REGISTRY: Dict[str, ChartTheme] = {}
+_CHART_THEME_REGISTRY: Dict[str, ChartTheme] = {}
 _DATASET_REGISTRY: Dict[str, ChartDataset] = {}
 _CHART_REGISTRY: Dict[str, ChartConfig] = {}
 
-# Default theme
-DEFAULT_THEME = ChartTheme(
-    id='dark',
-    text_color='#a8b3c5',
-    border_color='#1e2835',
-    grid_color='rgba(30, 40, 53, 0.5)',
-    font_family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    font_size=12
-)
 
-
-def register_theme(theme: ChartTheme) -> None:
-    """Register a chart theme."""
-    _THEME_REGISTRY[theme.id] = theme
+def register_chart_theme(theme: ChartTheme) -> None:
+    """Register a custom chart theme override."""
+    _CHART_THEME_REGISTRY[theme.id] = theme
 
 
 def register_dataset(dataset: ChartDataset) -> None:
@@ -110,9 +110,40 @@ def register_chart(config: ChartConfig) -> None:
     _CHART_REGISTRY[config.id] = config
 
 
-def get_theme(theme_id: str = 'dark') -> ChartTheme:
-    """Get a theme by ID, returns default if not found."""
-    return _THEME_REGISTRY.get(theme_id, DEFAULT_THEME)
+def get_chart_theme(theme_id: str = 'dark') -> ChartTheme:
+    """
+    Get a chart theme, synced from report theme registry.
+    
+    First checks for custom overrides, then auto-generates from report theme.
+    """
+    # Check for custom override first
+    if theme_id in _CHART_THEME_REGISTRY:
+        return _CHART_THEME_REGISTRY[theme_id]
+    
+    # Auto-generate from report theme
+    try:
+        from .theme_registry import get_theme as get_report_theme
+        report_theme = get_report_theme(theme_id)
+        return ChartTheme(
+            id=theme_id,
+            text_color=report_theme.text_soft,
+            border_color=report_theme.border_subtle,
+            grid_color=report_theme.border_subtle,
+            grid_opacity=0.5,
+            font_family=report_theme.font_sans,
+            font_size=12
+        )
+    except (ImportError, AttributeError):
+        # Fallback defaults
+        return ChartTheme(
+            id='dark',
+            text_color='#a8b3c5',
+            border_color='#1e2835',
+            grid_color='#1e2835',
+            grid_opacity=0.5,
+            font_family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            font_size=12
+        )
 
 
 def get_dataset(dataset_id: str) -> Optional[ChartDataset]:
@@ -132,11 +163,13 @@ def get_chart_defaults_js(theme_id: str = 'dark') -> str:
     Returns:
         JavaScript string to set Chart.defaults
     """
-    theme = get_theme(theme_id)
+    theme = get_chart_theme(theme_id)
+    # Use single quotes for font.family to avoid conflicts with font name quotes
+    font_escaped = theme.font_family.replace("'", "\\'")
     return f"""
         Chart.defaults.color = '{theme.text_color}';
         Chart.defaults.borderColor = '{theme.border_color}';
-        Chart.defaults.font.family = "{theme.font_family}";
+        Chart.defaults.font.family = '{font_escaped}';
         Chart.defaults.font.size = {theme.font_size};
     """
 
@@ -148,7 +181,7 @@ def get_scale_options_js(config: ChartConfig, theme_id: str = 'dark') -> str:
     Returns:
         JavaScript object string for scales config
     """
-    theme = get_theme(theme_id)
+    theme = get_chart_theme(theme_id)
     
     x_title = f"display: true, text: '{config.x_axis_label}', color: '{theme.text_color}'" if config.x_axis_label else "display: false"
     y_title = f"display: true, text: '{config.y_axis_label}', color: '{theme.text_color}'" if config.y_axis_label else "display: false"
@@ -156,18 +189,15 @@ def get_scale_options_js(config: ChartConfig, theme_id: str = 'dark') -> str:
     return f"""{{
         x: {{
           title: {{ {x_title} }},
-          grid: {{ color: '{theme.grid_color}' }}
+          grid: {{ color: '{theme.get_grid_color_with_opacity()}' }}
         }},
         y: {{
           title: {{ {y_title} }},
-          grid: {{ color: '{theme.grid_color}' }},
+          grid: {{ color: '{theme.get_grid_color_with_opacity()}' }},
           beginAtZero: {'true' if config.begin_at_zero else 'false'}
         }}
       }}"""
 
-
-# Register default theme
-register_theme(DEFAULT_THEME)
 
 # Register standard dataset styles
 register_dataset(ChartDataset(
