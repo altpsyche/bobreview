@@ -1223,7 +1223,7 @@ Std Dev:   {format_number(stats['tris']['stdev'], 1)}
 
           <h3>5.2 Critical Hotspot - Index {critical_idx}</h3>
           <div class="callout critical">
-            <div class="callout-title">Index {critical_idx} – {escape(critical_img)}</div>
+            <div class="callout-title">Index {critical_idx} - {escape(critical_img)}</div>
             <div>{critical_draws} draw calls &middot; {critical_tris_formatted} triangles</div>
           </div>
           <img
