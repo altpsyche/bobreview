@@ -16,6 +16,7 @@ from .base import (
 )
 from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
+from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart, get_theme
 
 
 def generate_metrics_page(
@@ -116,10 +117,7 @@ def generate_metrics_page(
         }}
 
         // Chart.js default configuration
-        Chart.defaults.color = '#a8b3c5';
-        Chart.defaults.borderColor = '#1e2835';
-        Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-        Chart.defaults.font.size = 12;
+        {get_chart_defaults_js()}
 
         // Timeline - Draw Calls
         try {{

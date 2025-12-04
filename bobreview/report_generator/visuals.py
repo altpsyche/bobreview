@@ -7,6 +7,7 @@ from typing import Dict, List, Any
 from .base import get_html_template, get_page_header, prepare_histogram_data, sanitize_llm_html
 from .registry import register_page, PageDefinition, get_nav_items
 from ..utils import format_number
+from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart
 
 
 def generate_visuals_page(
@@ -150,10 +151,7 @@ def generate_visuals_page(
         }}
 
         // Chart.js default configuration
-        Chart.defaults.color = '#a8b3c5';
-        Chart.defaults.borderColor = '#1e2835';
-        Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-        Chart.defaults.font.size = 12;
+        {get_chart_defaults_js()}
 
         // Histogram - Draw Calls Distribution
         try {{
