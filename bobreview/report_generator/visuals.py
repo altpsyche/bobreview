@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Visual analysis page generator with distribution charts.
 """

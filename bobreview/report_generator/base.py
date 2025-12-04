@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Base HTML utilities and shared components for BobReview reports.
 """

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Statistical summary page generator with comprehensive metrics.
 """

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Metrics page generator for detailed performance metrics analysis.
 """

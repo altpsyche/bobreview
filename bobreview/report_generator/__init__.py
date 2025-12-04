@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Multi-page HTML report generation for BobReview.
 
