@@ -5,18 +5,8 @@ Statistical summary page generator with comprehensive metrics.
 
 from html import escape
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, get_image_src
+from .base import get_html_template, get_page_header, get_image_src, get_trend_icon
 from ..utils import format_number
-
-
-def _get_trend_icon(direction: str) -> str:
-    """Return FontAwesome icon name for trend direction."""
-    if direction == 'improving':
-        return 'arrow-down'
-    elif direction == 'degrading':
-        return 'arrow-up'
-    else:  # stable
-        return 'arrow-right'
 
 
 def generate_stats_page(
@@ -259,7 +249,7 @@ IQR:       {format_number(stats['tris']['q3'] - stats['tris']['q1'])}</div>
           <div class="stats-item-label">Draw Calls Trend</div>
           <div class="stats-item-value">
             <span class="trend-indicator {stats['trends']['draws']['direction']}">
-              <i class="fas fa-{_get_trend_icon(stats['trends']['draws']['direction'])}"></i> {stats['trends']['draws']['direction'].title()}
+              <i class="fas fa-{get_trend_icon(stats['trends']['draws']['direction'])}"></i> {stats['trends']['draws']['direction'].title()}
             </span>
           </div>
         </div>
@@ -267,7 +257,7 @@ IQR:       {format_number(stats['tris']['q3'] - stats['tris']['q1'])}</div>
           <div class="stats-item-label">Triangles Trend</div>
           <div class="stats-item-value">
             <span class="trend-indicator {stats['trends']['tris']['direction']}">
-              <i class="fas fa-{_get_trend_icon(stats['trends']['tris']['direction'])}"></i> {stats['trends']['tris']['direction'].title()}
+              <i class="fas fa-{get_trend_icon(stats['trends']['tris']['direction'])}"></i> {stats['trends']['tris']['direction'].title()}
             </span>
           </div>
         </div>

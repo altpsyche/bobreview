@@ -9,6 +9,24 @@ from typing import Dict, Any, Optional, List
 from urllib.parse import quote
 
 
+def get_trend_icon(direction: str) -> str:
+    """
+    Return FontAwesome icon name for trend direction.
+    
+    Parameters:
+        direction: Trend direction ('improving', 'degrading', or 'stable')
+    
+    Returns:
+        FontAwesome icon name without 'fa-' prefix
+    """
+    if direction == 'improving':
+        return 'arrow-down'
+    elif direction == 'degrading':
+        return 'arrow-up'
+    else:  # stable
+        return 'arrow-right'
+
+
 def get_shared_css() -> str:
     """Return the shared CSS for all report pages."""
     return """

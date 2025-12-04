@@ -5,18 +5,8 @@ Homepage generator for BobReview multi-page reports.
 
 from datetime import datetime
 from typing import Dict, List, Any
-from .base import get_html_template, get_page_header
+from .base import get_html_template, get_page_header, get_trend_icon
 from ..utils import format_number
-
-
-def _get_trend_icon(direction: str) -> str:
-    """Return FontAwesome icon name for trend direction."""
-    if direction == 'improving':
-        return 'arrow-down'
-    elif direction == 'degrading':
-        return 'arrow-up'
-    else:  # stable
-        return 'arrow-right'
 
 
 def generate_homepage(
@@ -88,10 +78,10 @@ def generate_homepage(
       <div style="margin-top: 8px;">
         <span style="font-size: 12px; color: var(--text-soft);">Trend: </span>
         <span class="trend-indicator {stats['trends']['draws']['direction']}">
-          <i class="fas fa-{_get_trend_icon(stats['trends']['draws']['direction'])}"></i> {stats['trends']['draws']['direction'].title()} Draws
+          <i class="fas fa-{get_trend_icon(stats['trends']['draws']['direction'])}"></i> {stats['trends']['draws']['direction'].title()} Draws
         </span>
         <span class="trend-indicator {stats['trends']['tris']['direction']}">
-          <i class="fas fa-{_get_trend_icon(stats['trends']['tris']['direction'])}"></i> {stats['trends']['tris']['direction'].title()} Tris
+          <i class="fas fa-{get_trend_icon(stats['trends']['tris']['direction'])}"></i> {stats['trends']['tris']['direction'].title()} Tris
         </span>
         <span style="font-size: 12px; color: var(--text-soft); margin-left: 8px;">CV: {format_number(stats['draws']['cv'], 1)}% draws / {format_number(stats['tris']['cv'], 1)}% tris</span>
       </div>
