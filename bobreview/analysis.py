@@ -303,6 +303,8 @@ def analyze_data(data_points: List[Dict[str, Any]], config: "ReportConfig") -> D
                         if p['draws'] < draw_mean - sigma * draw_stdev]
     tri_outliers_high = [(i, p) for i, p in enumerate(data_points) 
                         if p['tris'] > tri_mean + sigma * tri_stdev]
+    tri_outliers_low = [(i, p) for i, p in enumerate(data_points) 
+                       if p['tris'] < tri_mean - sigma * tri_stdev]
     
     # IQR outlier detection
     draw_outliers_iqr = _detect_outliers_iqr(draws, indices)
@@ -357,7 +359,8 @@ def analyze_data(data_points: List[Dict[str, Any]], config: "ReportConfig") -> D
             'stdev': tri_stdev,
             'variance': tri_variance,
             'cv': tri_cv,
-            'outliers_high': tri_outliers_high
+            'outliers_high': tri_outliers_high,
+            'outliers_low': tri_outliers_low
         },
         'frame_times': frame_times,
         'confidence_intervals': {

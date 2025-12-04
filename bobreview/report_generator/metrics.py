@@ -1,0 +1,342 @@
+"""
+Metrics page generator for detailed performance metrics analysis.
+"""
+
+import json
+from datetime import datetime
+from typing import Dict, List, Any
+from .base import (
+    get_html_template, 
+    get_page_header, 
+    prepare_timeline_data, 
+    prepare_scatter_data,
+    prepare_histogram_data,
+    sanitize_llm_html
+)
+from ..utils import format_number
+
+
+def generate_metrics_page(
+    data_points: List[Dict[str, Any]], 
+    stats: Dict[str, Any], 
+    config,
+    metric_content: Dict[str, str]
+) -> str:
+    """
+    Generate the detailed metrics analysis page with charts.
+    
+    Parameters:
+        data_points: List of parsed capture records
+        stats: Aggregated analysis results
+        config: Report configuration
+        metric_content: Metric analysis content from LLM
+    
+    Returns:
+        Complete HTML document for the metrics page
+    """
+    nav_items = [
+        ("Home", "index.html", False),
+        ("Metrics", "metrics.html", True),
+        ("Zones & Hotspots", "zones.html", False),
+        ("Visual Analysis", "visuals.html", False),
+        ("Optimization", "optimization.html", False),
+        ("Statistics", "stats.html", False),
+    ]
+    
+    header = get_page_header("Metric Deep Dive", f"{stats['count']} captures · {config.location}", nav_items)
+    
+    # Prepare chart data
+    timeline_draws_data = prepare_timeline_data(data_points, 'draws', config)
+    timeline_tris_data = prepare_timeline_data(data_points, 'tris', config)
+    scatter_data = prepare_scatter_data(data_points, config)
+    
+    body_content = f"""{header}
+    
+    <section class="panel">
+      <h2>Metric Deep Dive</h2>
+      <p class="body-text">
+        Detailed analysis of draw calls and triangle counts with statistical breakdowns and temporal patterns.
+      </p>
+      
+      <h3>Draw Calls</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Samples</td><td>{stats['count']}</td></tr>
+          <tr><td>Min</td><td>{stats['draws']['min']}</td></tr>
+          <tr><td>Q1 (25th percentile)</td><td>{format_number(stats['draws']['q1'], 0)}</td></tr>
+          <tr><td>Median (50th percentile)</td><td>{format_number(stats['draws']['median'], 0)}</td></tr>
+          <tr><td>Q3 (75th percentile)</td><td>{format_number(stats['draws']['q3'], 0)}</td></tr>
+          <tr><td>Max</td><td>{stats['draws']['max']}</td></tr>
+          <tr><td>Mean</td><td>{format_number(stats['draws']['mean'], 1)}</td></tr>
+          <tr><td>Std Dev</td><td>{format_number(stats['draws']['stdev'], 1)}</td></tr>
+          <tr><td>Variance</td><td>{format_number(stats['draws']['variance'], 1)}</td></tr>
+          <tr><td>CV (Coefficient of Variation)</td><td>{format_number(stats['draws']['cv'], 1)}%</td></tr>
+        </tbody>
+      </table>
+      {sanitize_llm_html(metric_content.get('draws', ''))}
+      
+      <h3>Triangle Count</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Samples</td><td>{stats['count']}</td></tr>
+          <tr><td>Min</td><td>{format_number(stats['tris']['min'])}</td></tr>
+          <tr><td>Q1 (25th percentile)</td><td>{format_number(stats['tris']['q1'])}</td></tr>
+          <tr><td>Median (50th percentile)</td><td>{format_number(stats['tris']['median'])}</td></tr>
+          <tr><td>Q3 (75th percentile)</td><td>{format_number(stats['tris']['q3'])}</td></tr>
+          <tr><td>Max</td><td>{format_number(stats['tris']['max'])}</td></tr>
+          <tr><td>Mean</td><td>{format_number(stats['tris']['mean'], 1)}</td></tr>
+          <tr><td>Std Dev</td><td>{format_number(stats['tris']['stdev'], 1)}</td></tr>
+          <tr><td>Variance</td><td>{format_number(stats['tris']['variance'], 0)}</td></tr>
+          <tr><td>CV (Coefficient of Variation)</td><td>{format_number(stats['tris']['cv'], 1)}%</td></tr>
+        </tbody>
+      </table>
+      {sanitize_llm_html(metric_content.get('tris', ''))}
+    </section>
+    
+    <section class="panel" style="margin-top: 20px;">
+      <h2>Timeline Visualizations</h2>
+      
+      <div class="chart-container">
+        <div class="chart-title">Draw Calls Over Time</div>
+        <p class="chart-description">
+          Timeline showing draw call progression across captures. 
+          <span style="color: var(--ok);">Green</span> = low load (< {config.low_load_draw_threshold}), 
+          <span style="color: var(--warn);">Yellow</span> = medium, 
+          <span style="color: var(--danger);">Red</span> = high load (≥ {config.high_load_draw_threshold}).
+        </p>
+        <canvas id="timeline-draws-chart"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-title">Triangle Count Over Time</div>
+        <p class="chart-description">
+          Timeline showing triangle count progression across captures.
+          <span style="color: var(--ok);">Green</span> = low load (< {format_number(config.low_load_tri_threshold, 0)}), 
+          <span style="color: var(--warn);">Yellow</span> = medium, 
+          <span style="color: var(--danger);">Red</span> = high load (≥ {format_number(config.high_load_tri_threshold, 0)}).
+        </p>
+        <canvas id="timeline-tris-chart"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-title">Draw Calls vs Triangles (Scatter)</div>
+        <p class="chart-description">
+          Correlation between draw calls and triangle count. Each point represents one capture.
+          Color coding indicates overall performance zone.
+        </p>
+        <canvas id="scatter-chart"></canvas>
+      </div>
+      
+      {sanitize_llm_html(metric_content.get('temporal', ''))}
+    </section>
+    
+    <div class="footer">
+      Generated by BobReview - <a href="index.html">Back to Home</a>
+    </div>
+    
+    <script>
+      // Wait for DOM and Chart.js to be ready
+      window.addEventListener('load', function() {{
+        if (typeof Chart === 'undefined') {{
+          console.error('Chart.js failed to load');
+          return;
+        }}
+
+        // Chart.js default configuration
+        Chart.defaults.color = '#a8b3c5';
+        Chart.defaults.borderColor = '#1e2835';
+        Chart.defaults.font.family = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        Chart.defaults.font.size = 12;
+
+        // Timeline - Draw Calls
+        try {{
+          const timelineDrawsData = {timeline_draws_data};
+          const canvasDraws = document.getElementById('timeline-draws-chart');
+          if (!canvasDraws) throw new Error('Canvas not found');
+          
+          const ctxDraws = canvasDraws.getContext('2d');
+          new Chart(ctxDraws, {{
+            type: 'line',
+            data: {{
+              labels: timelineDrawsData.map((d, i) => i),
+              datasets: [{{
+                label: 'Draw Calls',
+                data: timelineDrawsData.map(d => d.y),
+                borderColor: 'rgba(78, 161, 255, 0.8)',
+                backgroundColor: timelineDrawsData.map(d => d.color),
+                pointBackgroundColor: timelineDrawsData.map(d => d.color),
+                pointBorderColor: timelineDrawsData.map(d => d.color),
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.2,
+                fill: false
+              }}]
+            }},
+            options: {{
+              responsive: true,
+              maintainAspectRatio: true,
+              aspectRatio: 2.5,
+              plugins: {{
+                legend: {{ display: false }},
+                tooltip: {{
+                  callbacks: {{
+                    label: function(context) {{
+                      const point = timelineDrawsData[context.dataIndex];
+                      return point.label + ': ' + point.y + ' draws';
+                    }}
+                  }}
+                }}
+              }},
+              scales: {{
+                x: {{
+                  title: {{ display: true, text: 'Capture Index', color: '#a8b3c5' }},
+                  grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}
+                }},
+                y: {{
+                  title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }},
+                  grid: {{ color: 'rgba(30, 40, 53, 0.5)' }},
+                  beginAtZero: true
+                }}
+              }}
+            }}
+          }});
+        }} catch (error) {{
+          console.error('Error creating timeline draws chart:', error);
+        }}
+
+        // Timeline - Triangles
+        try {{
+          const timelineTrisData = {timeline_tris_data};
+          const canvasTris = document.getElementById('timeline-tris-chart');
+          if (!canvasTris) throw new Error('Canvas not found');
+          
+          const ctxTris = canvasTris.getContext('2d');
+          new Chart(ctxTris, {{
+            type: 'line',
+            data: {{
+              labels: timelineTrisData.map((d, i) => i),
+              datasets: [{{
+                label: 'Triangles',
+                data: timelineTrisData.map(d => d.y),
+                borderColor: 'rgba(78, 161, 255, 0.8)',
+                backgroundColor: timelineTrisData.map(d => d.color),
+                pointBackgroundColor: timelineTrisData.map(d => d.color),
+                pointBorderColor: timelineTrisData.map(d => d.color),
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.2,
+                fill: false
+              }}]
+            }},
+            options: {{
+              responsive: true,
+              maintainAspectRatio: true,
+              aspectRatio: 2.5,
+              plugins: {{
+                legend: {{ display: false }},
+                tooltip: {{
+                  callbacks: {{
+                    label: function(context) {{
+                      const point = timelineTrisData[context.dataIndex];
+                      return point.label + ': ' + point.y.toLocaleString() + ' tris';
+                    }}
+                  }}
+                }}
+              }},
+              scales: {{
+                x: {{
+                  title: {{ display: true, text: 'Capture Index', color: '#a8b3c5' }},
+                  grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}
+                }},
+                y: {{
+                  title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }},
+                  grid: {{ color: 'rgba(30, 40, 53, 0.5)' }},
+                  beginAtZero: true,
+                  ticks: {{
+                    callback: function(value) {{
+                      return value >= 1000 ? (value/1000) + 'k' : value;
+                    }}
+                  }}
+                }}
+              }}
+            }}
+          }});
+        }} catch (error) {{
+          console.error('Error creating timeline tris chart:', error);
+        }}
+
+        // Scatter Plot
+        try {{
+          const scatterData = {scatter_data};
+          const canvasScatter = document.getElementById('scatter-chart');
+          if (!canvasScatter) throw new Error('Canvas not found');
+          
+          const ctxScatter = canvasScatter.getContext('2d');
+          new Chart(ctxScatter, {{
+            type: 'scatter',
+            data: {{
+              datasets: [{{
+                label: 'Captures',
+                data: scatterData.map(d => ({{ x: d.x, y: d.y }})),
+                backgroundColor: scatterData.map(d => d.color),
+                borderColor: scatterData.map(d => d.color.replace('0.7', '1')),
+                borderWidth: 1,
+                pointRadius: 5,
+                pointHoverRadius: 7
+              }}]
+            }},
+            options: {{
+              responsive: true,
+              maintainAspectRatio: true,
+              aspectRatio: 2.5,
+              plugins: {{
+                legend: {{ display: false }},
+                tooltip: {{
+                  callbacks: {{
+                    label: function(context) {{
+                      const point = scatterData[context.dataIndex];
+                      return point.label + ' - ' + point.x + ' draws, ' + point.y.toLocaleString() + ' tris';
+                    }}
+                  }}
+                }}
+              }},
+              scales: {{
+                x: {{
+                  title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }},
+                  grid: {{ color: 'rgba(30, 40, 53, 0.5)' }},
+                  beginAtZero: true
+                }},
+                y: {{
+                  title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }},
+                  grid: {{ color: 'rgba(30, 40, 53, 0.5)' }},
+                  beginAtZero: true,
+                  ticks: {{
+                    callback: function(value) {{
+                      return value >= 1000 ? (value/1000) + 'k' : value;
+                    }}
+                  }}
+                }}
+              }}
+            }}
+          }});
+        }} catch (error) {{
+          console.error('Error creating scatter chart:', error);
+        }}
+      }});
+    </script>
+"""
+    
+    return get_html_template(f"{config.title} - Metrics", body_content, include_chartjs=True)
+

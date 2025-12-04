@@ -85,7 +85,7 @@ Examples:
     )
     parser.add_argument(
         '--output', type=str, default='performance_report.html',
-        help='Output HTML file (default: performance_report.html)'
+        help='Output directory/file path (creates index.html and additional pages, default: performance_report.html)'
     )
     parser.add_argument(
         '--images-dir', type=str, default=None,
@@ -331,7 +331,7 @@ Examples:
             images_dir_rel = os.path.relpath(input_dir, output_path.parent).replace(os.sep, '/')
     
     # Generate HTML
-    log_info(f"Generating report: {output_path}", config)
+    log_info(f"Generating multi-page report in: {output_path.parent}", config)
     
     if config.dry_run:
         log_info("Dry run mode: Generating report with placeholder LLM content", config)
@@ -339,7 +339,8 @@ Examples:
         log_info("Using cache when available for LLM responses", config)
     
     try:
-        html = generate_html_report(data_points, stats, images_dir_rel, output_path, config)
+        # generate_html_report now creates multiple HTML files and returns the path to index.html
+        index_path = generate_html_report(data_points, stats, images_dir_rel, output_path, config)
     except Exception as e:
         log_error(f"Failed to generate HTML report: {e}")
         if config.verbose:
@@ -347,18 +348,11 @@ Examples:
             traceback.print_exc()
         return 1
     
-    # Write output
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(html, encoding='utf-8')
-    except Exception as e:
-        log_error(f"Failed to write output file: {e}")
-        return 1
-    
     elapsed_time = time.time() - start_time
     
     # Print summary
-    log_success(f"Report written to: {output_path}", config)
+    log_success(f"Multi-page report generated!", config)
+    log_success(f"Main page: {index_path}", config)
     log_info("Summary:", config)
     log_info(f"  - {stats['count']} samples analyzed", config)
     log_info(f"  - {len(stats['high_load'])} high-load frames identified", config)
