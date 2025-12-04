@@ -20,7 +20,6 @@ def _get_trend_icon(direction: str) -> str:
 
 
 def generate_homepage(
-    data_points: List[Dict[str, Any]], 
     stats: Dict[str, Any], 
     config,
     exec_summary: str
@@ -29,7 +28,6 @@ def generate_homepage(
     Generate the homepage/index with executive summary and links to detailed pages.
     
     Parameters:
-        data_points: List of parsed capture records
         stats: Aggregated analysis results
         config: Report configuration
         exec_summary: Executive summary content from LLM (HTML string)
@@ -102,7 +100,7 @@ def generate_homepage(
       
       <div class="pill-row">
         <span class="pill ok">Average: {format_number(stats['draws']['mean'], 0)} draws / {format_number(stats['tris']['mean'], 0)} tris</span>
-        <span class="pill warn">High variance detected</span>
+        {'<span class="pill warn">High variance detected</span>' if stats['draws']['cv'] > 30 or stats['tris']['cv'] > 30 else ''}
         <span class="pill danger">Peak: {critical_draws} draws / {critical_tris} tris</span>
       </div>
     </section>

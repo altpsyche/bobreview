@@ -133,7 +133,7 @@ def generate_html_report(
     log_info("Generating HTML pages...", config)
     
     pages = [
-        ("index.html", lambda: generate_homepage(data_points, stats, config, exec_summary)),
+        ("index.html", lambda: generate_homepage(stats, config, exec_summary)),
         ("metrics.html", lambda: generate_metrics_page(data_points, stats, config, metric_content)),
         ("zones.html", lambda: generate_zones_page(data_points, stats, images_dir_rel, image_data_uris, config, zones_content)),
         ("visuals.html", lambda: generate_visuals_page(data_points, stats, config, visual_analysis_content)),
