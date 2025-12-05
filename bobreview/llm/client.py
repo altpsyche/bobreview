@@ -48,17 +48,20 @@ def call_llm(
         prompt: The user-facing prompt
         data_table: Optional tabular context
         config: Report configuration
-        max_retries: Maximum retry attempts for rate limits
+        max_retries: Maximum retry attempts for rate limits (must be positive)
     
     Returns:
         Cleaned text response from the LLM
     
     Raises:
         RuntimeError: If API unavailable, key missing, or quota exceeded
-        ValueError: If config is not provided
+        ValueError: If config is not provided or max_retries is not positive
     """
     if config is None:
         raise ValueError("ReportConfig is required")
+    
+    if max_retries <= 0:
+        raise ValueError("max_retries must be positive")
     
     # Dry run mode
     if config.dry_run:
@@ -75,7 +78,9 @@ Data Table:
     # Check cache first
     cache = get_cache()
     if cache:
-        cached = cache.get(full_prompt, data_table or "", config.openai_model)
+        # Note: full_prompt already includes data_table content, so pass empty string
+        # to avoid redundant inclusion in cache key
+        cached = cache.get(full_prompt, "", config.openai_model)
         if cached is not None:
             log_verbose("Using cached LLM response", config)
             return cached
@@ -106,7 +111,8 @@ Data Table:
             result = clean_llm_response(response.choices[0].message.content)
             
             if cache:
-                cache.set(full_prompt, data_table or "", config.openai_model, result)
+                # Note: full_prompt already includes data_table content
+                cache.set(full_prompt, "", config.openai_model, result)
             return result
             
         except openai.RateLimitError as e:
