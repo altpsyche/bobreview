@@ -4,11 +4,10 @@ Anthropic Claude LLM provider implementation.
 Supports Claude 3 Opus, Sonnet, and Haiku models.
 """
 
-import re
 import time
 from typing import Optional
 
-from .base import BaseLLMProvider, LLMProviderConfig
+from .base import BaseLLMProvider, LLMProviderConfig, clean_llm_response
 
 # Check for Anthropic availability
 try:
@@ -16,20 +15,6 @@ try:
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
-
-
-def clean_response(response: str) -> str:
-    """
-    Remove Markdown triple-backtick code fences from an LLM response and trim surrounding whitespace.
-    
-    Returns:
-        cleaned_response (str): The response text with code-fence markers removed and leading/trailing whitespace trimmed.
-    """
-    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
-    response = re.sub(r'\n```\s*\n', '\n', response)
-    return response.strip()
 
 
 class AnthropicProvider(BaseLLMProvider):
@@ -133,7 +118,7 @@ class AnthropicProvider(BaseLLMProvider):
                     if hasattr(block, 'text'):
                         text_content += block.text
                 
-                return clean_response(text_content)
+                return clean_llm_response(text_content)
                 
             except anthropic.RateLimitError as e:
                 if attempt < max_retries - 1:

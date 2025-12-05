@@ -6,6 +6,7 @@ the required methods for making API calls.
 """
 
 import os
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
@@ -20,6 +21,25 @@ class LLMProviderConfig:
     api_key: Optional[str] = None
     api_base: Optional[str] = None
     extra_params: Dict[str, Any] = field(default_factory=dict)
+
+
+def clean_llm_response(response: str) -> str:
+    """
+    Strip Markdown code fences from LLM responses.
+    
+    Removes Markdown-style fenced code blocks and surrounding whitespace from an LLM response.
+    
+    Parameters:
+        response (str): Text produced by an LLM that may contain Markdown code fences (```).
+    
+    Returns:
+        str: The input text with Markdown fenced code blocks removed or unwrapped and leading/trailing whitespace trimmed.
+    """
+    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
+    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
+    response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
+    response = re.sub(r'\n```\s*\n', '\n', response)
+    return response.strip()
 
 
 class BaseLLMProvider(ABC):

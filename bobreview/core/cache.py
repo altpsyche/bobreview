@@ -132,6 +132,7 @@ class LLMCache:
                     'prompt_hash': cache_key,
                     'model': model,
                     'provider': provider,
+                    'api_base': api_base,
                     'response': response,
                     'timestamp': datetime.now().isoformat()
                 }, f, indent=2)

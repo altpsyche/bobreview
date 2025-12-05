@@ -5,11 +5,11 @@ Supports local Ollama models like Llama 2, Mistral, CodeLlama, etc.
 No API key required - runs locally.
 """
 
-import re
+import os
 import time
 from typing import Optional
 
-from .base import BaseLLMProvider, LLMProviderConfig
+from .base import BaseLLMProvider, LLMProviderConfig, clean_llm_response
 
 # Check for httpx availability (used for Ollama API calls)
 try:
@@ -17,22 +17,6 @@ try:
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
-
-
-def clean_response(response: str) -> str:
-    """
-    Remove Markdown code fences from an LLM response and normalize fenced-code blocks to plain text.
-    
-    This strips leading and trailing triple-backtick fences, removes interior fence delimiters, and trims surrounding whitespace.
-    
-    Returns:
-        cleaned (str): The response with Markdown code fences removed and surrounding whitespace trimmed.
-    """
-    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
-    response = re.sub(r'\n```\s*\n', '\n', response)
-    return response.strip()
 
 
 class OllamaProvider(BaseLLMProvider):
@@ -99,7 +83,6 @@ class OllamaProvider(BaseLLMProvider):
         Returns:
             str: The resolved base URL (from `config.api_base`, or the `OLLAMA_API_BASE` environment variable, or `DEFAULT_BASE_URL`).
         """
-        import os
         return (
             config.api_base or 
             os.getenv("OLLAMA_API_BASE") or 
@@ -162,7 +145,7 @@ class OllamaProvider(BaseLLMProvider):
                     if "response" not in data:
                         raise RuntimeError("No response from Ollama")
                     
-                    return clean_response(data["response"])
+                    return clean_llm_response(data["response"])
                     
             except httpx.ConnectError as e:
                 raise RuntimeError(

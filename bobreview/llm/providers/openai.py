@@ -5,11 +5,10 @@ Supports GPT-4, GPT-4 Turbo, GPT-3.5 Turbo, and other OpenAI models.
 """
 
 import random
-import re
 import time
 from typing import Optional
 
-from .base import BaseLLMProvider, LLMProviderConfig
+from .base import BaseLLMProvider, LLMProviderConfig, clean_llm_response
 
 # Check for OpenAI availability
 try:
@@ -17,23 +16,6 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-
-
-def clean_llm_response(response: str) -> str:
-    """
-    Strip Markdown-style fenced code blocks and surrounding whitespace from an LLM response.
-    
-    Parameters:
-        response (str): Text produced by an LLM that may contain Markdown code fences (```).
-    
-    Returns:
-        str: The input text with Markdown fenced code blocks removed or unwrapped and leading/trailing whitespace trimmed.
-    """
-    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
-    response = re.sub(r'\n```\s*\n', '\n', response)
-    return response.strip()
 
 
 class OpenAIProvider(BaseLLMProvider):

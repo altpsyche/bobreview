@@ -2,6 +2,11 @@
 LLM provider factory.
 
 Provides registration and retrieval of LLM providers by name.
+
+Note: The global provider registry is not thread-safe. This is acceptable
+for typical CLI usage, but if this module is used in a multi-threaded context,
+consider adding thread-safety mechanisms (e.g., threading.Lock) around
+registry modifications.
 """
 
 from typing import Dict, Type, List, Optional, Any
@@ -10,6 +15,7 @@ from .base import BaseLLMProvider
 
 
 # Global registry of providers
+# Note: Not thread-safe (acceptable for CLI usage)
 _PROVIDERS: Dict[str, Type[BaseLLMProvider]] = {}
 
 
