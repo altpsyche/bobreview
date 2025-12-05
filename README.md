@@ -503,7 +503,9 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --openai-key KEY        # OpenAI API key
 --openai-model MODEL    # Model to use (default: gpt-4o)
 --llm-temperature N     # Temperature 0-2 (default: 0.7)
+--llm-max-tokens N      # Maximum tokens for LLM responses (default: 2000)
 --llm-chunk-size N      # Samples per LLM call (default: 10)
+--llm-combine-warning-threshold N  # Character threshold for chunk combination warning (default: 100000, advanced)
 --no-recommendations    # Disable system recommendations
 ```
 

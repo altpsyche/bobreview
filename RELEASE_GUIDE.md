@@ -270,10 +270,18 @@ bobreview --dir /path/to/screenshots
 --linked-css             # Use external CSS file (styles.css)
 --theme THEME            # Report theme: dark (default), light, high_contrast
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
---help                   # Show all options
 
-# Check version
-bobreview --version
+# LLM Configuration
+--openai-key KEY         # OpenAI API key (or set OPENAI_API_KEY env var)
+--openai-model MODEL     # Model to use (default: gpt-4o)
+--llm-temperature N      # Temperature 0-2 (default: 0.7)
+--llm-max-tokens N       # Maximum tokens for LLM responses (default: 2000)
+--llm-chunk-size N       # Samples per LLM call (default: 10)
+--llm-combine-warning-threshold N  # Character threshold for chunk warnings (default: 100000, advanced)
+
+# Help and version
+--help                   # Show all options
+bobreview --version      # Check version
 
 # Test installation
 python -c "from bobreview import ReportConfig; print('OK')"
