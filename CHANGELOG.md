@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2025-12-05
+
+### Plug-and-Play LLM Provider System
+
+This release introduces a modular LLM provider architecture, allowing users to switch between different AI providers without modifying code.
+
+#### New LLM Provider Package
+```
+bobreview/llm/providers/
+├── __init__.py   # Package exports
+├── base.py       # BaseLLMProvider abstract class
+├── factory.py    # Provider registry & factory
+├── openai.py     # OpenAI GPT implementation
+├── anthropic.py  # Anthropic Claude implementation
+└── ollama.py     # Ollama local models implementation
+```
+
+### Added
+
+- **Multi-Provider Support**: Switch between LLM providers via CLI or JSON config
+  - **OpenAI**: GPT-4o, GPT-4-turbo, GPT-3.5-turbo (default)
+  - **Anthropic**: Claude 3 Opus, Sonnet, Haiku
+  - **Ollama**: Any local model (Llama 2, Mistral, CodeLlama, etc.)
+
+- **New CLI Arguments**:
+  - `--llm-provider {openai,anthropic,ollama}`: Select LLM provider
+  - `--llm-api-key KEY`: Unified API key argument
+  - `--llm-api-base URL`: Custom API endpoint (e.g., for Ollama)
+  - `--llm-model MODEL`: Model name (provider-specific defaults)
+  - `--list-providers`: List available providers and their defaults
+
+- **JSON Configuration**: Provider selection in report system JSON
+  ```json
+  {
+    "llm_config": {
+      "provider": "anthropic",
+      "model": "claude-3-sonnet-20240229"
+    }
+  }
+  ```
+
+- **Provider Factory**: Extensible registry pattern for adding custom providers
+  - `get_provider(name)`: Get provider instance
+  - `register_provider(name, class)`: Register custom provider
+  - `list_providers()`: List available providers
+
+### Changed
+
+- **ReportConfig**: Replaced OpenAI-specific fields with unified LLM fields
+  - `openai_api_key` → `llm_api_key`
+  - `openai_model` → `llm_model`
+  - Added: `llm_provider`, `llm_api_base`
+
+- **CLI**: Removed deprecated `--openai-key` and `--openai-model` arguments
+  - Use `--llm-api-key` and `--llm-model` instead
+
+- **client.py**: Refactored to use provider factory instead of hardcoded OpenAI
+
+### Technical Details
+- **New files**: 6 files in `bobreview/llm/providers/`
+- **Modified files**: `client.py`, `config.py`, `cli.py`, `schema.py`
+- **New dependencies**: 
+  - `anthropic>=0.18.0` (optional, for Anthropic provider)
+  - `httpx>=0.27.0` (optional, for Ollama provider)
+
+---
+
 ## [1.0.4] - 2025-12-05
 
 ### Architecture Refactoring
@@ -432,6 +499,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.5]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.1...v1.0.2

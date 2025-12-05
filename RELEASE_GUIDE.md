@@ -2,19 +2,17 @@
 
 ## Performance Analysis Tool for Game Development
 
-Version 1.0.4
+Version 1.0.5
 
-### What's New in v1.0.4
+### What's New in v1.0.5
 
-- **Clean Architecture Refactoring**: Reorganized into logical packages
-  - `core/` - configuration, caching, utilities, analysis
-  - `registry/` - unified themes, charts, pages
-  - `llm/` - client + 7 focused generators
-  - `pages/` - HTML renderers (renamed from report_generator)
-- **JSON Report Systems**: Define custom analysis pipelines with JSON
-- **Smaller Files**: Max 200 lines per file, no huge scripts
-- **CSS Fixes**: Fixed invisible gradients in stat cards
-- All v1.0.3 features preserved
+- **Multi-Provider LLM Support**: Choose your AI provider
+  - OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) - default
+  - Anthropic (Claude 3 Opus, Sonnet, Haiku)
+  - Ollama (local models - Llama 2, Mistral, CodeLlama)
+- **Unified CLI Arguments**: `--llm-provider`, `--llm-api-key`, `--llm-model`
+- **Provider Factory**: Extensible architecture for custom providers
+- All v1.0.4 features preserved
 
 ---
 
@@ -41,23 +39,38 @@ pip install .
 
 This installs BobReview as a global command you can run from anywhere.
 
-### 3. Set Up OpenAI API Key
+### 3. Set Up LLM Provider API Key
 
-BobReview requires an OpenAI API key to generate insights.
+BobReview supports multiple LLM providers. Choose one:
 
-**Windows PowerShell:**
-```powershell
-$env:OPENAI_API_KEY="sk-your-api-key-here"
-```
-
-**Windows Command Prompt:**
-```cmd
-set OPENAI_API_KEY=sk-your-api-key-here
-```
-
-**macOS/Linux:**
+**OpenAI (default):**
 ```bash
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+
+# Windows Command Prompt
+set OPENAI_API_KEY=sk-your-api-key-here
+
+# macOS/Linux
 export OPENAI_API_KEY=sk-your-api-key-here
+```
+
+**Anthropic Claude:**
+```bash
+# Windows PowerShell
+$env:ANTHROPIC_API_KEY="your-anthropic-key"
+
+# macOS/Linux
+export ANTHROPIC_API_KEY=your-anthropic-key
+```
+
+**Ollama (Local - No API Key Needed):**
+```bash
+# Just ensure Ollama is running
+ollama serve
+
+# Then use with --llm-provider ollama
+bobreview --dir . --llm-provider ollama --llm-model llama2
 ```
 
 > **Tip:** Add the API key to your shell profile for persistence (see [Making It Permanent](#making-api-key-permanent))
@@ -68,7 +81,7 @@ export OPENAI_API_KEY=sk-your-api-key-here
 bobreview --version
 ```
 
-You should see: `BobReview version 1.0.4`
+You should see: `bobreview 1.0.5`
 
 ---
 
@@ -138,6 +151,15 @@ bobreview --dir . --sample 20
 
 # Use light theme
 bobreview --dir . --theme light
+
+# Use Anthropic Claude instead of OpenAI
+bobreview --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
+
+# Use local Ollama
+bobreview --dir . --llm-provider ollama --llm-model mistral
+
+# List available providers
+bobreview --list-providers
 
 # See all available options
 bobreview --help
@@ -220,7 +242,8 @@ python -m bobreview.cli --dir .
 
 **"API key not found" error:**
 - Verify environment variable is set: `echo $OPENAI_API_KEY` (Linux/macOS) or `echo %OPENAI_API_KEY%` (Windows)
-- Or provide key via command line: `bobreview --dir . --openai-key sk-your-key`
+- Or provide key via command line: `bobreview --dir . --llm-api-key sk-your-key`
+- Or use Ollama for local inference: `bobreview --dir . --llm-provider ollama`
 
 **Slow performance:**
 - First run is slow (normal - API calls take time)
@@ -271,13 +294,14 @@ bobreview --dir /path/to/screenshots
 --theme THEME            # Report theme: dark (default), light, high_contrast
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 
-# LLM Configuration
---openai-key KEY         # OpenAI API key (or set OPENAI_API_KEY env var)
---openai-model MODEL     # Model to use (default: gpt-4o)
+# LLM Provider Configuration (v1.0.5)
+--llm-provider PROVIDER  # Provider: openai (default), anthropic, ollama
+--llm-api-key KEY        # API key for selected provider
+--llm-model MODEL        # Model name (default depends on provider)
 --llm-temperature N      # Temperature 0-2 (default: 0.7)
 --llm-max-tokens N       # Maximum tokens for LLM responses (default: 2000)
 --llm-chunk-size N       # Samples per LLM call (default: 10)
---llm-combine-warning-threshold N  # Character threshold for chunk warnings (default: 100000, advanced)
+--list-providers         # List available LLM providers
 
 # Help and version
 --help                   # Show all options
@@ -297,5 +321,5 @@ python -c "from bobreview import ReportConfig; print('OK')"
 
 ---
 
-**BobReview v1.0.4** - Performance analysis and review tool for game development  
-MIT License | Optimized for cost-effective LLM-powered analysis
+**BobReview v1.0.5** - Performance analysis and review tool for game development  
+MIT License | Multi-provider LLM support (OpenAI, Anthropic, Ollama)

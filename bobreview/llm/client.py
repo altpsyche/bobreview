@@ -1,14 +1,11 @@
 """
-LLM client for OpenAI API interactions.
+LLM client for API interactions.
 
-Provides core functions for calling the LLM with caching,
+Provides core functions for calling LLM providers with caching,
 retry logic, and response cleaning.
 """
 
 import os
-import random
-import re
-import time
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
@@ -18,22 +15,7 @@ from ..core.cache import get_cache
 from ..core.utils import log_verbose, log_warning
 from ..core.analysis import format_data_table
 
-# Check for OpenAI availability
-try:
-    import openai
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-
-
-def clean_llm_response(response: str) -> str:
-    """Clean LLM response by removing markdown code fences and extra formatting."""
-    # Remove markdown code fences (```html, ```, etc.)
-    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
-    response = re.sub(r'\n```\s*\n', '\n', response)
-    return response.strip()
+from .providers import get_provider, LLMProviderConfig
 
 
 def call_llm(
@@ -43,20 +25,20 @@ def call_llm(
     max_retries: int = 3,
 ) -> str:
     """
-    Call OpenAI LLM with caching, dry-run support, and retry logic.
+    Invoke the configured LLM provider for a prompt, optionally including tabular context, with caching, dry-run, and retry behavior.
+    
+    If a data table is provided it will be appended to the prompt before calling the provider. If caching is available the function will attempt to return a cached response for the same prompt and configuration. If config.dry_run is true a static placeholder HTML is returned instead of calling the provider.
     
     Parameters:
-        prompt: The user-facing prompt
-        data_table: Optional tabular context
-        config: Report configuration
-        max_retries: Maximum retry attempts for rate limits (must be positive)
+        data_table (str, optional): Tabular context to append to the prompt.
+        config (ReportConfig): Report configuration containing LLM provider, model, credentials, and related settings.
+        max_retries (int): Maximum number of retry attempts delegated to the provider; must be greater than zero.
     
     Returns:
-        Cleaned text response from the LLM
+        The LLM provider's response text.
     
     Raises:
-        RuntimeError: If API unavailable, key missing, or quota exceeded
-        ValueError: If config is not provided or max_retries is not positive
+        ValueError: If `config` is not provided or `max_retries` is not positive.
     """
     if config is None:
         raise ValueError("ReportConfig is required")
@@ -77,81 +59,51 @@ Data Table:
 {data_table}"""
     
     # Check cache first
-    # Cache key includes prompt, data_table, model, temperature, and max_tokens
-    # to ensure different generation parameters produce different cache entries
     cache = get_cache()
     if cache:
         cached = cache.get(
             prompt, 
             data_table or "", 
-            config.openai_model,
+            config.llm_model,
             config.llm_temperature,
-            config.llm_max_tokens
+            config.llm_max_tokens,
+            config.llm_provider,
+            config.llm_api_base or ""
         )
         if cached is not None:
             log_verbose("Using cached LLM response", config)
             return cached
     
-    # Check OpenAI availability
-    # Requires openai>=1.0.0 (v1 API) for openai.OpenAI() and openai.RateLimitError
-    if not OPENAI_AVAILABLE:
-        raise RuntimeError(
-            "OpenAI library not available. Install with: pip install 'openai>=1.0.0,<2.0.0'"
+    # Get provider and make call
+    provider = get_provider(config.llm_provider)
+    log_verbose(f"Calling LLM ({provider.name}: {config.llm_model})", config)
+    
+    # Build provider config
+    provider_config = LLMProviderConfig(
+        model=config.llm_model,
+        temperature=config.llm_temperature,
+        max_tokens=config.llm_max_tokens,
+        api_key=config.llm_api_key,
+        api_base=config.llm_api_base,
+    )
+    
+    # Make the call
+    result = provider.call(full_prompt, provider_config, max_retries)
+    
+    # Cache the result
+    if cache:
+        cache.set(
+            prompt,
+            data_table or "",
+            config.llm_model,
+            config.llm_temperature,
+            config.llm_max_tokens,
+            result,
+            config.llm_provider,
+            config.llm_api_base or ""
         )
     
-    # Get API key
-    api_key = config.openai_api_key or os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        raise RuntimeError("OpenAI API key not found. Set OPENAI_API_KEY or use --openai-key")
-    
-    # Use OpenAI v1 API (openai>=1.0.0)
-    client = openai.OpenAI(api_key=api_key)
-    log_verbose(f"Calling LLM API (model: {config.openai_model})", config)
-    
-    # Retry with exponential backoff
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=config.openai_model,
-                messages=[{"role": "user", "content": full_prompt}],
-                temperature=config.llm_temperature,
-                max_tokens=config.llm_max_tokens
-            )
-            if not response.choices:
-                raise RuntimeError("No response from LLM")
-            result = clean_llm_response(response.choices[0].message.content)
-            
-            # Cache the result with all generation parameters in the key
-            # to ensure cache entries are invalidated when parameters change
-            if cache:
-                cache.set(
-                    prompt,
-                    data_table or "",
-                    config.openai_model,
-                    config.llm_temperature,
-                    config.llm_max_tokens,
-                    result
-                )
-            return result
-            
-        except openai.RateLimitError as e:
-            if "quota" in str(e).lower():
-                raise RuntimeError(
-                    "OpenAI API quota exceeded. Check billing at "
-                    "https://platform.openai.com/account/billing"
-                ) from e
-            
-            if attempt < max_retries - 1:
-                wait = (2 ** attempt) + random.random()
-                log_warning(f"Rate limit, retrying in {wait:.1f}s...", config)
-                time.sleep(wait)
-            else:
-                raise RuntimeError(f"Rate limit after {max_retries} attempts") from e
-                
-        except openai.APIError as e:
-            raise RuntimeError(f"OpenAI API error: {e}") from e
-        except Exception as e:
-            raise RuntimeError(f"Unexpected error: {e}") from e
+    return result
 
 
 def call_llm_chunked(
@@ -162,30 +114,19 @@ def call_llm_chunked(
     table_formatter: Callable[[List[Dict[str, Any]]], str] = format_data_table,
 ) -> str:
     """
-    Call LLM with data points in chunks and combine results.
+    Process data_points in chunks with the LLM and return a single combined response.
     
-    Uses pairwise reduction to combine chunks, avoiding token limit issues when
-    there are many chunks. Chunks are combined two at a time until a single
-    unified result remains.
+    Each chunk is formatted with table_formatter and sent to the LLM using prompt_base; individual chunk responses are then merged by repeated pairwise combination until one unified result remains.
     
     Parameters:
-        prompt_base: Base prompt to use for each chunk
-        data_points: List of data point dictionaries to process
-        config: Report configuration
-        chunk_size: Number of data points per chunk (defaults to config.llm_chunk_size)
-        table_formatter: Function to format data points into a table string.
-                        Defaults to format_data_table. Custom formatters can be provided
-                        for different data schemas.
+        prompt_base (str): Base prompt used for each chunk.
+        data_points (List[Dict[str, Any]]): Data points to process.
+        config (ReportConfig): Report configuration containing LLM and chunking settings.
+        chunk_size (Optional[int]): Number of data points per chunk; if None, uses config.llm_chunk_size.
+        table_formatter (Callable[[List[Dict[str, Any]]], str]): Function that formats a list of data points into a table string.
     
     Returns:
-        Combined LLM response from all chunks
-    
-    Note:
-        When combining many chunks, the pairwise reduction approach prevents
-        exceeding token limits. However, if individual chunk results are very
-        large, warnings may be logged when content size exceeds
-        config.llm_combine_warning_threshold. Consider reducing chunk_size or
-        adjusting the warning threshold if you encounter token limit issues.
+        str: Unified LLM response combining analyses from all chunks.
     """
     if chunk_size is None:
         chunk_size = config.llm_chunk_size

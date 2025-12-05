@@ -24,51 +24,67 @@ class ReportConfig:
     outlier_sigma: float = 2.0
     mad_threshold: float = 3.5  # MAD threshold for outlier detection
     enable_recommendations: bool = True
-    openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-4o"
+    
+    # LLM provider settings (unified across all providers)
+    llm_provider: str = "openai"  # 'openai', 'anthropic', 'ollama'
+    llm_api_key: Optional[str] = None  # API key for the selected provider
+    llm_api_base: Optional[str] = None  # Custom API base URL (e.g., for Ollama)
+    llm_model: str = "gpt-4o"  # Model name (provider-specific)
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000  # Max tokens for LLM responses
     llm_chunk_size: int = 10  # Number of data samples to send per LLM call
-    llm_combine_warning_threshold: int = 100000  # Character count threshold for warning when combining chunks (roughly 25K tokens)
+    llm_combine_warning_threshold: int = 100000  # Character count threshold for warning
+    
+    # Caching
     cache_dir: Path = Path(".bobreview_cache")
     use_cache: bool = True
     clear_cache: bool = False
+    
+    # Execution
     dry_run: bool = False
     sample_size: Optional[int] = None
     verbose: bool = False
     quiet: bool = False
-    embed_images: bool = True  # Embed images as base64 in HTML for standalone sharing
-    linked_css: bool = False  # Use external CSS file instead of embedding
-    theme_id: str = 'dark'  # Report theme: 'dark', 'light', 'high_contrast', or custom
-    disabled_pages: Optional[List[str]] = None  # List of page IDs to exclude (e.g., ['stats', 'visuals'])
+    
+    # Output
+    embed_images: bool = True  # Embed images as base64 in HTML
+    linked_css: bool = False  # Use external CSS file
+    theme_id: str = 'dark'  # Report theme
+    disabled_pages: Optional[List[str]] = None  # Page IDs to exclude
     
     def __post_init__(self):
-        """Initialize mutable defaults."""
+        """
+        Initialize mutable default fields on construction.
+        
+        If `disabled_pages` was left as `None` during creation, set it to an empty list so each instance has its own mutable list rather than sharing a class-level default.
+        """
         if self.disabled_pages is None:
             self.disabled_pages = []
 
 
 def validate_config(config: ReportConfig) -> List[str]:
     """
-    Validate a ReportConfig for logical consistency and return any validation errors.
+    Validate a ReportConfig for logical consistency.
     
-    Checks:
-    - draw_soft_cap is less than or equal to draw_hard_cap
-    - tri_soft_cap is less than or equal to tri_hard_cap
-    - All threshold values (caps and load thresholds) are non-negative
-    - outlier_sigma is greater than 0
-    - mad_threshold is greater than 0
-    - llm_chunk_size is greater than 0
-    - llm_max_tokens is greater than 0
-    - llm_combine_warning_threshold is greater than 0
-    - sample_size, if provided, is greater than 0
-    - llm_temperature is between 0 and 2 (inclusive of 0 and 2)
+    Performs validation of numeric thresholds, size limits, and LLM settings and collects human-readable error messages for each violated constraint.
+    
+    Checks performed:
+    - draw_soft_cap <= draw_hard_cap and tri_soft_cap <= tri_hard_cap
+    - draw/tri caps and high/low load thresholds are >= 0
+    - outlier_sigma > 0
+    - mad_threshold > 0
+    - llm_chunk_size > 0
+    - llm_max_tokens > 0
+    - llm_combine_warning_threshold > 0
+    - sample_size, if provided, > 0
+    - llm_temperature is between 0 and 2 (inclusive)
+    - llm_provider is one of: "openai", "anthropic", "ollama"
     
     Parameters:
-        config (ReportConfig): Configuration to validate.
+        config (ReportConfig): Configuration instance to validate.
     
     Returns:
-        List[str]: A list of human-readable error messages for each violated constraint; empty if config is valid.
+        List[str]: List of error messages describing each violated constraint; empty if the configuration is valid.
     """
     errors = []
     
@@ -125,5 +141,9 @@ def validate_config(config: ReportConfig) -> List[str]:
     if config.llm_temperature < 0 or config.llm_temperature > 2:
         errors.append("llm_temperature must be between 0 and 2")
     
+    # Validate provider
+    valid_providers = ['openai', 'anthropic', 'ollama']
+    if config.llm_provider not in valid_providers:
+        errors.append(f"llm_provider must be one of: {', '.join(valid_providers)}")
+    
     return errors
-

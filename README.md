@@ -35,10 +35,11 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 ## Features
 
 - **JSON-Based Report Systems** - Define custom analysis pipelines with JSON
+- **Multi-Provider LLM Support** - OpenAI, Anthropic Claude, or local Ollama
 - **Automated Data Extraction** - Parse performance metrics from PNG filenames
 - **Statistical Analysis** - Calculate comprehensive statistics and identify patterns
 - **Hotspot Identification** - Automatically find high-load and low-load performance zones
-- **LLM-Powered Insights** - Generate contextual analysis using OpenAI GPT models
+- **LLM-Powered Insights** - Generate contextual analysis using AI models
 - **Professional Reports** - Generate presentation-ready HTML reports
 - **Standalone HTML** - Images embedded as base64 for easy sharing
 - **Intelligent Caching** - Cache LLM responses to reduce costs
@@ -49,7 +50,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 ## Architecture
 
-BobReview v1.0.4 uses a clean modular architecture:
+BobReview v1.0.5 uses a clean modular architecture:
 
 ```text
 bobreview/
@@ -70,6 +71,12 @@ bobreview/
 │
 ├── llm/               # LLM abstraction layer
 │   ├── client.py      # call_llm, call_llm_chunked
+│   ├── providers/     # Pluggable LLM providers (NEW in v1.0.5)
+│   │   ├── base.py    # BaseLLMProvider abstract class
+│   │   ├── factory.py # Provider registry & factory
+│   │   ├── openai.py  # OpenAI GPT implementation
+│   │   ├── anthropic.py # Anthropic Claude implementation
+│   │   └── ollama.py  # Ollama local models
 │   └── generators/    # Content generators
 │       ├── executive.py, metrics.py, zones.py
 │       ├── optimization.py, recommendations.py
@@ -99,7 +106,7 @@ bobreview/
 |---------|---------|
 | `core/` | Configuration, caching, logging, analysis |
 | `registry/` | Themes, charts, pages (unified access) |
-| `llm/` | LLM client and 7 content generators |
+| `llm/` | LLM client, providers (OpenAI/Anthropic/Ollama), 7 generators |
 | `pages/` | 6 HTML page renderers + CSS |
 | `report_systems/` | JSON-based pipeline configuration |
 
@@ -130,6 +137,16 @@ set OPENAI_API_KEY=sk-your-api-key-here
 # Run from any directory
 cd /path/to/screenshots
 bobreview --dir .
+```
+
+**Alternative LLM Providers (v1.0.5):**
+```bash
+# Use Anthropic Claude
+export ANTHROPIC_API_KEY=your-key
+bobreview --dir . --llm-provider anthropic
+
+# Use local Ollama (no API key needed)
+bobreview --dir . --llm-provider ollama --llm-model llama2
 ```
 
 After installation, the `bobreview` command is available globally.
@@ -496,14 +513,16 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --outlier-sigma N       # Outlier detection sigma (default: 2.0)
 ```
 
-**LLM Configuration:**
+**LLM Provider Configuration (v1.0.5):**
 ```bash
---openai-key KEY        # OpenAI API key
---openai-model MODEL    # Model to use (default: gpt-4o)
+--llm-provider PROVIDER # Provider: openai, anthropic, ollama (default: openai)
+--llm-api-key KEY       # API key for the selected provider
+--llm-api-base URL      # Custom API endpoint (e.g., for Ollama)
+--llm-model MODEL       # Model name (default depends on provider)
 --llm-temperature N     # Temperature 0-2 (default: 0.7)
 --llm-max-tokens N      # Maximum tokens for LLM responses (default: 2000)
 --llm-chunk-size N      # Samples per LLM call (default: 10)
---llm-combine-warning-threshold N  # Character threshold for chunk combination warning (default: 100000, advanced)
+--list-providers        # List available LLM providers
 --no-recommendations    # Disable system recommendations
 ```
 
@@ -647,7 +666,7 @@ $env:OPENAI_API_KEY="sk-your-api-key-here"
 set OPENAI_API_KEY=sk-your-api-key-here
 
 # Or use command-line argument (all platforms)
-bobreview --dir ./screenshots --openai-key sk-your-api-key-here
+bobreview --dir ./screenshots --llm-api-key sk-your-api-key-here
 
 # Add to shell profile for persistence (Linux/macOS)
 echo 'export OPENAI_API_KEY=sk-your-key' >> ~/.bashrc
