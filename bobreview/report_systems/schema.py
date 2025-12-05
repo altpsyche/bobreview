@@ -72,12 +72,14 @@ class MetricConfig:
 @dataclass
 class LLMConfig:
     """Configuration for LLM provider and settings."""
-    provider: str = 'openai'
+    provider: str = 'openai'  # 'openai', 'anthropic', 'ollama'
     model: str = 'gpt-4o'
     temperature: float = 0.7
     max_tokens: int = 2000
     chunk_size: int = 10
     enable_cache: bool = True
+    api_base: Optional[str] = None  # Custom API endpoint
+    api_key_env: Optional[str] = None  # Environment variable for API key
 
 
 @dataclass
@@ -401,7 +403,9 @@ def parse_llm_config(data: Dict[str, Any]) -> LLMConfig:
         temperature=data.get('temperature', 0.7),
         max_tokens=data.get('max_tokens', 2000),
         chunk_size=data.get('chunk_size', 10),
-        enable_cache=data.get('enable_cache', True)
+        enable_cache=data.get('enable_cache', True),
+        api_base=data.get('api_base'),
+        api_key_env=data.get('api_key_env')
     )
 
 

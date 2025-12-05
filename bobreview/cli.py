@@ -20,6 +20,9 @@ from .pages import generate_report
 from .report_systems import load_report_system, list_available_systems
 from .report_systems.executor import ReportSystemExecutor
 
+# Import provider listing
+from .llm.providers import list_providers, get_provider_info
+
 # Check for tqdm availability
 try:
     from tqdm import tqdm
@@ -37,8 +40,6 @@ def main():
     """
     Parse CLI arguments, analyze PNG-captured performance data, optionally call an LLM, and write an HTML performance report.
     
-    This is the script entry point: it builds a ReportConfig from command-line options, validates configuration, initializes (and optionally clears) the LLM response cache, scans and parses PNG files whose filenames encode performance metrics, computes statistics, and generates an HTML report. Depending on options it may sample the input set, run in dry-run mode (skip LLM calls and use placeholder content), and use cached LLM responses. Errors during validation, parsing, analysis, LLM interaction, HTML generation, or file I/O cause a non-zero exit code; verbose and quiet flags control console output.
-    
     Returns:
         exit_code (int): 0 on success, 1 on failure.
     """
@@ -48,34 +49,24 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Basic usage with defaults
+  # Basic usage with defaults (OpenAI)
   bobreview --dir ./screenshots
+
+  # Use Anthropic Claude
+  bobreview --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
+
+  # Use local Ollama
+  bobreview --dir ./screenshots --llm-provider ollama --llm-model llama2
 
   # Custom thresholds and title
   bobreview --dir ./screenshots --title "My Level Analysis" \\
     --draw-hard-cap 700 --tri-hard-cap 150000 --location "City District"
 
-  # Subsequent runs reuse cache automatically (enabled by default)
-  bobreview --dir ./screenshots
-
-  # Disable caching for this run
-  bobreview --dir ./screenshots --no-cache
-
   # Dry run to test without calling LLM
   bobreview --dir ./screenshots --dry-run
 
-  # Process only a random sample
-  bobreview --dir ./screenshots --sample 50
-
-  # Or set OPENAI_API_KEY environment variable
-  export OPENAI_API_KEY=sk-...
-  bobreview --dir ./screenshots
-
-  # Clear cache and regenerate
-  bobreview --dir ./screenshots --clear-cache
-
-  # Use external image files (reduces HTML file size)
-  bobreview --dir ./screenshots --no-embed-images
+  # List available LLM providers
+  bobreview --list-providers
         """
     )
     parser.add_argument(
@@ -87,7 +78,7 @@ Examples:
     )
     parser.add_argument(
         '--output', type=str, default='performance_report.html',
-        help='Output directory/file path (creates index.html and additional pages, default: performance_report.html)'
+        help='Output directory/file path (creates index.html and additional pages)'
     )
     parser.add_argument(
         '--title', type=str, default=None,
@@ -97,6 +88,8 @@ Examples:
         '--location', type=str, default=None,
         help='Location/level name (default: "Unknown Location")'
     )
+    
+    # Threshold arguments
     parser.add_argument(
         '--draw-soft-cap', type=int, default=550,
         help='Soft cap for draw calls (default: 550)'
@@ -137,17 +130,24 @@ Examples:
         '--no-recommendations', action='store_true',
         help='Disable system-level recommendations section'
     )
+    
+    # LLM Provider arguments (unified)
     parser.add_argument(
-        '--openai-key', type=str, default=None,
-        help='OpenAI API key (or set OPENAI_API_KEY environment variable)'
+        '--llm-provider', type=str, default='openai',
+        choices=['openai', 'anthropic', 'ollama'],
+        help='LLM provider to use (default: openai)'
     )
     parser.add_argument(
-        '--llm-chunk-size', type=int, default=10,
-        help='Number of data samples to send per LLM call (default: 10)'
+        '--llm-api-key', type=str, default=None,
+        help='API key for LLM provider (or use OPENAI_API_KEY, ANTHROPIC_API_KEY env vars)'
     )
     parser.add_argument(
-        '--openai-model', type=str, default='gpt-4o',
-        help='OpenAI model to use (default: gpt-4o)'
+        '--llm-api-base', type=str, default=None,
+        help='Custom API base URL (e.g., for Ollama: http://localhost:11434)'
+    )
+    parser.add_argument(
+        '--llm-model', type=str, default=None,
+        help='Model to use (default depends on provider: gpt-4o, claude-3-5-sonnet-20241022, llama2)'
     )
     parser.add_argument(
         '--llm-temperature', type=float, default=0.7,
@@ -158,8 +158,16 @@ Examples:
         help='Maximum tokens for LLM responses (default: 2000)'
     )
     parser.add_argument(
+        '--llm-chunk-size', type=int, default=10,
+        help='Number of data samples to send per LLM call (default: 10)'
+    )
+    parser.add_argument(
         '--llm-combine-warning-threshold', type=int, default=100000,
-        help='Character count threshold for warning when combining chunks (default: 100000, roughly 25K tokens). Advanced option.'
+        help='Character count threshold for warning when combining chunks (default: 100000)'
+    )
+    parser.add_argument(
+        '--list-providers', action='store_true',
+        help='List available LLM providers and exit'
     )
     
     # Caching options
@@ -205,22 +213,22 @@ Examples:
     )
     parser.add_argument(
         '--linked-css', action='store_true', default=False,
-        help='Use external CSS file instead of embedding (creates styles.css in output directory)'
+        help='Use external CSS file instead of embedding'
     )
     parser.add_argument(
         '--theme', type=str, default='dark', dest='theme_id',
         choices=['dark', 'light', 'high_contrast'],
-        help='Report theme (default: dark). Options: dark, light, high_contrast'
+        help='Report theme (default: dark)'
     )
     parser.add_argument(
         '--disable-page', action='append', dest='disabled_pages', default=[],
         metavar='PAGE_ID',
-        help='Disable a page by ID (can be used multiple times). Valid IDs: home, metrics, zones, visuals, optimization, stats'
+        help='Disable a page by ID (can be used multiple times)'
     )
     parser.add_argument(
         '--report-system', type=str, default='png_data_points',
         metavar='SYSTEM',
-        help='Report system to use (built-in name or path to JSON file). Default: png_data_points'
+        help='Report system to use (built-in name or path to JSON file)'
     )
     parser.add_argument(
         '--list-report-systems', action='store_true',
@@ -230,6 +238,18 @@ Examples:
     # Parse args
     args = parser.parse_args()
     
+    # Handle --list-providers
+    if args.list_providers:
+        print("Available LLM providers:\n")
+        for provider_name in list_providers():
+            info = get_provider_info(provider_name)
+            key_info = f"(requires {info['env_key_name']})" if info['requires_api_key'] else "(no API key needed)"
+            print(f"  {provider_name}")
+            print(f"    Default model: {info['default_model']}")
+            print(f"    {key_info}")
+            print()
+        return 0
+    
     # Handle --list-report-systems
     if args.list_report_systems:
         systems = list_available_systems()
@@ -237,8 +257,7 @@ Examples:
             print("No report systems found.")
             return 0
         
-        print("Available report systems:")
-        print()
+        print("Available report systems:\n")
         for system in systems:
             source_label = "built-in" if system['source'] == 'builtin' else "custom"
             print(f"  {system['id']} ({source_label}) - v{system['version']}")
@@ -253,10 +272,35 @@ Examples:
     
     start_time = time.time()
     
-    # Check for OpenAI API key (unless dry run)
-    openai_key = args.openai_key or os.getenv('OPENAI_API_KEY')
-    if not openai_key and not args.dry_run:
-        parser.error("OpenAI API key is required. Set OPENAI_API_KEY environment variable or use --openai-key")
+    # Get default model based on provider if not specified
+    if args.llm_model is None:
+        default_models = {
+            'openai': 'gpt-4o',
+            'anthropic': 'claude-3-5-sonnet-20241022',
+            'ollama': 'llama2'
+        }
+        args.llm_model = default_models.get(args.llm_provider, 'gpt-4o')
+    
+    # Get API key from environment if not provided
+    env_key_names = {
+        'openai': 'OPENAI_API_KEY',
+        'anthropic': 'ANTHROPIC_API_KEY',
+        'ollama': None  # Ollama doesn't need API key
+    }
+    
+    llm_api_key = args.llm_api_key
+    if not llm_api_key and args.llm_provider != 'ollama':
+        env_key = env_key_names.get(args.llm_provider)
+        if env_key:
+            llm_api_key = os.getenv(env_key)
+    
+    # Check for API key (unless dry run or Ollama)
+    if not llm_api_key and not args.dry_run and args.llm_provider != 'ollama':
+        env_key = env_key_names.get(args.llm_provider, 'API_KEY')
+        parser.error(
+            f"API key required for {args.llm_provider}. "
+            f"Set {env_key} environment variable or use --llm-api-key"
+        )
     
     # Build configuration
     config = ReportConfig(
@@ -272,12 +316,14 @@ Examples:
         low_load_tri_threshold=args.low_load_tris,
         outlier_sigma=args.outlier_sigma,
         enable_recommendations=not args.no_recommendations,
-        openai_api_key=openai_key,
-        openai_model=args.openai_model,
+        llm_provider=args.llm_provider,
+        llm_api_key=llm_api_key,
+        llm_api_base=args.llm_api_base,
+        llm_model=args.llm_model,
         llm_temperature=args.llm_temperature,
         llm_max_tokens=args.llm_max_tokens,
-        llm_combine_warning_threshold=args.llm_combine_warning_threshold,
         llm_chunk_size=args.llm_chunk_size,
+        llm_combine_warning_threshold=args.llm_combine_warning_threshold,
         cache_dir=Path(args.cache_dir),
         use_cache=args.use_cache and not args.dry_run,
         clear_cache=args.clear_cache,
@@ -311,12 +357,13 @@ Examples:
     if config.dry_run:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
-    # Use the new JSON-based report system framework
+    log_verbose(f"LLM Provider: {config.llm_provider} (model: {config.llm_model})", config)
+    
+    # Use the JSON-based report system framework
     try:
         log_info(f"Loading report system: {args.report_system}", config)
         
         # Build CLI overrides for the JSON system
-        # These allow CLI arguments to override values from the JSON definition
         cli_overrides = {
             'thresholds': {
                 'draw_soft_cap': config.draw_soft_cap,
@@ -331,7 +378,8 @@ Examples:
                 'mad_threshold': config.mad_threshold,
             },
             'llm_config': {
-                'model': config.openai_model,
+                'provider': config.llm_provider,
+                'model': config.llm_model,
                 'temperature': config.llm_temperature,
                 'max_tokens': config.llm_max_tokens,
                 'chunk_size': config.llm_chunk_size,
@@ -388,4 +436,3 @@ Examples:
 
 if __name__ == '__main__':
     sys.exit(main())
-

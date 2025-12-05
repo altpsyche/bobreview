@@ -1,14 +1,11 @@
 """
-LLM client for OpenAI API interactions.
+LLM client for API interactions.
 
-Provides core functions for calling the LLM with caching,
+Provides core functions for calling LLM providers with caching,
 retry logic, and response cleaning.
 """
 
 import os
-import random
-import re
-import time
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
@@ -18,22 +15,7 @@ from ..core.cache import get_cache
 from ..core.utils import log_verbose, log_warning
 from ..core.analysis import format_data_table
 
-# Check for OpenAI availability
-try:
-    import openai
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-
-
-def clean_llm_response(response: str) -> str:
-    """Clean LLM response by removing markdown code fences and extra formatting."""
-    # Remove markdown code fences (```html, ```, etc.)
-    response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
-    response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
-    response = re.sub(r'\n```\s*\n', '\n', response)
-    return response.strip()
+from .providers import get_provider, LLMProviderConfig
 
 
 def call_llm(
@@ -43,7 +25,7 @@ def call_llm(
     max_retries: int = 3,
 ) -> str:
     """
-    Call OpenAI LLM with caching, dry-run support, and retry logic.
+    Call LLM provider with caching, dry-run support, and retry logic.
     
     Parameters:
         prompt: The user-facing prompt
@@ -77,14 +59,12 @@ Data Table:
 {data_table}"""
     
     # Check cache first
-    # Cache key includes prompt, data_table, model, temperature, and max_tokens
-    # to ensure different generation parameters produce different cache entries
     cache = get_cache()
     if cache:
         cached = cache.get(
             prompt, 
             data_table or "", 
-            config.openai_model,
+            config.llm_model,
             config.llm_temperature,
             config.llm_max_tokens
         )
@@ -92,66 +72,34 @@ Data Table:
             log_verbose("Using cached LLM response", config)
             return cached
     
-    # Check OpenAI availability
-    # Requires openai>=1.0.0 (v1 API) for openai.OpenAI() and openai.RateLimitError
-    if not OPENAI_AVAILABLE:
-        raise RuntimeError(
-            "OpenAI library not available. Install with: pip install 'openai>=1.0.0,<2.0.0'"
+    # Get provider and make call
+    provider = get_provider(config.llm_provider)
+    log_verbose(f"Calling LLM ({provider.name}: {config.llm_model})", config)
+    
+    # Build provider config
+    provider_config = LLMProviderConfig(
+        model=config.llm_model,
+        temperature=config.llm_temperature,
+        max_tokens=config.llm_max_tokens,
+        api_key=config.llm_api_key,
+        api_base=config.llm_api_base,
+    )
+    
+    # Make the call
+    result = provider.call(full_prompt, provider_config, max_retries)
+    
+    # Cache the result
+    if cache:
+        cache.set(
+            prompt,
+            data_table or "",
+            config.llm_model,
+            config.llm_temperature,
+            config.llm_max_tokens,
+            result
         )
     
-    # Get API key
-    api_key = config.openai_api_key or os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        raise RuntimeError("OpenAI API key not found. Set OPENAI_API_KEY or use --openai-key")
-    
-    # Use OpenAI v1 API (openai>=1.0.0)
-    client = openai.OpenAI(api_key=api_key)
-    log_verbose(f"Calling LLM API (model: {config.openai_model})", config)
-    
-    # Retry with exponential backoff
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=config.openai_model,
-                messages=[{"role": "user", "content": full_prompt}],
-                temperature=config.llm_temperature,
-                max_tokens=config.llm_max_tokens
-            )
-            if not response.choices:
-                raise RuntimeError("No response from LLM")
-            result = clean_llm_response(response.choices[0].message.content)
-            
-            # Cache the result with all generation parameters in the key
-            # to ensure cache entries are invalidated when parameters change
-            if cache:
-                cache.set(
-                    prompt,
-                    data_table or "",
-                    config.openai_model,
-                    config.llm_temperature,
-                    config.llm_max_tokens,
-                    result
-                )
-            return result
-            
-        except openai.RateLimitError as e:
-            if "quota" in str(e).lower():
-                raise RuntimeError(
-                    "OpenAI API quota exceeded. Check billing at "
-                    "https://platform.openai.com/account/billing"
-                ) from e
-            
-            if attempt < max_retries - 1:
-                wait = (2 ** attempt) + random.random()
-                log_warning(f"Rate limit, retrying in {wait:.1f}s...", config)
-                time.sleep(wait)
-            else:
-                raise RuntimeError(f"Rate limit after {max_retries} attempts") from e
-                
-        except openai.APIError as e:
-            raise RuntimeError(f"OpenAI API error: {e}") from e
-        except Exception as e:
-            raise RuntimeError(f"Unexpected error: {e}") from e
+    return result
 
 
 def call_llm_chunked(
