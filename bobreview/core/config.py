@@ -60,6 +60,7 @@ def validate_config(config: ReportConfig) -> List[str]:
     - mad_threshold is greater than 0
     - llm_chunk_size is greater than 0
     - llm_max_tokens is greater than 0
+    - llm_combine_warning_threshold is greater than 0
     - sample_size, if provided, is greater than 0
     - llm_temperature is between 0 and 2 (inclusive of 0 and 2)
     
@@ -114,6 +115,9 @@ def validate_config(config: ReportConfig) -> List[str]:
     
     if config.llm_max_tokens <= 0:
         errors.append("llm_max_tokens must be > 0")
+    
+    if config.llm_combine_warning_threshold <= 0:
+        errors.append("llm_combine_warning_threshold must be > 0")
     
     if config.sample_size is not None and config.sample_size <= 0:
         errors.append("sample_size must be > 0")

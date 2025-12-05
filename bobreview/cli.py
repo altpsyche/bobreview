@@ -90,10 +90,6 @@ Examples:
         help='Output directory/file path (creates index.html and additional pages, default: performance_report.html)'
     )
     parser.add_argument(
-        '--images-dir', type=str, default=None,
-        help='Relative path to images directory from output (auto-detected if not specified)'
-    )
-    parser.add_argument(
         '--title', type=str, default=None,
         help='Report title (default: "Performance Analysis Report")'
     )
@@ -231,18 +227,8 @@ Examples:
         help='List all available report systems and exit'
     )
     
-    # Parse args but also track which were explicitly provided
+    # Parse args
     args = parser.parse_args()
-    
-    # Get the raw command line arguments to detect user-provided values
-    # This helps us distinguish between defaults and user-specified values
-    import sys
-    user_provided_args = set()
-    for i, arg in enumerate(sys.argv[1:]):
-        if arg.startswith('--'):
-            # Remove leading dashes and convert to argument name
-            arg_name = arg.lstrip('-').replace('-', '_')
-            user_provided_args.add(arg_name)
     
     # Handle --list-report-systems
     if args.list_report_systems:
