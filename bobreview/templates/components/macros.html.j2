@@ -1,0 +1,125 @@
+{#- Stat Card Component
+    
+    Parameters:
+        label: Card title/label
+        value: Main value to display
+        subtitle: Optional subtitle text
+        variant: CSS class variant ('ok', 'warn', 'danger', or empty)
+-#}
+{% macro stat_card(label, value, subtitle='', variant='') %}
+<div class="stat-card{% if variant %} {{ variant }}{% endif %}">
+  <div class="stat-label">{{ label }}</div>
+  <div class="stat-value">{{ value }}</div>
+  {% if subtitle %}
+  <div class="stat-sub">{{ subtitle }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{#- Stats Item Component (for stats grid)
+    
+    Parameters:
+        label: Item label
+        value: Item value
+-#}
+{% macro stats_item(label, value) %}
+<div class="stats-item">
+  <div class="stats-item-label">{{ label }}</div>
+  <div class="stats-item-value">{{ value }}</div>
+</div>
+{% endmacro %}
+
+
+{#- Trend Indicator Component
+    
+    Parameters:
+        direction: 'improving', 'degrading', or 'stable'
+        label: Text label for the trend
+-#}
+{% macro trend_indicator(direction, label) %}
+{% set icons = {'improving': 'arrow-down', 'degrading': 'arrow-up', 'stable': 'arrow-right'} %}
+<span class="trend-indicator {{ direction }}">
+  <i class="fas fa-{{ icons.get(direction, 'arrow-right') }}"></i> {{ label }}
+</span>
+{% endmacro %}
+
+
+{#- Pill Badge Component
+    
+    Parameters:
+        text: Badge text
+        variant: 'ok', 'warn', 'danger', or empty for default
+-#}
+{% macro pill(text, variant='') %}
+<span class="pill{% if variant %} {{ variant }}{% endif %}">{{ text }}</span>
+{% endmacro %}
+
+
+{#- Percentile Badge Component
+    
+    Parameters:
+        label: Percentile label (e.g., "P90")
+        value: Percentile value
+-#}
+{% macro percentile_badge(label, value) %}
+<span class="percentile-badge">{{ label }}: {{ value }}</span>
+{% endmacro %}
+
+
+{#- Feature Card Component (for navigation cards)
+    
+    Parameters:
+        url: Link destination
+        icon: FontAwesome icon class (e.g., 'fa-chart-bar')
+        title: Card title
+        description: Card description
+        pills: Optional list of (text, variant) tuples
+-#}
+{% macro feature_card(url, icon, title, description, pills=None) %}
+<a href="{{ url }}" style="text-decoration: none;">
+  <div class="feature-card">
+    <div class="icon"><i class="fas {{ icon }}"></i></div>
+    <h3>{{ title }}</h3>
+    <p>{{ description }}</p>
+    {% if pills %}
+    <div class="pill-row" style="margin-top: 12px;">
+      {% for text, variant in pills %}
+      {{ pill(text, variant) }}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</a>
+{% endmacro %}
+
+
+{#- Metric Table Component
+    
+    Parameters:
+        metric_name: Display name for the metric
+        stats: Dictionary with min, max, q1, median, q3, mean, stdev, variance, cv
+        labels: Labels dictionary for localized text
+-#}
+{% macro metric_table(metric_name, stats, labels) %}
+<h3>{{ metric_name }}</h3>
+<table>
+  <thead>
+    <tr>
+      <th>{{ labels.get('metric', 'Metric') }}</th>
+      <th>{{ labels.get('value', 'Value') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>{{ labels.minimum }}</td><td>{{ stats.min|format_number }}</td></tr>
+    <tr><td>Q1 (25th percentile)</td><td>{{ stats.q1|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.median }} (50th percentile)</td><td>{{ stats.median|format_number(0) }}</td></tr>
+    <tr><td>Q3 (75th percentile)</td><td>{{ stats.q3|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.maximum }}</td><td>{{ stats.max|format_number }}</td></tr>
+    <tr><td>{{ labels.mean }}</td><td>{{ stats.mean|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.std_dev }}</td><td>{{ stats.stdev|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.variance }}</td><td>{{ stats.variance|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.cv }}</td><td>{{ stats.cv|format_number(1) }}%</td></tr>
+  </tbody>
+</table>
+{% endmacro %}

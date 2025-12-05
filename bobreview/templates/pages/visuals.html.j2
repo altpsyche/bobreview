@@ -1,0 +1,69 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card %}
+
+{% block title %}{{ config.title }} - {{ labels.visual_analysis }}{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h2>{{ labels.visual_analysis }}</h2>
+  
+  {{ llm.visual_analysis|sanitize }}
+</section>
+
+<!-- Timeline Charts -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.draw_calls }} {{ labels.get('timeline', 'Timeline') }}</h2>
+  <div class="chart-container">
+    <canvas id="drawsTimeline"></canvas>
+  </div>
+</section>
+
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.triangles }} {{ labels.get('timeline', 'Timeline') }}</h2>
+  <div class="chart-container">
+    <canvas id="trisTimeline"></canvas>
+  </div>
+</section>
+
+<!-- Scatter Plot -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.draw_calls }} vs {{ labels.triangles }}</h2>
+  <div class="chart-container">
+    <canvas id="scatterPlot"></canvas>
+  </div>
+</section>
+
+<!-- Sample Gallery -->
+{% if images %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('sample_gallery', 'Sample Gallery') }}</h2>
+  <p class="body-text">{{ labels.get('sample_gallery_desc', 'Visual samples from the analysis:') }}</p>
+  
+  <div class="gallery-grid">
+    {% for img in images[:12] %}
+    <div class="gallery-item">
+      <img src="{{ img.src }}" alt="{{ img.testcase }}" loading="lazy" />
+      <div class="gallery-caption">
+        <strong>{{ img.testcase }}</strong><br>
+        {{ labels.draw_calls }}: {{ img.draws }} | {{ labels.triangles }}: {{ img.tris|format_number }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if charts %}
+<script>
+{{ charts.draws_timeline|safe }}
+{{ charts.tris_timeline|safe }}
+{{ charts.scatter|safe }}
+</script>
+{% endif %}
+{% endblock %}

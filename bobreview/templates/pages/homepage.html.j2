@@ -1,0 +1,93 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, stats_item, trend_indicator, pill, percentile_badge, feature_card %}
+
+{% block title %}{{ config.title }} - {{ labels.home }}{% endblock %}
+
+{% block head_scripts %}{% endblock %}
+
+{% block content %}
+<!-- Executive Summary Section -->
+<section class="panel">
+  <h2>{{ labels.executive_summary }}</h2>
+  
+  <div class="summary-grid">
+    {{ stat_card(
+        labels.average,
+        (stats.draws.mean|format_number(0)) ~ ' ' ~ labels.draw_calls,
+        (stats.tris.mean|format_number(0)) ~ ' ' ~ labels.triangles ~ ' · ' ~ labels.median ~ ' ' ~ (stats.draws.median|format_number(0)) ~ ' / ' ~ (stats.tris.median|format_number(0)),
+        'ok'
+    ) }}
+    
+    {{ stat_card(
+        labels.peak_hotspot,
+        critical.draws ~ ' ' ~ labels.draw_calls,
+        (critical.tris|format_number) ~ ' ' ~ labels.triangles ~ ' (index ' ~ critical.index ~ ')',
+        'danger'
+    ) }}
+    
+    {{ stat_card(
+        labels.high_load_frames,
+        stats.high_load|length,
+        labels.draw_calls ~ ' ≥ ' ~ config.high_load_draw_threshold ~ ' or ' ~ labels.triangles ~ ' ≥ ' ~ (config.high_load_tri_threshold|format_number(0)),
+        'warn'
+    ) }}
+  </div>
+  
+  <div style="margin-top: 12px;">
+    {{ percentile_badge(labels.p90 ~ ' ' ~ labels.draw_calls, stats.draws.p90|format_number(0)) }}
+    {{ percentile_badge(labels.p95 ~ ' ' ~ labels.draw_calls, stats.draws.p95|format_number(0)) }}
+    {{ percentile_badge(labels.p99 ~ ' ' ~ labels.draw_calls, stats.draws.p99|format_number(0)) }}
+    {{ percentile_badge(labels.p90 ~ ' ' ~ labels.triangles, stats.tris.p90|format_number(0)) }}
+    {{ percentile_badge(labels.p95 ~ ' ' ~ labels.triangles, stats.tris.p95|format_number(0)) }}
+  </div>
+  
+  <div style="margin-top: 8px;">
+    {% if stats.trends is defined and stats.trends.draws is defined %}
+    <span style="font-size: 12px; color: var(--text-soft);">{{ labels.trend }}: </span>
+    {{ trend_indicator(stats.trends.draws.direction|default('stable'), (stats.trends.draws.direction|default('stable')|title) ~ ' ' ~ labels.draw_calls) }}
+    {{ trend_indicator(stats.trends.tris.direction|default('stable'), (stats.trends.tris.direction|default('stable')|title) ~ ' ' ~ labels.triangles) }}
+    {% endif %}
+    <span style="font-size: 12px; color: var(--text-soft); margin-left: 8px;">{{ labels.cv }}: {{ stats.draws.cv|format_number(1) }}% {{ labels.draw_calls }} / {{ stats.tris.cv|format_number(1) }}% {{ labels.triangles }}</span>
+  </div>
+  
+  {{ llm.exec_summary|sanitize }}
+  
+  <div class="pill-row">
+    {{ pill(labels.average ~ ': ' ~ (stats.draws.mean|format_number(0)) ~ ' ' ~ labels.draw_calls ~ ' / ' ~ (stats.tris.mean|format_number(0)) ~ ' ' ~ labels.triangles, 'ok') }}
+    {% if stats.draws.cv > 30 or stats.tris.cv > 30 %}
+    {{ pill('High variance detected', 'warn') }}
+    {% endif %}
+    {{ pill(labels.peak_hotspot ~ ': ' ~ critical.draws ~ ' ' ~ labels.draw_calls ~ ' / ' ~ (critical.tris|format_number) ~ ' ' ~ labels.triangles, 'danger') }}
+  </div>
+</section>
+
+<!-- Navigation Cards -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.detailed_analysis }}</h2>
+  <p class="body-text">{{ labels.get('explore_sections', 'Explore different aspects of the performance analysis:') }}</p>
+  
+  <div class="card-grid">
+    {% for page in pages if page.id != 'home' and page.card_description %}
+    {% set page_pills = [] %}
+    {% if page.id == 'zones' %}
+      {% set page_pills = [(stats.high_load|length ~ ' ' ~ labels.high_load, 'danger'), (stats.low_load|length ~ ' ' ~ labels.low_load, 'ok')] %}
+    {% endif %}
+    {{ feature_card(page.filename, page.card_icon, page.nav_label, page.card_description, page_pills) }}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Quick Stats Section -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.quick_stats }}</h2>
+  
+  <div class="stats-grid">
+    {{ stats_item(labels.total_captures, stats.count) }}
+    {{ stats_item(labels.draw_calls ~ ' ' ~ labels.range_label, stats.draws.min ~ ' - ' ~ stats.draws.max) }}
+    {{ stats_item(labels.triangles ~ ' ' ~ labels.range_label, (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number)) }}
+    {{ stats_item(labels.high_load_frames, stats.high_load|length) }}
+    {{ stats_item(labels.low_load_frames, stats.low_load|length) }}
+    {{ stats_item(labels.performance_variance, (stats.draws.cv|format_number(1)) ~ '%') }}
+  </div>
+</section>
+{% endblock %}

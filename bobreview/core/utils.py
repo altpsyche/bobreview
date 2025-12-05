@@ -113,15 +113,20 @@ def format_number(n, decimals=1):
     Return the number formatted with thousands separators and a fixed number of decimal places.
     
     Parameters:
-        n (int | float): The numeric value to format.
+        n (int | float | None): The numeric value to format.
         decimals (int): Number of digits to show after the decimal point. If set to 0, the value is converted to an integer and the fractional part is discarded.
     
     Returns:
         formatted (str): The number as a string with comma separators for thousands and the requested decimal precision.
     """
-    if decimals == 0:
-        return f"{int(n):,}"
-    return f"{n:,.{decimals}f}"
+    if n is None:
+        return 'N/A'
+    try:
+        if decimals == 0:
+            return f"{int(n):,}"
+        return f"{n:,.{decimals}f}"
+    except (TypeError, ValueError):
+        return str(n) if n else 'N/A'
 
 
 def image_to_base64(image_path: Path) -> Optional[str]:

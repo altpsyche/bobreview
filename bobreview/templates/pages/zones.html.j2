@@ -1,0 +1,87 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, pill %}
+
+{% block title %}{{ config.title }} - {{ labels.performance_zones }}{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h2>{{ labels.performance_zones }}</h2>
+  
+  {{ llm.zones_analysis|sanitize }}
+  
+  <div class="summary-grid" style="margin-top: 24px;">
+    {{ stat_card(labels.high_load_frames, stats.high_load|length, labels.draw_calls ~ ' ≥ ' ~ config.high_load_draw_threshold, 'danger') }}
+    {{ stat_card(labels.low_load_frames, stats.low_load|length, labels.draw_calls ~ ' < ' ~ config.low_load_draw_threshold, 'ok') }}
+  </div>
+</section>
+
+<!-- High Load Frames -->
+{% if stats.high_load %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.high_load }} {{ labels.get('frames', 'Frames') }}</h2>
+  <p class="body-text">{{ labels.get('high_load_desc', 'Frames exceeding performance thresholds:') }}</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>{{ labels.index }}</th>
+        <th>{{ labels.testcase }}</th>
+        <th>{{ labels.draw_calls }}</th>
+        <th>{{ labels.triangles }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for frame in stats.high_load[:20] %}
+      {# frame is tuple: (index, data_point_dict) #}
+      {% set idx = frame[0] %}
+      {% set data = frame[1] %}
+      <tr>
+        <td>{{ idx }}</td>
+        <td>{{ data.testcase|default('N/A') }}</td>
+        <td>{{ data.draws }}</td>
+        <td>{{ data.tris|format_number }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  {% if stats.high_load|length > 20 %}
+  <p style="margin-top: 12px; color: var(--text-soft);">
+    {{ labels.get('showing', 'Showing') }} 20 {{ labels.get('of', 'of') }} {{ stats.high_load|length }} {{ labels.high_load }} {{ labels.get('frames', 'frames') }}
+  </p>
+  {% endif %}
+</section>
+{% endif %}
+
+<!-- Low Load Frames -->
+{% if stats.low_load %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.low_load }} {{ labels.get('frames', 'Frames') }}</h2>
+  <p class="body-text">{{ labels.get('low_load_desc', 'Frames with minimal resource usage:') }}</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>{{ labels.index }}</th>
+        <th>{{ labels.testcase }}</th>
+        <th>{{ labels.draw_calls }}</th>
+        <th>{{ labels.triangles }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for frame in stats.low_load[:10] %}
+      {# frame is tuple: (index, data_point_dict) #}
+      {% set idx = frame[0] %}
+      {% set data = frame[1] %}
+      <tr>
+        <td>{{ idx }}</td>
+        <td>{{ data.testcase|default('N/A') }}</td>
+        <td>{{ data.draws }}</td>
+        <td>{{ data.tris|format_number }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

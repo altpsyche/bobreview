@@ -1,0 +1,52 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, metric_table %}
+
+{% block title %}{{ config.title }} - {{ labels.metric_deep_dive }}{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h2>{{ labels.metric_deep_dive }}</h2>
+  
+  {{ llm.metrics_analysis|sanitize }}
+  
+  <div class="summary-grid" style="margin-top: 24px;">
+    {{ stat_card(labels.draw_calls ~ ' ' ~ labels.average, stats.draws.mean|format_number(0), labels.range_label ~ ': ' ~ stats.draws.min ~ ' - ' ~ stats.draws.max, 'ok') }}
+    {{ stat_card(labels.triangles ~ ' ' ~ labels.average, stats.tris.mean|format_number(0), labels.range_label ~ ': ' ~ (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number), 'ok') }}
+  </div>
+</section>
+
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.draw_calls }} {{ labels.get('statistics', 'Statistics') }}</h2>
+  {{ metric_table(labels.draw_calls, stats.draws, labels) }}
+</section>
+
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.triangles }} {{ labels.get('statistics', 'Statistics') }}</h2>
+  {{ metric_table(labels.triangles, stats.tris, labels) }}
+</section>
+
+{% if charts %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('distribution', 'Distribution') }}</h2>
+  <div class="chart-container">
+    <canvas id="drawsHistogram"></canvas>
+  </div>
+  <div class="chart-container" style="margin-top: 20px;">
+    <canvas id="trisHistogram"></canvas>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if charts %}
+<script>
+{{ charts.draws_histogram|safe }}
+{{ charts.tris_histogram|safe }}
+</script>
+{% endif %}
+{% endblock %}

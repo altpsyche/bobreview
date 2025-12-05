@@ -1,0 +1,73 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, pill %}
+
+{% block title %}{{ config.title }} - {{ labels.optimization }}{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h2>{{ labels.optimization }}</h2>
+  
+  {{ llm.optimization|sanitize }}
+  
+  <div class="summary-grid" style="margin-top: 24px;">
+    {{ stat_card(labels.get('critical_frames', 'Critical Frames'), stats.critical_count|default(1), labels.get('requires_attention', 'Requires immediate attention'), 'danger') }}
+    {{ stat_card(labels.get('optimization_targets', 'Optimization Targets'), stats.high_load|length, labels.get('above_threshold', 'Above threshold'), 'warn') }}
+  </div>
+</section>
+
+<!-- Optimization Recommendations -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('recommendations', 'Recommendations') }}</h2>
+  
+  {{ llm.recommendations|sanitize }}
+</section>
+
+<!-- Critical Hotspots -->
+{% if stats.high_load %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('critical_hotspots', 'Critical Hotspots') }}</h2>
+  <p class="body-text">{{ labels.get('hotspots_desc', 'Top frames requiring optimization:') }}</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>{{ labels.get('priority', 'Priority') }}</th>
+        <th>{{ labels.index }}</th>
+        <th>{{ labels.testcase }}</th>
+        <th>{{ labels.draw_calls }}</th>
+        <th>{{ labels.triangles }}</th>
+        <th>{{ labels.get('issue', 'Issue') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for frame in stats.high_load[:10] %}
+      {# frame is tuple: (index, data_point_dict) #}
+      {% set idx = frame[0] %}
+      {% set data = frame[1] %}
+      <tr>
+        <td>
+          {% if loop.index <= 3 %}
+          {{ pill('Critical', 'danger') }}
+          {% else %}
+          {{ pill('High', 'warn') }}
+          {% endif %}
+        </td>
+        <td>{{ idx }}</td>
+        <td>{{ data.testcase|default('N/A') }}</td>
+        <td>{{ data.draws }}</td>
+        <td>{{ data.tris|format_number }}</td>
+        <td>
+          {% if data.draws >= config.high_load_draw_threshold %}
+          {{ labels.get('high_draw_calls', 'High draw calls') }}
+          {% endif %}
+          {% if data.tris >= config.high_load_tri_threshold %}
+          {{ labels.get('high_triangles', 'High triangle count') }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

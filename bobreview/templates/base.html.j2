@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{% block title %}{{ config.title }}{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  {% block head_scripts %}{% endblock %}
+  {% if config.linked_css %}
+  <link rel="stylesheet" href="styles.css">
+  {% else %}
+  <style>
+{{ get_css()|safe }}
+  </style>
+  {% endif %}
+  {% block head_styles %}{% endblock %}
+</head>
+<body>
+  <div class="page">
+    {% block header %}
+    <header>
+      <h1>{{ config.title }}</h1>
+      {% if meta_text %}
+      <div class="meta"><span>{{ meta_text }}</span></div>
+      {% endif %}
+    </header>
+    {% endblock %}
+    
+    {% block nav %}
+    {% if nav_items %}
+    <div class="nav-links">
+      {% for item in nav_items %}
+      <a href="{{ item.url }}"{% if item.active %} class="active"{% endif %}>{{ item.label }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endblock %}
+    
+    {% block content %}{% endblock %}
+    
+    {% block footer %}
+    <div class="footer">{{ labels.footer_text }}</div>
+    {% endblock %}
+  </div>
+  
+  {% block scripts %}{% endblock %}
+</body>
+</html>

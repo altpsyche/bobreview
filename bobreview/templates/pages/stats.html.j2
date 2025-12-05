@@ -1,0 +1,110 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import metric_table, stats_item %}
+
+{% block title %}{{ config.title }} - {{ labels.statistical_summary }}{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <h2>{{ labels.statistical_summary }}</h2>
+  
+  {{ llm.stats_interpretation|sanitize }}
+</section>
+
+<!-- Complete Statistics -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.draw_calls }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
+  {{ metric_table(labels.draw_calls, stats.draws, labels) }}
+</section>
+
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.triangles }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
+  {{ metric_table(labels.triangles, stats.tris, labels) }}
+</section>
+
+<!-- Outlier Analysis -->
+{% if stats.outliers %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('outlier_analysis', 'Outlier Analysis') }}</h2>
+  <p class="body-text">{{ labels.get('outlier_desc', 'Data points significantly deviating from the mean:') }}</p>
+  
+  <div class="stats-grid">
+    {{ stats_item(labels.get('outliers_detected', 'Outliers Detected'), stats.outliers|length) }}
+    {{ stats_item(labels.get('detection_method', 'Detection Method'), labels.get('zscore', 'Z-Score (σ=' ~ config.outlier_sigma ~ ')')) }}
+  </div>
+  
+  {% if stats.outliers %}
+  <table style="margin-top: 16px;">
+    <thead>
+      <tr>
+        <th>{{ labels.index }}</th>
+        <th>{{ labels.testcase }}</th>
+        <th>{{ labels.draw_calls }}</th>
+        <th>{{ labels.triangles }}</th>
+        <th>{{ labels.get('zscore', 'Z-Score') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for outlier in stats.outliers[:15] %}
+      <tr>
+        <td>{{ outlier.index }}</td>
+        <td>{{ outlier.testcase }}</td>
+        <td>{{ outlier.draws }}</td>
+        <td>{{ outlier.tris|format_number }}</td>
+        <td>{{ outlier.zscore|format_number(2) if outlier.zscore else 'N/A' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endif %}
+
+<!-- Confidence Intervals -->
+{% if stats.draws.ci_lower is defined and stats.draws.ci_upper is defined %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('confidence_intervals', 'Confidence Intervals') }}</h2>
+  
+  <div class="stats-grid">
+    {{ stats_item(labels.draw_calls ~ ' 95% CI', (stats.draws.ci_lower|format_number(1)) ~ ' - ' ~ (stats.draws.ci_upper|format_number(1))) }}
+    {{ stats_item(labels.triangles ~ ' 95% CI', (stats.tris.ci_lower|default(0)|format_number(0)) ~ ' - ' ~ (stats.tris.ci_upper|default(0)|format_number(0))) }}
+  </div>
+</section>
+{% endif %}
+
+<!-- Full Data Table -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.full_sample_table }}</h2>
+  <p class="body-text">{{ labels.get('all_captures', 'All captured data points:') }}</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>{{ labels.index }}</th>
+        <th>{{ labels.testcase }}</th>
+        <th>{{ labels.draw_calls }}</th>
+        <th>{{ labels.triangles }}</th>
+        <th>{{ labels.timestamp }}</th>
+        {% if has_images %}
+        <th>{{ labels.screenshot }}</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for point in data_points %}
+      <tr>
+        <td>{{ loop.index0 }}</td>
+        <td>{{ point.testcase }}</td>
+        <td>{{ point.draws }}</td>
+        <td>{{ point.tris|format_number }}</td>
+        <td>{{ point.timestamp }}</td>
+        {% if has_images and point.image_src %}
+        <td><img src="{{ point.image_src }}" alt="{{ point.testcase }}" class="thumb" loading="lazy" /></td>
+        {% elif has_images %}
+        <td>-</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -5,20 +5,24 @@ The executor takes a ReportSystemDefinition and executes it:
 1. Parse data using configured data source
 2. Calculate statistics based on metrics config  
 3. Generate LLM content for configured generators
-4. Generate HTML pages from page configs
+4. Generate HTML pages from Jinja2 templates (CMS-style)
 """
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from dataclasses import asdict
+from datetime import datetime
 import os
 import random
+import json
 
-from .schema import ReportSystemDefinition
+from .schema import ReportSystemDefinition, LabelConfig
 from .data_parser_base import DataParser, FilenamePatternParser
 from .llm_generator_base import LLMGeneratorTemplate, LLMGeneratorAdapter
 
 # Import from new package structure
 from ..core import ReportConfig, analyze_data, log_info, log_verbose, log_warning, log_error, image_to_base64
+from ..core.template_engine import get_template_engine
 from ..llm import call_llm, call_llm_chunked
 from ..llm.generators import (
     generate_executive_summary,
@@ -30,8 +34,7 @@ from ..llm.generators import (
     generate_statistical_interpretation
 )
 
-# Import page generators
-from ..pages import homepage, metrics, zones, visuals, optimization, stats as stats_page
+from ..registry.pages import get_enabled_pages, get_nav_items
 
 
 class ReportSystemExecutor:
@@ -279,7 +282,9 @@ class ReportSystemExecutor:
         output_path: Path
     ):
         """
-        Generate all configured pages.
+        Generate all configured pages using Jinja2 templates.
+        
+        Uses CMS-style labels from JSON configuration - no hardcoded strings.
         
         Parameters:
             data_points: List of data points
@@ -307,91 +312,292 @@ class ReportSystemExecutor:
         # Calculate relative images directory
         images_dir_rel = os.path.relpath(input_dir, output_dir)
         
+        # Get template engine
+        engine = get_template_engine()
+        
+        # Get labels from system definition
+        labels = self.system_def.labels
+        
         # Get enabled pages
         enabled_pages = [p for p in self.system_def.pages if p.enabled]
         
-        # Map of Python page generators (for builtin templates)
-        page_generators = {
-            'homepage': homepage.generate_homepage,
-            'metrics': metrics.generate_metrics_page,
-            'zones': zones.generate_zones_page,
-            'visuals': visuals.generate_visuals_page,
-            'optimization': optimization.generate_optimization_page,
-            'stats': stats_page.generate_stats_page
+        # Build navigation items
+        nav_items = []
+        for page in enabled_pages:
+            nav_items.append({
+                'label': page.nav_label,
+                'url': page.filename,
+                'active': False
+            })
+        
+        # Prepare image data for templates
+        images = []
+        for point in data_points:
+            if 'img' in point:
+                img_name = point['img']
+                if img_name in image_data_uris:
+                    src = image_data_uris[img_name]
+                elif images_dir_rel:
+                    src = f"{images_dir_rel}/{img_name}"
+                else:
+                    src = img_name
+                images.append({
+                    'src': src,
+                    'testcase': point.get('testcase', ''),
+                    'draws': point.get('draws', 0),
+                    'tris': point.get('tris', 0)
+                })
+        
+        # Template mapping for pages
+        template_map = {
+            'home': 'pages/homepage.html.j2',
+            'metrics': 'pages/metrics.html.j2',
+            'zones': 'pages/zones.html.j2',
+            'visuals': 'pages/visuals.html.j2',
+            'optimization': 'pages/optimization.html.j2',
+            'stats': 'pages/stats.html.j2',
+        }
+        
+        # LLM content mapping
+        llm_key_map = {
+            'home': {'exec_summary': 'executive_summary'},
+            'metrics': {'metrics_analysis': 'metric_deep_dive'},
+            'zones': {'zones_analysis': 'zones_hotspots'},
+            'visuals': {'visual_analysis': 'visual_analysis'},
+            'optimization': {'optimization': 'optimization_checklist', 'recommendations': 'system_recommendations'},
+            'stats': {'stats_interpretation': 'statistical_interpretation'},
         }
         
         # Generate each page
-        log_info(f"Generating {len(enabled_pages)} HTML pages...", self.config)
+        log_info(f"Generating {len(enabled_pages)} HTML pages using Jinja2 templates...", self.config)
         
         for i, page_config in enumerate(enabled_pages, 1):
             page_path = output_dir / page_config.filename
-            log_info(f"[{i}/{len(enabled_pages)}] Writing {page_config.filename}...", self.config)
+            log_info(f"[{i}/{len(enabled_pages)}] Rendering {page_config.filename}...", self.config)
             
-            # Collect LLM content for this page
-            page_llm_content = {}
-            for llm_id in page_config.llm_content:
-                if llm_id in llm_results:
-                    page_llm_content[llm_id] = llm_results[llm_id]
+            # Update nav to mark current page as active
+            page_nav = []
+            for nav in nav_items:
+                page_nav.append({
+                    **nav,
+                    'active': nav['url'] == page_config.filename
+                })
             
-            # Use builtin page generator if available
-            if page_config.template.type == 'builtin' and page_config.template.name in page_generators:
-                # Build kwargs based on page ID (different pages have different signatures)
-                if page_config.id == 'home':
-                    html = homepage.generate_homepage(
-                        stats=stats,
-                        config=self.config,
-                        exec_summary=llm_results.get('executive_summary', '')
-                    )
-                elif page_config.id == 'metrics':
-                    html = metrics.generate_metrics_page(
-                        data_points=data_points,
-                        stats=stats,
-                        config=self.config,
-                        metric_content=llm_results.get('metric_deep_dive', {})
-                    )
-                elif page_config.id == 'zones':
-                    html = zones.generate_zones_page(
-                        stats=stats,
-                        images_dir_rel=images_dir_rel,
-                        image_data_uris=image_data_uris,
-                        config=self.config,
-                        zones_content=llm_results.get('zones_hotspots', {})
-                    )
-                elif page_config.id == 'visuals':
-                    html = visuals.generate_visuals_page(
-                        data_points=data_points,
-                        stats=stats,
-                        config=self.config,
-                        visual_analysis_content=llm_results.get('visual_analysis', '')
-                    )
-                elif page_config.id == 'optimization':
-                    html = optimization.generate_optimization_page(
-                        data_points=data_points,
-                        stats=stats,
-                        images_dir_rel=images_dir_rel,
-                        image_data_uris=image_data_uris,
-                        config=self.config,
-                        optimization_content=llm_results.get('optimization_checklist', {}),
-                        system_recs=llm_results.get('system_recommendations', {})
-                    )
-                elif page_config.id == 'stats':
-                    html = stats_page.generate_stats_page(
-                        data_points=data_points,
-                        stats=stats,
-                        images_dir_rel=images_dir_rel,
-                        image_data_uris=image_data_uris,
-                        config=self.config,
-                        statistical_interpretation=llm_results.get('statistical_interpretation', '')
-                    )
-                else:
-                    log_warning(f"Unknown page ID: {page_config.id}", self.config)
-                    continue
+            # Build LLM content dict for this page
+            llm_content = {}
+            if page_config.id in llm_key_map:
+                for template_key, result_key in llm_key_map[page_config.id].items():
+                    llm_content[template_key] = llm_results.get(result_key, '')
+            
+            # Get critical point for homepage
+            critical = {
+                'index': stats['critical'][0] if 'critical' in stats else 0,
+                'draws': stats['critical'][1]['draws'] if 'critical' in stats else 0,
+                'tris': stats['critical'][1]['tris'] if 'critical' in stats else 0,
+            } if 'critical' in stats else {'index': 0, 'draws': 0, 'tris': 0}
+            
+            # Build base context for all templates
+            context = {
+                'config': self.config,
+                'stats': stats,
+                'data_points': data_points,
+                'llm': llm_content,
+                'nav_items': page_nav,
+                'pages': [asdict(p) for p in enabled_pages],
+                'images': images,
+                'has_images': len(images) > 0,
+                'critical': critical,
+                'meta_text': f"{stats['count']} captures · {self.config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            }
+            
+            # Add charts for visuals and metrics pages
+            if page_config.id == 'visuals':
+                context['charts'] = self._generate_charts(data_points, 'visuals')
+            elif page_config.id == 'metrics':
+                context['charts'] = self._generate_charts(data_points, 'metrics')
+            
+            # Determine template to use
+            template_name = None
+            
+            # Check for custom template in page config
+            if page_config.template.type == 'jinja2' and page_config.template.name:
+                template_name = page_config.template.name
+            elif page_config.id in template_map:
+                template_name = template_map[page_config.id]
+            
+            # Render with Jinja2 template
+            if template_name and engine.template_exists(template_name):
+                log_verbose(f"  Using Jinja2 template: {template_name}", self.config)
+                try:
+                    html = engine.render(template_name, context, labels)
+                except Exception as e:
+                    log_error(f"Template error for {page_config.id}: {e}")
+                    if self.config.verbose:
+                        import traceback
+                        traceback.print_exc()
+                    html = f"<html><body><h1>Template Error: {page_config.id}</h1><pre>{e}</pre></body></html>"
             else:
-                # Use template-based rendering (not fully implemented yet)
-                log_warning(f"Custom templates not yet supported for page: {page_config.id}", self.config)
-                continue
+                log_warning(f"No template found for page: {page_config.id}", self.config)
+                html = f"<html><body><h1>No template: {page_config.id}</h1></body></html>"
             
             # Write HTML file
             with open(page_path, 'w', encoding='utf-8') as f:
                 f.write(html)
+    
+    def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str) -> Dict[str, str]:
+        """Generate Chart.js JavaScript code for charts."""
+        charts = {}
+        
+        if page_type == 'visuals':
+            # Timeline charts
+            draws_data = json.dumps([{'x': i, 'y': p['draws']} for i, p in enumerate(data_points)])
+            tris_data = json.dumps([{'x': i, 'y': p['tris']} for i, p in enumerate(data_points)])
+            scatter_data = json.dumps([{'x': p['draws'], 'y': p['tris']} for p in data_points])
+            
+            charts['draws_timeline'] = f"""
+new Chart(document.getElementById('drawsTimeline'), {{
+    type: 'line',
+    data: {{
+        datasets: [{{
+            label: 'Draw Calls',
+            data: {draws_data},
+            borderColor: '#4ea1ff',
+            backgroundColor: 'rgba(78, 161, 255, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2
+        }}]
+    }},
+    options: {{
+        responsive: true,
+        scales: {{
+            x: {{ type: 'linear', title: {{ display: true, text: 'Frame Index', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
+        }},
+        plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
+    }}
+}});
+"""
+            charts['tris_timeline'] = f"""
+new Chart(document.getElementById('trisTimeline'), {{
+    type: 'line',
+    data: {{
+        datasets: [{{
+            label: 'Triangles',
+            data: {tris_data},
+            borderColor: '#ffb347',
+            backgroundColor: 'rgba(255, 179, 71, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2
+        }}]
+    }},
+    options: {{
+        responsive: true,
+        scales: {{
+            x: {{ type: 'linear', title: {{ display: true, text: 'Frame Index', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
+        }},
+        plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
+    }}
+}});
+"""
+            charts['scatter'] = f"""
+new Chart(document.getElementById('scatterPlot'), {{
+    type: 'scatter',
+    data: {{
+        datasets: [{{
+            label: 'Draw Calls vs Triangles',
+            data: {scatter_data},
+            backgroundColor: 'rgba(78, 161, 255, 0.6)',
+            borderColor: '#4ea1ff',
+            pointRadius: 4
+        }}]
+    }},
+    options: {{
+        responsive: true,
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
+        }},
+        plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
+    }}
+}});
+"""
+        elif page_type == 'metrics':
+            # Histogram data
+            draws_values = [p['draws'] for p in data_points]
+            tris_values = [p['tris'] for p in data_points]
+            
+            draws_hist = self._compute_histogram(draws_values)
+            tris_hist = self._compute_histogram(tris_values)
+            
+            charts['draws_histogram'] = f"""
+new Chart(document.getElementById('drawsHistogram'), {{
+    type: 'bar',
+    data: {{
+        labels: {json.dumps(draws_hist['labels'])},
+        datasets: [{{
+            label: 'Frequency',
+            data: {json.dumps(draws_hist['counts'])},
+            backgroundColor: 'rgba(78, 161, 255, 0.6)',
+            borderColor: '#4ea1ff',
+            borderWidth: 1
+        }}]
+    }},
+    options: {{
+        responsive: true,
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: 'Frequency', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}, beginAtZero: true }}
+        }},
+        plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
+    }}
+}});
+"""
+            charts['tris_histogram'] = f"""
+new Chart(document.getElementById('trisHistogram'), {{
+    type: 'bar',
+    data: {{
+        labels: {json.dumps(tris_hist['labels'])},
+        datasets: [{{
+            label: 'Frequency',
+            data: {json.dumps(tris_hist['counts'])},
+            backgroundColor: 'rgba(255, 179, 71, 0.6)',
+            borderColor: '#ffb347',
+            borderWidth: 1
+        }}]
+    }},
+    options: {{
+        responsive: true,
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: 'Frequency', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}, beginAtZero: true }}
+        }},
+        plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
+    }}
+}});
+"""
+        return charts
+    
+    def _compute_histogram(self, values: List[float], num_bins: int = 15) -> Dict[str, Any]:
+        """Compute histogram bins and counts."""
+        if not values:
+            return {'labels': [], 'counts': []}
+        
+        min_val, max_val = min(values), max(values)
+        if min_val == max_val:
+            return {'labels': [str(int(min_val))], 'counts': [len(values)]}
+        
+        bin_width = (max_val - min_val) / num_bins
+        counts = [0] * num_bins
+        
+        for v in values:
+            idx = int((v - min_val) / bin_width)
+            if idx >= num_bins:
+                idx = num_bins - 1
+            counts[idx] += 1
+        
+        labels = [f"{int(min_val + i * bin_width)}-{int(min_val + (i+1) * bin_width)}" for i in range(num_bins)]
+        return {'labels': labels, 'counts': counts}
 
