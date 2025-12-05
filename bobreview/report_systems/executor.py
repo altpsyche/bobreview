@@ -11,6 +11,7 @@ The executor takes a ReportSystemDefinition and executes it:
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import os
+import random
 
 from .schema import ReportSystemDefinition
 from .data_parser_base import DataParser, FilenamePatternParser
@@ -79,13 +80,16 @@ class ReportSystemExecutor:
         theme_cfg = self.system_def.theme
         self.config.theme_id = theme_cfg.default
     
-    def execute(self, input_dir: Path, output_path: Path):
+    def execute(self, input_dir: Path, output_path: Path) -> bool:
         """
         Execute complete report generation pipeline.
         
         Parameters:
             input_dir: Directory containing input files
             output_path: Path for output HTML file
+        
+        Returns:
+            True if report was generated successfully, False otherwise
         """
         log_info(f"Executing report system: {self.system_def.name}", self.config)
         log_verbose(f"System ID: {self.system_def.id} v{self.system_def.version}", self.config)
@@ -94,7 +98,7 @@ class ReportSystemExecutor:
         data_points = self.parse_data(input_dir)
         if not data_points:
             log_warning("No data points found", self.config)
-            return
+            return False
         
         log_info(f"Parsed {len(data_points)} data points", self.config)
         
@@ -109,6 +113,7 @@ class ReportSystemExecutor:
         # 4. Generate pages
         self.generate_pages(data_points, stats, llm_results, input_dir, output_path)
         log_info(f"Report generated: {output_path}", self.config)
+        return True
     
     def parse_data(self, input_dir: Path) -> List[Dict[str, Any]]:
         """
@@ -134,7 +139,6 @@ class ReportSystemExecutor:
         
         # Apply sampling if configured
         if self.config.sample_size and self.config.sample_size < len(data_points):
-            import random
             data_points = random.sample(data_points, self.config.sample_size)
         
         # Sort by timestamp if available

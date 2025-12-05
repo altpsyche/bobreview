@@ -6,6 +6,7 @@ retry logic, and response cleaning.
 """
 
 import os
+import random
 import re
 import time
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Callable
@@ -141,7 +142,7 @@ Data Table:
                 ) from e
             
             if attempt < max_retries - 1:
-                wait = (2 ** attempt) + (time.time() % 1)
+                wait = (2 ** attempt) + random.random()
                 log_warning(f"Rate limit, retrying in {wait:.1f}s...", config)
                 time.sleep(wait)
             else:

@@ -86,7 +86,8 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     user_dir = get_user_report_systems_dir()
     systems.extend(_discover_systems_in_directory(user_dir, 'user', logger))
     
-    return systems
+    # Return systems in deterministic order (sorted by source, then id)
+    return sorted(systems, key=lambda s: (s["source"], s["id"]))
 
 
 def list_available_systems() -> List[Dict[str, Any]]:
@@ -119,15 +120,18 @@ def find_report_system_path(id_or_path: str) -> Optional[Path]:
     if direct_path.exists() and direct_path.is_file():
         return direct_path.resolve()
     
+    # If it's a bare filename like "foo.json", also try its stem as an ID
+    candidate_id = direct_path.stem if direct_path.suffix == ".json" and direct_path.parent == Path("") else id_or_path
+    
     # Try as ID in user directory
     user_dir = get_user_report_systems_dir()
-    user_path = user_dir / f"{id_or_path}.json"
+    user_path = user_dir / f"{candidate_id}.json"
     if user_path.exists():
         return user_path.resolve()
     
     # Try as ID in built-in directory
     builtin_dir = get_builtin_report_systems_dir()
-    builtin_path = builtin_dir / f"{id_or_path}.json"
+    builtin_path = builtin_dir / f"{candidate_id}.json"
     if builtin_path.exists():
         return builtin_path.resolve()
     
@@ -242,10 +246,12 @@ def load_report_system(
         overrides_key = ""
     else:
         # Normalize overrides so equivalent dicts share the same cache key
-        overrides_key = json.dumps(cli_overrides, sort_keys=True)
+        # Use default=str to handle non-JSON-serializable types (e.g., Path, Enum)
+        overrides_key = json.dumps(cli_overrides, sort_keys=True, default=str)
     cache_key = f"{id_or_path}:{overrides_key}"
     if use_cache and cache_key in _report_system_cache:
-        return _report_system_cache[cache_key]
+        # Return a deep copy to prevent mutation of cached instances
+        return copy.deepcopy(_report_system_cache[cache_key])
     
     # Find the JSON file
     json_path = find_report_system_path(id_or_path)
@@ -275,9 +281,9 @@ def load_report_system(
     except ValueError as e:
         raise ValueError(f"Failed to load report system from {json_path}: {e}") from e
     
-    # Cache the result
+    # Cache the result (deep copy to prevent mutation)
     if use_cache:
-        _report_system_cache[cache_key] = system_def
+        _report_system_cache[cache_key] = copy.deepcopy(system_def)
     
     return system_def
 

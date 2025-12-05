@@ -103,8 +103,6 @@ bobreview/
 | `pages/` | 6 HTML page renderers + CSS |
 | `report_systems/` | JSON-based pipeline configuration |
 
-| Theme Registry | `theme_registry.py` | Report colors, fonts, and CSS variables |
-
 ---
 
 ## Installation
