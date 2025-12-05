@@ -123,13 +123,13 @@ def find_report_system_path(id_or_path: str) -> Optional[Path]:
     user_dir = get_user_report_systems_dir()
     user_path = user_dir / f"{id_or_path}.json"
     if user_path.exists():
-        return user_path
+        return user_path.resolve()
     
     # Try as ID in built-in directory
     builtin_dir = get_builtin_report_systems_dir()
     builtin_path = builtin_dir / f"{id_or_path}.json"
     if builtin_path.exists():
-        return builtin_path
+        return builtin_path.resolve()
     
     return None
 
