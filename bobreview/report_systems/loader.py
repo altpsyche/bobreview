@@ -32,6 +32,42 @@ def get_user_report_systems_dir() -> Path:
     return home / '.bobreview' / 'report_systems'
 
 
+def _discover_systems_in_directory(
+    directory: Path,
+    source: str,
+    logger: logging.Logger
+) -> List[Dict[str, Any]]:
+    """
+    Discover report systems in a given directory.
+    
+    Parameters:
+        directory: Directory to search for JSON report system files
+        source: Source identifier ('builtin' or 'user')
+        logger: Logger instance for warnings
+    
+    Returns:
+        List of discovered system dictionaries
+    """
+    systems = []
+    if directory.exists():
+        for json_file in directory.glob('*.json'):
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    systems.append({
+                        'id': data.get('id', json_file.stem),
+                        'name': data.get('name', json_file.stem),
+                        'version': data.get('version', 'unknown'),
+                        'description': data.get('description', ''),
+                        'path': str(json_file),
+                        'source': source
+                    })
+            except (OSError, json.JSONDecodeError) as e:
+                logger.warning("Skipping invalid %s report system %s: %s", source, json_file, e)
+    
+    return systems
+
+
 def discover_report_systems() -> List[Dict[str, Any]]:
     """
     Discover all available report systems (built-in and user custom).
@@ -44,39 +80,11 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     
     # Discover built-in systems
     builtin_dir = get_builtin_report_systems_dir()
-    if builtin_dir.exists():
-        for json_file in builtin_dir.glob('*.json'):
-            try:
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    systems.append({
-                        'id': data.get('id', json_file.stem),
-                        'name': data.get('name', json_file.stem),
-                        'version': data.get('version', 'unknown'),
-                        'description': data.get('description', ''),
-                        'path': str(json_file),
-                        'source': 'builtin'
-                    })
-            except (OSError, json.JSONDecodeError) as e:
-                logger.warning("Skipping invalid builtin report system %s: %s", json_file, e)
+    systems.extend(_discover_systems_in_directory(builtin_dir, 'builtin', logger))
     
     # Discover user custom systems
     user_dir = get_user_report_systems_dir()
-    if user_dir.exists():
-        for json_file in user_dir.glob('*.json'):
-            try:
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    systems.append({
-                        'id': data.get('id', json_file.stem),
-                        'name': data.get('name', json_file.stem),
-                        'version': data.get('version', 'unknown'),
-                        'description': data.get('description', ''),
-                        'path': str(json_file),
-                        'source': 'user'
-                    })
-            except (OSError, json.JSONDecodeError) as e:
-                logger.warning("Skipping invalid user report system %s: %s", json_file, e)
+    systems.extend(_discover_systems_in_directory(user_dir, 'user', logger))
     
     return systems
 
