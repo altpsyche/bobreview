@@ -78,9 +78,13 @@ Data Table:
     # Check cache first
     cache = get_cache()
     if cache:
-        # Note: full_prompt already includes data_table content, so pass empty string
-        # to avoid redundant inclusion in cache key
-        cached = cache.get(full_prompt, "", config.openai_model)
+        cached = cache.get(
+            prompt, 
+            data_table or "", 
+            config.openai_model,
+            config.llm_temperature,
+            config.llm_max_tokens
+        )
         if cached is not None:
             log_verbose("Using cached LLM response", config)
             return cached
@@ -111,8 +115,14 @@ Data Table:
             result = clean_llm_response(response.choices[0].message.content)
             
             if cache:
-                # Note: full_prompt already includes data_table content
-                cache.set(full_prompt, "", config.openai_model, result)
+                cache.set(
+                    prompt,
+                    data_table or "",
+                    config.openai_model,
+                    config.llm_temperature,
+                    config.llm_max_tokens,
+                    result
+                )
             return result
             
         except openai.RateLimitError as e:
