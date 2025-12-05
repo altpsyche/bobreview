@@ -71,6 +71,48 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Multiple outlier detection algorithms (IQR, MAD, Z-score)
 - **COMPLETE** - Input validation for statistical functions
 
+### Report Theming System
+- **COMPLETE** - Theme registry system (`theme_registry.py`)
+- **COMPLETE** - Three built-in themes (dark, light, high_contrast)
+- **COMPLETE** - `ReportTheme` dataclass with 18+ customizable properties
+- **COMPLETE** - Theme selection via CLI (`--theme`)
+- **COMPLETE** - Theme selection via config (`theme_id` parameter)
+- **COMPLETE** - CSS variable generation (`get_theme_css_variables()`)
+- **COMPLETE** - Chart colors integrated with themes
+- **COMPLETE** - Custom theme registration API
+
+### Chart Configuration System
+- **COMPLETE** - Chart registry system (`chart_registry.py`)
+- **COMPLETE** - `ChartDataset` dataclass for dataset styling
+- **COMPLETE** - `ChartConfig` dataclass for chart configuration
+- **COMPLETE** - Pre-registered standard datasets (draws, tris, histograms)
+- **COMPLETE** - Pre-registered standard charts (timelines, scatter, histograms)
+- **COMPLETE** - Chart.js defaults generation from themes
+- **COMPLETE** - Scale options generation from themes
+- **COMPLETE** - Custom dataset/chart registration API
+
+### LLM Generator System
+- **COMPLETE** - LLM generator registry (`llm_registry.py`)
+- **COMPLETE** - `LLMGeneratorDefinition` dataclass
+- **COMPLETE** - `PromptCategory` system for structured prompts
+- **COMPLETE** - 7 registered generators with categories
+- **COMPLETE** - Self-registration pattern for modularity
+- **COMPLETE** - Category-based prompt building
+
+### Page Management System
+- **COMPLETE** - Page registry with `PageDefinition` dataclass
+- **COMPLETE** - Dynamic navigation generation from registry
+- **COMPLETE** - Page disabling functionality (`--disable-page`)
+- **COMPLETE** - Homepage cards auto-generated from page registry
+- **COMPLETE** - Card icons and descriptions for navigation
+- **COMPLETE** - Special badges for zones page (high/low load counts)
+
+### CSS and Styling Options
+- **COMPLETE** - External CSS file support (`--linked-css`)
+- **COMPLETE** - CSS copying with error handling
+- **COMPLETE** - Embedded CSS (default) for standalone reports
+- **COMPLETE** - Theme-based CSS variable generation
+
 ---
 
 ## Planned Features
@@ -115,6 +157,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - Provider fallback system
 
 ### Export Options
+- **COMPLETE** - External CSS export (`--linked-css`)
 - PDF export (weasyprint or pdfkit)
 - Markdown export
 - JSON data export (raw + analyzed)
@@ -141,18 +184,16 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - GitLab CI examples
 - Jenkins integration documentation
 
-### Template System
+### Template System (Jinja2-based)
 - Jinja2 dependency
 - Convert HTML to Jinja2 templates
 - Template directory structure
-- Custom CSS theme support
 - Template selection flag (`--template`)
-- Multiple default templates:
+- Additional template designs:
   - Classic (current design)
   - Minimal (lightweight)
   - Corporate (formal presentation)
-  - Dark (dark mode)
-- Branding customization (logo, colors)
+- Logo customization support
 
 ### GPU Metrics
 - GPU metrics schema design
@@ -232,7 +273,10 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 ## Dependencies Added
 
 **For Statistics:**
-- scipy (accurate t-distribution for confidence intervals)
+- scipy>=1.11.0,<2.0.0 (accurate t-distribution for confidence intervals)
+
+**For Registry Systems:**
+- No new external dependencies (pure Python dataclasses)
 
 ## Dependencies to Add
 
@@ -296,14 +340,19 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 **v1.0 - Foundation Release (Current)**
 - v1.0.0 - Initial stable release
 - v1.0.1 - Base64 image embedding + bug fix (syntax error in llm_provider.py)
-- v1.0.2 - Statistical enhancements + interactive charts (planned)
+- v1.0.2 - Statistical enhancements + interactive charts
+- v1.0.3 - Registry-based modularization (LLM, charts, themes)
 - Core refactoring complete
 - Caching implemented
-- Modular architecture
+- Modular architecture with registry patterns
 - Comprehensive documentation
 - Standalone HTML reports with embedded images
 - Interactive Chart.js visualizations
 - Advanced statistical analysis (percentiles, confidence intervals, outlier detection)
+- Theme system with 3 built-in themes
+- Chart configuration registry
+- LLM generator registry with prompt categories
+- Page management system with dynamic navigation
 
 **v2.0 - Enterprise Release**
 - Alternative LLM support
@@ -348,6 +397,6 @@ Contributions are welcome. Consider:
 
 ---
 
-Last updated: December 3, 2025
-Current version: 1.0.1 (preparing v1.0.2)
-Next milestone: v1.0.2 Visual Charts and Statistical Enhancements Release
+Last updated: December 5, 2025
+Current version: 1.0.3
+Next milestone: v2.0 - Enterprise Release (Alternative LLM Support, Configuration Files, Batch Processing)

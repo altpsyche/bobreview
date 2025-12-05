@@ -14,6 +14,7 @@ Generate comprehensive HTML performance reports from game engine performance cap
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
+- [Report Systems](#report-systems)
 - [File Format](#file-format)
 - [Configuration](#configuration)
 - [Report Structure](#report-structure)
@@ -33,6 +34,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 ## Features
 
+- **JSON-Based Report Systems** - Define custom analysis pipelines with JSON (NEW in v1.0.4)
 - **Automated Data Extraction** - Parse performance metrics from PNG filenames
 - **Statistical Analysis** - Calculate comprehensive statistics and identify patterns
 - **Hotspot Identification** - Automatically find high-load and low-load performance zones
@@ -314,6 +316,115 @@ html = generate_html_report(
 # Save
 Path("report.html").write_text(html, encoding='utf-8')
 ```
+
+---
+
+## Report Systems
+
+**NEW in v1.0.4:** BobReview now supports JSON-based report system definitions, allowing you to create custom analysis pipelines without modifying code.
+
+### What are Report Systems?
+
+Report systems are JSON files that define:
+- How to parse input data
+- What metrics to analyze
+- What LLM-generated insights to include
+- What pages to generate
+- How to theme and configure the output
+
+### Using Report Systems
+
+#### List Available Systems
+```bash
+bobreview --list-report-systems
+```
+
+Output:
+```
+Available report systems:
+
+  png_data_points (built-in) - v1.0.0
+    Game performance analysis from PNG filename metadata
+    Path: bobreview/report_systems/builtin/png_data_points.json
+```
+
+#### Use a Specific System
+```bash
+# Use built-in system (default)
+bobreview --report-system png_data_points --dir ./screenshots
+
+# Use custom system
+bobreview --report-system my_custom_system --dir ./data
+
+# Use JSON file directly
+bobreview --report-system /path/to/system.json --dir ./data
+```
+
+### Creating Custom Report Systems
+
+1. **Create a JSON file** in `~/.bobreview/report_systems/`:
+
+```json
+{
+  "schema_version": "1.0",
+  "id": "my_system",
+  "name": "My Custom Analysis",
+  "version": "1.0.0",
+  "description": "Custom performance analysis",
+  "author": "Your Name",
+  
+  "data_source": {
+    "type": "filename_pattern",
+    "input_format": "csv",
+    "pattern": "{timestamp}_{metric}_{value}.csv",
+    "fields": {...}
+  },
+  
+  "metrics": {...},
+  "thresholds": {...},
+  "llm_generators": [...],
+  "pages": [...]
+}
+```
+
+2. **Use it:**
+```bash
+bobreview --report-system my_system --dir ./data
+```
+
+### Built-in Report Systems
+
+#### png_data_points (Default)
+
+Analyzes game performance from PNG filename metadata.
+
+**Pattern:** `{testcase}_{tris}_{draws}_{timestamp}.png`  
+**Example:** `Level1_85000_520_1234567890.png`
+
+**Features:**
+- Triangle count and draw call analysis
+- Performance zone identification
+- Trend detection
+- Outlier analysis (3 methods)
+- Interactive Chart.js visualizations
+- 6 HTML pages with AI-generated insights
+
+### Report System Capabilities
+
+- **Flexible Data Sources:** Parse any file format with custom patterns
+- **Custom Metrics:** Define primary and derived metrics
+- **Configurable LLM:** Custom prompts, categories, and sampling strategies
+- **Dynamic Pages:** Define custom page layouts and navigation
+- **Theme Support:** Use built-in themes or create custom ones
+- **Reusable:** Share report systems across teams
+
+### Documentation
+
+See **[REPORT_SYSTEMS_GUIDE.md](REPORT_SYSTEMS_GUIDE.md)** for:
+- Complete JSON schema reference
+- Creating custom report systems
+- Template variable reference
+- Examples and best practices
 
 ---
 
@@ -856,16 +967,19 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.3
+**Current:** v1.0.4
 
 **Features:**
+- JSON-based report systems framework
+- Custom analysis pipelines without coding
+- Built-in `png_data_points` system
+- Report system discovery and loading
+- Template variable substitution
+- Backward compatible with v1.0.3
 - Modular architecture
 - Global CLI command
 - Intelligent caching
 - Complete documentation
-- Registry pattern for pages, LLM generators, and charts
-- Configurable prompt categories for LLM content
-- Dynamic homepage navigation from page registry
 
 ---
 

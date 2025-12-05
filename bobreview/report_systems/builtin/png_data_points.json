@@ -1,0 +1,499 @@
+{
+  "schema_version": "1.0",
+  "id": "png_data_points",
+  "name": "PNG Data Points Analysis",
+  "version": "1.0.0",
+  "description": "Game performance analysis from PNG filename metadata. Extracts triangle counts, draw calls, and timestamps from filename patterns.",
+  "author": "BobReview",
+  "tags": ["game", "performance", "graphics", "rendering"],
+  
+  "data_source": {
+    "type": "filename_pattern",
+    "input_format": "png",
+    "pattern": "{testcase}_{tris}_{draws}_{timestamp}.png",
+    "fields": {
+      "testcase": {
+        "type": "string",
+        "required": true
+      },
+      "tris": {
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      "draws": {
+        "type": "integer",
+        "required": true,
+        "min": 0
+      },
+      "timestamp": {
+        "type": "integer",
+        "required": true,
+        "min": 0
+      }
+    },
+    "validation": {
+      "allow_missing_fields": false,
+      "skip_invalid": true,
+      "strict_mode": false
+    }
+  },
+  
+  "metrics": {
+    "primary": ["draws", "tris"],
+    "derived": [
+      {
+        "id": "frame_time",
+        "description": "Time between consecutive frames",
+        "calculation": "delta(timestamp)"
+      }
+    ],
+    "statistics": {
+      "basic": ["min", "max", "mean", "median", "stdev"],
+      "advanced": ["p90", "p95", "p99", "variance", "cv"],
+      "analysis": ["confidence_interval", "trend", "outliers"]
+    }
+  },
+  
+  "thresholds": {
+    "draw_soft_cap": 550,
+    "draw_hard_cap": 600,
+    "tri_soft_cap": 100000,
+    "tri_hard_cap": 120000,
+    "high_load_draw_threshold": 600,
+    "high_load_tri_threshold": 100000,
+    "low_load_draw_threshold": 400,
+    "low_load_tri_threshold": 50000,
+    "outlier_sigma": 2.0,
+    "mad_threshold": 3.5
+  },
+  
+  "llm_config": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "temperature": 0.7,
+    "max_tokens": 2000,
+    "chunk_size": 10,
+    "enable_cache": true
+  },
+  
+  "llm_generators": [
+    {
+      "id": "executive_summary",
+      "name": "Executive Summary",
+      "description": "High-level performance overview and key findings",
+      "prompt_template": "You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:\n\nLocation: {context.location}\nTotal samples: {stats.count}\n\nDraw Calls:\n- Mean: {stats.draws.mean}, Median: {stats.draws.median}\n- P90: {stats.draws.p90}, P95: {stats.draws.p95}, P99: {stats.draws.p99}\n- CV (variability): {stats.draws.cv}%\n- 95% CI: [{stats.confidence_intervals.draws.0}, {stats.confidence_intervals.draws.1}]\n- Trend: {stats.trends.draws.direction}\n\nTriangles:\n- Mean: {stats.tris.mean}, Median: {stats.tris.median}\n- P90: {stats.tris.p90}, P95: {stats.tris.p95}, P99: {stats.tris.p99}\n- CV (variability): {stats.tris.cv}%\n- 95% CI: [{stats.confidence_intervals.tris.0}, {stats.confidence_intervals.tris.1}]\n- Trend: {stats.trends.tris.direction}\n\nAnalyze the provided data table to understand performance patterns.\n\nWrite a professional executive summary covering:\n{categories}\n\nUse HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics.",
+      "categories": [
+        {
+          "id": "health",
+          "title": "Overall Performance Health",
+          "focus": "reference P90/P95 values for realistic expectations",
+          "priority": 10
+        },
+        {
+          "id": "concerns",
+          "title": "Key Concerns",
+          "focus": "based on trends and variability (CV indicates consistency)",
+          "priority": 20
+        },
+        {
+          "id": "hotspot",
+          "title": "Peak Hotspot Impact",
+          "focus": "mention the peak hotspot and its severity",
+          "priority": 30
+        },
+        {
+          "id": "variance",
+          "title": "Variance and Trends",
+          "focus": "direction (improving/stable/degrading)",
+          "priority": 40
+        },
+        {
+          "id": "frametime",
+          "title": "Frame Time Stability",
+          "focus": "comment if anomalies exist",
+          "priority": 50
+        }
+      ],
+      "data_table": {
+        "columns": ["index", "testcase", "draws", "tris", "timestamp"],
+        "sample_strategy": "mixed",
+        "samples": {
+          "critical": 1,
+          "high_load": 2,
+          "low_load": 1,
+          "random": 3
+        },
+        "max_rows": 10
+      },
+      "returns": "string",
+      "enabled": true
+    },
+    {
+      "id": "metric_deep_dive",
+      "name": "Metric Deep Dive",
+      "description": "Detailed draw calls and triangle count analysis",
+      "prompt_template": "Analyze draw call and triangle performance data.",
+      "categories": [
+        {
+          "id": "distribution",
+          "title": "Distribution Characteristics",
+          "focus": "P90/P95 expectations",
+          "priority": 10
+        },
+        {
+          "id": "variability",
+          "title": "Variability Assessment",
+          "focus": "using CV (coefficient of variation)",
+          "priority": 20
+        },
+        {
+          "id": "trend",
+          "title": "Trend Direction",
+          "focus": "improving/stable/degrading and implications",
+          "priority": 30
+        },
+        {
+          "id": "outliers",
+          "title": "Outlier Impact",
+          "focus": "detected by different methods",
+          "priority": 40
+        },
+        {
+          "id": "thresholds",
+          "title": "Threshold Comparison",
+          "focus": "vs thresholds and confidence intervals",
+          "priority": 50
+        }
+      ],
+      "returns": "dict",
+      "enabled": true
+    },
+    {
+      "id": "zones_hotspots",
+      "name": "Zones & Hotspots",
+      "description": "High-load and low-load frame analysis",
+      "prompt_template": "Analyze high-load and low-load performance frames.",
+      "categories": [
+        {
+          "id": "critical",
+          "title": "Critical Hotspot",
+          "focus": "peak performance bottleneck analysis",
+          "priority": 10
+        },
+        {
+          "id": "highload",
+          "title": "High-load Frames",
+          "focus": "patterns above thresholds",
+          "priority": 20
+        },
+        {
+          "id": "lowload",
+          "title": "Low-load Frames",
+          "focus": "baseline and optimization opportunities",
+          "priority": 30
+        }
+      ],
+      "returns": "dict",
+      "enabled": true
+    },
+    {
+      "id": "visual_analysis",
+      "name": "Visual Analysis",
+      "description": "Distribution chart interpretation",
+      "prompt_template": "Analyze the distribution patterns in performance data.",
+      "categories": [
+        {
+          "id": "shape",
+          "title": "Distribution Shape",
+          "focus": "bimodal, skewed, normal patterns",
+          "priority": 10
+        },
+        {
+          "id": "peaks",
+          "title": "Peak Analysis",
+          "focus": "primary and secondary modes",
+          "priority": 20
+        },
+        {
+          "id": "outliers",
+          "title": "Outlier Patterns",
+          "focus": "tail behavior and extreme values",
+          "priority": 30
+        }
+      ],
+      "returns": "string",
+      "enabled": true
+    },
+    {
+      "id": "statistical_interpretation",
+      "name": "Statistical Interpretation",
+      "description": "Advanced statistical metrics interpretation",
+      "prompt_template": "Provide interpretation of advanced performance statistics.",
+      "categories": [
+        {
+          "id": "consistency",
+          "title": "Performance Consistency",
+          "focus": "based on CV and confidence intervals",
+          "priority": 10
+        },
+        {
+          "id": "trajectory",
+          "title": "Performance Trajectory",
+          "focus": "whether action is needed based on trends",
+          "priority": 20
+        },
+        {
+          "id": "frametime",
+          "title": "Frame Time Stability",
+          "focus": "concerns based on anomalies",
+          "priority": 30
+        },
+        {
+          "id": "detection",
+          "title": "Outlier Detection Reliability",
+          "focus": "consensus across methods",
+          "priority": 40
+        }
+      ],
+      "returns": "string",
+      "enabled": true
+    },
+    {
+      "id": "optimization_checklist",
+      "name": "Optimization Checklist",
+      "description": "Actionable optimization recommendations",
+      "prompt_template": "Generate optimization recommendations.",
+      "categories": [
+        {
+          "id": "geometry",
+          "title": "Geometry Optimizations",
+          "focus": "LOD, mesh complexity, vertex count",
+          "priority": 10
+        },
+        {
+          "id": "drawcalls",
+          "title": "Draw Call Optimizations",
+          "focus": "batching, instancing, materials",
+          "priority": 20
+        },
+        {
+          "id": "lighting",
+          "title": "Lighting/Shadow Optimizations",
+          "focus": "shadow quality, light count",
+          "priority": 30
+        },
+        {
+          "id": "verification",
+          "title": "Verification Steps",
+          "focus": "testing and validation",
+          "priority": 40
+        }
+      ],
+      "returns": "dict",
+      "enabled": true
+    },
+    {
+      "id": "system_recommendations",
+      "name": "System Recommendations",
+      "description": "System-level architecture improvements",
+      "prompt_template": "Generate system-level recommendations.",
+      "categories": [
+        {
+          "id": "lod",
+          "title": "LOD System",
+          "focus": "prioritize if triangles trend is degrading or CV is high",
+          "priority": 10
+        },
+        {
+          "id": "occlusion",
+          "title": "Occlusion and Visibility",
+          "focus": "prioritize if draw calls are high",
+          "priority": 20
+        },
+        {
+          "id": "lighting",
+          "title": "Lighting and Shadows",
+          "focus": "shadow quality, dynamic vs baked lighting",
+          "priority": 30
+        },
+        {
+          "id": "materials",
+          "title": "Materials and Textures",
+          "focus": "prioritize if draw call CV is high",
+          "priority": 40
+        },
+        {
+          "id": "regression",
+          "title": "Capture and Regression",
+          "focus": "emphasize trend monitoring if trends are degrading",
+          "priority": 50
+        }
+      ],
+      "returns": "dict",
+      "enabled": true
+    }
+  ],
+  
+  "pages": [
+    {
+      "id": "home",
+      "filename": "index.html",
+      "nav_label": "Home",
+      "nav_order": 10,
+      "template": {
+        "type": "builtin",
+        "name": "homepage"
+      },
+      "llm_content": ["executive_summary"],
+      "data_requirements": {
+        "stats": true,
+        "data_points": false,
+        "images": false
+      },
+      "features": {
+        "navigation_cards": true,
+        "summary_stats": true
+      },
+      "enabled": true
+    },
+    {
+      "id": "metrics",
+      "filename": "metrics.html",
+      "nav_label": "Metrics",
+      "nav_order": 20,
+      "template": {
+        "type": "builtin",
+        "name": "metrics"
+      },
+      "llm_content": ["metric_deep_dive"],
+      "data_requirements": {
+        "stats": true,
+        "data_points": true,
+        "images": false
+      },
+      "charts": [
+        {
+          "id": "timeline_draws",
+          "type": "line",
+          "title": "Draw Calls Over Time",
+          "x_field": "index",
+          "y_field": "draws",
+          "performance_zones": {
+            "good": {"max": "draw_soft_cap", "color": "green"},
+            "warning": {"min": "draw_soft_cap", "max": "draw_hard_cap", "color": "yellow"},
+            "critical": {"min": "draw_hard_cap", "color": "red"}
+          }
+        },
+        {
+          "id": "timeline_tris",
+          "type": "line",
+          "title": "Triangles Over Time",
+          "x_field": "index",
+          "y_field": "tris",
+          "performance_zones": {
+            "good": {"max": "tri_soft_cap", "color": "green"},
+            "warning": {"min": "tri_soft_cap", "max": "tri_hard_cap", "color": "yellow"},
+            "critical": {"min": "tri_hard_cap", "color": "red"}
+          }
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "zones",
+      "filename": "zones.html",
+      "nav_label": "Zones",
+      "nav_order": 30,
+      "template": {
+        "type": "builtin",
+        "name": "zones"
+      },
+      "llm_content": ["zones_hotspots"],
+      "data_requirements": {
+        "stats": true,
+        "data_points": false,
+        "images": true
+      },
+      "enabled": true
+    },
+    {
+      "id": "visuals",
+      "filename": "visuals.html",
+      "nav_label": "Visuals",
+      "nav_order": 40,
+      "template": {
+        "type": "builtin",
+        "name": "visuals"
+      },
+      "llm_content": ["visual_analysis"],
+      "data_requirements": {
+        "stats": true,
+        "data_points": true,
+        "images": false
+      },
+      "charts": [
+        {
+          "id": "scatter_correlation",
+          "type": "scatter",
+          "title": "Draw Calls vs Triangles",
+          "x_field": "draws",
+          "y_field": "tris"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "optimization",
+      "filename": "optimization.html",
+      "nav_label": "Optimization",
+      "nav_order": 50,
+      "template": {
+        "type": "builtin",
+        "name": "optimization"
+      },
+      "llm_content": ["optimization_checklist", "system_recommendations"],
+      "data_requirements": {
+        "stats": true,
+        "data_points": true,
+        "images": false
+      },
+      "enabled": true
+    },
+    {
+      "id": "stats",
+      "filename": "stats.html",
+      "nav_label": "Statistics",
+      "nav_order": 60,
+      "template": {
+        "type": "builtin",
+        "name": "stats"
+      },
+      "llm_content": ["statistical_interpretation"],
+      "data_requirements": {
+        "stats": true,
+        "data_points": true,
+        "images": true
+      },
+      "enabled": true
+    }
+  ],
+  
+  "theme": {
+    "default": "dark",
+    "override_colors": {}
+  },
+  
+  "output": {
+    "default_filename": "performance_report.html",
+    "embed_images": true,
+    "linked_css": false
+  },
+  
+  "documentation_url": "https://github.com/DiggingNebula8/bobreview",
+  "examples": [
+    "Level1_85000_520_1234567890.png",
+    "Dark_Forest_95000_580_1234567891.png"
+  ]
+}
+

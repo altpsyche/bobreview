@@ -18,6 +18,10 @@ from .data_parser import parse_filename
 from .analysis import analyze_data
 from .report_generator import generate_html_report
 
+# Import report systems framework
+from .report_systems import load_report_system, list_available_systems
+from .report_systems.executor import ReportSystemExecutor
+
 # Check for tqdm availability
 try:
     from tqdm import tqdm
@@ -211,8 +215,34 @@ Examples:
         metavar='PAGE_ID',
         help='Disable a page by ID (can be used multiple times). Valid IDs: home, metrics, zones, visuals, optimization, stats'
     )
+    parser.add_argument(
+        '--report-system', type=str, default='png_data_points',
+        metavar='SYSTEM',
+        help='Report system to use (built-in name or path to JSON file). Default: png_data_points'
+    )
+    parser.add_argument(
+        '--list-report-systems', action='store_true',
+        help='List all available report systems and exit'
+    )
     
     args = parser.parse_args()
+    
+    # Handle --list-report-systems
+    if args.list_report_systems:
+        systems = list_available_systems()
+        if not systems:
+            print("No report systems found.")
+            return 0
+        
+        print("Available report systems:")
+        print()
+        for system in systems:
+            source_label = "built-in" if system['source'] == 'builtin' else "custom"
+            print(f"  {system['id']} ({source_label}) - v{system['version']}")
+            print(f"    {system['description']}")
+            print(f"    Path: {system['path']}")
+            print()
+        return 0
     
     # Handle quiet + verbose conflict
     if args.quiet and args.verbose:
@@ -276,6 +306,66 @@ Examples:
     if config.dry_run:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
+    # Check if user wants to use the new report system framework
+    use_report_system = args.report_system != 'png_data_points' or args.report_system
+    
+    if use_report_system:
+        # Use the new JSON-based report system framework
+        try:
+            log_info(f"Loading report system: {args.report_system}", config)
+            
+            # Build CLI overrides for the JSON system
+            cli_overrides = {
+                'thresholds': {},
+                'llm_config': {},
+                'output': {},
+                'theme': {},
+                'disabled_pages': config.disabled_pages
+            }
+            
+            # Add threshold overrides if specified (non-default values)
+            # Note: We don't have a perfect way to detect CLI overrides vs defaults
+            # So we just pass through the config values
+            
+            # Load report system
+            system_def = load_report_system(args.report_system, cli_overrides=cli_overrides)
+            
+            # Create executor
+            executor = ReportSystemExecutor(system_def, config)
+            
+            # Execute
+            input_dir = Path(args.dir).resolve()
+            output_path = Path(args.output).resolve()
+            
+            if not input_dir.exists():
+                log_error(f"Directory not found: {input_dir}")
+                return 1
+            
+            if not input_dir.is_dir():
+                log_error(f"Path is not a directory: {input_dir}")
+                return 1
+            
+            executor.execute(input_dir, output_path)
+            
+            elapsed_time = time.time() - start_time
+            log_info(f"Completed in {elapsed_time:.1f}s", config)
+            
+            return 0
+            
+        except FileNotFoundError as e:
+            log_error(str(e))
+            return 1
+        except ValueError as e:
+            log_error(f"Report system validation failed: {e}")
+            return 1
+        except Exception as e:
+            log_error(f"Failed to execute report system: {e}")
+            if config.verbose:
+                import traceback
+                traceback.print_exc()
+            return 1
+    
+    # Original code path (backward compatibility)
     # Find PNG files
     input_dir = Path(args.dir).resolve()
     
