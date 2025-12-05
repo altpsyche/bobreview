@@ -41,31 +41,41 @@ class BaseLLMProvider(ABC):
         max_retries: int = 3
     ) -> str:
         """
-        Make a single LLM call.
+        Perform a single call to the provider's LLM using the given prompt and configuration.
         
         Parameters:
-            prompt: The prompt to send to the LLM
-            config: Provider configuration (model, temperature, etc.)
-            max_retries: Maximum retry attempts for rate limits
+            prompt (str): The prompt to send to the LLM.
+            config (LLMProviderConfig): Provider configuration (model, temperature, authentication, extra params).
+            max_retries (int): Maximum number of retry attempts for transient failures such as rate limits.
         
         Returns:
-            The LLM response text
+            The LLM response text.
         
         Raises:
-            RuntimeError: If the API call fails
+            RuntimeError: If the API call fails after the configured retries.
         """
         pass
     
     @property
     @abstractmethod
     def name(self) -> str:
-        """Provider name for display and configuration."""
+        """
+        Provider display name used for configuration and user interfaces.
+        
+        Returns:
+            provider_name (str): Human-readable identifier for the LLM provider.
+        """
         pass
     
     @property
     @abstractmethod
     def default_model(self) -> str:
-        """Default model to use if none specified."""
+        """
+        Default model name for the provider.
+        
+        Returns:
+            The provider's default model name.
+        """
         pass
     
     @property
@@ -76,7 +86,12 @@ class BaseLLMProvider(ABC):
     
     @property
     def requires_api_key(self) -> bool:
-        """Whether this provider requires an API key. Override for local providers."""
+        """
+        Indicates whether the provider requires an API key.
+        
+        Returns:
+            `true` if an API key is required, `false` otherwise.
+        """
         return True
     
     def get_api_key(self, config: LLMProviderConfig) -> Optional[str]:
@@ -93,13 +108,15 @@ class BaseLLMProvider(ABC):
     
     def validate_config(self, config: LLMProviderConfig) -> None:
         """
-        Validate configuration before making a call.
+        Validate the provided LLMProviderConfig for use with this provider.
+        
+        Checks that an API key is available when this provider requires one and raises a RuntimeError if not.
         
         Parameters:
-            config: Provider configuration
+            config: The LLMProviderConfig to validate.
         
         Raises:
-            RuntimeError: If configuration is invalid
+            RuntimeError: If this provider requires an API key but none is found; the error message indicates the provider name and suggests setting the provider's environment variable or using the `--llm-api-key` flag.
         """
         if self.requires_api_key and not self.get_api_key(config):
             raise RuntimeError(

@@ -19,7 +19,12 @@ except ImportError:
 
 
 def clean_response(response: str) -> str:
-    """Clean LLM response by removing markdown code fences."""
+    """
+    Remove Markdown triple-backtick code fences from an LLM response and trim surrounding whitespace.
+    
+    Returns:
+        cleaned_response (str): The response text with code-fence markers removed and leading/trailing whitespace trimmed.
+    """
     response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
     response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
     response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
@@ -42,14 +47,32 @@ class AnthropicProvider(BaseLLMProvider):
     
     @property
     def name(self) -> str:
+        """
+        Canonical provider identifier for the Anthropic Claude implementation.
+        
+        Returns:
+            str: The provider identifier "anthropic".
+        """
         return "anthropic"
     
     @property
     def default_model(self) -> str:
+        """
+        Default model identifier used when no model is provided.
+        
+        Returns:
+            The default model identifier: "claude-3-5-sonnet-20241022".
+        """
         return "claude-3-5-sonnet-20241022"
     
     @property
     def env_key_name(self) -> str:
+        """
+        Environment variable name used to locate the Anthropic API key.
+        
+        Returns:
+            The environment variable name "ANTHROPIC_API_KEY".
+        """
         return "ANTHROPIC_API_KEY"
     
     def call(
@@ -59,18 +82,18 @@ class AnthropicProvider(BaseLLMProvider):
         max_retries: int = 3
     ) -> str:
         """
-        Call Anthropic Claude API.
+        Send a prompt to Anthropic Claude and return the cleaned text response.
         
         Parameters:
-            prompt: The prompt to send
-            config: Provider configuration
-            max_retries: Maximum retry attempts
+        	prompt (str): The prompt to send to the model.
+        	config (LLMProviderConfig): Provider configuration (model, max_tokens, extra_params, api_base, etc.).
+        	max_retries (int): Maximum retry attempts for rate limit errors before failing.
         
         Returns:
-            Cleaned response text
+        	cleaned_text (str): The model's response with Markdown code fences removed and surrounding whitespace trimmed.
         
         Raises:
-            RuntimeError: If API unavailable, key missing, or call fails
+        	RuntimeError: If the Anthropic library is unavailable, the API key is missing/invalid, no response is returned, rate limits are exceeded after retries, or any API/transport error occurs.
         """
         if not ANTHROPIC_AVAILABLE:
             raise RuntimeError(

@@ -53,33 +53,38 @@ class ReportConfig:
     disabled_pages: Optional[List[str]] = None  # Page IDs to exclude
     
     def __post_init__(self):
-        """Initialize mutable defaults."""
+        """
+        Initialize mutable default fields on construction.
+        
+        If `disabled_pages` was left as `None` during creation, set it to an empty list so each instance has its own mutable list rather than sharing a class-level default.
+        """
         if self.disabled_pages is None:
             self.disabled_pages = []
 
 
 def validate_config(config: ReportConfig) -> List[str]:
     """
-    Validate a ReportConfig for logical consistency and return any validation errors.
+    Validate a ReportConfig for logical consistency.
     
-    Checks:
-    - draw_soft_cap is less than or equal to draw_hard_cap
-    - tri_soft_cap is less than or equal to tri_hard_cap
-    - All threshold values (caps and load thresholds) are non-negative
-    - outlier_sigma is greater than 0
-    - mad_threshold is greater than 0
-    - llm_chunk_size is greater than 0
-    - llm_max_tokens is greater than 0
-    - llm_combine_warning_threshold is greater than 0
-    - sample_size, if provided, is greater than 0
-    - llm_temperature is between 0 and 2 (inclusive of 0 and 2)
-    - llm_provider is a valid provider name
+    Performs validation of numeric thresholds, size limits, and LLM settings and collects human-readable error messages for each violated constraint.
+    
+    Checks performed:
+    - draw_soft_cap <= draw_hard_cap and tri_soft_cap <= tri_hard_cap
+    - draw/tri caps and high/low load thresholds are >= 0
+    - outlier_sigma > 0
+    - mad_threshold > 0
+    - llm_chunk_size > 0
+    - llm_max_tokens > 0
+    - llm_combine_warning_threshold > 0
+    - sample_size, if provided, > 0
+    - llm_temperature is between 0 and 2 (inclusive)
+    - llm_provider is one of: "openai", "anthropic", "ollama"
     
     Parameters:
-        config (ReportConfig): Configuration to validate.
+        config (ReportConfig): Configuration instance to validate.
     
     Returns:
-        List[str]: A list of human-readable error messages for each violated constraint; empty if config is valid.
+        List[str]: List of error messages describing each violated constraint; empty if the configuration is valid.
     """
     errors = []
     

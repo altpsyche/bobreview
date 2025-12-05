@@ -20,7 +20,14 @@ except ImportError:
 
 
 def clean_response(response: str) -> str:
-    """Clean LLM response by removing markdown code fences."""
+    """
+    Remove Markdown code fences from an LLM response and normalize fenced-code blocks to plain text.
+    
+    This strips leading and trailing triple-backtick fences, removes interior fence delimiters, and trims surrounding whitespace.
+    
+    Returns:
+        cleaned (str): The response with Markdown code fences removed and surrounding whitespace trimmed.
+    """
     response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
     response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
     response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
@@ -47,14 +54,34 @@ class OllamaProvider(BaseLLMProvider):
     
     @property
     def name(self) -> str:
+        """
+        Provider identifier for this LLM backend.
+        
+        Returns:
+            "ollama" — the provider name.
+        """
         return "ollama"
     
     @property
     def default_model(self) -> str:
+        """
+        Provide the provider's default model identifier.
+        
+        Returns:
+            The model identifier "llama2".
+        """
         return "llama2"
     
     @property
     def env_key_name(self) -> str:
+        """
+        Name of the environment variable used for the provider's API key.
+        
+        Usually not required for local Ollama deployments.
+        
+        Returns:
+            env_var (str): The environment variable name `OLLAMA_API_KEY`.
+        """
         return "OLLAMA_API_KEY"  # Not typically used
     
     @property
@@ -63,7 +90,15 @@ class OllamaProvider(BaseLLMProvider):
         return False
     
     def _get_base_url(self, config: LLMProviderConfig) -> str:
-        """Get Ollama API base URL from config or environment."""
+        """
+        Determine the base URL for the Ollama API by checking configuration, then environment, then the default.
+        
+        Parameters:
+            config (LLMProviderConfig): Provider configuration that may contain an `api_base` override.
+        
+        Returns:
+            str: The resolved base URL (from `config.api_base`, or the `OLLAMA_API_BASE` environment variable, or `DEFAULT_BASE_URL`).
+        """
         import os
         return (
             config.api_base or 
@@ -78,18 +113,19 @@ class OllamaProvider(BaseLLMProvider):
         max_retries: int = 3
     ) -> str:
         """
-        Call Ollama API.
+        Generate text from a local Ollama model using the given prompt and provider configuration.
         
         Parameters:
-            prompt: The prompt to send
-            config: Provider configuration
-            max_retries: Maximum retry attempts
+            prompt (str): The prompt text to send to the model.
+            config (LLMProviderConfig): Provider configuration (model, temperature, max_tokens, extra_params, etc.).
+            max_retries (int): Maximum number of retry attempts for transient request failures.
         
         Returns:
-            Cleaned response text
+            str: The model's response text with Markdown code fences removed.
         
         Raises:
-            RuntimeError: If Ollama is not running or call fails
+            RuntimeError: If the httpx dependency is missing, Ollama cannot be reached, a timeout occurs after retries,
+            the specified model is not found, or any other error occurs while making the request.
         """
         if not HTTPX_AVAILABLE:
             raise RuntimeError(

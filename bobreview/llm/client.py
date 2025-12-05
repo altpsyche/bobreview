@@ -25,20 +25,20 @@ def call_llm(
     max_retries: int = 3,
 ) -> str:
     """
-    Call LLM provider with caching, dry-run support, and retry logic.
+    Invoke the configured LLM provider for a prompt, optionally including tabular context, with caching, dry-run, and retry behavior.
+    
+    If a data table is provided it will be appended to the prompt before calling the provider. If caching is available the function will attempt to return a cached response for the same prompt and configuration. If config.dry_run is true a static placeholder HTML is returned instead of calling the provider.
     
     Parameters:
-        prompt: The user-facing prompt
-        data_table: Optional tabular context
-        config: Report configuration
-        max_retries: Maximum retry attempts for rate limits (must be positive)
+        data_table (str, optional): Tabular context to append to the prompt.
+        config (ReportConfig): Report configuration containing LLM provider, model, credentials, and related settings.
+        max_retries (int): Maximum number of retry attempts delegated to the provider; must be greater than zero.
     
     Returns:
-        Cleaned text response from the LLM
+        The LLM provider's response text.
     
     Raises:
-        RuntimeError: If API unavailable, key missing, or quota exceeded
-        ValueError: If config is not provided or max_retries is not positive
+        ValueError: If `config` is not provided or `max_retries` is not positive.
     """
     if config is None:
         raise ValueError("ReportConfig is required")
@@ -110,30 +110,19 @@ def call_llm_chunked(
     table_formatter: Callable[[List[Dict[str, Any]]], str] = format_data_table,
 ) -> str:
     """
-    Call LLM with data points in chunks and combine results.
+    Process data_points in chunks with the LLM and return a single combined response.
     
-    Uses pairwise reduction to combine chunks, avoiding token limit issues when
-    there are many chunks. Chunks are combined two at a time until a single
-    unified result remains.
+    Each chunk is formatted with table_formatter and sent to the LLM using prompt_base; individual chunk responses are then merged by repeated pairwise combination until one unified result remains.
     
     Parameters:
-        prompt_base: Base prompt to use for each chunk
-        data_points: List of data point dictionaries to process
-        config: Report configuration
-        chunk_size: Number of data points per chunk (defaults to config.llm_chunk_size)
-        table_formatter: Function to format data points into a table string.
-                        Defaults to format_data_table. Custom formatters can be provided
-                        for different data schemas.
+        prompt_base (str): Base prompt used for each chunk.
+        data_points (List[Dict[str, Any]]): Data points to process.
+        config (ReportConfig): Report configuration containing LLM and chunking settings.
+        chunk_size (Optional[int]): Number of data points per chunk; if None, uses config.llm_chunk_size.
+        table_formatter (Callable[[List[Dict[str, Any]]], str]): Function that formats a list of data points into a table string.
     
     Returns:
-        Combined LLM response from all chunks
-    
-    Note:
-        When combining many chunks, the pairwise reduction approach prevents
-        exceeding token limits. However, if individual chunk results are very
-        large, warnings may be logged when content size exceeds
-        config.llm_combine_warning_threshold. Consider reducing chunk_size or
-        adjusting the warning threshold if you encounter token limit issues.
+        str: Unified LLM response combining analyses from all chunks.
     """
     if chunk_size is None:
         chunk_size = config.llm_chunk_size

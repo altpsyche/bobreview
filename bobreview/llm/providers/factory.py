@@ -15,14 +15,14 @@ _PROVIDERS: Dict[str, Type[BaseLLMProvider]] = {}
 
 def register_provider(name: str, provider_class: Type[BaseLLMProvider]) -> None:
     """
-    Register an LLM provider.
+    Register a provider class under the given name in the global provider registry.
     
     Parameters:
-        name: Provider name (e.g., 'openai', 'anthropic')
-        provider_class: Provider class (not instance)
+        name: The registry key for the provider (e.g., "openai", "anthropic").
+        provider_class: The provider class (a subclass of `BaseLLMProvider`) to register.
     
     Raises:
-        ValueError: If provider with same name already registered
+        ValueError: If a provider is already registered under `name`.
     """
     if name in _PROVIDERS:
         raise ValueError(f"Provider '{name}' is already registered")
@@ -31,16 +31,16 @@ def register_provider(name: str, provider_class: Type[BaseLLMProvider]) -> None:
 
 def get_provider(name: str) -> BaseLLMProvider:
     """
-    Get an LLM provider instance by name.
+    Return a registered LLM provider instance for the given provider name.
     
     Parameters:
-        name: Provider name
+        name (str): The registered provider name (e.g., "openai", "anthropic", "ollama").
     
     Returns:
-        Provider instance
+        BaseLLMProvider: An instance of the provider class registered under `name`.
     
     Raises:
-        ValueError: If provider not found
+        ValueError: If no provider is registered under `name`.
     """
     if name not in _PROVIDERS:
         available = ", ".join(sorted(_PROVIDERS.keys()))
@@ -52,24 +52,23 @@ def get_provider(name: str) -> BaseLLMProvider:
 
 def list_providers() -> List[str]:
     """
-    List all registered provider names.
+    Return a sorted list of registered provider names.
     
     Returns:
-        List of provider names
+        Sorted list of registered provider names.
     """
     return sorted(_PROVIDERS.keys())
 
 
 def get_provider_info(name: str) -> Optional[Dict[str, str]]:
     """
-    Get information about a provider.
+    Retrieve basic metadata for a registered LLM provider by name.
     
     Parameters:
-        name: Provider name
+        name: The provider name to look up.
     
     Returns:
-        Dict with name, default_model, env_key_name, requires_api_key
-        or None if not found
+        A dictionary with keys "name", "default_model", "env_key_name", and "requires_api_key" containing the provider's metadata, or `None` if the provider is not registered.
     """
     if name not in _PROVIDERS:
         return None

@@ -20,7 +20,15 @@ except ImportError:
 
 
 def clean_llm_response(response: str) -> str:
-    """Clean LLM response by removing markdown code fences and extra formatting."""
+    """
+    Strip Markdown-style fenced code blocks and surrounding whitespace from an LLM response.
+    
+    Parameters:
+        response (str): Text produced by an LLM that may contain Markdown code fences (```).
+    
+    Returns:
+        str: The input text with Markdown fenced code blocks removed or unwrapped and leading/trailing whitespace trimmed.
+    """
     response = re.sub(r'^[ \t]*```[^\n]*\n?', '', response, flags=re.MULTILINE)
     response = re.sub(r'\n?[ \t]*```\s*$', '', response, flags=re.MULTILINE)
     response = re.sub(r'\n```[\w]*\s*\n', '\n', response)
@@ -38,14 +46,32 @@ class OpenAIProvider(BaseLLMProvider):
     
     @property
     def name(self) -> str:
+        """
+        Provider identifier for the OpenAI implementation.
+        
+        Returns:
+            The provider name "openai".
+        """
         return "openai"
     
     @property
     def default_model(self) -> str:
+        """
+        Default model identifier used by the provider.
+        
+        Returns:
+            The default model name: "gpt-4o".
+        """
         return "gpt-4o"
     
     @property
     def env_key_name(self) -> str:
+        """
+        Name of the environment variable that stores the OpenAI API key.
+        
+        Returns:
+            str: The environment variable name "OPENAI_API_KEY".
+        """
         return "OPENAI_API_KEY"
     
     def call(
@@ -55,18 +81,18 @@ class OpenAIProvider(BaseLLMProvider):
         max_retries: int = 3
     ) -> str:
         """
-        Call OpenAI API with retry logic for rate limits.
+        Call the OpenAI Chat Completions API with retry and exponential backoff for rate limits.
         
         Parameters:
-            prompt: The prompt to send
-            config: Provider configuration
-            max_retries: Maximum retry attempts
+            prompt (str): The user prompt to send to the model.
+            config (LLMProviderConfig): Provider configuration; used fields include `model` (optional), `temperature`, `max_tokens`, `extra_params`, and `api_base` (optional).
+            max_retries (int): Maximum number of attempts to retry on rate-limit errors.
         
         Returns:
-            Cleaned response text
+            str: The cleaned text content of the first chat completion choice.
         
         Raises:
-            RuntimeError: If API unavailable, key missing, or call fails
+            RuntimeError: If the OpenAI library is unavailable, configuration or API key validation fails, the API returns no choices, quota is exceeded, an OpenAI API error occurs, or other OpenAI-related errors occur.
         """
         if not OPENAI_AVAILABLE:
             raise RuntimeError(
