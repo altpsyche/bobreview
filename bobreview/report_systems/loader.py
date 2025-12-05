@@ -8,6 +8,7 @@ This module handles:
 - Caching loaded definitions
 """
 
+import copy
 import json
 import os
 from pathlib import Path
@@ -168,8 +169,8 @@ def merge_cli_overrides(
     if not cli_overrides:
         return system_data
     
-    # Create a copy to avoid modifying original
-    merged = system_data.copy()
+    # Create a deep copy to avoid modifying original (including nested dicts)
+    merged = copy.deepcopy(system_data)
     
     # Merge thresholds
     if 'thresholds' in cli_overrides:
