@@ -117,6 +117,9 @@ class AnthropicProvider(BaseLLMProvider):
                 for block in message.content:
                     if hasattr(block, 'text'):
                         text_content += block.text
+
+                if not text_content:
+                    raise RuntimeError("No text content in response from Anthropic")
                 
                 return clean_llm_response(text_content)
                 
