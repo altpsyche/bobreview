@@ -155,6 +155,10 @@ def call_llm_chunked(
     """
     Call LLM with data points in chunks and combine results.
     
+    Uses pairwise reduction to combine chunks, avoiding token limit issues when
+    there are many chunks. Chunks are combined two at a time until a single
+    unified result remains.
+    
     Parameters:
         prompt_base: Base prompt to use for each chunk
         data_points: List of data point dictionaries to process
@@ -166,6 +170,13 @@ def call_llm_chunked(
     
     Returns:
         Combined LLM response from all chunks
+    
+    Note:
+        When combining many chunks, the pairwise reduction approach prevents
+        exceeding token limits. However, if individual chunk results are very
+        large, warnings may be logged when content size exceeds
+        config.llm_combine_warning_threshold. Consider reducing chunk_size or
+        adjusting the warning threshold if you encounter token limit issues.
     """
     if chunk_size is None:
         chunk_size = config.image_chunk_size
@@ -188,14 +199,43 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
         result = call_llm(chunk_prompt, data_table=data_table, config=config)
         results.append(result)
     
-    # Combine if multiple chunks
+    # Combine if multiple chunks using pairwise reduction
     if len(results) == 1:
         return results[0]
     
-    chunks_text = '\n'.join([f"Chunk {i+1}:\n{r}" for i, r in enumerate(results)])
-    combine_prompt = f"""Combine these {len(results)} analyses into one coherent response:
+    # Pairwise reduction to avoid token limits
+    while len(results) > 1:
+        # Check for potential token limit issues
+        total_length = sum(len(r) for r in results)
+        if total_length > config.llm_combine_warning_threshold:
+            log_warning(
+                f"Large content size ({total_length:,} chars) when combining {len(results)} chunks. "
+                f"This may approach token limits. Consider reducing chunk_size.",
+                config
+            )
+        
+        # Combine pairs of results
+        combined = []
+        for i in range(0, len(results), 2):
+            if i + 1 < len(results):
+                # Combine two chunks
+                pair_text = f"""First Analysis:
+{results[i]}
 
-{chunks_text}
+Second Analysis:
+{results[i+1]}"""
+                
+                combine_prompt = f"""Combine these two analyses into one coherent response:
 
-Provide a unified analysis integrating all information."""
-    return call_llm(combine_prompt, data_table=None, config=config)
+{pair_text}
+
+Provide a unified analysis integrating all information from both analyses."""
+                combined_result = call_llm(combine_prompt, data_table=None, config=config)
+                combined.append(combined_result)
+            else:
+                # Odd number: keep the last chunk as-is
+                combined.append(results[i])
+        
+        results = combined
+    
+    return results[0]

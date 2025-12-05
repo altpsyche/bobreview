@@ -29,6 +29,7 @@ class ReportConfig:
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000  # Max tokens for LLM responses
     image_chunk_size: int = 10  # Number of data samples to send per LLM call
+    llm_combine_warning_threshold: int = 100000  # Character count threshold for warning when combining chunks (roughly 25K tokens)
     cache_dir: Path = Path(".bobreview_cache")
     use_cache: bool = True
     clear_cache: bool = False
