@@ -52,10 +52,10 @@ Repository = "https://github.com/DiggingNebula8/bobreview"
 bobreview = "bobreview.cli:main"
 
 [tool.setuptools]
-packages = ["bobreview", "bobreview.report_generator", "bobreview.report_systems"]
+packages = ["bobreview", "bobreview.core", "bobreview.registry", "bobreview.llm", "bobreview.llm.generators", "bobreview.pages", "bobreview.report_systems"]
 
 [tool.setuptools.package-data]
-bobreview = ["py.typed", "report_generator/styles.css", "report_systems/builtin/*.json", "report_systems/builtin/*.md"]
+bobreview = ["py.typed", "pages/styles.css", "report_systems/builtin/*.json", "report_systems/builtin/*.md"]
 
 [tool.black]
 line-length = 100
