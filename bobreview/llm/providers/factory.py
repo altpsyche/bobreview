@@ -4,7 +4,7 @@ LLM provider factory.
 Provides registration and retrieval of LLM providers by name.
 """
 
-from typing import Dict, Type, List, Optional
+from typing import Dict, Type, List, Optional, Any
 
 from .base import BaseLLMProvider
 
@@ -60,7 +60,7 @@ def list_providers() -> List[str]:
     return sorted(_PROVIDERS.keys())
 
 
-def get_provider_info(name: str) -> Optional[Dict[str, str]]:
+def get_provider_info(name: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve basic metadata for a registered LLM provider by name.
     

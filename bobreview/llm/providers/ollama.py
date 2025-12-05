@@ -164,22 +164,22 @@ class OllamaProvider(BaseLLMProvider):
                     
                     return clean_response(data["response"])
                     
-            except httpx.ConnectError:
+            except httpx.ConnectError as e:
                 raise RuntimeError(
                     f"Cannot connect to Ollama at {base_url}. "
                     "Make sure Ollama is running (ollama serve)"
-                )
+                ) from e
             except httpx.TimeoutException:
                 if attempt < max_retries - 1:
                     wait = (2 ** attempt) + 0.5
                     time.sleep(wait)
                 else:
-                    raise RuntimeError(f"Ollama timeout after {max_retries} attempts")
+                    raise RuntimeError(f"Ollama timeout after {max_retries} attempts") from None
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 404:
                     raise RuntimeError(
                         f"Model '{model}' not found. Pull it with: ollama pull {model}"
-                    )
+                    ) from e
                 raise RuntimeError(f"Ollama HTTP error: {e}") from e
             except Exception as e:
                 raise RuntimeError(f"Ollama error: {e}") from e

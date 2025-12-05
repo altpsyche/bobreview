@@ -66,7 +66,9 @@ Data Table:
             data_table or "", 
             config.llm_model,
             config.llm_temperature,
-            config.llm_max_tokens
+            config.llm_max_tokens,
+            config.llm_provider,
+            config.llm_api_base or ""
         )
         if cached is not None:
             log_verbose("Using cached LLM response", config)
@@ -96,7 +98,9 @@ Data Table:
             config.llm_model,
             config.llm_temperature,
             config.llm_max_tokens,
-            result
+            result,
+            config.llm_provider,
+            config.llm_api_base or ""
         )
     
     return result

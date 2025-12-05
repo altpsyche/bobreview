@@ -39,9 +39,13 @@ class LLMCache:
         if enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
     
-    def _get_cache_key(self, prompt: str, data_table: str, model: str, temperature: float, max_tokens: int) -> str:
+    def _get_cache_key(
+        self, prompt: str, data_table: str, model: str, 
+        temperature: float, max_tokens: int,
+        provider: str = "", api_base: str = ""
+    ) -> str:
         """
-        Create a deterministic SHA-256 cache key representing the combination of prompt, data table, model, and LLM parameters.
+        Create a deterministic SHA-256 cache key representing the combination of prompt, data table, model, provider, and LLM parameters.
         
         Parameters:
             prompt (str): The LLM prompt text.
@@ -49,16 +53,22 @@ class LLMCache:
             model (str): The model identifier used for the request.
             temperature (float): The temperature setting for the LLM request.
             max_tokens (int): The max_tokens setting for the LLM request.
+            provider (str): The LLM provider name (e.g., 'openai', 'anthropic').
+            api_base (str): The custom API base URL, if any.
         
         Returns:
             str: Hexadecimal SHA-256 digest suitable for use as a cache filename or key.
         """
-        content = f"{prompt}|{data_table}|{model}|{temperature}|{max_tokens}"
+        content = f"{prompt}|{data_table}|{model}|{temperature}|{max_tokens}|{provider}|{api_base}"
         return hashlib.sha256(content.encode()).hexdigest()
     
-    def get(self, prompt: str, data_table: str, model: str, temperature: float, max_tokens: int) -> Optional[str]:
+    def get(
+        self, prompt: str, data_table: str, model: str, 
+        temperature: float, max_tokens: int,
+        provider: str = "", api_base: str = ""
+    ) -> Optional[str]:
         """
-        Return the cached LLM response for the given prompt, data table, model, and LLM parameters when available.
+        Return the cached LLM response for the given prompt, data table, model, provider, and LLM parameters when available.
         
         Parameters:
             prompt (str): The LLM prompt text.
@@ -66,6 +76,8 @@ class LLMCache:
             model (str): The model identifier.
             temperature (float): The temperature setting for the LLM request.
             max_tokens (int): The max_tokens setting for the LLM request.
+            provider (str): The LLM provider name.
+            api_base (str): The custom API base URL, if any.
         
         Returns:
             str: Cached response text if present.
@@ -74,7 +86,7 @@ class LLMCache:
         if not self.enabled:
             return None
         
-        cache_key = self._get_cache_key(prompt, data_table, model, temperature, max_tokens)
+        cache_key = self._get_cache_key(prompt, data_table, model, temperature, max_tokens, provider, api_base)
         cache_file = self.cache_dir / f"{cache_key}.json"
         
         if cache_file.exists():
@@ -88,9 +100,13 @@ class LLMCache:
         
         return None
     
-    def set(self, prompt: str, data_table: str, model: str, temperature: float, max_tokens: int, response: str):
+    def set(
+        self, prompt: str, data_table: str, model: str, 
+        temperature: float, max_tokens: int, response: str,
+        provider: str = "", api_base: str = ""
+    ):
         """
-        Write the LLM response into the cache directory using a deterministic filename based on the prompt, data table, model, and LLM parameters.
+        Write the LLM response into the cache directory using a deterministic filename based on the prompt, data table, model, provider, and LLM parameters.
         
         Parameters:
             prompt (str): The LLM prompt text.
@@ -99,13 +115,15 @@ class LLMCache:
             temperature (float): The temperature setting for the LLM request.
             max_tokens (int): The max_tokens setting for the LLM request.
             response (str): The LLM response to cache.
+            provider (str): The LLM provider name.
+            api_base (str): The custom API base URL, if any.
         
         If caching is disabled, this is a no-op. On I/O or serialization errors the function logs a warning and does not raise.
         """
         if not self.enabled:
             return
         
-        cache_key = self._get_cache_key(prompt, data_table, model, temperature, max_tokens)
+        cache_key = self._get_cache_key(prompt, data_table, model, temperature, max_tokens, provider, api_base)
         cache_file = self.cache_dir / f"{cache_key}.json"
         
         try:
@@ -113,6 +131,7 @@ class LLMCache:
                 json.dump({
                     'prompt_hash': cache_key,
                     'model': model,
+                    'provider': provider,
                     'response': response,
                     'timestamp': datetime.now().isoformat()
                 }, f, indent=2)

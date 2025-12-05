@@ -124,7 +124,10 @@ class OpenAIProvider(BaseLLMProvider):
                 if not response.choices:
                     raise RuntimeError("No response from OpenAI")
                 
-                return clean_llm_response(response.choices[0].message.content)
+                content = response.choices[0].message.content
+                if content is None:
+                    raise RuntimeError("No text content in OpenAI response")
+                return clean_llm_response(content)
                 
             except openai.RateLimitError as e:
                 if "quota" in str(e).lower():

@@ -117,6 +117,7 @@ class AnthropicProvider(BaseLLMProvider):
                 message = client.messages.create(
                     model=model,
                     max_tokens=config.max_tokens,
+                    temperature=config.temperature,
                     messages=[
                         {"role": "user", "content": prompt}
                     ],
