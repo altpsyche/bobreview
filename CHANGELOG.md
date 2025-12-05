@@ -40,16 +40,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation**: `REPORT_SYSTEMS_GUIDE.md` with complete schema reference and examples
 
 ### Fixed
-- **LLM Generator Registry Mismatch**: Fixed key lookup to check both `id` and `name` for backward compatibility
-- **CLI Override Application**: CLI arguments for thresholds, LLM config, output settings now properly override JSON defaults
+
+#### CSS Gradient Issues
+- **Stat Card Gradients**: Fixed invisible gradients in stat cards and UI elements
+  - Problem: Gradients from dark to darker were nearly invisible
+  - Solution: Use colored tints matching border colors (accent-soft, danger-soft, warn-soft, ok-soft)
+  - Applied to: `.stat-card`, `.stats-item`, `.callout`, `.chart-container`, `.nav-links`, header meta spans
+  - All gradients now use CSS variables instead of hardcoded RGBA values
+  
+- **New CSS Variables**: Added soft color variants for status colors
+  - `--danger-soft: rgba(255, 92, 92, 0.15)`
+  - `--warn-soft: rgba(230, 179, 92, 0.15)`
+  - `--ok-soft: rgba(79, 209, 139, 0.15)`
+  - Applied to all three themes (dark, light, high_contrast)
+
+- **Theme Registry**: Extended `ReportTheme` dataclass
+  - Added `danger_soft`, `warn_soft`, `ok_soft` fields
+  - Updated `get_theme_css_variables()` to export new variables
+
+#### Report System Executor Fixes
+- **Field Name Mapping**: Automatic compatibility for `timestamp` → `ts` field names
+  - Ensures JSON definitions work with existing analysis code
+  - Backward compatibility for legacy field names
+  
+- **Page Generator Parameters**: Fixed parameter order for all page generators
+  - Corrected signatures for homepage, metrics, zones, visuals, optimization, stats
+  - Fixed LLM content mapping (`system_recs` parameter name)
+  - Proper image directory and data URI passing
+  
+- **Progress Logging**: Added detailed progress tracking
+  - Generator progress: `[1/7] Generating: Executive Summary`
+  - Page progress: `[1/6] Writing index.html...`
+  - Verbose mode shows Python vs template generator usage
+  
+- **Error Handling**: Robust exception handling for LLM generation
+  - Individual generator failures don't stop entire process
+  - Detailed error messages with generator names
+  - Continue processing remaining generators on failure
+
+- **CLI Override System**: Complete implementation of CLI argument overrides
+  - All CLI flags properly override JSON values
+  - Overrides for thresholds, LLM config, output settings, theme, pages
+  - Override precedence: CLI arguments > JSON definition > defaults
 
 ### Changed
 - **Unified Execution Path**: All report generation now uses the Report Systems framework
-- **Removed Legacy Code Path**: 113 lines of duplicate code removed from `cli.py`
+- **Architecture**: BobReview is now a flexible report generation framework
+- **Backward Compatibility**: 100% compatible - existing code paths preserved
 
 ### Technical Details
-- **New files**: 7 files in `bobreview/report_systems/` (~1,800 lines)
-- **Modified files**: `cli.py` (refactored for report systems integration)
+- **New files**: 12 files (~4,250 lines total)
+  - 7 Python modules in `bobreview/report_systems/` (~2,400 lines)
+  - 1 JSON definition (~350 lines)
+  - 4 documentation files (~1,500 lines)
+- **Modified files**: `cli.py`, `__init__.py`, `theme_registry.py`, `styles.css`, `README.md`
 - No breaking changes - all v1.0.3 CLI commands work identically
 - Backward compatible with existing configurations
 
