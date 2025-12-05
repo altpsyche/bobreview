@@ -171,7 +171,7 @@ def call_llm_chunked(
         prompt_base: Base prompt to use for each chunk
         data_points: List of data point dictionaries to process
         config: Report configuration
-        chunk_size: Number of data points per chunk (defaults to config.image_chunk_size)
+        chunk_size: Number of data points per chunk (defaults to config.llm_chunk_size)
         table_formatter: Function to format data points into a table string.
                         Defaults to format_data_table. Custom formatters can be provided
                         for different data schemas.
@@ -187,7 +187,7 @@ def call_llm_chunked(
         adjusting the warning threshold if you encounter token limit issues.
     """
     if chunk_size is None:
-        chunk_size = config.image_chunk_size
+        chunk_size = config.llm_chunk_size
     
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")

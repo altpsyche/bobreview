@@ -503,7 +503,7 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --openai-key KEY        # OpenAI API key
 --openai-model MODEL    # Model to use (default: gpt-4o)
 --llm-temperature N     # Temperature 0-2 (default: 0.7)
---image-chunk-size N    # Samples per LLM call (default: 10)
+--llm-chunk-size N      # Samples per LLM call (default: 10)
 --no-recommendations    # Disable system recommendations
 ```
 
@@ -607,7 +607,7 @@ bobreview --dir ./screenshots --dry-run
 bobreview --dir ./screenshots --sample 20
 
 # Adjust chunk size if needed
-bobreview --dir ./screenshots --image-chunk-size 5
+bobreview --dir ./screenshots --llm-chunk-size 5
 ```
 
 ---

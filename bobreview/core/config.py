@@ -28,7 +28,7 @@ class ReportConfig:
     openai_model: str = "gpt-4o"
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000  # Max tokens for LLM responses
-    image_chunk_size: int = 10  # Number of data samples to send per LLM call
+    llm_chunk_size: int = 10  # Number of data samples to send per LLM call
     llm_combine_warning_threshold: int = 100000  # Character count threshold for warning when combining chunks (roughly 25K tokens)
     cache_dir: Path = Path(".bobreview_cache")
     use_cache: bool = True
@@ -58,7 +58,7 @@ def validate_config(config: ReportConfig) -> List[str]:
     - All threshold values (caps and load thresholds) are non-negative
     - outlier_sigma is greater than 0
     - mad_threshold is greater than 0
-    - image_chunk_size is greater than 0
+    - llm_chunk_size is greater than 0
     - llm_max_tokens is greater than 0
     - sample_size, if provided, is greater than 0
     - llm_temperature is between 0 and 2 (inclusive of 0 and 2)
@@ -109,8 +109,8 @@ def validate_config(config: ReportConfig) -> List[str]:
     if config.mad_threshold <= 0:
         errors.append("mad_threshold must be > 0")
     
-    if config.image_chunk_size <= 0:
-        errors.append("image_chunk_size must be > 0")
+    if config.llm_chunk_size <= 0:
+        errors.append("llm_chunk_size must be > 0")
     
     if config.llm_max_tokens <= 0:
         errors.append("llm_max_tokens must be > 0")

@@ -67,7 +67,7 @@ class ReportSystemExecutor:
         self.config.openai_model = llm_cfg.model
         self.config.llm_temperature = llm_cfg.temperature
         self.config.llm_max_tokens = llm_cfg.max_tokens
-        self.config.image_chunk_size = llm_cfg.chunk_size
+        self.config.llm_chunk_size = llm_cfg.chunk_size
         self.config.use_cache = llm_cfg.enable_cache
         
         # Output config has already been merged

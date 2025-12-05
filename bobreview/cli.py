@@ -146,7 +146,7 @@ Examples:
         help='OpenAI API key (or set OPENAI_API_KEY environment variable)'
     )
     parser.add_argument(
-        '--image-chunk-size', type=int, default=10,
+        '--llm-chunk-size', type=int, default=10,
         help='Number of data samples to send per LLM call (default: 10)'
     )
     parser.add_argument(
@@ -291,7 +291,7 @@ Examples:
         llm_temperature=args.llm_temperature,
         llm_max_tokens=args.llm_max_tokens,
         llm_combine_warning_threshold=args.llm_combine_warning_threshold,
-        image_chunk_size=args.image_chunk_size,
+        llm_chunk_size=args.llm_chunk_size,
         cache_dir=Path(args.cache_dir),
         use_cache=args.use_cache and not args.dry_run,
         clear_cache=args.clear_cache,
@@ -348,7 +348,7 @@ Examples:
                 'model': config.openai_model,
                 'temperature': config.llm_temperature,
                 'max_tokens': config.llm_max_tokens,
-                'chunk_size': config.image_chunk_size,
+                'chunk_size': config.llm_chunk_size,
                 'enable_cache': config.use_cache,
             },
             'output': {
