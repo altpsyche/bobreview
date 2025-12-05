@@ -76,6 +76,8 @@ Data Table:
 {data_table}"""
     
     # Check cache first
+    # Cache key includes prompt, data_table, model, temperature, and max_tokens
+    # to ensure different generation parameters produce different cache entries
     cache = get_cache()
     if cache:
         cached = cache.get(
@@ -90,14 +92,18 @@ Data Table:
             return cached
     
     # Check OpenAI availability
+    # Requires openai>=1.0.0 (v1 API) for openai.OpenAI() and openai.RateLimitError
     if not OPENAI_AVAILABLE:
-        raise RuntimeError("OpenAI library not available. Install with: pip install openai")
+        raise RuntimeError(
+            "OpenAI library not available. Install with: pip install 'openai>=1.0.0,<2.0.0'"
+        )
     
     # Get API key
     api_key = config.openai_api_key or os.getenv('OPENAI_API_KEY')
     if not api_key:
         raise RuntimeError("OpenAI API key not found. Set OPENAI_API_KEY or use --openai-key")
     
+    # Use OpenAI v1 API (openai>=1.0.0)
     client = openai.OpenAI(api_key=api_key)
     log_verbose(f"Calling LLM API (model: {config.openai_model})", config)
     
@@ -114,6 +120,8 @@ Data Table:
                 raise RuntimeError("No response from LLM")
             result = clean_llm_response(response.choices[0].message.content)
             
+            # Cache the result with all generation parameters in the key
+            # to ensure cache entries are invalidated when parameters change
             if cache:
                 cache.set(
                     prompt,
