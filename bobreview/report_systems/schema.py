@@ -396,7 +396,23 @@ def parse_metric_config(data: Dict[str, Any]) -> MetricConfig:
 
 
 def parse_llm_config(data: Dict[str, Any]) -> LLMConfig:
-    """Parse LLM configuration from JSON."""
+    """
+    Create an LLMConfig from a mapping of configuration values.
+    
+    Parameters:
+        data (dict): Mapping containing optional keys to configure the LLM:
+            - provider: provider identifier (default 'openai')
+            - model: model name (default 'gpt-4o')
+            - temperature: sampling temperature (default 0.7)
+            - max_tokens: maximum token limit (default 2000)
+            - chunk_size: chunk size for batching (default 10)
+            - enable_cache: whether to enable caching (default True)
+            - api_base: optional custom API base URL
+            - api_key_env: optional environment variable name holding the API key
+    
+    Returns:
+        LLMConfig: An LLMConfig populated from the provided mapping, using defaults for any missing fields.
+    """
     return LLMConfig(
         provider=data.get('provider', 'openai'),
         model=data.get('model', 'gpt-4o'),
@@ -566,4 +582,3 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         documentation_url=data.get('documentation_url'),
         examples=data.get('examples', [])
     )
-
