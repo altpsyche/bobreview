@@ -21,17 +21,24 @@ The `bobreview` command is now available globally.
 
 ## Configuration
 
-Set your OpenAI API key:
+Set your LLM provider API key:
 
 ```bash
-# Linux/macOS
+# OpenAI (default)
 export OPENAI_API_KEY=sk-your-api-key-here
 
-# Windows PowerShell
-$env:OPENAI_API_KEY="sk-your-api-key-here"
+# Or Anthropic Claude
+export ANTHROPIC_API_KEY=your-anthropic-key
 
-# Windows Command Prompt
-set OPENAI_API_KEY=sk-your-api-key-here
+# Or Ollama (no API key needed - runs locally)
+# Just ensure Ollama is running: ollama serve
+```
+
+**Windows PowerShell:**
+```powershell
+$env:OPENAI_API_KEY="sk-your-api-key-here"
+# Or for Anthropic:
+$env:ANTHROPIC_API_KEY="your-anthropic-key"
 ```
 
 **For persistence:**
@@ -322,7 +329,10 @@ bobreview --dir PATH [OPTIONS]
 --no-embed-images          # Use external image files
 --linked-css               # Use external CSS file
 --disable-page ID          # Disable a page (home, metrics, zones, visuals, optimization, stats)
---openai-key KEY           # OpenAI API key
+--llm-provider PROVIDER    # LLM: openai, anthropic, ollama (default: openai)
+--llm-api-key KEY          # API key for selected provider
+--llm-model MODEL          # Model name (default depends on provider)
+--list-providers           # List available providers
 ```
 
 ---

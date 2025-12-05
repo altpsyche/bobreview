@@ -249,7 +249,14 @@ set OPENAI_API_KEY=sk-your-api-key-here
 ### Command Line
 
 ```bash
-bobreview --dir screenshots --openai-key sk-your-api-key-here
+# OpenAI (default)
+bobreview --dir screenshots --llm-api-key sk-your-api-key-here
+
+# Or specify provider
+bobreview --dir screenshots --llm-provider anthropic --llm-api-key your-key
+
+# Local Ollama (no API key needed)
+bobreview --dir screenshots --llm-provider ollama --llm-model llama2
 ```
 
 ---
@@ -277,8 +284,8 @@ bobreview --dir screenshots --openai-key sk-your-api-key-here
 - `mypy>=1.0.0` - Type checking
 
 ### System
-- Internet connection for API calls
-- OpenAI API key
+- Internet connection for API calls (except Ollama which runs locally)
+- LLM API key (OpenAI or Anthropic) or local Ollama installation
 - Approximately 50MB disk space
 
 ---
