@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bobreview"
-version = "1.0.4"
+version = "1.0.5"
 description = "Performance Analysis and Review Tool for Game Development"
 readme = "README.md"
 requires-python = ">=3.7"
