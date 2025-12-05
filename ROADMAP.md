@@ -71,17 +71,86 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Multiple outlier detection algorithms (IQR, MAD, Z-score)
 - **COMPLETE** - Input validation for statistical functions
 
+### Report Theming System
+- **COMPLETE** - Theme registry system (`theme_registry.py`)
+- **COMPLETE** - Three built-in themes (dark, light, high_contrast)
+- **COMPLETE** - `ReportTheme` dataclass with 18+ customizable properties
+- **COMPLETE** - Theme selection via CLI (`--theme`)
+- **COMPLETE** - Theme selection via config (`theme_id` parameter)
+- **COMPLETE** - CSS variable generation (`get_theme_css_variables()`)
+- **COMPLETE** - Chart colors integrated with themes
+- **COMPLETE** - Custom theme registration API
+
+### Chart Configuration System
+- **COMPLETE** - Chart registry system (`chart_registry.py`)
+- **COMPLETE** - `ChartDataset` dataclass for dataset styling
+- **COMPLETE** - `ChartConfig` dataclass for chart configuration
+- **COMPLETE** - Pre-registered standard datasets (draws, tris, histograms)
+- **COMPLETE** - Pre-registered standard charts (timelines, scatter, histograms)
+- **COMPLETE** - Chart.js defaults generation from themes
+- **COMPLETE** - Scale options generation from themes
+- **COMPLETE** - Custom dataset/chart registration API
+
+### LLM Generator System
+- **COMPLETE** - LLM generator registry (`llm_registry.py`)
+- **COMPLETE** - `LLMGeneratorDefinition` dataclass
+- **COMPLETE** - `PromptCategory` system for structured prompts
+- **COMPLETE** - 7 registered generators with categories
+- **COMPLETE** - Self-registration pattern for modularity
+- **COMPLETE** - Category-based prompt building
+
+### Page Management System
+- **COMPLETE** - Page registry with `PageDefinition` dataclass
+- **COMPLETE** - Dynamic navigation generation from registry
+- **COMPLETE** - Page disabling functionality (`--disable-page`)
+- **COMPLETE** - Homepage cards auto-generated from page registry
+- **COMPLETE** - Card icons and descriptions for navigation
+- **COMPLETE** - Special badges for zones page (high/low load counts)
+
+### CSS and Styling Options
+- **COMPLETE** - External CSS file support (`--linked-css`)
+- **COMPLETE** - CSS copying with error handling
+- **COMPLETE** - Embedded CSS (default) for standalone reports
+- **COMPLETE** - Theme-based CSS variable generation
+
+---
+
+### JSON Report Systems Framework
+- **COMPLETE** - Report system JSON schema with 15+ dataclasses
+- **COMPLETE** - Report system loader with discovery and caching
+- **COMPLETE** - Abstract interfaces (DataParser, LLMGenerator, PageGenerator)
+- **COMPLETE** - Report system executor for pipeline orchestration
+- **COMPLETE** - Template variable substitution in prompts
+- **COMPLETE** - Data sampling strategies (all, random, sequential, mixed)
+- **COMPLETE** - Built-in png_data_points system (350+ lines)
+- **COMPLETE** - CLI flags (`--report-system`, `--list-report-systems`)
+- **COMPLETE** - Complete CLI override support
+- **COMPLETE** - User custom systems directory (~/.bobreview/report_systems/)
+- **COMPLETE** - Comprehensive documentation (REPORT_SYSTEMS_GUIDE.md)
+- **COMPLETE** - FilenamePatternParser implementation
+- **COMPLETE** - Backward compatibility with v1.0.3
+
+### v1.0.4 Architecture Refactoring
+- **COMPLETE** - `core/` package (config, cache, utils, analysis)
+- **COMPLETE** - `registry/` package (themes, charts, pages unified)
+- **COMPLETE** - `llm/` package (client + 7 generators)
+- **COMPLETE** - `pages/` package (renamed from report_generator)
+- **COMPLETE** - Split llm_provider.py (814 lines) → 9 small modules
+- **COMPLETE** - Unified registries (4 files → 1 package)
+- **COMPLETE** - Max 200 lines per file guideline
+
 ---
 
 ## Planned Features
 
 ### Data Sources
-- Design unified data schema (JSON/dataclass)
-- CSV input support with header detection
-- JSON input support
-- Input format flag (`--input-format`)
-- Data schema documentation
-- Sample data files
+- **COMPLETE** - Design unified data schema (JSON/dataclass)
+- **COMPLETE** - Input format configuration in JSON
+- **COMPLETE** - Data schema documentation
+- CSV parser implementation (schema ready)
+- JSON file parser implementation (schema ready)
+- API data source implementation (schema ready)
+- Sample data files for each parser type
 
 ### File Format Enhancements
 - Filename pattern regex matching (`--filename-pattern`)
@@ -115,6 +184,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - Provider fallback system
 
 ### Export Options
+- **COMPLETE** - External CSS export (`--linked-css`)
 - PDF export (weasyprint or pdfkit)
 - Markdown export
 - JSON data export (raw + analyzed)
@@ -141,18 +211,16 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - GitLab CI examples
 - Jenkins integration documentation
 
-### Template System
+### Template System (Jinja2-based)
 - Jinja2 dependency
 - Convert HTML to Jinja2 templates
 - Template directory structure
-- Custom CSS theme support
 - Template selection flag (`--template`)
-- Multiple default templates:
+- Additional template designs:
   - Classic (current design)
   - Minimal (lightweight)
   - Corporate (formal presentation)
-  - Dark (dark mode)
-- Branding customization (logo, colors)
+- Logo customization support
 
 ### GPU Metrics
 - GPU metrics schema design
@@ -232,7 +300,13 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 ## Dependencies Added
 
 **For Statistics:**
-- scipy (accurate t-distribution for confidence intervals)
+- scipy>=1.11.0,<2.0.0 (accurate t-distribution for confidence intervals)
+
+**For Registry Systems:**
+- No new external dependencies (pure Python dataclasses)
+
+**For Report Systems Framework (v1.0.4):**
+- No new external dependencies (pure Python with built-in json module)
 
 ## Dependencies to Add
 
@@ -295,15 +369,18 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 
 **v1.0 - Foundation Release (Current)**
 - v1.0.0 - Initial stable release
-- v1.0.1 - Base64 image embedding + bug fix (syntax error in llm_provider.py)
-- v1.0.2 - Statistical enhancements + interactive charts (planned)
+- v1.0.1 - Base64 image embedding + bug fix
+- v1.0.2 - Statistical enhancements + interactive charts
+- v1.0.3 - Registry-based modularization (LLM, charts, themes)
+- v1.0.4 - Clean architecture refactoring + JSON report systems
+  - New packages: core/, registry/, llm/, pages/
+  - Split 814-line llm_provider.py → 9 focused modules
+  - Unified registries into single package
+  - Max 200 lines per file
 - Core refactoring complete
 - Caching implemented
-- Modular architecture
-- Comprehensive documentation
-- Standalone HTML reports with embedded images
-- Interactive Chart.js visualizations
-- Advanced statistical analysis (percentiles, confidence intervals, outlier detection)
+- Modular architecture with registry patterns
+- JSON-based report system definitions
 
 **v2.0 - Enterprise Release**
 - Alternative LLM support
@@ -348,6 +425,6 @@ Contributions are welcome. Consider:
 
 ---
 
-Last updated: December 3, 2025
-Current version: 1.0.1 (preparing v1.0.2)
-Next milestone: v1.0.2 Visual Charts and Statistical Enhancements Release
+Last updated: December 5, 2025
+Current version: 1.0.4
+Next milestone: v1.1.0 - Extended Parsers (CSV, JSON, API implementations) or v2.0 - Enterprise Release

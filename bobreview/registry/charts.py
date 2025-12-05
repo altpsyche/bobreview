@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .theme_registry import ReportTheme
+    from .themes import ReportTheme
 
 
 @dataclass
@@ -107,7 +107,7 @@ def get_chart_defaults_js(theme_id: str = 'dark') -> str:
     Returns:
         JavaScript string to set Chart.defaults
     """
-    from .theme_registry import get_theme
+    from .themes import get_theme
     theme = get_theme(theme_id)
     
     # Escape single quotes in font family for JS string
@@ -134,7 +134,7 @@ def get_scale_options_js(config: ChartConfig, theme_id: str = 'dark') -> str:
     Returns:
         JavaScript object string for scales config
     """
-    from .theme_registry import get_theme
+    from .themes import get_theme
     theme = get_theme(theme_id)
     
     grid_color = _get_grid_color_with_opacity(theme.border_subtle, theme.chart_grid_opacity)

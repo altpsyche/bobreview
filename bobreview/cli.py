@@ -11,12 +11,14 @@ import random
 from pathlib import Path
 
 from . import __version__
-from .config import ReportConfig, validate_config
-from .utils import log_info, log_success, log_warning, log_error, log_verbose, format_number
-from .cache import init_cache, get_cache
+from .core import ReportConfig, validate_config, log_info, log_success, log_warning, log_error, log_verbose, format_number
+from .core import init_cache, get_cache, analyze_data
 from .data_parser import parse_filename
-from .analysis import analyze_data
-from .report_generator import generate_html_report
+from .pages import generate_report
+
+# Import report systems framework
+from .report_systems import load_report_system, list_available_systems
+from .report_systems.executor import ReportSystemExecutor
 
 # Check for tqdm availability
 try:
@@ -88,10 +90,6 @@ Examples:
         help='Output directory/file path (creates index.html and additional pages, default: performance_report.html)'
     )
     parser.add_argument(
-        '--images-dir', type=str, default=None,
-        help='Relative path to images directory from output (auto-detected if not specified)'
-    )
-    parser.add_argument(
         '--title', type=str, default=None,
         help='Report title (default: "Performance Analysis Report")'
     )
@@ -144,7 +142,7 @@ Examples:
         help='OpenAI API key (or set OPENAI_API_KEY environment variable)'
     )
     parser.add_argument(
-        '--image-chunk-size', type=int, default=10,
+        '--llm-chunk-size', type=int, default=10,
         help='Number of data samples to send per LLM call (default: 10)'
     )
     parser.add_argument(
@@ -154,6 +152,14 @@ Examples:
     parser.add_argument(
         '--llm-temperature', type=float, default=0.7,
         help='LLM temperature for generation (default: 0.7)'
+    )
+    parser.add_argument(
+        '--llm-max-tokens', type=int, default=2000,
+        help='Maximum tokens for LLM responses (default: 2000)'
+    )
+    parser.add_argument(
+        '--llm-combine-warning-threshold', type=int, default=100000,
+        help='Character count threshold for warning when combining chunks (default: 100000, roughly 25K tokens). Advanced option.'
     )
     
     # Caching options
@@ -211,8 +217,35 @@ Examples:
         metavar='PAGE_ID',
         help='Disable a page by ID (can be used multiple times). Valid IDs: home, metrics, zones, visuals, optimization, stats'
     )
+    parser.add_argument(
+        '--report-system', type=str, default='png_data_points',
+        metavar='SYSTEM',
+        help='Report system to use (built-in name or path to JSON file). Default: png_data_points'
+    )
+    parser.add_argument(
+        '--list-report-systems', action='store_true',
+        help='List all available report systems and exit'
+    )
     
+    # Parse args
     args = parser.parse_args()
+    
+    # Handle --list-report-systems
+    if args.list_report_systems:
+        systems = list_available_systems()
+        if not systems:
+            print("No report systems found.")
+            return 0
+        
+        print("Available report systems:")
+        print()
+        for system in systems:
+            source_label = "built-in" if system['source'] == 'builtin' else "custom"
+            print(f"  {system['id']} ({source_label}) - v{system['version']}")
+            print(f"    {system['description']}")
+            print(f"    Path: {system['path']}")
+            print()
+        return 0
     
     # Handle quiet + verbose conflict
     if args.quiet and args.verbose:
@@ -242,7 +275,9 @@ Examples:
         openai_api_key=openai_key,
         openai_model=args.openai_model,
         llm_temperature=args.llm_temperature,
-        image_chunk_size=args.image_chunk_size,
+        llm_max_tokens=args.llm_max_tokens,
+        llm_combine_warning_threshold=args.llm_combine_warning_threshold,
+        llm_chunk_size=args.llm_chunk_size,
         cache_dir=Path(args.cache_dir),
         use_cache=args.use_cache and not args.dry_run,
         clear_cache=args.clear_cache,
@@ -276,117 +311,79 @@ Examples:
     if config.dry_run:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
-    # Find PNG files
-    input_dir = Path(args.dir).resolve()
-    
-    if not input_dir.exists():
-        log_error(f"Directory not found: {input_dir}")
-        return 1
-    
-    if not input_dir.is_dir():
-        log_error(f"Path is not a directory: {input_dir}")
-        return 1
-    
-    log_info(f"Scanning directory: {input_dir}", config)
-    png_files = [f for f in os.listdir(input_dir) if f.lower().endswith('.png')]
-    
-    if not png_files:
-        log_error(f"No PNG files found in {input_dir}")
-        log_info("Expected filename format: TestCase_tricount_drawcalls_timestamp.png", config)
-        log_info("Example: Level1_85000_520_1234567890.png", config)
-        return 1
-    
-    log_success(f"Found {len(png_files)} PNG file(s)", config)
-    
-    # Parse data
-    data_points = []
-    parse_errors = 0
-    
-    iterator = tqdm(png_files, desc="Parsing files", disable=config.quiet) if TQDM_AVAILABLE else png_files
-    
-    for png_file in iterator:
-        try:
-            data_points.append(parse_filename(png_file))
-        except (ValueError, IndexError) as e:
-            log_warning(f"Skipping {png_file} - {e}", config)
-            parse_errors += 1
-            continue
-    
-    if not data_points:
-        log_error("No valid data points found after parsing")
-        log_info(f"Skipped {parse_errors} file(s) due to parsing errors", config)
-        return 1
-    
-    if parse_errors > 0:
-        log_warning(f"Successfully parsed {len(data_points)}/{len(png_files)} files ({parse_errors} errors)", config)
-    
-    # Apply sampling if requested
-    original_count = len(data_points)
-    if config.sample_size and config.sample_size < len(data_points):
-        log_info(f"Sampling {config.sample_size} random data points from {len(data_points)}", config)
-        data_points = random.sample(data_points, config.sample_size)
-    
-    # Sort by timestamp
-    data_points.sort(key=lambda x: x['ts'])
-    
-    # Calculate statistics
-    log_info("Analyzing performance data...", config)
-    stats = analyze_data(data_points, config)
-    
-    log_verbose(f"Statistics calculated: {stats['count']} samples", config)
-    log_verbose(f"  Draw calls - Min: {stats['draws']['min']}, Max: {stats['draws']['max']}, Mean: {format_number(stats['draws']['mean'], 1)}", config)
-    log_verbose(f"  Triangles - Min: {format_number(stats['tris']['min'])}, Max: {format_number(stats['tris']['max'])}, Mean: {format_number(stats['tris']['mean'], 1)}", config)
-    
-    # Determine image directory path
-    output_path = Path(args.output).resolve()
-    if args.images_dir:
-        images_dir_rel = args.images_dir
-    else:
-        try:
-            images_dir_rel = input_dir.relative_to(output_path.parent).as_posix()
-        except ValueError:
-            images_dir_rel = os.path.relpath(input_dir, output_path.parent).replace(os.sep, '/')
-    
-    # Generate HTML
-    log_info(f"Generating multi-page report in: {output_path.parent}", config)
-    
-    if config.dry_run:
-        log_info("Dry run mode: Generating report with placeholder LLM content", config)
-    elif config.use_cache:
-        log_info("Using cache when available for LLM responses", config)
-    
+    # Use the new JSON-based report system framework
     try:
-        # generate_html_report now creates multiple HTML files and returns the path to index.html
-        index_path = generate_html_report(data_points, stats, images_dir_rel, output_path, config)
+        log_info(f"Loading report system: {args.report_system}", config)
+        
+        # Build CLI overrides for the JSON system
+        # These allow CLI arguments to override values from the JSON definition
+        cli_overrides = {
+            'thresholds': {
+                'draw_soft_cap': config.draw_soft_cap,
+                'draw_hard_cap': config.draw_hard_cap,
+                'tri_soft_cap': config.tri_soft_cap,
+                'tri_hard_cap': config.tri_hard_cap,
+                'high_load_draw_threshold': config.high_load_draw_threshold,
+                'high_load_tri_threshold': config.high_load_tri_threshold,
+                'low_load_draw_threshold': config.low_load_draw_threshold,
+                'low_load_tri_threshold': config.low_load_tri_threshold,
+                'outlier_sigma': config.outlier_sigma,
+                'mad_threshold': config.mad_threshold,
+            },
+            'llm_config': {
+                'model': config.openai_model,
+                'temperature': config.llm_temperature,
+                'max_tokens': config.llm_max_tokens,
+                'chunk_size': config.llm_chunk_size,
+                'enable_cache': config.use_cache,
+            },
+            'output': {
+                'embed_images': config.embed_images,
+                'linked_css': config.linked_css,
+            },
+            'theme': {
+                'default': config.theme_id,
+            },
+            'disabled_pages': config.disabled_pages
+        }
+        
+        # Load report system with CLI overrides
+        system_def = load_report_system(args.report_system, cli_overrides=cli_overrides)
+        
+        # Create executor
+        executor = ReportSystemExecutor(system_def, config)
+        
+        # Execute
+        input_dir = Path(args.dir).resolve()
+        output_path = Path(args.output).resolve()
+        
+        if not input_dir.exists():
+            log_error(f"Directory not found: {input_dir}")
+            return 1
+        
+        if not input_dir.is_dir():
+            log_error(f"Path is not a directory: {input_dir}")
+            return 1
+        
+        executor.execute(input_dir, output_path)
+        
+        elapsed_time = time.time() - start_time
+        log_info(f"Completed in {elapsed_time:.1f}s", config)
+        
+        return 0
+        
+    except FileNotFoundError as e:
+        log_error(str(e))
+        return 1
+    except ValueError as e:
+        log_error(f"Report system validation failed: {e}")
+        return 1
     except Exception as e:
-        log_error(f"Failed to generate HTML report: {e}")
+        log_error(f"Failed to execute report system: {e}")
         if config.verbose:
             import traceback
             traceback.print_exc()
         return 1
-    
-    elapsed_time = time.time() - start_time
-    
-    # Print summary
-    log_success(f"Multi-page report generated!", config)
-    log_success(f"Main page: {index_path}", config)
-    log_info("Summary:", config)
-    log_info(f"  - {stats['count']} samples analyzed", config)
-    log_info(f"  - {len(stats['high_load'])} high-load frames identified", config)
-    log_info(f"  - Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
-    
-    if config.embed_images:
-        log_info("  - Images embedded as base64 (standalone HTML)", config)
-    
-    if config.sample_size and config.sample_size < original_count:
-        log_info(f"  - Sampled {config.sample_size} of {original_count} total samples", config)
-    
-    if config.dry_run:
-        log_warning("  - Dry run mode - no actual LLM calls made", config)
-    
-    log_info(f"Completed in {elapsed_time:.1f}s", config)
-    
-    return 0
 
 
 if __name__ == '__main__':

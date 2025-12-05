@@ -267,7 +267,7 @@ def get_html_template(title: str, body_content: str, include_chartjs: bool = Fal
     Returns:
         Complete HTML document as string
     """
-    from ..theme_registry import get_theme_css_variables
+    from ..registry.themes import get_theme_css_variables
     
     chartjs_script = ""
     if include_chartjs:

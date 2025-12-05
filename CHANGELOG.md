@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2025-12-05
+
+### Architecture Refactoring
+
+This release introduces a major codebase restructuring for better modularity and maintainability.
+
+#### New Package Structure
+```
+bobreview/
+├── core/           # Foundational utilities
+│   ├── config.py   # ReportConfig dataclass
+│   ├── cache.py    # LLM response caching
+│   ├── utils.py    # Logging, formatting
+│   └── analysis.py # Statistics calculation
+│
+├── registry/       # Unified registries
+│   ├── themes.py   # Visual themes
+│   ├── charts.py   # Chart.js configs
+│   └── pages.py    # Page definitions
+│
+├── llm/            # LLM abstraction
+│   ├── client.py   # call_llm, call_llm_chunked
+│   └── generators/ # One file per content type
+│       ├── executive.py
+│       ├── metrics.py
+│       ├── zones.py
+│       ├── optimization.py
+│       ├── recommendations.py
+│       ├── visuals.py
+│       └── stats.py
+│
+├── pages/          # HTML page renderers (renamed from report_generator)
+│   ├── base.py, homepage.py, metrics.py, etc.
+│   └── styles.css
+│
+└── report_systems/ # JSON config (unchanged)
+```
+
+#### Key Changes
+- **Split `llm_provider.py`** (814 lines) → 9 focused modules (~60-100 lines each)
+- **Unified registries** (4 files → `registry/` package)
+- **Renamed `report_generator/`** → `pages/` for clarity
+- **Deleted 8 legacy files** that were superseded by new packages
+
+### Added
+
+#### JSON-Based Report Systems Framework
+- **Report System Definitions**: Complete JSON schema for defining custom analysis pipelines
+  - Configurable data source parsing (filename patterns, CSV support planned)
+  - Custom metrics and statistics configuration
+  - LLM generator definitions with prompt templates
+  - Page layout and chart configuration
+  - Theme and output settings
+  
+- **New CLI Flags**:
+  - `--report-system SYSTEM`: Use a built-in or custom JSON report system
+  - `--list-report-systems`: List all available report systems
+
+- **Built-in Report System**: `png_data_points` encapsulates the v1.0.3 workflow
+
+- **User Custom Systems Directory**: `~/.bobreview/report_systems/` for custom JSON definitions
+
+### Fixed
+
+#### CSS Gradient Issues
+- **Stat Card Gradients**: Fixed invisible gradients in stat cards and UI elements
+  - Solution: Use colored tints matching border colors (accent-soft, danger-soft, warn-soft, ok-soft)
+  
+- **New CSS Variables**: Added soft color variants for status colors
+  - `--danger-soft: rgba(255, 92, 92, 0.15)`
+  - `--warn-soft: rgba(230, 179, 92, 0.15)`
+  - `--ok-soft: rgba(79, 209, 139, 0.15)`
+
+### Changed
+- **Unified Execution Path**: All report generation now uses the Report Systems framework
+- **Architecture**: Clean modular packages with max 200 lines per file
+- **Backward Compatibility**: 100% compatible - existing CLI commands unchanged
+
+### Technical Details
+- **Files created**: 25+ modular files in new package structure
+- **Files deleted**: 8 legacy files (config.py, cache.py, utils.py, analysis.py, llm_provider.py, llm_registry.py, theme_registry.py, chart_registry.py, report_generator/)
+- **Net effect**: Same functionality, cleaner organization, smaller files
+- No breaking changes - all v1.0.3 CLI commands work identically
+
+---
+
 ## [1.0.3] - 2025-12-05
 
 ### Added
@@ -346,6 +432,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.4]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.0...v1.0.1

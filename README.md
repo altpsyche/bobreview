@@ -14,6 +14,7 @@ Generate comprehensive HTML performance reports from game engine performance cap
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
+- [Report Systems](#report-systems)
 - [File Format](#file-format)
 - [Configuration](#configuration)
 - [Report Structure](#report-structure)
@@ -33,6 +34,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 ## Features
 
+- **JSON-Based Report Systems** - Define custom analysis pipelines with JSON
 - **Automated Data Extraction** - Parse performance metrics from PNG filenames
 - **Statistical Analysis** - Calculate comprehensive statistics and identify patterns
 - **Hotspot Identification** - Automatically find high-load and low-load performance zones
@@ -40,63 +42,66 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 - **Professional Reports** - Generate presentation-ready HTML reports
 - **Standalone HTML** - Images embedded as base64 for easy sharing
 - **Intelligent Caching** - Cache LLM responses to reduce costs
-- **Modular Architecture** - Clean, maintainable codebase
+- **Modular Architecture** - Clean packages with max 200 lines per file
 - **Global CLI Command** - Run from any directory after installation
 
 ---
 
 ## Architecture
 
-BobReview uses a modular architecture with clear separation of concerns:
+BobReview v1.0.4 uses a clean modular architecture:
 
 ```text
 bobreview/
-├── bobreview/              # Main package
-│   ├── __init__.py         # Public API exports
-│   ├── config.py           # Configuration and validation
-│   ├── utils.py            # Logging and formatting
-│   ├── cache.py            # LLM response caching
-│   ├── data_parser.py      # PNG filename parsing
-│   ├── analysis.py         # Statistical analysis
-│   ├── llm_provider.py     # LLM API interaction
-│   ├── llm_registry.py     # LLM generator registration
-│   ├── chart_registry.py   # Chart configuration registry
-│   ├── theme_registry.py   # Report theme registry (NEW)
-│   ├── cli.py              # Command-line interface
-│   └── report_generator/   # Modular HTML generation
-│       ├── __init__.py     # Report orchestration
-│       ├── base.py         # Shared utilities & templates
-│       ├── registry.py     # Page registration system
-│       ├── homepage.py     # Index page
-│       ├── metrics.py      # Metrics analysis page
-│       ├── zones.py        # Zones & hotspots page
-│       ├── visuals.py      # Visual analysis page
-│       ├── optimization.py # Optimization page
-│       └── stats.py        # Statistics page
+├── __init__.py        # Package entry
+├── cli.py             # Command-line interface
+├── data_parser.py     # PNG filename parsing
 │
-├── bobreview.py            # Entry point script
-├── requirements.txt        # Dependencies
-├── setup.py                # Package installer
-└── pyproject.toml          # Package configuration
+├── core/              # Foundational utilities
+│   ├── config.py      # ReportConfig dataclass
+│   ├── cache.py       # LLM response caching
+│   ├── utils.py       # Logging, formatting
+│   └── analysis.py    # Statistics calculation
+│
+├── registry/          # Unified registries
+│   ├── themes.py      # Visual themes (dark, light, high_contrast)
+│   ├── charts.py      # Chart.js configurations
+│   └── pages.py       # Page definitions
+│
+├── llm/               # LLM abstraction layer
+│   ├── client.py      # call_llm, call_llm_chunked
+│   └── generators/    # Content generators
+│       ├── executive.py, metrics.py, zones.py
+│       ├── optimization.py, recommendations.py
+│       ├── visuals.py, stats.py
+│
+├── pages/             # HTML page renderers
+│   ├── base.py        # Shared templates
+│   ├── homepage.py, metrics.py, zones.py
+│   ├── visuals.py, optimization.py, stats.py
+│   └── styles.css
+│
+└── report_systems/    # JSON-based configuration
+    ├── schema.py, loader.py, executor.py
+    └── builtin/png_data_points.json
 ```
 
 **Design Principles:**
-- Single Responsibility - Each module has one clear purpose
+- Single Responsibility - Each module has one clear purpose (max 200 lines)
 - Dependency Injection - Configuration passed through parameters
 - No Circular Dependencies - Clean import hierarchy
 - Testable - Each module can be tested independently
 - Registry Pattern - Self-registration for pages, LLM generators, and charts
 
-### Registry Systems
+### Package Overview
 
-BobReview uses three registry patterns for extensibility:
-
-| Registry | File | Purpose |
-|----------|------|--------|
-| Page Registry | `report_generator/registry.py` | HTML page registration |
-| LLM Generator Registry | `llm_registry.py` | LLM content generators with categories |
-| Chart Registry | `chart_registry.py` | Chart.js datasets and configs |
-| Theme Registry | `theme_registry.py` | Report colors, fonts, and CSS variables |
+| Package | Purpose |
+|---------|---------|
+| `core/` | Configuration, caching, logging, analysis |
+| `registry/` | Themes, charts, pages (unified access) |
+| `llm/` | LLM client and 7 content generators |
+| `pages/` | 6 HTML page renderers + CSS |
+| `report_systems/` | JSON-based pipeline configuration |
 
 ---
 
@@ -317,6 +322,115 @@ Path("report.html").write_text(html, encoding='utf-8')
 
 ---
 
+## Report Systems
+
+**NEW in v1.0.4:** BobReview now supports JSON-based report system definitions, allowing you to create custom analysis pipelines without modifying code.
+
+### What are Report Systems?
+
+Report systems are JSON files that define:
+- How to parse input data
+- What metrics to analyze
+- What LLM-generated insights to include
+- What pages to generate
+- How to theme and configure the output
+
+### Using Report Systems
+
+#### List Available Systems
+```bash
+bobreview --list-report-systems
+```
+
+Output:
+```
+Available report systems:
+
+  png_data_points (built-in) - v1.0.0
+    Game performance analysis from PNG filename metadata
+    Path: bobreview/report_systems/builtin/png_data_points.json
+```
+
+#### Use a Specific System
+```bash
+# Use built-in system (default)
+bobreview --report-system png_data_points --dir ./screenshots
+
+# Use custom system
+bobreview --report-system my_custom_system --dir ./data
+
+# Use JSON file directly
+bobreview --report-system /path/to/system.json --dir ./data
+```
+
+### Creating Custom Report Systems
+
+1. **Create a JSON file** in `~/.bobreview/report_systems/`:
+
+```json
+{
+  "schema_version": "1.0",
+  "id": "my_system",
+  "name": "My Custom Analysis",
+  "version": "1.0.0",
+  "description": "Custom performance analysis",
+  "author": "Your Name",
+  
+  "data_source": {
+    "type": "filename_pattern",
+    "input_format": "csv",
+    "pattern": "{timestamp}_{metric}_{value}.csv",
+    "fields": {...}
+  },
+  
+  "metrics": {...},
+  "thresholds": {...},
+  "llm_generators": [...],
+  "pages": [...]
+}
+```
+
+2. **Use it:**
+```bash
+bobreview --report-system my_system --dir ./data
+```
+
+### Built-in Report Systems
+
+#### png_data_points (Default)
+
+Analyzes game performance from PNG filename metadata.
+
+**Pattern:** `{testcase}_{tris}_{draws}_{timestamp}.png`  
+**Example:** `Level1_85000_520_1234567890.png`
+
+**Features:**
+- Triangle count and draw call analysis
+- Performance zone identification
+- Trend detection
+- Outlier analysis (3 methods)
+- Interactive Chart.js visualizations
+- 6 HTML pages with AI-generated insights
+
+### Report System Capabilities
+
+- **Flexible Data Sources:** Parse any file format with custom patterns
+- **Custom Metrics:** Define primary and derived metrics
+- **Configurable LLM:** Custom prompts, categories, and sampling strategies
+- **Dynamic Pages:** Define custom page layouts and navigation
+- **Theme Support:** Use built-in themes or create custom ones
+- **Reusable:** Share report systems across teams
+
+### Documentation
+
+See **[REPORT_SYSTEMS_GUIDE.md](REPORT_SYSTEMS_GUIDE.md)** for:
+- Complete JSON schema reference
+- Creating custom report systems
+- Template variable reference
+- Examples and best practices
+
+---
+
 ## File Format
 
 BobReview expects PNG files with performance data encoded in the filename:
@@ -387,7 +501,9 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 --openai-key KEY        # OpenAI API key
 --openai-model MODEL    # Model to use (default: gpt-4o)
 --llm-temperature N     # Temperature 0-2 (default: 0.7)
---image-chunk-size N    # Samples per LLM call (default: 10)
+--llm-max-tokens N      # Maximum tokens for LLM responses (default: 2000)
+--llm-chunk-size N      # Samples per LLM call (default: 10)
+--llm-combine-warning-threshold N  # Character threshold for chunk combination warning (default: 100000, advanced)
 --no-recommendations    # Disable system recommendations
 ```
 
@@ -491,7 +607,7 @@ bobreview --dir ./screenshots --dry-run
 bobreview --dir ./screenshots --sample 20
 
 # Adjust chunk size if needed
-bobreview --dir ./screenshots --image-chunk-size 5
+bobreview --dir ./screenshots --llm-chunk-size 5
 ```
 
 ---
@@ -856,16 +972,19 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.3
+**Current:** v1.0.4
 
 **Features:**
+- JSON-based report systems framework
+- Custom analysis pipelines without coding
+- Built-in `png_data_points` system
+- Report system discovery and loading
+- Template variable substitution
+- Backward compatible with v1.0.3
 - Modular architecture
 - Global CLI command
 - Intelligent caching
 - Complete documentation
-- Registry pattern for pages, LLM generators, and charts
-- Configurable prompt categories for LLM content
-- Dynamic homepage navigation from page registry
 
 ---
 

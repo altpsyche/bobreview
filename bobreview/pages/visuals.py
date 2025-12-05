@@ -5,9 +5,9 @@ Visual analysis page generator with distribution charts.
 import json
 from typing import Dict, List, Any
 from .base import get_html_template, get_page_header, prepare_histogram_data, sanitize_llm_html
-from .registry import register_page, PageDefinition, get_nav_items
-from ..utils import format_number
-from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart
+from ..registry.pages import register_page, PageDefinition, get_nav_items
+from ..core.utils import format_number
+from ..registry.charts import get_chart_defaults_js, get_dataset, get_chart
 
 
 def generate_visuals_page(

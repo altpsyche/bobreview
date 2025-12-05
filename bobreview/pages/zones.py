@@ -11,8 +11,8 @@ from .base import (
     sanitize_llm_html,
     render_stat_card
 )
-from .registry import register_page, PageDefinition, get_nav_items
-from ..utils import format_number
+from ..registry.pages import register_page, PageDefinition, get_nav_items
+from ..core.utils import format_number
 
 
 def generate_zones_page(
