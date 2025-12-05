@@ -153,7 +153,7 @@ bobreview --dir . --sample 20
 bobreview --dir . --theme light
 
 # Use Anthropic Claude instead of OpenAI
-bobreview --dir . --llm-provider anthropic
+bobreview --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
 
 # Use local Ollama
 bobreview --dir . --llm-provider ollama --llm-model mistral
