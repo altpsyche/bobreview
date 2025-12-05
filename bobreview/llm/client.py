@@ -101,6 +101,8 @@ Data Table:
                 temperature=config.llm_temperature,
                 max_tokens=config.llm_max_tokens
             )
+            if not response.choices:
+                raise RuntimeError("No response from LLM")
             result = clean_llm_response(response.choices[0].message.content)
             
             if cache:
@@ -125,8 +127,6 @@ Data Table:
             raise RuntimeError(f"OpenAI API error: {e}") from e
         except Exception as e:
             raise RuntimeError(f"Unexpected error: {e}") from e
-    
-    raise RuntimeError(f"Failed after {max_retries} attempts")
 
 
 def call_llm_chunked(
