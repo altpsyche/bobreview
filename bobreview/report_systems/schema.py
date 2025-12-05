@@ -7,7 +7,6 @@ including validation logic and dataclass representations of all configuration se
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
-from pathlib import Path
 
 
 @dataclass

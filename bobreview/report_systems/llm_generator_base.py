@@ -5,8 +5,7 @@ LLM generators are responsible for creating AI-generated content
 using configured prompts and templates.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from .schema import LLMGeneratorConfig, PromptCategoryConfig
 
 

@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2025-12-05
+
+### Added
+
+#### JSON-Based Report Systems Framework
+- **Report System Definitions**: Complete JSON schema for defining custom analysis pipelines
+  - Configurable data source parsing (filename patterns, CSV support planned)
+  - Custom metrics and statistics configuration
+  - LLM generator definitions with prompt templates
+  - Page layout and chart configuration
+  - Theme and output settings
+  
+- **New CLI Flags**:
+  - `--report-system SYSTEM`: Use a built-in or custom JSON report system
+  - `--list-report-systems`: List all available report systems
+
+- **New Modules** (`bobreview/report_systems/`):
+  - `schema.py`: 18 dataclasses defining the complete JSON schema
+  - `loader.py`: Discovery and loading of report systems from built-in and user directories
+  - `executor.py`: Orchestrates the complete report generation pipeline
+  - `data_parser_base.py`: Extensible data parser framework with `FilenamePatternParser`
+  - `llm_generator_base.py`: Template-based LLM content generation
+  - `page_generator_base.py`: Page rendering framework
+
+- **Built-in Report System**: `png_data_points` encapsulates the v1.0.3 workflow
+  - Stored at `report_systems/builtin/png_data_points.json`
+  - Fully backward compatible with existing CLI usage
+
+- **User Custom Systems Directory**: `~/.bobreview/report_systems/` for custom JSON definitions
+
+- **Documentation**: `REPORT_SYSTEMS_GUIDE.md` with complete schema reference and examples
+
+### Fixed
+- **LLM Generator Registry Mismatch**: Fixed key lookup to check both `id` and `name` for backward compatibility
+- **CLI Override Application**: CLI arguments for thresholds, LLM config, output settings now properly override JSON defaults
+
+### Changed
+- **Unified Execution Path**: All report generation now uses the Report Systems framework
+- **Removed Legacy Code Path**: 113 lines of duplicate code removed from `cli.py`
+
+### Technical Details
+- **New files**: 7 files in `bobreview/report_systems/` (~1,800 lines)
+- **Modified files**: `cli.py` (refactored for report systems integration)
+- No breaking changes - all v1.0.3 CLI commands work identically
+- Backward compatible with existing configurations
+
+---
+
 ## [1.0.3] - 2025-12-05
 
 ### Added
@@ -346,6 +394,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.4]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.0...v1.0.1

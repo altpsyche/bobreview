@@ -225,7 +225,18 @@ Examples:
         help='List all available report systems and exit'
     )
     
+    # Parse args but also track which were explicitly provided
     args = parser.parse_args()
+    
+    # Get the raw command line arguments to detect user-provided values
+    # This helps us distinguish between defaults and user-specified values
+    import sys
+    user_provided_args = set()
+    for i, arg in enumerate(sys.argv[1:]):
+        if arg.startswith('--'):
+            # Remove leading dashes and convert to argument name
+            arg_name = arg.lstrip('-').replace('-', '_')
+            user_provided_args.add(arg_name)
     
     # Handle --list-report-systems
     if args.list_report_systems:
@@ -306,177 +317,79 @@ Examples:
     if config.dry_run:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
-    # Check if user wants to use the new report system framework
-    use_report_system = args.report_system != 'png_data_points' or args.report_system
-    
-    if use_report_system:
-        # Use the new JSON-based report system framework
-        try:
-            log_info(f"Loading report system: {args.report_system}", config)
-            
-            # Build CLI overrides for the JSON system
-            cli_overrides = {
-                'thresholds': {},
-                'llm_config': {},
-                'output': {},
-                'theme': {},
-                'disabled_pages': config.disabled_pages
-            }
-            
-            # Add threshold overrides if specified (non-default values)
-            # Note: We don't have a perfect way to detect CLI overrides vs defaults
-            # So we just pass through the config values
-            
-            # Load report system
-            system_def = load_report_system(args.report_system, cli_overrides=cli_overrides)
-            
-            # Create executor
-            executor = ReportSystemExecutor(system_def, config)
-            
-            # Execute
-            input_dir = Path(args.dir).resolve()
-            output_path = Path(args.output).resolve()
-            
-            if not input_dir.exists():
-                log_error(f"Directory not found: {input_dir}")
-                return 1
-            
-            if not input_dir.is_dir():
-                log_error(f"Path is not a directory: {input_dir}")
-                return 1
-            
-            executor.execute(input_dir, output_path)
-            
-            elapsed_time = time.time() - start_time
-            log_info(f"Completed in {elapsed_time:.1f}s", config)
-            
-            return 0
-            
-        except FileNotFoundError as e:
-            log_error(str(e))
-            return 1
-        except ValueError as e:
-            log_error(f"Report system validation failed: {e}")
-            return 1
-        except Exception as e:
-            log_error(f"Failed to execute report system: {e}")
-            if config.verbose:
-                import traceback
-                traceback.print_exc()
-            return 1
-    
-    # Original code path (backward compatibility)
-    # Find PNG files
-    input_dir = Path(args.dir).resolve()
-    
-    if not input_dir.exists():
-        log_error(f"Directory not found: {input_dir}")
-        return 1
-    
-    if not input_dir.is_dir():
-        log_error(f"Path is not a directory: {input_dir}")
-        return 1
-    
-    log_info(f"Scanning directory: {input_dir}", config)
-    png_files = [f for f in os.listdir(input_dir) if f.lower().endswith('.png')]
-    
-    if not png_files:
-        log_error(f"No PNG files found in {input_dir}")
-        log_info("Expected filename format: TestCase_tricount_drawcalls_timestamp.png", config)
-        log_info("Example: Level1_85000_520_1234567890.png", config)
-        return 1
-    
-    log_success(f"Found {len(png_files)} PNG file(s)", config)
-    
-    # Parse data
-    data_points = []
-    parse_errors = 0
-    
-    iterator = tqdm(png_files, desc="Parsing files", disable=config.quiet) if TQDM_AVAILABLE else png_files
-    
-    for png_file in iterator:
-        try:
-            data_points.append(parse_filename(png_file))
-        except (ValueError, IndexError) as e:
-            log_warning(f"Skipping {png_file} - {e}", config)
-            parse_errors += 1
-            continue
-    
-    if not data_points:
-        log_error("No valid data points found after parsing")
-        log_info(f"Skipped {parse_errors} file(s) due to parsing errors", config)
-        return 1
-    
-    if parse_errors > 0:
-        log_warning(f"Successfully parsed {len(data_points)}/{len(png_files)} files ({parse_errors} errors)", config)
-    
-    # Apply sampling if requested
-    original_count = len(data_points)
-    if config.sample_size and config.sample_size < len(data_points):
-        log_info(f"Sampling {config.sample_size} random data points from {len(data_points)}", config)
-        data_points = random.sample(data_points, config.sample_size)
-    
-    # Sort by timestamp
-    data_points.sort(key=lambda x: x['ts'])
-    
-    # Calculate statistics
-    log_info("Analyzing performance data...", config)
-    stats = analyze_data(data_points, config)
-    
-    log_verbose(f"Statistics calculated: {stats['count']} samples", config)
-    log_verbose(f"  Draw calls - Min: {stats['draws']['min']}, Max: {stats['draws']['max']}, Mean: {format_number(stats['draws']['mean'], 1)}", config)
-    log_verbose(f"  Triangles - Min: {format_number(stats['tris']['min'])}, Max: {format_number(stats['tris']['max'])}, Mean: {format_number(stats['tris']['mean'], 1)}", config)
-    
-    # Determine image directory path
-    output_path = Path(args.output).resolve()
-    if args.images_dir:
-        images_dir_rel = args.images_dir
-    else:
-        try:
-            images_dir_rel = input_dir.relative_to(output_path.parent).as_posix()
-        except ValueError:
-            images_dir_rel = os.path.relpath(input_dir, output_path.parent).replace(os.sep, '/')
-    
-    # Generate HTML
-    log_info(f"Generating multi-page report in: {output_path.parent}", config)
-    
-    if config.dry_run:
-        log_info("Dry run mode: Generating report with placeholder LLM content", config)
-    elif config.use_cache:
-        log_info("Using cache when available for LLM responses", config)
-    
+    # Use the new JSON-based report system framework
     try:
-        # generate_html_report now creates multiple HTML files and returns the path to index.html
-        index_path = generate_html_report(data_points, stats, images_dir_rel, output_path, config)
+        log_info(f"Loading report system: {args.report_system}", config)
+        
+        # Build CLI overrides for the JSON system
+        # These allow CLI arguments to override values from the JSON definition
+        cli_overrides = {
+            'thresholds': {
+                'draw_soft_cap': config.draw_soft_cap,
+                'draw_hard_cap': config.draw_hard_cap,
+                'tri_soft_cap': config.tri_soft_cap,
+                'tri_hard_cap': config.tri_hard_cap,
+                'high_load_draw_threshold': config.high_load_draw_threshold,
+                'high_load_tri_threshold': config.high_load_tri_threshold,
+                'low_load_draw_threshold': config.low_load_draw_threshold,
+                'low_load_tri_threshold': config.low_load_tri_threshold,
+                'outlier_sigma': config.outlier_sigma,
+                'mad_threshold': config.mad_threshold,
+            },
+            'llm_config': {
+                'model': config.openai_model,
+                'temperature': config.llm_temperature,
+                'max_tokens': config.llm_max_tokens,
+                'chunk_size': config.image_chunk_size,
+                'enable_cache': config.use_cache,
+            },
+            'output': {
+                'embed_images': config.embed_images,
+                'linked_css': config.linked_css,
+            },
+            'theme': {
+                'default': config.theme_id,
+            },
+            'disabled_pages': config.disabled_pages
+        }
+        
+        # Load report system with CLI overrides
+        system_def = load_report_system(args.report_system, cli_overrides=cli_overrides)
+        
+        # Create executor
+        executor = ReportSystemExecutor(system_def, config)
+        
+        # Execute
+        input_dir = Path(args.dir).resolve()
+        output_path = Path(args.output).resolve()
+        
+        if not input_dir.exists():
+            log_error(f"Directory not found: {input_dir}")
+            return 1
+        
+        if not input_dir.is_dir():
+            log_error(f"Path is not a directory: {input_dir}")
+            return 1
+        
+        executor.execute(input_dir, output_path)
+        
+        elapsed_time = time.time() - start_time
+        log_info(f"Completed in {elapsed_time:.1f}s", config)
+        
+        return 0
+        
+    except FileNotFoundError as e:
+        log_error(str(e))
+        return 1
+    except ValueError as e:
+        log_error(f"Report system validation failed: {e}")
+        return 1
     except Exception as e:
-        log_error(f"Failed to generate HTML report: {e}")
+        log_error(f"Failed to execute report system: {e}")
         if config.verbose:
             import traceback
             traceback.print_exc()
         return 1
-    
-    elapsed_time = time.time() - start_time
-    
-    # Print summary
-    log_success(f"Multi-page report generated!", config)
-    log_success(f"Main page: {index_path}", config)
-    log_info("Summary:", config)
-    log_info(f"  - {stats['count']} samples analyzed", config)
-    log_info(f"  - {len(stats['high_load'])} high-load frames identified", config)
-    log_info(f"  - Critical hotspot: index {stats['critical'][0]} ({stats['critical'][1]['draws']} draws, {format_number(stats['critical'][1]['tris'])} tris)", config)
-    
-    if config.embed_images:
-        log_info("  - Images embedded as base64 (standalone HTML)", config)
-    
-    if config.sample_size and config.sample_size < original_count:
-        log_info(f"  - Sampled {config.sample_size} of {original_count} total samples", config)
-    
-    if config.dry_run:
-        log_warning("  - Dry run mode - no actual LLM calls made", config)
-    
-    log_info(f"Completed in {elapsed_time:.1f}s", config)
-    
-    return 0
 
 
 if __name__ == '__main__':

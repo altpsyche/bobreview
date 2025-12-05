@@ -15,7 +15,6 @@ import os
 from .schema import ReportSystemDefinition
 from .data_parser_base import DataParser, FilenamePatternParser
 from .llm_generator_base import LLMGeneratorTemplate, LLMGeneratorAdapter
-from .page_generator_base import PageGeneratorAdapter
 
 # Import existing modules
 from ..config import ReportConfig
@@ -44,15 +43,20 @@ class ReportSystemExecutor:
         self._merge_config()
     
     def _merge_config(self):
-        """Merge JSON configuration into ReportConfig."""
-        # Update thresholds from JSON if not overridden
+        """
+        Merge JSON configuration into ReportConfig.
+        
+        Note: CLI overrides have already been merged into the JSON definition
+        by the loader, so we just update the config with JSON values.
+        The loader's merge_cli_overrides() ensures CLI arguments take precedence.
+        """
+        # Thresholds have already been merged in loader
+        # The system_def.thresholds already contains CLI overrides
         for key, value in self.system_def.thresholds.items():
             if hasattr(self.config, key):
-                # Only update if it's still the default value
-                # (meaning user didn't specify it via CLI)
                 setattr(self.config, key, value)
         
-        # Update LLM config
+        # LLM config has already been merged
         llm_cfg = self.system_def.llm_config
         self.config.openai_model = llm_cfg.model
         self.config.llm_temperature = llm_cfg.temperature
@@ -60,12 +64,12 @@ class ReportSystemExecutor:
         self.config.image_chunk_size = llm_cfg.chunk_size
         self.config.use_cache = llm_cfg.enable_cache
         
-        # Update output config
+        # Output config has already been merged
         output_cfg = self.system_def.output
         self.config.embed_images = output_cfg.embed_images
         self.config.linked_css = output_cfg.linked_css
         
-        # Update theme
+        # Theme has already been merged
         theme_cfg = self.system_def.theme
         self.config.theme_id = theme_cfg.default
     
@@ -193,10 +197,13 @@ class ReportSystemExecutor:
             
             try:
                 # Check if there's a Python-based generator registered
-                if has_llm_generator(gen_config.name):
+                # Note: Registry uses section_name which matches the generator's display name,
+                # so we check both id and name for compatibility
+                if has_llm_generator(gen_config.id) or has_llm_generator(gen_config.name):
                     # Use existing Python generator
-                    log_verbose(f"  Using Python generator: {gen_config.name}", self.config)
-                    generator_func = get_llm_generator(gen_config.name)
+                    registry_key = gen_config.id if has_llm_generator(gen_config.id) else gen_config.name
+                    log_verbose(f"  Using Python generator: {registry_key}", self.config)
+                    generator_func = get_llm_generator(registry_key)
                     adapter = LLMGeneratorAdapter(generator_func, gen_config)
                     content = adapter.generate(data_points, stats, self.config, "")
                 else:
@@ -303,9 +310,6 @@ class ReportSystemExecutor:
             
             # Use builtin page generator if available
             if page_config.template.type == 'builtin' and page_config.template.name in page_generators:
-                generator_func = page_generators[page_config.template.name]
-                adapter = PageGeneratorAdapter(generator_func, page_config)
-                
                 # Build kwargs based on page ID (different pages have different signatures)
                 if page_config.id == 'home':
                     html = homepage.generate_homepage(

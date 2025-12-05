@@ -56,8 +56,7 @@ from .llm_generator_base import (
 )
 
 from .page_generator_base import (
-    PageGeneratorTemplate,
-    PageGeneratorAdapter
+    PageGeneratorTemplate
 )
 
 __all__ = [
@@ -89,6 +88,5 @@ __all__ = [
     'LLMGeneratorTemplate',
     'LLMGeneratorAdapter',
     'PageGeneratorTemplate',
-    'PageGeneratorAdapter',
 ]
 
