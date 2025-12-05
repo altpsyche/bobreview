@@ -22,7 +22,7 @@ def generate_visual_analysis(
 Draw Calls:
 - Mean: {format_number(stats['draws']['mean'], 0)}, Median: {format_number(stats['draws']['median'], 0)}
 - P90: {format_number(stats['draws']['p90'], 0)}, P95: {format_number(stats['draws']['p95'], 0)}, P99: {format_number(stats['draws']['p99'], 0)}
-- Range: {stats['draws']['min']} to {stats['draws']['max']}
+- Range: {format_number(stats['draws']['min'], 0)} to {format_number(stats['draws']['max'], 0)}
 - CV: {format_number(stats['draws']['cv'], 1)}%, Trend: {stats['trends']['draws']['direction']}
 
 Triangles:
