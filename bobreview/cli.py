@@ -157,6 +157,14 @@ Examples:
         '--llm-temperature', type=float, default=0.7,
         help='LLM temperature for generation (default: 0.7)'
     )
+    parser.add_argument(
+        '--llm-max-tokens', type=int, default=2000,
+        help='Maximum tokens for LLM responses (default: 2000)'
+    )
+    parser.add_argument(
+        '--llm-combine-warning-threshold', type=int, default=100000,
+        help='Character count threshold for warning when combining chunks (default: 100000, roughly 25K tokens). Advanced option.'
+    )
     
     # Caching options
     parser.add_argument(
@@ -281,6 +289,8 @@ Examples:
         openai_api_key=openai_key,
         openai_model=args.openai_model,
         llm_temperature=args.llm_temperature,
+        llm_max_tokens=args.llm_max_tokens,
+        llm_combine_warning_threshold=args.llm_combine_warning_threshold,
         image_chunk_size=args.image_chunk_size,
         cache_dir=Path(args.cache_dir),
         use_cache=args.use_cache and not args.dry_run,
