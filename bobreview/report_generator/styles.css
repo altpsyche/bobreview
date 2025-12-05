@@ -17,8 +17,11 @@
   --text-soft: #a8b3c5;
   --border-subtle: #1e2835;
   --danger: #ff5c5c;
+  --danger-soft: rgba(255, 92, 92, 0.15);
   --warn: #e6b35c;
+  --warn-soft: rgba(230, 179, 92, 0.15);
   --ok: #4fd18b;
+  --ok-soft: rgba(79, 209, 139, 0.15);
   --mono: "SF Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius-lg: 12px;
@@ -169,7 +172,7 @@ header .meta span {
 .stat-card {
   padding: 12px 12px 10px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+  background: linear-gradient(135deg, var(--accent-soft), var(--bg-elevated));
   border: 1px solid var(--accent-soft);
   display: flex;
   flex-direction: column;
@@ -177,17 +180,17 @@ header .meta span {
 }
 
 .stat-card.danger {
-  background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+  background: linear-gradient(135deg, var(--danger-soft), var(--bg-elevated));
   border-color: var(--danger);
 }
 
 .stat-card.warn {
-  background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+  background: linear-gradient(135deg, var(--warn-soft), var(--bg-elevated));
   border-color: var(--warn);
 }
 
 .stat-card.ok {
-  background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+  background: linear-gradient(135deg, var(--ok-soft), var(--bg-elevated));
   border-color: var(--ok);
 }
 
@@ -486,7 +489,7 @@ ul.body-text li {
 
 .stats-item {
   padding: 8px 10px;
-  background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+  background: linear-gradient(135deg, var(--accent-soft), var(--bg-elevated));
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
 }

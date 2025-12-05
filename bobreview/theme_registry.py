@@ -68,8 +68,11 @@ class ReportTheme:
     
     # Status colors
     danger: str = '#ff5c5c'
+    danger_soft: str = 'rgba(255, 92, 92, 0.15)'
     warn: str = '#e6b35c'
+    warn_soft: str = 'rgba(230, 179, 92, 0.15)'
     ok: str = '#4fd18b'
+    ok_soft: str = 'rgba(79, 209, 139, 0.15)'
     
     # Borders and effects
     border_subtle: str = '#1e2835'
@@ -151,8 +154,11 @@ def get_theme_css_variables(theme_id: Optional[str] = None) -> str:
   --text-soft: {theme.text_soft};
   --border-subtle: {theme.border_subtle};
   --danger: {theme.danger};
+  --danger-soft: {theme.danger_soft};
   --warn: {theme.warn};
+  --warn-soft: {theme.warn_soft};
   --ok: {theme.ok};
+  --ok-soft: {theme.ok_soft};
   --mono: {theme.font_mono};
   --sans: {theme.font_sans};
   --radius-lg: {theme.radius_lg};
@@ -175,8 +181,11 @@ register_theme(ReportTheme(
     text_soft='#a8b3c5',
     border_subtle='#1e2835',
     danger='#ff5c5c',
+    danger_soft='rgba(255, 92, 92, 0.15)',
     warn='#e6b35c',
-    ok='#4fd18b'
+    warn_soft='rgba(230, 179, 92, 0.15)',
+    ok='#4fd18b',
+    ok_soft='rgba(79, 209, 139, 0.15)'
 ))
 
 # Register light theme
@@ -193,8 +202,11 @@ register_theme(ReportTheme(
     text_soft='#6c757d',
     border_subtle='#dee2e6',
     danger='#dc3545',
+    danger_soft='rgba(220, 53, 69, 0.1)',
     warn='#ffc107',
+    warn_soft='rgba(255, 193, 7, 0.1)',
     ok='#28a745',
+    ok_soft='rgba(40, 167, 69, 0.1)',
     shadow_soft='0 4px 12px rgba(0, 0, 0, 0.1)'
 ))
 
@@ -212,6 +224,9 @@ register_theme(ReportTheme(
     text_soft='#cccccc',
     border_subtle='#404040',
     danger='#ff0000',
+    danger_soft='rgba(255, 0, 0, 0.2)',
     warn='#ffff00',
-    ok='#00ff00'
+    warn_soft='rgba(255, 255, 0, 0.2)',
+    ok='#00ff00',
+    ok_soft='rgba(0, 255, 0, 0.2)'
 ))
