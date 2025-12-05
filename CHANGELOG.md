@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.4] - 2025-12-05
 
+### Architecture Refactoring
+
+This release introduces a major codebase restructuring for better modularity and maintainability.
+
+#### New Package Structure
+```
+bobreview/
+├── core/           # Foundational utilities
+│   ├── config.py   # ReportConfig dataclass
+│   ├── cache.py    # LLM response caching
+│   ├── utils.py    # Logging, formatting
+│   └── analysis.py # Statistics calculation
+│
+├── registry/       # Unified registries
+│   ├── themes.py   # Visual themes
+│   ├── charts.py   # Chart.js configs
+│   └── pages.py    # Page definitions
+│
+├── llm/            # LLM abstraction
+│   ├── client.py   # call_llm, call_llm_chunked
+│   └── generators/ # One file per content type
+│       ├── executive.py
+│       ├── metrics.py
+│       ├── zones.py
+│       ├── optimization.py
+│       ├── recommendations.py
+│       ├── visuals.py
+│       └── stats.py
+│
+├── pages/          # HTML page renderers (renamed from report_generator)
+│   ├── base.py, homepage.py, metrics.py, etc.
+│   └── styles.css
+│
+└── report_systems/ # JSON config (unchanged)
+```
+
+#### Key Changes
+- **Split `llm_provider.py`** (814 lines) → 9 focused modules (~60-100 lines each)
+- **Unified registries** (4 files → `registry/` package)
+- **Renamed `report_generator/`** → `pages/` for clarity
+- **Deleted 8 legacy files** that were superseded by new packages
+
 ### Added
 
 #### JSON-Based Report Systems Framework
@@ -23,79 +65,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--report-system SYSTEM`: Use a built-in or custom JSON report system
   - `--list-report-systems`: List all available report systems
 
-- **New Modules** (`bobreview/report_systems/`):
-  - `schema.py`: 18 dataclasses defining the complete JSON schema
-  - `loader.py`: Discovery and loading of report systems from built-in and user directories
-  - `executor.py`: Orchestrates the complete report generation pipeline
-  - `data_parser_base.py`: Extensible data parser framework with `FilenamePatternParser`
-  - `llm_generator_base.py`: Template-based LLM content generation
-  - `page_generator_base.py`: Page rendering framework
-
 - **Built-in Report System**: `png_data_points` encapsulates the v1.0.3 workflow
-  - Stored at `report_systems/builtin/png_data_points.json`
-  - Fully backward compatible with existing CLI usage
 
 - **User Custom Systems Directory**: `~/.bobreview/report_systems/` for custom JSON definitions
-
-- **Documentation**: `REPORT_SYSTEMS_GUIDE.md` with complete schema reference and examples
 
 ### Fixed
 
 #### CSS Gradient Issues
 - **Stat Card Gradients**: Fixed invisible gradients in stat cards and UI elements
-  - Problem: Gradients from dark to darker were nearly invisible
   - Solution: Use colored tints matching border colors (accent-soft, danger-soft, warn-soft, ok-soft)
-  - Applied to: `.stat-card`, `.stats-item`, `.callout`, `.chart-container`, `.nav-links`, header meta spans
-  - All gradients now use CSS variables instead of hardcoded RGBA values
   
 - **New CSS Variables**: Added soft color variants for status colors
   - `--danger-soft: rgba(255, 92, 92, 0.15)`
   - `--warn-soft: rgba(230, 179, 92, 0.15)`
   - `--ok-soft: rgba(79, 209, 139, 0.15)`
-  - Applied to all three themes (dark, light, high_contrast)
-
-- **Theme Registry**: Extended `ReportTheme` dataclass
-  - Added `danger_soft`, `warn_soft`, `ok_soft` fields
-  - Updated `get_theme_css_variables()` to export new variables
-
-#### Report System Executor Fixes
-- **Field Name Mapping**: Automatic compatibility for `timestamp` → `ts` field names
-  - Ensures JSON definitions work with existing analysis code
-  - Backward compatibility for legacy field names
-  
-- **Page Generator Parameters**: Fixed parameter order for all page generators
-  - Corrected signatures for homepage, metrics, zones, visuals, optimization, stats
-  - Fixed LLM content mapping (`system_recs` parameter name)
-  - Proper image directory and data URI passing
-  
-- **Progress Logging**: Added detailed progress tracking
-  - Generator progress: `[1/7] Generating: Executive Summary`
-  - Page progress: `[1/6] Writing index.html...`
-  - Verbose mode shows Python vs template generator usage
-  
-- **Error Handling**: Robust exception handling for LLM generation
-  - Individual generator failures don't stop entire process
-  - Detailed error messages with generator names
-  - Continue processing remaining generators on failure
-
-- **CLI Override System**: Complete implementation of CLI argument overrides
-  - All CLI flags properly override JSON values
-  - Overrides for thresholds, LLM config, output settings, theme, pages
-  - Override precedence: CLI arguments > JSON definition > defaults
 
 ### Changed
 - **Unified Execution Path**: All report generation now uses the Report Systems framework
-- **Architecture**: BobReview is now a flexible report generation framework
-- **Backward Compatibility**: 100% compatible - existing code paths preserved
+- **Architecture**: Clean modular packages with max 200 lines per file
+- **Backward Compatibility**: 100% compatible - existing CLI commands unchanged
 
 ### Technical Details
-- **New files**: 12 files (~4,250 lines total)
-  - 7 Python modules in `bobreview/report_systems/` (~2,400 lines)
-  - 1 JSON definition (~350 lines)
-  - 4 documentation files (~1,500 lines)
-- **Modified files**: `cli.py`, `__init__.py`, `theme_registry.py`, `styles.css`, `README.md`
+- **Files created**: 25+ modular files in new package structure
+- **Files deleted**: 8 legacy files (config.py, cache.py, utils.py, analysis.py, llm_provider.py, llm_registry.py, theme_registry.py, chart_registry.py, report_generator/)
+- **Net effect**: Same functionality, cleaner organization, smaller files
 - No breaking changes - all v1.0.3 CLI commands work identically
-- Backward compatible with existing configurations
 
 ---
 

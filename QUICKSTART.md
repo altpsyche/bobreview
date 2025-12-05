@@ -294,7 +294,7 @@ bobreview --help
 bobreview --version
 
 # Test installation
-python -c "from bobreview import ReportConfig; print('Installation verified')"
+python -c "from bobreview.core import ReportConfig; print('Installation verified')"
 ```
 
 ---

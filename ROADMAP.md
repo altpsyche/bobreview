@@ -130,6 +130,15 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - FilenamePatternParser implementation
 - **COMPLETE** - Backward compatibility with v1.0.3
 
+### v1.0.4 Architecture Refactoring
+- **COMPLETE** - `core/` package (config, cache, utils, analysis)
+- **COMPLETE** - `registry/` package (themes, charts, pages unified)
+- **COMPLETE** - `llm/` package (client + 7 generators)
+- **COMPLETE** - `pages/` package (renamed from report_generator)
+- **COMPLETE** - Split llm_provider.py (814 lines) → 9 small modules
+- **COMPLETE** - Unified registries (4 files → 1 package)
+- **COMPLETE** - Max 200 lines per file guideline
+
 ---
 
 ## Planned Features
@@ -360,25 +369,18 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 
 **v1.0 - Foundation Release (Current)**
 - v1.0.0 - Initial stable release
-- v1.0.1 - Base64 image embedding + bug fix (syntax error in llm_provider.py)
+- v1.0.1 - Base64 image embedding + bug fix
 - v1.0.2 - Statistical enhancements + interactive charts
 - v1.0.3 - Registry-based modularization (LLM, charts, themes)
-- v1.0.4 - JSON report systems framework + CSS gradient fixes
+- v1.0.4 - Clean architecture refactoring + JSON report systems
+  - New packages: core/, registry/, llm/, pages/
+  - Split 814-line llm_provider.py → 9 focused modules
+  - Unified registries into single package
+  - Max 200 lines per file
 - Core refactoring complete
 - Caching implemented
 - Modular architecture with registry patterns
 - JSON-based report system definitions
-- Flexible data parsing framework
-- Template-based LLM generation
-- Complete CLI override system
-- Comprehensive documentation
-- Standalone HTML reports with embedded images
-- Interactive Chart.js visualizations
-- Advanced statistical analysis (percentiles, confidence intervals, outlier detection)
-- Theme system with 3 built-in themes (with gradient fixes)
-- Chart configuration registry
-- LLM generator registry with prompt categories
-- Page management system with dynamic navigation
 
 **v2.0 - Enterprise Release**
 - Alternative LLM support
