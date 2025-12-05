@@ -5,8 +5,8 @@ Optimization checklist page generator with actionable recommendations.
 from html import escape
 from typing import Dict, List, Any
 from .base import get_html_template, get_page_header, get_image_src, sanitize_llm_html
-from .registry import register_page, PageDefinition, get_nav_items
-from ..utils import format_number
+from ..registry.pages import register_page, PageDefinition, get_nav_items
+from ..core.utils import format_number
 
 
 def generate_optimization_page(

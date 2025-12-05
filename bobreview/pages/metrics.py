@@ -14,9 +14,9 @@ from .base import (
     sanitize_llm_html,
     render_metric_table
 )
-from .registry import register_page, PageDefinition, get_nav_items
-from ..utils import format_number
-from ..chart_registry import get_chart_defaults_js, get_dataset, get_chart
+from ..registry.pages import register_page, PageDefinition, get_nav_items
+from ..core.utils import format_number
+from ..registry.charts import get_chart_defaults_js, get_dataset, get_chart
 
 
 def generate_metrics_page(

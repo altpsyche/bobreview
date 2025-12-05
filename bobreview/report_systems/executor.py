@@ -16,15 +16,21 @@ from .schema import ReportSystemDefinition
 from .data_parser_base import DataParser, FilenamePatternParser
 from .llm_generator_base import LLMGeneratorTemplate, LLMGeneratorAdapter
 
-# Import existing modules
-from ..config import ReportConfig
-from ..analysis import analyze_data
-from ..utils import log_info, log_verbose, log_warning, log_error, image_to_base64
-from ..llm_provider import call_llm, call_llm_chunked
-from ..llm_registry import get_llm_generator, has_llm_generator
+# Import from new package structure
+from ..core import ReportConfig, analyze_data, log_info, log_verbose, log_warning, log_error, image_to_base64
+from ..llm import call_llm, call_llm_chunked
+from ..llm.generators import (
+    generate_executive_summary,
+    generate_metric_deep_dive,
+    generate_zones_hotspots,
+    generate_optimization_checklist,
+    generate_system_recommendations,
+    generate_visual_analysis,
+    generate_statistical_interpretation
+)
 
 # Import page generators
-from ..report_generator import homepage, metrics, zones, visuals, optimization, stats as stats_page
+from ..pages import homepage, metrics, zones, visuals, optimization, stats as stats_page
 
 
 class ReportSystemExecutor:
@@ -187,6 +193,24 @@ class ReportSystemExecutor:
         """
         results = {}
         
+        # Direct mapping of generator IDs to functions
+        generator_funcs = {
+            'executive_summary': generate_executive_summary,
+            'Executive Summary': generate_executive_summary,
+            'metric_deep_dive': generate_metric_deep_dive,
+            'Metric Deep Dive': generate_metric_deep_dive,
+            'zones_hotspots': generate_zones_hotspots,
+            'Zones & Hotspots': generate_zones_hotspots,
+            'optimization_checklist': generate_optimization_checklist,
+            'Optimization Checklist': generate_optimization_checklist,
+            'system_recommendations': generate_system_recommendations,
+            'System Recommendations': generate_system_recommendations,
+            'visual_analysis': generate_visual_analysis,
+            'Visual Analysis': generate_visual_analysis,
+            'statistical_interpretation': generate_statistical_interpretation,
+            'Statistical Interpretation': generate_statistical_interpretation,
+        }
+        
         # Get enabled generators
         enabled_generators = [g for g in self.system_def.llm_generators if g.enabled]
         
@@ -196,15 +220,12 @@ class ReportSystemExecutor:
             log_info(f"[{i}/{len(enabled_generators)}] Generating: {gen_config.name}", self.config)
             
             try:
-                # Check if there's a Python-based generator registered
-                # Note: Registry uses section_name which matches the generator's display name,
-                # so we check both id and name for compatibility
-                if has_llm_generator(gen_config.id) or has_llm_generator(gen_config.name):
-                    # Use existing Python generator
-                    registry_key = gen_config.id if has_llm_generator(gen_config.id) else gen_config.name
-                    log_verbose(f"  Using Python generator: {registry_key}", self.config)
-                    generator_func = get_llm_generator(registry_key)
-                    adapter = LLMGeneratorAdapter(generator_func, gen_config)
+                # Check if there's a direct Python generator
+                gen_func = generator_funcs.get(gen_config.id) or generator_funcs.get(gen_config.name)
+                if gen_func:
+                    # Use direct Python generator
+                    log_verbose(f"  Using Python generator: {gen_config.name}", self.config)
+                    adapter = LLMGeneratorAdapter(gen_func, gen_config)
                     content = adapter.generate(data_points, stats, self.config, "")
                 else:
                     # Use template-based generator

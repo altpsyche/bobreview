@@ -12,8 +12,8 @@ from .base import (
     render_stat_card,
     render_stats_item
 )
-from .registry import register_page, PageDefinition, get_nav_items, get_enabled_pages
-from ..utils import format_number
+from ..registry.pages import register_page, PageDefinition, get_nav_items, get_enabled_pages
+from ..core.utils import format_number
 
 
 def _generate_feature_cards(stats: Dict[str, Any]) -> str:

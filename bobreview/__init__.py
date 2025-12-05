@@ -10,15 +10,11 @@ __version__ = "1.0.4"
 __author__ = "BobReview Contributors"
 __description__ = "Performance analysis and review tool for game development"
 
-# Import main components for easier access
-from .config import ReportConfig
+# Import from new package structure
+from .core import ReportConfig, analyze_data
 from .data_parser import parse_filename, DataPoint
-from .analysis import analyze_data
-from .report_generator import generate_html_report
+from .pages import generate_report
 from .cli import main as cli_main
-
-# Legacy alias for backward compatibility
-generate_html = generate_html_report
 
 __all__ = [
     '__author__',
@@ -28,8 +24,7 @@ __all__ = [
     'ReportConfig',
     'analyze_data',
     'cli_main',
-    'generate_html',  # Legacy name
-    'generate_html_report',
+    'generate_report',
     'parse_filename',
 ]
 

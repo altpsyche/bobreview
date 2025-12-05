@@ -11,12 +11,10 @@ import random
 from pathlib import Path
 
 from . import __version__
-from .config import ReportConfig, validate_config
-from .utils import log_info, log_success, log_warning, log_error, log_verbose, format_number
-from .cache import init_cache, get_cache
+from .core import ReportConfig, validate_config, log_info, log_success, log_warning, log_error, log_verbose, format_number
+from .core import init_cache, get_cache, analyze_data
 from .data_parser import parse_filename
-from .analysis import analyze_data
-from .report_generator import generate_html_report
+from .pages import generate_report
 
 # Import report systems framework
 from .report_systems import load_report_system, list_available_systems
