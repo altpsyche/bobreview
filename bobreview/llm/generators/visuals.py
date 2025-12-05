@@ -19,19 +19,19 @@ def generate_visual_analysis(
     
     prompt = f"""Analyze distribution patterns (2 paragraphs):
 
-Draw Calls:
+Draw Calls (based on {len(data_points)} samples):
 - Mean: {format_number(stats['draws']['mean'], 0)}, Median: {format_number(stats['draws']['median'], 0)}
 - P90: {format_number(stats['draws']['p90'], 0)}, P95: {format_number(stats['draws']['p95'], 0)}, P99: {format_number(stats['draws']['p99'], 0)}
 - Range: {format_number(stats['draws']['min'], 0)} to {format_number(stats['draws']['max'], 0)}
 - CV: {format_number(stats['draws']['cv'], 1)}%, Trend: {stats['trends']['draws']['direction']}
 
-Triangles:
+Triangles (based on {len(data_points)} samples):
 - Mean: {format_number(stats['tris']['mean'], 0)}, Median: {format_number(stats['tris']['median'], 0)}
 - P90: {format_number(stats['tris']['p90'], 0)}, P95: {format_number(stats['tris']['p95'], 0)}, P99: {format_number(stats['tris']['p99'], 0)}
 - Range: {format_number(stats['tris']['min'])} to {format_number(stats['tris']['max'])}
 - CV: {format_number(stats['tris']['cv'], 1)}%, Trend: {stats['trends']['tris']['direction']}
 
-Cover:
+Cover (based on {len(data_points)} samples):
 1. Distribution shape (normal, skewed, bimodal)
 2. Percentile interpretation (tail behavior)
 3. Consistency (using CV)

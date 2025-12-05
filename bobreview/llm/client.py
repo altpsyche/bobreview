@@ -8,7 +8,7 @@ retry logic, and response cleaning.
 import os
 import re
 import time
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from ..core.config import ReportConfig
@@ -140,8 +140,23 @@ def call_llm_chunked(
     data_points: List[Dict[str, Any]],
     config: "ReportConfig",
     chunk_size: Optional[int] = None,
+    table_formatter: Callable[[List[Dict[str, Any]]], str] = format_data_table,
 ) -> str:
-    """Call LLM with data points in chunks and combine results."""
+    """
+    Call LLM with data points in chunks and combine results.
+    
+    Parameters:
+        prompt_base: Base prompt to use for each chunk
+        data_points: List of data point dictionaries to process
+        config: Report configuration
+        chunk_size: Number of data points per chunk (defaults to config.image_chunk_size)
+        table_formatter: Function to format data points into a table string.
+                        Defaults to format_data_table. Custom formatters can be provided
+                        for different data schemas.
+    
+    Returns:
+        Combined LLM response from all chunks
+    """
     if chunk_size is None:
         chunk_size = config.image_chunk_size
     
@@ -155,7 +170,7 @@ def call_llm_chunked(
     results = []
     for i in range(0, len(data_points), chunk_size):
         chunk = data_points[i:i + chunk_size]
-        data_table = format_data_table(chunk)
+        data_table = table_formatter(chunk)
         chunk_prompt = f"""{prompt_base}
 
 Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_points)}."""

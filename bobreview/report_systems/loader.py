@@ -10,6 +10,7 @@ This module handles:
 
 import copy
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -38,6 +39,7 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     Returns:
         List of dictionaries with 'id', 'name', 'version', 'path', 'source' keys
     """
+    logger = logging.getLogger(__name__)
     systems = []
     
     # Discover built-in systems
@@ -55,9 +57,8 @@ def discover_report_systems() -> List[Dict[str, Any]]:
                         'path': str(json_file),
                         'source': 'builtin'
                     })
-            except Exception:
-                # Skip invalid JSON files
-                pass
+            except (OSError, json.JSONDecodeError) as e:
+                logger.warning("Skipping invalid builtin report system %s: %s", json_file, e)
     
     # Discover user custom systems
     user_dir = get_user_report_systems_dir()
@@ -74,9 +75,8 @@ def discover_report_systems() -> List[Dict[str, Any]]:
                         'path': str(json_file),
                         'source': 'user'
                     })
-            except Exception:
-                # Skip invalid JSON files
-                pass
+            except (OSError, json.JSONDecodeError) as e:
+                logger.warning("Skipping invalid user report system %s: %s", json_file, e)
     
     return systems
 
@@ -203,6 +203,8 @@ def merge_cli_overrides(
             for page in merged['pages']:
                 if page.get('id') in disabled_ids:
                     page['enabled'] = False
+        # Remove CLI-only key from merged dict
+        merged.pop('disabled_pages', None)
     
     return merged
 
@@ -228,7 +230,12 @@ def load_report_system(
         ValueError: If JSON validation fails
     """
     # Check cache first
-    cache_key = f"{id_or_path}:{str(cli_overrides)}"
+    if cli_overrides is None:
+        overrides_key = ""
+    else:
+        # Normalize overrides so equivalent dicts share the same cache key
+        overrides_key = json.dumps(cli_overrides, sort_keys=True)
+    cache_key = f"{id_or_path}:{overrides_key}"
     if use_cache and cache_key in _report_system_cache:
         return _report_system_cache[cache_key]
     
