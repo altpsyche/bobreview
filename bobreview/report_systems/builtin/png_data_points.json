@@ -5,8 +5,12 @@
   "version": "1.0.0",
   "description": "Game performance analysis from PNG filename metadata. Extracts triangle counts, draw calls, and timestamps from filename patterns.",
   "author": "BobReview",
-  "tags": ["game", "performance", "graphics", "rendering"],
-  
+  "tags": [
+    "game",
+    "performance",
+    "graphics",
+    "rendering"
+  ],
   "data_source": {
     "type": "filename_pattern",
     "input_format": "png",
@@ -38,9 +42,11 @@
       "strict_mode": false
     }
   },
-  
   "metrics": {
-    "primary": ["draws", "tris"],
+    "primary": [
+      "draws",
+      "tris"
+    ],
     "derived": [
       {
         "id": "frame_time",
@@ -49,12 +55,27 @@
       }
     ],
     "statistics": {
-      "basic": ["min", "max", "mean", "median", "stdev"],
-      "advanced": ["p90", "p95", "p99", "variance", "cv"],
-      "analysis": ["confidence_interval", "trend", "outliers"]
+      "basic": [
+        "min",
+        "max",
+        "mean",
+        "median",
+        "stdev"
+      ],
+      "advanced": [
+        "p90",
+        "p95",
+        "p99",
+        "variance",
+        "cv"
+      ],
+      "analysis": [
+        "confidence_interval",
+        "trend",
+        "outliers"
+      ]
     }
   },
-  
   "thresholds": {
     "draw_soft_cap": 550,
     "draw_hard_cap": 600,
@@ -67,7 +88,6 @@
     "outlier_sigma": 2.0,
     "mad_threshold": 3.5
   },
-  
   "llm_config": {
     "provider": "openai",
     "model": "gpt-4o",
@@ -76,7 +96,6 @@
     "chunk_size": 10,
     "enable_cache": true
   },
-  
   "llm_generators": [
     {
       "id": "executive_summary",
@@ -116,7 +135,13 @@
         }
       ],
       "data_table": {
-        "columns": ["index", "testcase", "draws", "tris", "timestamp"],
+        "columns": [
+          "index",
+          "testcase",
+          "draws",
+          "tris",
+          "timestamp"
+        ],
         "sample_strategy": "mixed",
         "samples": {
           "critical": 1,
@@ -334,7 +359,6 @@
       "enabled": true
     }
   ],
-  
   "pages": [
     {
       "id": "home",
@@ -345,7 +369,9 @@
         "type": "builtin",
         "name": "homepage"
       },
-      "llm_content": ["executive_summary"],
+      "llm_content": [
+        "executive_summary"
+      ],
       "data_requirements": {
         "stats": true,
         "data_points": false,
@@ -362,11 +388,15 @@
       "filename": "metrics.html",
       "nav_label": "Metrics",
       "nav_order": 20,
+      "card_icon": "fa-chart-line",
+      "card_description": "Detailed statistical analysis of draw calls and triangle counts with interactive timelines and correlation charts.",
       "template": {
         "type": "builtin",
         "name": "metrics"
       },
-      "llm_content": ["metric_deep_dive"],
+      "llm_content": [
+        "metric_deep_dive"
+      ],
       "data_requirements": {
         "stats": true,
         "data_points": true,
@@ -380,9 +410,19 @@
           "x_field": "index",
           "y_field": "draws",
           "performance_zones": {
-            "good": {"max": "draw_soft_cap", "color": "green"},
-            "warning": {"min": "draw_soft_cap", "max": "draw_hard_cap", "color": "yellow"},
-            "critical": {"min": "draw_hard_cap", "color": "red"}
+            "good": {
+              "max": "draw_soft_cap",
+              "color": "green"
+            },
+            "warning": {
+              "min": "draw_soft_cap",
+              "max": "draw_hard_cap",
+              "color": "yellow"
+            },
+            "critical": {
+              "min": "draw_hard_cap",
+              "color": "red"
+            }
           }
         },
         {
@@ -392,9 +432,19 @@
           "x_field": "index",
           "y_field": "tris",
           "performance_zones": {
-            "good": {"max": "tri_soft_cap", "color": "green"},
-            "warning": {"min": "tri_soft_cap", "max": "tri_hard_cap", "color": "yellow"},
-            "critical": {"min": "tri_hard_cap", "color": "red"}
+            "good": {
+              "max": "tri_soft_cap",
+              "color": "green"
+            },
+            "warning": {
+              "min": "tri_soft_cap",
+              "max": "tri_hard_cap",
+              "color": "yellow"
+            },
+            "critical": {
+              "min": "tri_hard_cap",
+              "color": "red"
+            }
           }
         }
       ],
@@ -405,11 +455,15 @@
       "filename": "zones.html",
       "nav_label": "Zones",
       "nav_order": 30,
+      "card_icon": "fa-fire",
+      "card_description": "Identify high-load and low-load frames, critical hotspots, and performance zones requiring optimization.",
       "template": {
         "type": "builtin",
         "name": "zones"
       },
-      "llm_content": ["zones_hotspots"],
+      "llm_content": [
+        "zones_hotspots"
+      ],
       "data_requirements": {
         "stats": true,
         "data_points": false,
@@ -422,11 +476,15 @@
       "filename": "visuals.html",
       "nav_label": "Visuals",
       "nav_order": 40,
+      "card_icon": "fa-chart-bar",
+      "card_description": "Distribution timelines and visual breakdowns showing performance patterns across all captures.",
       "template": {
         "type": "builtin",
         "name": "visuals"
       },
-      "llm_content": ["visual_analysis"],
+      "llm_content": [
+        "visual_analysis"
+      ],
       "data_requirements": {
         "stats": true,
         "data_points": true,
@@ -448,11 +506,16 @@
       "filename": "optimization.html",
       "nav_label": "Optimization",
       "nav_order": 50,
+      "card_icon": "fa-tasks",
+      "card_description": "Actionable recommendations for addressing critical hotspots and high-load frames with budget guidelines.",
       "template": {
         "type": "builtin",
         "name": "optimization"
       },
-      "llm_content": ["optimization_checklist", "system_recommendations"],
+      "llm_content": [
+        "optimization_checklist",
+        "system_recommendations"
+      ],
       "data_requirements": {
         "stats": true,
         "data_points": true,
@@ -465,11 +528,15 @@
       "filename": "stats.html",
       "nav_label": "Statistics",
       "nav_order": 60,
+      "card_icon": "fa-calculator",
+      "card_description": "Comprehensive statistical analysis including percentiles, confidence intervals, and outlier detection.",
       "template": {
         "type": "builtin",
         "name": "stats"
       },
-      "llm_content": ["statistical_interpretation"],
+      "llm_content": [
+        "statistical_interpretation"
+      ],
       "data_requirements": {
         "stats": true,
         "data_points": true,
@@ -478,22 +545,18 @@
       "enabled": true
     }
   ],
-  
   "theme": {
     "default": "dark",
     "override_colors": {}
   },
-  
   "output": {
     "default_filename": "performance_report.html",
     "embed_images": true,
     "linked_css": false
   },
-  
   "documentation_url": "https://github.com/DiggingNebula8/bobreview",
   "examples": [
     "Level1_85000_520_1234567890.png",
     "Dark_Forest_95000_580_1234567891.png"
   ]
 }
-

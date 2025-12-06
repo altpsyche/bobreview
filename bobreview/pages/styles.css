@@ -406,6 +406,7 @@ ul.body-text li {
 }
 
 .chart-container canvas {
+  min-height: 350px;
   max-height: 400px;
 }
 
@@ -515,6 +516,7 @@ ul.body-text li {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
   margin-top: 20px;
+  align-items: stretch;
 }
 
 .feature-card {
@@ -524,6 +526,9 @@ ul.body-text li {
   padding: 20px;
   transition: all 0.3s;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 220px;
 }
 
 .feature-card:hover {
@@ -544,6 +549,11 @@ ul.body-text li {
   font-size: 13px;
   color: var(--text-soft);
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .feature-card .icon {

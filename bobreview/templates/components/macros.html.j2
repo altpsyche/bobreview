@@ -80,14 +80,14 @@
   <div class="feature-card">
     <div class="icon"><i class="fas {{ icon }}"></i></div>
     <h3>{{ title }}</h3>
-    <p>{{ description }}</p>
-    {% if pills %}
-    <div class="pill-row" style="margin-top: 12px;">
+    <p style="flex-grow: 1;">{{ description }}</p>
+    <div class="pill-row" style="margin-top: 12px; min-height: 26px;">
+      {% if pills %}
       {% for text, variant in pills %}
       {{ pill(text, variant) }}
       {% endfor %}
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 </a>
 {% endmacro %}

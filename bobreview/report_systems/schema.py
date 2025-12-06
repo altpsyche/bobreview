@@ -155,6 +155,9 @@ class PageConfig:
     charts: List[ChartConfig] = field(default_factory=list)
     features: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    # Homepage card display
+    card_icon: str = ""
+    card_description: str = ""
 
 
 @dataclass
@@ -605,7 +608,9 @@ def parse_page_config(data: Dict[str, Any]) -> PageConfig:
         data_requirements=data_requirements,
         charts=charts,
         features=data.get('features', {}),
-        enabled=data.get('enabled', True)
+        enabled=data.get('enabled', True),
+        card_icon=data.get('card_icon', ''),
+        card_description=data.get('card_description', '')
     )
 
 
