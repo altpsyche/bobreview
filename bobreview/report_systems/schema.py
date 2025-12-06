@@ -5,7 +5,7 @@ This module defines the complete schema for JSON-based report system definitions
 including validation logic and dataclass representations of all configuration sections.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Dict, List, Any, Optional
 
 
@@ -626,6 +626,46 @@ def parse_output_config(data: Dict[str, Any]) -> OutputConfig:
     )
 
 
+def parse_label_config(data: Optional[Dict[str, Any]]) -> LabelConfig:
+    """
+    Parse label configuration from JSON.
+    
+    Supports all standard LabelConfig fields plus custom keys.
+    Any keys not matching standard fields are placed in the custom dict.
+    
+    Parameters:
+        data: Optional dictionary from JSON labels section
+    
+    Returns:
+        LabelConfig with defaults overridden by provided values
+    """
+    if data is None:
+        return LabelConfig()
+    
+    # Get all standard field names from LabelConfig
+    standard_fields = {f.name for f in fields(LabelConfig)}
+    
+    # Separate standard fields from custom fields
+    standard_values = {}
+    custom_values = {}
+    
+    for key, value in data.items():
+        if key in standard_fields:
+            standard_values[key] = value
+        else:
+            # Custom label not in standard fields
+            custom_values[key] = value
+    
+    # Create LabelConfig with standard values
+    label_config = LabelConfig(**standard_values)
+    
+    # Merge custom values into the custom dict
+    if custom_values:
+        label_config.custom.update(custom_values)
+    
+    return label_config
+
+
 def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefinition:
     """
     Parse complete report system definition from JSON.
@@ -664,6 +704,7 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         pages=pages,
         theme=parse_theme_config(data['theme']),
         output=parse_output_config(data['output']),
+        labels=parse_label_config(data.get('labels')),
         tags=data.get('tags', []),
         documentation_url=data.get('documentation_url'),
         examples=data.get('examples', [])
