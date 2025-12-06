@@ -55,7 +55,7 @@
   <div class="pill-row">
     {{ pill(labels.average ~ ': ' ~ (stats.draws.mean|format_number(0)) ~ ' ' ~ labels.draw_calls ~ ' / ' ~ (stats.tris.mean|format_number(0)) ~ ' ' ~ labels.triangles, 'ok') }}
     {% if stats.draws.cv > 30 or stats.tris.cv > 30 %}
-    {{ pill('High variance detected', 'warn') }}
+    {{ pill(labels.get('high_variance_detected', 'High variance detected'), 'warn') }}
     {% endif %}
     {{ pill(labels.peak_hotspot ~ ': ' ~ critical.draws ~ ' ' ~ labels.draw_calls ~ ' / ' ~ (critical.tris|format_number) ~ ' ' ~ labels.triangles, 'danger') }}
   </div>

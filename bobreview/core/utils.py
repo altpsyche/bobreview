@@ -112,19 +112,23 @@ def format_number(n, decimals=1):
     """
     Return the number formatted with thousands separators and a fixed number of decimal places.
     
+    If ``n`` is ``None`` or cannot be formatted as a number, returns ``"N/A"``.
+    
     Parameters:
         n (int | float | None): The numeric value to format.
         decimals (int): Number of digits to show after the decimal point. If set to 0, the value is converted to an integer and the fractional part is discarded.
     
     Returns:
-        formatted (str): The number as a string with comma separators for thousands and the requested decimal precision.
+        formatted (str): The number as a string with comma separators for thousands and the requested decimal precision,
+            or ``"N/A"`` when the value is missing or invalid.
     """
     if n is None:
         return 'N/A'
     try:
         if decimals == 0:
             return f"{int(n):,}"
-        return f"{n:,.{decimals}f}"
+        else:
+            return f"{n:,.{decimals}f}"
     except (TypeError, ValueError):
         return str(n) if n else 'N/A'
 

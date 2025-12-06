@@ -32,7 +32,6 @@
     {{ stats_item(labels.get('detection_method', 'Detection Method'), labels.get('zscore', 'Z-Score (σ=' ~ config.outlier_sigma ~ ')')) }}
   </div>
   
-  {% if stats.outliers %}
   <table style="margin-top: 16px;">
     <thead>
       <tr>
@@ -55,7 +54,6 @@
       {% endfor %}
     </tbody>
   </table>
-  {% endif %}
 </section>
 {% endif %}
 

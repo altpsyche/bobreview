@@ -14,7 +14,7 @@
   {{ llm.metrics_analysis|sanitize }}
   
   <div class="summary-grid" style="margin-top: 24px;">
-    {{ stat_card(labels.draw_calls ~ ' ' ~ labels.average, stats.draws.mean|format_number(0), labels.range_label ~ ': ' ~ stats.draws.min ~ ' - ' ~ stats.draws.max, 'ok') }}
+    {{ stat_card(labels.draw_calls ~ ' ' ~ labels.average, stats.draws.mean|format_number(0), labels.range_label ~ ': ' ~ (stats.draws.min|format_number) ~ ' - ' ~ (stats.draws.max|format_number), 'ok') }}
     {{ stat_card(labels.triangles ~ ' ' ~ labels.average, stats.tris.mean|format_number(0), labels.range_label ~ ': ' ~ (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number), 'ok') }}
   </div>
 </section>

@@ -38,9 +38,8 @@
         label: Text label for the trend
 -#}
 {% macro trend_indicator(direction, label) %}
-{% set icons = {'improving': 'arrow-down', 'degrading': 'arrow-up', 'stable': 'arrow-right'} %}
 <span class="trend-indicator {{ direction }}">
-  <i class="fas fa-{{ icons.get(direction, 'arrow-right') }}"></i> {{ label }}
+  <i class="fas fa-{{ direction|trend_icon }}"></i> {{ label }}
 </span>
 {% endmacro %}
 
@@ -112,9 +111,9 @@
   </thead>
   <tbody>
     <tr><td>{{ labels.minimum }}</td><td>{{ stats.min|format_number }}</td></tr>
-    <tr><td>Q1 (25th percentile)</td><td>{{ stats.q1|format_number(0) }}</td></tr>
-    <tr><td>{{ labels.median }} (50th percentile)</td><td>{{ stats.median|format_number(0) }}</td></tr>
-    <tr><td>Q3 (75th percentile)</td><td>{{ stats.q3|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.get('q1_label', 'Q1 (25th percentile)') }}</td><td>{{ stats.q1|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.median }}{% if labels.get('median_suffix') %} {{ labels.median_suffix }}{% else %} (50th percentile){% endif %}</td><td>{{ stats.median|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.get('q3_label', 'Q3 (75th percentile)') }}</td><td>{{ stats.q3|format_number(0) }}</td></tr>
     <tr><td>{{ labels.maximum }}</td><td>{{ stats.max|format_number }}</td></tr>
     <tr><td>{{ labels.mean }}</td><td>{{ stats.mean|format_number(1) }}</td></tr>
     <tr><td>{{ labels.std_dev }}</td><td>{{ stats.stdev|format_number(1) }}</td></tr>

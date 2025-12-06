@@ -55,7 +55,13 @@ bobreview = "bobreview.cli:main"
 packages = ["bobreview", "bobreview.core", "bobreview.registry", "bobreview.llm", "bobreview.llm.generators", "bobreview.llm.providers", "bobreview.pages", "bobreview.report_systems"]
 
 [tool.setuptools.package-data]
-bobreview = ["py.typed", "pages/styles.css", "report_systems/builtin/*.json", "report_systems/builtin/*.md"]
+bobreview = [
+    "py.typed",
+    "pages/styles.css",
+    "report_systems/builtin/*.json",
+    "report_systems/builtin/*.md",
+    "templates/**/*.j2",
+]
 
 [tool.black]
 line-length = 100

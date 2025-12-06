@@ -15,6 +15,7 @@ from datetime import datetime
 import os
 import random
 import json
+import jinja2
 
 from .schema import ReportSystemDefinition, LabelConfig
 from .data_parser_base import DataParser, FilenamePatternParser
@@ -411,9 +412,9 @@ class ReportSystemExecutor:
             
             # Add charts for visuals and metrics pages
             if page_config.id == 'visuals':
-                context['charts'] = self._generate_charts(data_points, 'visuals')
+                context['charts'] = self._generate_charts(data_points, 'visuals', labels)
             elif page_config.id == 'metrics':
-                context['charts'] = self._generate_charts(data_points, 'metrics')
+                context['charts'] = self._generate_charts(data_points, 'metrics', labels)
             
             # Determine template to use
             template_name = None
@@ -429,12 +430,18 @@ class ReportSystemExecutor:
                 log_verbose(f"  Using Jinja2 template: {template_name}", self.config)
                 try:
                     html = engine.render(template_name, context, labels)
-                except Exception as e:
+                except jinja2.TemplateError as e:
                     log_error(f"Template error for {page_config.id}: {e}")
                     if self.config.verbose:
                         import traceback
                         traceback.print_exc()
                     html = f"<html><body><h1>Template Error: {page_config.id}</h1><pre>{e}</pre></body></html>"
+                except Exception as e:
+                    log_error(f"Unexpected error rendering {page_config.id}: {e}")
+                    if self.config.verbose:
+                        import traceback
+                        traceback.print_exc()
+                    raise  # Re-raise unexpected errors
             else:
                 log_warning(f"No template found for page: {page_config.id}", self.config)
                 html = f"<html><body><h1>No template: {page_config.id}</h1></body></html>"
@@ -443,9 +450,11 @@ class ReportSystemExecutor:
             with open(page_path, 'w', encoding='utf-8') as f:
                 f.write(html)
     
-    def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str) -> Dict[str, str]:
+    def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str, labels: LabelConfig) -> Dict[str, str]:
         """Generate Chart.js JavaScript code for charts."""
         charts = {}
+        # Convert labels to dict for easier access
+        labels_dict = asdict(labels)
         
         if page_type == 'visuals':
             # Timeline charts
@@ -453,12 +462,18 @@ class ReportSystemExecutor:
             tris_data = json.dumps([{'x': i, 'y': p['tris']} for i, p in enumerate(data_points)])
             scatter_data = json.dumps([{'x': p['draws'], 'y': p['tris']} for p in data_points])
             
+            # Use labels for chart text
+            draws_label = labels_dict.get('draw_calls', 'Draw Calls')
+            tris_label = labels_dict.get('triangles', 'Triangles')
+            frame_index_label = labels_dict.get('frame_index', 'Frame Index')
+            frequency_label = labels_dict.get('frequency', 'Frequency')
+            
             charts['draws_timeline'] = f"""
 new Chart(document.getElementById('drawsTimeline'), {{
     type: 'line',
     data: {{
         datasets: [{{
-            label: 'Draw Calls',
+            label: {json.dumps(draws_label)},
             data: {draws_data},
             borderColor: '#4ea1ff',
             backgroundColor: 'rgba(78, 161, 255, 0.1)',
@@ -470,8 +485,8 @@ new Chart(document.getElementById('drawsTimeline'), {{
     options: {{
         responsive: true,
         scales: {{
-            x: {{ type: 'linear', title: {{ display: true, text: 'Frame Index', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
-            y: {{ title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
+            x: {{ type: 'linear', title: {{ display: true, text: {json.dumps(frame_index_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: {json.dumps(draws_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
         }},
         plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
     }}
@@ -482,7 +497,7 @@ new Chart(document.getElementById('trisTimeline'), {{
     type: 'line',
     data: {{
         datasets: [{{
-            label: 'Triangles',
+            label: {json.dumps(tris_label)},
             data: {tris_data},
             borderColor: '#ffb347',
             backgroundColor: 'rgba(255, 179, 71, 0.1)',
@@ -494,19 +509,20 @@ new Chart(document.getElementById('trisTimeline'), {{
     options: {{
         responsive: true,
         scales: {{
-            x: {{ type: 'linear', title: {{ display: true, text: 'Frame Index', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
-            y: {{ title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
+            x: {{ type: 'linear', title: {{ display: true, text: {json.dumps(frame_index_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: {json.dumps(tris_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
         }},
         plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
     }}
 }});
 """
+            scatter_label = f"{draws_label} vs {tris_label}"
             charts['scatter'] = f"""
 new Chart(document.getElementById('scatterPlot'), {{
     type: 'scatter',
     data: {{
         datasets: [{{
-            label: 'Draw Calls vs Triangles',
+            label: {json.dumps(scatter_label)},
             data: {scatter_data},
             backgroundColor: 'rgba(78, 161, 255, 0.6)',
             borderColor: '#4ea1ff',
@@ -516,8 +532,8 @@ new Chart(document.getElementById('scatterPlot'), {{
     options: {{
         responsive: true,
         scales: {{
-            x: {{ title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
-            y: {{ title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
+            x: {{ title: {{ display: true, text: {json.dumps(draws_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: {json.dumps(tris_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }}
         }},
         plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
     }}
@@ -531,13 +547,18 @@ new Chart(document.getElementById('scatterPlot'), {{
             draws_hist = self._compute_histogram(draws_values)
             tris_hist = self._compute_histogram(tris_values)
             
+            # Use labels for chart text
+            draws_label = labels_dict.get('draw_calls', 'Draw Calls')
+            tris_label = labels_dict.get('triangles', 'Triangles')
+            frequency_label = labels_dict.get('frequency', 'Frequency')
+            
             charts['draws_histogram'] = f"""
 new Chart(document.getElementById('drawsHistogram'), {{
     type: 'bar',
     data: {{
         labels: {json.dumps(draws_hist['labels'])},
         datasets: [{{
-            label: 'Frequency',
+            label: {json.dumps(frequency_label)},
             data: {json.dumps(draws_hist['counts'])},
             backgroundColor: 'rgba(78, 161, 255, 0.6)',
             borderColor: '#4ea1ff',
@@ -547,8 +568,8 @@ new Chart(document.getElementById('drawsHistogram'), {{
     options: {{
         responsive: true,
         scales: {{
-            x: {{ title: {{ display: true, text: 'Draw Calls', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
-            y: {{ title: {{ display: true, text: 'Frequency', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}, beginAtZero: true }}
+            x: {{ title: {{ display: true, text: {json.dumps(draws_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: {json.dumps(frequency_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}, beginAtZero: true }}
         }},
         plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
     }}
@@ -560,7 +581,7 @@ new Chart(document.getElementById('trisHistogram'), {{
     data: {{
         labels: {json.dumps(tris_hist['labels'])},
         datasets: [{{
-            label: 'Frequency',
+            label: {json.dumps(frequency_label)},
             data: {json.dumps(tris_hist['counts'])},
             backgroundColor: 'rgba(255, 179, 71, 0.6)',
             borderColor: '#ffb347',
@@ -570,8 +591,8 @@ new Chart(document.getElementById('trisHistogram'), {{
     options: {{
         responsive: true,
         scales: {{
-            x: {{ title: {{ display: true, text: 'Triangles', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
-            y: {{ title: {{ display: true, text: 'Frequency', color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}, beginAtZero: true }}
+            x: {{ title: {{ display: true, text: {json.dumps(tris_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }} }},
+            y: {{ title: {{ display: true, text: {json.dumps(frequency_label)}, color: '#a8b3c5' }}, grid: {{ color: 'rgba(30, 40, 53, 0.5)' }}, beginAtZero: true }}
         }},
         plugins: {{ legend: {{ labels: {{ color: '#f5f7fb' }} }} }}
     }}

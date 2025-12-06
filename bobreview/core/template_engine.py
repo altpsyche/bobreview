@@ -32,9 +32,10 @@ class TemplateEngine:
     """
     Jinja2 template engine with multi-source loading.
     
-    Load order:
+    Load order (first match wins):
     1. User templates: ~/.bobreview/templates/
-    2. Package built-in templates: bobreview/templates/
+    2. Custom paths (if provided via custom_paths parameter)
+    3. Package built-in templates: bobreview/templates/
     """
     
     def __init__(self, custom_paths: Optional[list] = None):
@@ -84,25 +85,32 @@ class TemplateEngine:
         """
         Sanitize LLM content - handles both string and dict.
         
-        If content is a dict, extracts string values and joins them.
+        If content is a dict, recursively extracts all string values and joins them.
         If content is a string, sanitizes directly.
         Returns Markup to prevent double-escaping by Jinja2.
+        
+        Note: All content is sanitized via sanitize_llm_html before wrapping in Markup,
+        which is safe from an XSS perspective.
         """
         from markupsafe import Markup
         
         if content is None:
             return Markup('')
+        
+        def _gather_strings(obj):
+            """Recursively gather all string values from nested structures."""
+            if isinstance(obj, str):
+                return [sanitize_llm_html(obj)]
+            if isinstance(obj, dict):
+                parts = []
+                for _key, v in obj.items():
+                    parts.extend(_gather_strings(v))
+                return parts
+            return []
+        
         if isinstance(content, dict):
-            # Extract all string values from dict and join
-            parts = []
-            for key, value in content.items():
-                if isinstance(value, str):
-                    parts.append(sanitize_llm_html(value))
-                elif isinstance(value, dict):
-                    # Nested dict - recursively extract
-                    for k, v in value.items():
-                        if isinstance(v, str):
-                            parts.append(sanitize_llm_html(v))
+            # Extract all string leaves from nested dicts and join
+            parts = _gather_strings(content)
             return Markup('\n'.join(parts) if parts else '')
         return Markup(sanitize_llm_html(str(content)))
     
@@ -121,18 +129,19 @@ class TemplateEngine:
         
         Parameters:
             template_name: Name of the template file (e.g., 'pages/homepage.html.j2')
-            context: Dictionary of template variables
+            context: Dictionary of template variables (not mutated)
             labels: Optional LabelConfig for UI text labels
         
         Returns:
             Rendered HTML string
         """
-        # Always inject labels into context
+        # Copy context to avoid mutating caller's dict
+        data = dict(context)
         if labels:
-            context['labels'] = asdict(labels)
+            data['labels'] = asdict(labels)
         
         template = self.env.get_template(template_name)
-        return template.render(**context)
+        return template.render(**data)
     
     def render_string(
         self, 
@@ -145,17 +154,19 @@ class TemplateEngine:
         
         Parameters:
             template_string: Raw Jinja2 template string
-            context: Dictionary of template variables
+            context: Dictionary of template variables (not mutated)
             labels: Optional LabelConfig for UI text labels
         
         Returns:
             Rendered string
         """
+        # Copy context to avoid mutating caller's dict
+        data = dict(context)
         if labels:
-            context['labels'] = asdict(labels)
+            data['labels'] = asdict(labels)
         
         template = self.env.from_string(template_string)
-        return template.render(**context)
+        return template.render(**data)
     
     def template_exists(self, template_name: str) -> bool:
         """Check if a template exists."""
@@ -172,7 +183,11 @@ def get_template_engine(custom_paths: Optional[list] = None) -> TemplateEngine:
     Get or create the global template engine instance.
     
     Parameters:
-        custom_paths: Optional list of additional template directories
+        custom_paths: Optional list of additional template directories (only used on first call).
+            Note: This parameter is only honored when the engine is first created.
+            Subsequent calls with different custom_paths will return the existing
+            instance. To create a new instance with different paths, call
+            reset_template_engine() first.
     
     Returns:
         TemplateEngine instance

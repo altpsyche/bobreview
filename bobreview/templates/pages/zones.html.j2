@@ -1,5 +1,5 @@
 {% extends "base.html.j2" %}
-{% from "components/macros.html.j2" import stat_card, pill %}
+{% from "components/macros.html.j2" import stat_card %}
 
 {% block title %}{{ config.title }} - {{ labels.performance_zones }}{% endblock %}
 
@@ -82,6 +82,12 @@
       {% endfor %}
     </tbody>
   </table>
+  
+  {% if stats.low_load|length > 10 %}
+  <p style="margin-top: 12px; color: var(--text-soft);">
+    {{ labels.get('showing', 'Showing') }} 10 {{ labels.get('of', 'of') }} {{ stats.low_load|length }} {{ labels.low_load }} {{ labels.get('frames', 'frames') }}
+  </p>
+  {% endif %}
 </section>
 {% endif %}
 {% endblock %}

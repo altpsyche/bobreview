@@ -63,6 +63,9 @@
           {% if data.tris >= config.high_load_tri_threshold %}
           {{ labels.get('high_triangles', 'High triangle count') }}
           {% endif %}
+          {% if data.draws < config.high_load_draw_threshold and data.tris < config.high_load_tri_threshold %}
+          {{ labels.get('above_combined_threshold', 'Above combined threshold') }}
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
