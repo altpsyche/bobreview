@@ -4,37 +4,41 @@
 {% block title %}{{ config.title }} - {{ labels.optimization }}{% endblock %}
 
 {% block content %}
+{# Use namespace for counters to work across loop scopes #}
+{% set ns = namespace(
+  high_geometry_count=0,
+  high_draw_count=0,
+  over_hard_cap=0,
+  priority_critical=0,
+  priority_high=0,
+  priority_medium=0,
+  within_budget=0
+) %}
+
 {# Calculate hotspot counts #}
-{% set high_geometry_count = 0 %}
-{% set high_draw_count = 0 %}
 {% for frame in stats.high_load %}
   {% set data = frame[1] %}
   {% if data.tris >= config.high_load_tri_threshold %}
-    {% set high_geometry_count = high_geometry_count + 1 %}
+    {% set ns.high_geometry_count = ns.high_geometry_count + 1 %}
   {% endif %}
   {% if data.draws >= config.high_load_draw_threshold %}
-    {% set high_draw_count = high_draw_count + 1 %}
+    {% set ns.high_draw_count = ns.high_draw_count + 1 %}
   {% endif %}
 {% endfor %}
 
 {# Count frames exceeding caps #}
-{% set over_hard_cap = 0 %}
-{% set priority_critical = 0 %}
-{% set priority_high = 0 %}
-{% set priority_medium = 0 %}
-{% set within_budget = 0 %}
 {% for p in data_points %}
   {% if p.draws > config.draw_hard_cap or p.tris > config.tri_hard_cap %}
-    {% set over_hard_cap = over_hard_cap + 1 %}
+    {% set ns.over_hard_cap = ns.over_hard_cap + 1 %}
   {% endif %}
   {% if p.draws > config.draw_hard_cap * 1.2 or p.tris > config.tri_hard_cap * 1.2 %}
-    {% set priority_critical = priority_critical + 1 %}
-  {% elif (config.draw_hard_cap < p.draws <= config.draw_hard_cap * 1.2) or (config.tri_hard_cap < p.tris <= config.tri_hard_cap * 1.2) %}
-    {% set priority_high = priority_high + 1 %}
-  {% elif (config.draw_soft_cap < p.draws <= config.draw_hard_cap) or (config.tri_soft_cap < p.tris <= config.tri_hard_cap) %}
-    {% set priority_medium = priority_medium + 1 %}
+    {% set ns.priority_critical = ns.priority_critical + 1 %}
+  {% elif (p.draws > config.draw_hard_cap and p.draws <= config.draw_hard_cap * 1.2) or (p.tris > config.tri_hard_cap and p.tris <= config.tri_hard_cap * 1.2) %}
+    {% set ns.priority_high = ns.priority_high + 1 %}
+  {% elif (p.draws > config.draw_soft_cap and p.draws <= config.draw_hard_cap) or (p.tris > config.tri_soft_cap and p.tris <= config.tri_hard_cap) %}
+    {% set ns.priority_medium = ns.priority_medium + 1 %}
   {% elif p.draws <= config.draw_soft_cap and p.tris <= config.tri_soft_cap %}
-    {% set within_budget = within_budget + 1 %}
+    {% set ns.within_budget = ns.within_budget + 1 %}
   {% endif %}
 {% endfor %}
 
@@ -59,9 +63,9 @@
       <div class="stat-sub">Soft cap {{ config.tri_soft_cap|format_number(0) }} &middot; hard cap {{ config.tri_hard_cap|format_number(0) }}</div>
     </div>
     
-    <div class="stat-card warn">
+    <div class="stat-card {% if ns.over_hard_cap > 0 %}danger{% else %}ok{% endif %}">
       <div class="stat-label">Current Status</div>
-      <div class="stat-value">{{ over_hard_cap }}</div>
+      <div class="stat-value">{{ ns.over_hard_cap }}</div>
       <div class="stat-sub">Frames exceeding hard caps</div>
     </div>
   </div>
@@ -123,7 +127,7 @@
   <h2>{{ labels.get('high_geometry_hotspots', 'High-Geometry Hotspots') }}</h2>
   <p class="body-text">
     Frames with excessive triangle counts (≥ {{ config.high_load_tri_threshold|format_number(0) }} {{ labels.triangles|lower }}).
-    Affects <strong>{{ high_geometry_count }} frame(s)</strong>.
+    Affects <strong>{{ ns.high_geometry_count }} frame(s)</strong>.
   </p>
   
   <div class="callout" style="margin-top: 12px;">
@@ -143,7 +147,7 @@
   <h2>{{ labels.get('high_draw_hotspots', 'High-Draw Hotspots') }}</h2>
   <p class="body-text">
     Frames with excessive draw calls (≥ {{ config.high_load_draw_threshold }} {{ labels.draw_calls|lower }}).
-    Affects <strong>{{ high_draw_count }} frame(s)</strong>.
+    Affects <strong>{{ ns.high_draw_count }} frame(s)</strong>.
   </p>
   
   <div class="callout" style="margin-top: 12px;">
@@ -180,22 +184,22 @@
   <div class="stats-grid">
     <div class="stats-item" style="border-left: 3px solid var(--danger);">
       <div class="stats-item-label">Priority 1: Critical</div>
-      <div class="stats-item-value">{{ priority_critical }}</div>
+      <div class="stats-item-value">{{ ns.priority_critical }}</div>
     </div>
     
     <div class="stats-item" style="border-left: 3px solid var(--warn);">
       <div class="stats-item-label">Priority 2: High</div>
-      <div class="stats-item-value">{{ priority_high }}</div>
+      <div class="stats-item-value">{{ ns.priority_high }}</div>
     </div>
     
     <div class="stats-item" style="border-left: 3px solid var(--accent);">
       <div class="stats-item-label">Priority 3: Medium</div>
-      <div class="stats-item-value">{{ priority_medium }}</div>
+      <div class="stats-item-value">{{ ns.priority_medium }}</div>
     </div>
     
     <div class="stats-item" style="border-left: 3px solid var(--ok);">
       <div class="stats-item-label">Within Budget</div>
-      <div class="stats-item-value">{{ within_budget }}</div>
+      <div class="stats-item-value">{{ ns.within_budget }}</div>
     </div>
   </div>
 </section>
