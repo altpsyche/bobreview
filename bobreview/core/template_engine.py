@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Dict, Any, Optional, TYPE_CHECKING
 from dataclasses import asdict
 
-from jinja2 import Environment, FileSystemLoader, PackageLoader, ChoiceLoader, select_autoescape
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+    PackageLoader,
+    ChoiceLoader,
+    TemplateNotFound,
+    select_autoescape,
+)
 
 if TYPE_CHECKING:
     from ..report_systems.schema import LabelConfig
@@ -154,9 +161,10 @@ class TemplateEngine:
         """Check if a template exists."""
         try:
             self.env.get_template(template_name)
-            return True
-        except Exception:
+        except TemplateNotFound:
             return False
+        else:
+            return True
 
 
 def get_template_engine(custom_paths: Optional[list] = None) -> TemplateEngine:
