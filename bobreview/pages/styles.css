@@ -143,7 +143,7 @@ header .meta span {
   box-shadow: var(--shadow-soft);
 }
 
-.panel + .panel {
+.panel+.panel {
   margin-top: 16px;
 }
 
@@ -406,7 +406,7 @@ ul.body-text li {
 }
 
 .chart-container canvas {
-  max-height: 320px;
+  max-height: 400px;
 }
 
 .chart-title {
@@ -653,7 +653,7 @@ ul.body-text li {
   .gallery-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .gallery-item img {
     height: 100px;
   }
