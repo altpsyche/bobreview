@@ -222,176 +222,256 @@ def _classify_trend(slope: float, stdev: float, mean: float) -> str:
         return 'stable'
 
 
-def analyze_data(data_points: List[Dict[str, Any]], config: "ReportConfig") -> Dict[str, Any]:
+def calculate_metric_stats(
+    values: List[float],
+    config: "ReportConfig",
+    all_data_points: List[Dict[str, Any]] = None,
+    metric_name: str = None
+) -> Dict[str, Any]:
     """
-    Calculate statistics and identify hotspots from performance data.
+    Calculate comprehensive statistics for a single metric.
     
     Parameters:
-        data_points: List of parsed data points with 'draws', 'tris', etc.
-        config: ReportConfig object with thresholds and parameters
+        values: List of numeric values for this metric
+        config: ReportConfig object with thresholds
+        all_data_points: Optional full data points for z-score calculation
+        metric_name: Name of the metric being analyzed
     
     Returns:
-        dict: Dictionary containing statistical analysis results including:
-            - draws: Statistics for draw calls (min, max, mean, median, quartiles, percentiles, 
-                     variance, CV, stdev, outliers)
-            - tris: Statistics for triangle counts
-            - frame_times: Frame time statistics and anomalies
-            - confidence_intervals: 95% CI for draws and triangles
-            - trends: Trend analysis with slope and direction
-            - outliers_iqr: Outliers detected by IQR method
-            - outliers_mad: Outliers detected by MAD method
-            - high_load: List of high-load frames
-            - low_load: List of low-load frames
-            - critical: Critical hotspot (worst frame)
-            - count: Total number of samples
+        Dictionary with all statistics for this metric
+    """
+    n = len(values)
+    if n == 0:
+        return {
+            'min': 0, 'max': 0, 'mean': 0, 'median': 0,
+            'q1': 0, 'q3': 0, 'p90': 0, 'p95': 0, 'p99': 0,
+            'stdev': 0, 'variance': 0, 'cv': 0,
+            'ci_lower': 0, 'ci_upper': 0,
+            'outliers_high': [], 'outliers_low': []
+        }
+    
+    indices = list(range(n))
+    
+    mean_val = statistics.mean(values)
+    stdev_val = statistics.stdev(values) if n > 1 else 0
+    variance_val = statistics.variance(values) if n > 1 else 0
+    cv_val = (stdev_val / mean_val * 100) if mean_val > 0 else 0
+    
+    # Percentiles
+    if n > 1:
+        percentiles = statistics.quantiles(values, n=100)
+        p90, p95, p99 = percentiles[89], percentiles[94], percentiles[98]
+        quartiles = statistics.quantiles(values, n=4)
+        q1, q3 = quartiles[0], quartiles[2]
+    else:
+        p90 = p95 = p99 = q1 = q3 = values[0]
+    
+    # Confidence interval
+    ci = _calculate_confidence_interval(values)
+    
+    # Outlier detection
+    sigma = config.outlier_sigma
+    outliers_high = []
+    outliers_low = []
+    if all_data_points and metric_name:
+        outliers_high = [(i, p) for i, p in enumerate(all_data_points) 
+                         if metric_name in p and p[metric_name] > mean_val + sigma * stdev_val]
+        outliers_low = [(i, p) for i, p in enumerate(all_data_points) 
+                        if metric_name in p and p[metric_name] < mean_val - sigma * stdev_val]
+    
+    return {
+        'min': min(values),
+        'max': max(values),
+        'mean': mean_val,
+        'median': statistics.median(values),
+        'q1': q1,
+        'q3': q3,
+        'p90': p90,
+        'p95': p95,
+        'p99': p99,
+        'stdev': stdev_val,
+        'variance': variance_val,
+        'cv': cv_val,
+        'ci_lower': ci[0],
+        'ci_upper': ci[1],
+        'outliers_high': outliers_high,
+        'outliers_low': outliers_low
+    }
+
+
+def analyze_data(
+    data_points: List[Dict[str, Any]],
+    config: "ReportConfig",
+    metrics: List[str] = None,
+    metric_config: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Calculate statistics and identify hotspots from data.
+    
+    This function is metric-agnostic - it analyzes whatever metrics are specified.
+    
+    Parameters:
+        data_points: List of parsed data points
+        config: ReportConfig object with thresholds and parameters
+        metrics: List of metric field names to analyze (default: ['draws', 'tris'])
+        metric_config: Optional MetricConfig-like dict with:
+            - timestamp_field: Field name for timestamps (default: 'ts')
+            - identifier_field: Field name for item identifier (default: 'testcase')
+            - threshold_mapping: Maps metrics to threshold config keys
+    
+    Returns:
+        dict: Dictionary containing statistical analysis results for each metric,
+              plus high_load, low_load, critical, frame_times, trends, etc.
     """
     if not data_points:
         raise ValueError("analyze_data requires at least one data point")
     
+    # Defaults for backward compatibility
+    if metrics is None:
+        metrics = ['draws', 'tris']
+    
+    if metric_config is None:
+        metric_config = {
+            'timestamp_field': 'ts',
+            'identifier_field': 'testcase',
+            'threshold_mapping': {
+                'draws': {
+                    'high': 'high_load_draw_threshold',
+                    'low': 'low_load_draw_threshold',
+                    'soft_cap': 'draw_soft_cap',
+                    'hard_cap': 'draw_hard_cap'
+                },
+                'tris': {
+                    'high': 'high_load_tri_threshold',
+                    'low': 'low_load_tri_threshold',
+                    'soft_cap': 'tri_soft_cap',
+                    'hard_cap': 'tri_hard_cap'
+                }
+            }
+        }
+    
     n = len(data_points)
-    draws = [p['draws'] for p in data_points]
-    tris = [p['tris'] for p in data_points]
-    timestamps = [p['ts'] for p in data_points]
+    timestamp_field = metric_config.get('timestamp_field', 'ts')
+    identifier_field = metric_config.get('identifier_field', 'testcase')
+    threshold_mapping = metric_config.get('threshold_mapping', {})
     indices = list(range(n))
     
-    # Basic statistics
-    draw_mean = statistics.mean(draws)
-    draw_stdev = statistics.stdev(draws) if n > 1 else 0
-    draw_variance = statistics.variance(draws) if n > 1 else 0
-    draw_cv = (draw_stdev / draw_mean * 100) if draw_mean > 0 else 0
+    result = {'count': n}
     
-    tri_mean = statistics.mean(tris)
-    tri_stdev = statistics.stdev(tris) if n > 1 else 0
-    tri_variance = statistics.variance(tris) if n > 1 else 0
-    tri_cv = (tri_stdev / tri_mean * 100) if tri_mean > 0 else 0
-    
-    # Percentile analysis
-    if n > 1:
-        # statistics.quantiles(data, n=100) returns exactly 99 elements (P1 to P99)
-        draw_percentiles = statistics.quantiles(draws, n=100)
-        draw_p90, draw_p95, draw_p99 = draw_percentiles[89], draw_percentiles[94], draw_percentiles[98]
+    # Calculate statistics for each metric
+    for metric in metrics:
+        values = [p.get(metric, 0) for p in data_points]
+        result[metric] = calculate_metric_stats(values, config, data_points, metric)
         
-        tri_percentiles = statistics.quantiles(tris, n=100)
-        tri_p90, tri_p95, tri_p99 = tri_percentiles[89], tri_percentiles[94], tri_percentiles[98]
+        # Calculate trend for this metric
+        slope, intercept = _calculate_linear_regression(
+            [float(i) for i in indices], [float(v) for v in values]
+        )
+        stdev = result[metric]['stdev']
+        mean = result[metric]['mean']
+        direction = _classify_trend(slope, stdev, mean)
+        
+        # Add trend info
+        if 'trends' not in result:
+            result['trends'] = {}
+        result['trends'][metric] = {
+            'slope': slope,
+            'intercept': intercept,
+            'direction': direction
+        }
+        
+        # Add confidence intervals
+        if 'confidence_intervals' not in result:
+            result['confidence_intervals'] = {}
+        result['confidence_intervals'][metric] = (
+            result[metric]['ci_lower'],
+            result[metric]['ci_upper']
+        )
+        
+        # IQR and MAD outlier detection
+        if 'outliers_iqr' not in result:
+            result['outliers_iqr'] = {}
+        if 'outliers_mad' not in result:
+            result['outliers_mad'] = {}
+        result['outliers_iqr'][metric] = _detect_outliers_iqr(values, indices)
+        result['outliers_mad'][metric] = _detect_outliers_mad(values, indices, config.mad_threshold)
+    
+    # Frame time analysis using timestamp field
+    timestamps = [p.get(timestamp_field, 0) for p in data_points]
+    result['frame_times'] = _calculate_frame_times(timestamps)
+    
+    # High-load and low-load detection
+    # Uses threshold_mapping to get thresholds dynamically
+    high_load = []
+    low_load = []
+    
+    for i, p in enumerate(data_points):
+        is_high = False
+        is_low = True
+        
+        for metric in metrics:
+            if metric in threshold_mapping:
+                high_key = threshold_mapping[metric].get('high')
+                low_key = threshold_mapping[metric].get('low')
+                
+                high_threshold = getattr(config, high_key, None) if high_key else None
+                low_threshold = getattr(config, low_key, None) if low_key else None
+                
+                val = p.get(metric, 0)
+                if high_threshold is not None and val >= high_threshold:
+                    is_high = True
+                if low_threshold is not None and val >= low_threshold:
+                    is_low = False
+        
+        if is_high:
+            high_load.append((i, p))
+        if is_low and not is_high:
+            low_load.append((i, p))
+    
+    result['high_load'] = high_load
+    result['low_load'] = low_load
+    
+    # Critical hotspot detection - use first metric weighted more heavily
+    if len(metrics) >= 1:
+        primary_metric = metrics[0]
+        secondary_metric = metrics[1] if len(metrics) > 1 else None
+        
+        def score_point(i):
+            p = data_points[i]
+            score = p.get(primary_metric, 0)
+            if secondary_metric:
+                # Weight secondary metric less (normalized by factor)
+                score += p.get(secondary_metric, 0) / 1000
+            return score
+        
+        worst_idx = max(range(n), key=score_point)
+        result['critical'] = (worst_idx, data_points[worst_idx])
     else:
-        draw_p90 = draw_p95 = draw_p99 = draws[0]
-        tri_p90 = tri_p95 = tri_p99 = tris[0]
+        result['critical'] = (0, data_points[0])
     
-    # Confidence intervals
-    draw_ci = _calculate_confidence_interval(draws)
-    tri_ci = _calculate_confidence_interval(tris)
-    
-    # Frame time analysis (timestamps should already be in temporal order)
-    frame_times = _calculate_frame_times(timestamps)
-    
-    # Trend detection (using index as x-axis for temporal order)
-    draw_slope, draw_intercept = _calculate_linear_regression(
-        [float(i) for i in indices], [float(d) for d in draws]
-    )
-    tri_slope, tri_intercept = _calculate_linear_regression(
-        [float(i) for i in indices], [float(t) for t in tris]
-    )
-    
-    draw_trend_direction = _classify_trend(draw_slope, draw_stdev, draw_mean)
-    tri_trend_direction = _classify_trend(tri_slope, tri_stdev, tri_mean)
-    
-    # Outlier detection (existing sigma method)
-    sigma = config.outlier_sigma
-    draw_outliers_high = [(i, p) for i, p in enumerate(data_points) 
-                          if p['draws'] > draw_mean + sigma * draw_stdev]
-    draw_outliers_low = [(i, p) for i, p in enumerate(data_points) 
-                        if p['draws'] < draw_mean - sigma * draw_stdev]
-    tri_outliers_high = [(i, p) for i, p in enumerate(data_points) 
-                        if p['tris'] > tri_mean + sigma * tri_stdev]
-    tri_outliers_low = [(i, p) for i, p in enumerate(data_points) 
-                       if p['tris'] < tri_mean - sigma * tri_stdev]
-    
-    # IQR outlier detection
-    draw_outliers_iqr = _detect_outliers_iqr(draws, indices)
-    tri_outliers_iqr = _detect_outliers_iqr(tris, indices)
-    
-    # MAD outlier detection (using config threshold)
-    draw_outliers_mad = _detect_outliers_mad(draws, indices, config.mad_threshold)
-    tri_outliers_mad = _detect_outliers_mad(tris, indices, config.mad_threshold)
-    
-    # High-load frames: configurable thresholds
-    high_load = [(i, p) for i, p in enumerate(data_points) 
-                 if p['draws'] >= config.high_load_draw_threshold or 
-                    p['tris'] >= config.high_load_tri_threshold]
-    
-    # Low-load frames: configurable thresholds
-    low_load = [(i, p) for i, p in enumerate(data_points) 
-                if p['draws'] < config.low_load_draw_threshold and 
-                   p['tris'] < config.low_load_tri_threshold]
-    
-    # Critical hotspot (worst frame)
-    worst_idx = max(range(n), 
-                    key=lambda i: data_points[i]['draws'] + data_points[i]['tris'] / 1000)
-    critical = (worst_idx, data_points[worst_idx])
-    
-    return {
-        'draws': {
-            'min': min(draws), 
-            'max': max(draws), 
-            'mean': draw_mean, 
-            'median': statistics.median(draws),
-            'q1': statistics.quantiles(draws, n=4)[0] if n > 1 else draws[0],
-            'q3': statistics.quantiles(draws, n=4)[2] if n > 1 else draws[0],
-            'p90': draw_p90,
-            'p95': draw_p95,
-            'p99': draw_p99,
-            'stdev': draw_stdev,
-            'variance': draw_variance,
-            'cv': draw_cv,
-            'outliers_high': draw_outliers_high,
-            'outliers_low': draw_outliers_low
-        },
-        'tris': {
-            'min': min(tris), 
-            'max': max(tris), 
-            'mean': tri_mean, 
-            'median': statistics.median(tris),
-            'q1': statistics.quantiles(tris, n=4)[0] if n > 1 else tris[0],
-            'q3': statistics.quantiles(tris, n=4)[2] if n > 1 else tris[0],
-            'p90': tri_p90,
-            'p95': tri_p95,
-            'p99': tri_p99,
-            'stdev': tri_stdev,
-            'variance': tri_variance,
-            'cv': tri_cv,
-            'outliers_high': tri_outliers_high,
-            'outliers_low': tri_outliers_low
-        },
-        'frame_times': frame_times,
-        'confidence_intervals': {
-            'draws': draw_ci,
-            'tris': tri_ci
-        },
-        'trends': {
-            'draws': {
-                'slope': draw_slope,
-                'intercept': draw_intercept,
-                'direction': draw_trend_direction
-            },
-            'tris': {
-                'slope': tri_slope,
-                'intercept': tri_intercept,
-                'direction': tri_trend_direction
+    # Build outliers list for templates (combined from all metrics)
+    outliers_combined = []
+    for metric in metrics:
+        for idx, p in result[metric].get('outliers_high', []):
+            # Calculate z-score
+            mean = result[metric]['mean']
+            stdev = result[metric]['stdev']
+            if stdev > 0:
+                zscore = (p.get(metric, 0) - mean) / stdev
+            else:
+                zscore = 0
+            outlier_entry = {
+                'index': idx,
+                identifier_field: p.get(identifier_field, ''),
+                **{m: p.get(m, 0) for m in metrics},
+                'zscore': zscore
             }
-        },
-        'outliers_iqr': {
-            'draws': draw_outliers_iqr,
-            'tris': tri_outliers_iqr
-        },
-        'outliers_mad': {
-            'draws': draw_outliers_mad,
-            'tris': tri_outliers_mad
-        },
-        'high_load': high_load,
-        'low_load': low_load,
-        'critical': critical,
-        'count': n
-    }
+            if outlier_entry not in outliers_combined:
+                outliers_combined.append(outlier_entry)
+    
+    result['outliers'] = outliers_combined
+    
+    return result
 
 
 def format_data_table(

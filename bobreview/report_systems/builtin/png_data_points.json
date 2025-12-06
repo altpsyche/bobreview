@@ -47,6 +47,26 @@
       "draws",
       "tris"
     ],
+    "metric_labels": {
+      "draws": "Draw Calls",
+      "tris": "Triangle Count"
+    },
+    "threshold_mapping": {
+      "draws": {
+        "soft_cap": "draw_soft_cap",
+        "hard_cap": "draw_hard_cap",
+        "high": "high_load_draw_threshold",
+        "low": "low_load_draw_threshold"
+      },
+      "tris": {
+        "soft_cap": "tri_soft_cap",
+        "hard_cap": "tri_hard_cap",
+        "high": "high_load_tri_threshold",
+        "low": "low_load_tri_threshold"
+      }
+    },
+    "timestamp_field": "ts",
+    "identifier_field": "testcase",
     "derived": [
       {
         "id": "frame_time",
@@ -101,7 +121,7 @@
       "id": "executive_summary",
       "name": "Executive Summary",
       "description": "High-level performance overview and key findings",
-      "prompt_template": "You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:\n\nLocation: {context.location}\nTotal samples: {stats.count}\n\nDraw Calls:\n- Mean: {stats.draws.mean}, Median: {stats.draws.median}\n- P90: {stats.draws.p90}, P95: {stats.draws.p95}, P99: {stats.draws.p99}\n- CV (variability): {stats.draws.cv}%\n- 95% CI: [{stats.confidence_intervals.draws.0}, {stats.confidence_intervals.draws.1}]\n- Trend: {stats.trends.draws.direction}\n\nTriangles:\n- Mean: {stats.tris.mean}, Median: {stats.tris.median}\n- P90: {stats.tris.p90}, P95: {stats.tris.p95}, P99: {stats.tris.p99}\n- CV (variability): {stats.tris.cv}%\n- 95% CI: [{stats.confidence_intervals.tris.0}, {stats.confidence_intervals.tris.1}]\n- Trend: {stats.trends.tris.direction}\n\nAnalyze the provided data table to understand performance patterns.\n\nWrite a professional executive summary covering:\n{categories}\n\nUse HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics.",
+      "prompt_template": "You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:\n\nLocation: {context.location}\nTotal samples: {stats.count}\n\nDraw Calls:\n- Mean: {stats.draws.mean}, Median: {stats.draws.median}\n- P90: {stats.draws.p90}, P95: {stats.draws.p95}, P99: {stats.draws.p99}\n- CV (variability): {stats.draws.cv}%\n- Trend: {stats.trends.draws.direction}\n\nTriangles:\n- Mean: {stats.tris.mean}, Median: {stats.tris.median}\n- P90: {stats.tris.p90}, P95: {stats.tris.p95}, P99: {stats.tris.p99}\n- CV (variability): {stats.tris.cv}%\n- Trend: {stats.trends.tris.direction}\n\nAnalyze the provided data table to understand performance patterns.\n\nWrite a professional executive summary covering:\n{categories}\n\nUse HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics.",
       "categories": [
         {
           "id": "health",
@@ -408,44 +428,14 @@
           "type": "line",
           "title": "Draw Calls Over Time",
           "x_field": "index",
-          "y_field": "draws",
-          "performance_zones": {
-            "good": {
-              "max": "draw_soft_cap",
-              "color": "green"
-            },
-            "warning": {
-              "min": "draw_soft_cap",
-              "max": "draw_hard_cap",
-              "color": "yellow"
-            },
-            "critical": {
-              "min": "draw_hard_cap",
-              "color": "red"
-            }
-          }
+          "y_field": "draws"
         },
         {
           "id": "timeline_tris",
           "type": "line",
           "title": "Triangles Over Time",
           "x_field": "index",
-          "y_field": "tris",
-          "performance_zones": {
-            "good": {
-              "max": "tri_soft_cap",
-              "color": "green"
-            },
-            "warning": {
-              "min": "tri_soft_cap",
-              "max": "tri_hard_cap",
-              "color": "yellow"
-            },
-            "critical": {
-              "min": "tri_hard_cap",
-              "color": "red"
-            }
-          }
+          "y_field": "tris"
         }
       ],
       "enabled": true
@@ -553,6 +543,85 @@
     "default_filename": "performance_report.html",
     "embed_images": true,
     "linked_css": false
+  },
+  "content_blocks": {
+    "performance_budgets_intro": "Establish and maintain performance budgets to ensure consistent frame rates and responsive gameplay. Any capture exceeding the hard cap should be treated as a performance issue.",
+    "budget_guidelines": [
+      {
+        "title": "Soft Cap",
+        "description": "Target performance level for most scenes. Aim to stay below this threshold."
+      },
+      {
+        "title": "Hard Cap",
+        "description": "Maximum acceptable performance cost. Exceeding this requires immediate optimization."
+      },
+      {
+        "title": "Budget Tracking",
+        "description": "Monitor budgets across all development stages to prevent performance regressions."
+      }
+    ],
+    "critical_hotspot_intro": "The highest-priority optimization target. This frame has the worst performance characteristics and should be addressed first for maximum impact.",
+    "critical_hotspot_actions": [
+      "Profile this specific frame to identify expensive draw calls",
+      "Look for redundant or unnecessary rendering operations",
+      "Consider LOD (Level of Detail) systems for distant objects",
+      "Investigate potential for object culling or occlusion",
+      "Batch similar materials and meshes where possible"
+    ],
+    "geometry_strategies": [
+      {
+        "title": "LOD Systems",
+        "description": "Implement multiple levels of detail for complex meshes"
+      },
+      {
+        "title": "Mesh Simplification",
+        "description": "Reduce polygon counts on distant or less important objects"
+      },
+      {
+        "title": "Frustum Culling",
+        "description": "Ensure objects outside the camera view are not rendered"
+      },
+      {
+        "title": "Occlusion Culling",
+        "description": "Skip rendering objects hidden behind other geometry"
+      },
+      {
+        "title": "Instancing",
+        "description": "Use GPU instancing for repeated geometry"
+      }
+    ],
+    "draw_call_strategies": [
+      {
+        "title": "Batching",
+        "description": "Combine meshes with identical materials into single draw calls"
+      },
+      {
+        "title": "Material Reduction",
+        "description": "Minimize unique material instances and shader variants"
+      },
+      {
+        "title": "Atlasing",
+        "description": "Combine multiple textures into texture atlases"
+      },
+      {
+        "title": "GPU Instancing",
+        "description": "Render multiple copies of the same mesh in one call"
+      },
+      {
+        "title": "Static Batching",
+        "description": "Pre-combine static geometry at build time"
+      },
+      {
+        "title": "Dynamic Batching",
+        "description": "Combine small dynamic objects at runtime"
+      }
+    ],
+    "system_recommendations_intro": "Strategic recommendations for improving overall performance architecture and workflow.",
+    "visual_analysis_intro": "Distribution charts reveal patterns in performance data, showing how metrics are distributed across all captures. This helps identify clustering, outliers, and overall performance characteristics.",
+    "priority_matrix_intro": "Prioritize optimization work based on impact and effort. Focus on high-impact, low-effort improvements first.",
+    "zones_overview_intro": "Performance zones categorize captures based on their resource usage. This helps identify problematic areas requiring optimization and establish baseline performance expectations.",
+    "critical_hotspot_zones": "The single worst-performing capture that demands the highest priority for optimization work.",
+    "critical_hotspot_analysis": "This frame represents the peak load in the capture session. Focus optimization efforts here first, as improvements will have the most significant impact."
   },
   "documentation_url": "https://github.com/DiggingNebula8/bobreview",
   "examples": [

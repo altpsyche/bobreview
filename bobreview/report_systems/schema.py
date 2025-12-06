@@ -63,8 +63,21 @@ class StatisticsConfig:
 
 @dataclass
 class MetricConfig:
-    """Configuration for metrics and analysis."""
+    """Configuration for metrics and analysis.
+    
+    Attributes:
+        primary: List of primary metric field names to analyze (e.g., ['draws', 'tris'])
+        metric_labels: Display names for metrics (e.g., {'draws': 'Draw Calls'})
+        threshold_mapping: Maps metric names to threshold config keys
+            e.g., {'draws': {'soft_cap': 'draw_soft_cap', 'hard_cap': 'draw_hard_cap', 'high': 'high_load_draw_threshold', 'low': 'low_load_draw_threshold'}}
+        timestamp_field: Field name for timestamps (default 'ts')
+        identifier_field: Field name for item identifier/name (default 'testcase')
+    """
     primary: List[str]
+    metric_labels: Dict[str, str] = field(default_factory=dict)
+    threshold_mapping: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    timestamp_field: str = 'ts'
+    identifier_field: str = 'testcase'
     derived: List[DerivedMetricConfig] = field(default_factory=list)
     statistics: StatisticsConfig = field(default_factory=StatisticsConfig)
 
@@ -176,6 +189,13 @@ class OutputConfig:
 
 
 @dataclass
+class ContentBlockConfig:
+    """Configuration for a content block with title and description."""
+    title: str
+    description: str
+
+
+@dataclass
 class LabelConfig:
     """
     CMS-style UI text labels - all configurable via JSON.
@@ -278,6 +298,9 @@ class ReportSystemDefinition:
     
     # CMS-style labels
     labels: LabelConfig = field(default_factory=LabelConfig)
+    
+    # Content blocks for longer descriptive text (lists of ContentBlockConfig or strings)
+    content_blocks: Dict[str, Any] = field(default_factory=dict)
     
     # Optional metadata
     tags: List[str] = field(default_factory=list)
@@ -479,6 +502,10 @@ def parse_metric_config(data: Dict[str, Any]) -> MetricConfig:
     
     return MetricConfig(
         primary=data['primary'],
+        metric_labels=data.get('metric_labels', {}),
+        threshold_mapping=data.get('threshold_mapping', {}),
+        timestamp_field=data.get('timestamp_field', 'ts'),
+        identifier_field=data.get('identifier_field', 'testcase'),
         derived=derived,
         statistics=statistics
     )
@@ -710,6 +737,7 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         theme=parse_theme_config(data['theme']),
         output=parse_output_config(data['output']),
         labels=parse_label_config(data.get('labels')),
+        content_blocks=data.get('content_blocks', {}),
         tags=data.get('tags', []),
         documentation_url=data.get('documentation_url'),
         examples=data.get('examples', [])

@@ -6,6 +6,14 @@
 {% block head_scripts %}{% endblock %}
 
 {% block content %}
+{# Set up dynamic metrics - use JSON config with fallback to draws/tris #}
+{% set primary_metric = metrics[0] if metrics else 'draws' %}
+{% set secondary_metric = metrics[1] if metrics|length > 1 else 'tris' %}
+{% set primary_label = metric_labels.get(primary_metric, labels.draw_calls) if metric_labels else labels.draw_calls %}
+{% set secondary_label = metric_labels.get(secondary_metric, labels.triangles) if metric_labels else labels.triangles %}
+{% set primary_stats = stats[primary_metric] if primary_metric in stats else stats.draws %}
+{% set secondary_stats = stats[secondary_metric] if secondary_metric in stats else stats.tris %}
+
 <!-- Executive Summary Section -->
 <section class="panel">
   <h2>{{ labels.executive_summary }}</h2>
@@ -13,51 +21,51 @@
   <div class="summary-grid">
     {{ stat_card(
         labels.average,
-        (stats.draws.mean|format_number(0)) ~ ' ' ~ labels.draw_calls,
-        (stats.tris.mean|format_number(0)) ~ ' ' ~ labels.triangles ~ ' · ' ~ labels.median ~ ' ' ~ (stats.draws.median|format_number(0)) ~ ' / ' ~ (stats.tris.median|format_number(0)),
+        (primary_stats.mean|format_number(0)) ~ ' ' ~ primary_label,
+        (secondary_stats.mean|format_number(0)) ~ ' ' ~ secondary_label ~ ' · ' ~ labels.median ~ ' ' ~ (primary_stats.median|format_number(0)) ~ ' / ' ~ (secondary_stats.median|format_number(0)),
         'ok'
     ) }}
     
     {{ stat_card(
         labels.peak_hotspot,
-        critical.draws ~ ' ' ~ labels.draw_calls,
-        (critical.tris|format_number) ~ ' ' ~ labels.triangles ~ ' (index ' ~ critical.index ~ ')',
+        critical[primary_metric]|default(critical.draws) ~ ' ' ~ primary_label,
+        (critical[secondary_metric]|default(critical.tris)|format_number) ~ ' ' ~ secondary_label ~ ' (index ' ~ critical.index ~ ')',
         'danger'
     ) }}
     
     {{ stat_card(
         labels.high_load_frames,
         stats.high_load|length,
-        labels.draw_calls ~ ' ≥ ' ~ config.high_load_draw_threshold ~ ' or ' ~ labels.triangles ~ ' ≥ ' ~ (config.high_load_tri_threshold|format_number(0)),
+        primary_label ~ ' ≥ ' ~ config.high_load_draw_threshold ~ ' or ' ~ secondary_label ~ ' ≥ ' ~ (config.high_load_tri_threshold|format_number(0)),
         'warn'
     ) }}
   </div>
   
   <div style="margin-top: 12px;">
-    {{ percentile_badge(labels.p90 ~ ' ' ~ labels.draw_calls, stats.draws.p90|format_number(0)) }}
-    {{ percentile_badge(labels.p95 ~ ' ' ~ labels.draw_calls, stats.draws.p95|format_number(0)) }}
-    {{ percentile_badge(labels.p99 ~ ' ' ~ labels.draw_calls, stats.draws.p99|format_number(0)) }}
-    {{ percentile_badge(labels.p90 ~ ' ' ~ labels.triangles, stats.tris.p90|format_number(0)) }}
-    {{ percentile_badge(labels.p95 ~ ' ' ~ labels.triangles, stats.tris.p95|format_number(0)) }}
+    {{ percentile_badge(labels.p90 ~ ' ' ~ primary_label, primary_stats.p90|format_number(0)) }}
+    {{ percentile_badge(labels.p95 ~ ' ' ~ primary_label, primary_stats.p95|format_number(0)) }}
+    {{ percentile_badge(labels.p99 ~ ' ' ~ primary_label, primary_stats.p99|format_number(0)) }}
+    {{ percentile_badge(labels.p90 ~ ' ' ~ secondary_label, secondary_stats.p90|format_number(0)) }}
+    {{ percentile_badge(labels.p95 ~ ' ' ~ secondary_label, secondary_stats.p95|format_number(0)) }}
   </div>
   
   <div style="margin-top: 8px;">
-    {% if stats.trends is defined and stats.trends.draws is defined %}
+    {% if stats.trends is defined and stats.trends[primary_metric] is defined %}
     <span style="font-size: 12px; color: var(--text-soft);">{{ labels.trend }}: </span>
-    {{ trend_indicator(stats.trends.draws.direction|default('stable'), (stats.trends.draws.direction|default('stable')|title) ~ ' ' ~ labels.draw_calls) }}
-    {{ trend_indicator(stats.trends.tris.direction|default('stable'), (stats.trends.tris.direction|default('stable')|title) ~ ' ' ~ labels.triangles) }}
+    {{ trend_indicator(stats.trends[primary_metric].direction|default('stable'), (stats.trends[primary_metric].direction|default('stable')|title) ~ ' ' ~ primary_label) }}
+    {{ trend_indicator(stats.trends[secondary_metric].direction|default('stable'), (stats.trends[secondary_metric].direction|default('stable')|title) ~ ' ' ~ secondary_label) }}
     {% endif %}
-    <span style="font-size: 12px; color: var(--text-soft); margin-left: 8px;">{{ labels.cv }}: {{ stats.draws.cv|format_number(1) }}% {{ labels.draw_calls }} / {{ stats.tris.cv|format_number(1) }}% {{ labels.triangles }}</span>
+    <span style="font-size: 12px; color: var(--text-soft); margin-left: 8px;">{{ labels.cv }}: {{ primary_stats.cv|format_number(1) }}% {{ primary_label }} / {{ secondary_stats.cv|format_number(1) }}% {{ secondary_label }}</span>
   </div>
   
   {{ llm.exec_summary|sanitize }}
   
   <div class="pill-row">
-    {{ pill(labels.average ~ ': ' ~ (stats.draws.mean|format_number(0)) ~ ' ' ~ labels.draw_calls ~ ' / ' ~ (stats.tris.mean|format_number(0)) ~ ' ' ~ labels.triangles, 'ok') }}
-    {% if stats.draws.cv > 30 or stats.tris.cv > 30 %}
+    {{ pill(labels.average ~ ': ' ~ (primary_stats.mean|format_number(0)) ~ ' ' ~ primary_label ~ ' / ' ~ (secondary_stats.mean|format_number(0)) ~ ' ' ~ secondary_label, 'ok') }}
+    {% if primary_stats.cv > 30 or secondary_stats.cv > 30 %}
     {{ pill(labels.get('high_variance_detected', 'High variance detected'), 'warn') }}
     {% endif %}
-    {{ pill(labels.peak_hotspot ~ ': ' ~ critical.draws ~ ' ' ~ labels.draw_calls ~ ' / ' ~ (critical.tris|format_number) ~ ' ' ~ labels.triangles, 'danger') }}
+    {{ pill(labels.peak_hotspot ~ ': ' ~ critical[primary_metric]|default(critical.draws) ~ ' ' ~ primary_label ~ ' / ' ~ (critical[secondary_metric]|default(critical.tris)|format_number) ~ ' ' ~ secondary_label, 'danger') }}
   </div>
 </section>
 
@@ -83,11 +91,11 @@
   
   <div class="stats-grid">
     {{ stats_item(labels.total_captures, stats.count) }}
-    {{ stats_item(labels.draw_calls ~ ' ' ~ labels.range_label, stats.draws.min ~ ' - ' ~ stats.draws.max) }}
-    {{ stats_item(labels.triangles ~ ' ' ~ labels.range_label, (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number)) }}
+    {{ stats_item(primary_label ~ ' ' ~ labels.range_label, primary_stats.min ~ ' - ' ~ primary_stats.max) }}
+    {{ stats_item(secondary_label ~ ' ' ~ labels.range_label, (secondary_stats.min|format_number) ~ ' - ' ~ (secondary_stats.max|format_number)) }}
     {{ stats_item(labels.high_load_frames, stats.high_load|length) }}
     {{ stats_item(labels.low_load_frames, stats.low_load|length) }}
-    {{ stats_item(labels.performance_variance, (stats.draws.cv|format_number(1)) ~ '%') }}
+    {{ stats_item(labels.performance_variance, (primary_stats.cv|format_number(1)) ~ '%') }}
   </div>
 </section>
 {% endblock %}

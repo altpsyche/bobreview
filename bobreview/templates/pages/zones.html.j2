@@ -12,8 +12,7 @@
 <section class="panel">
   <h2>{{ labels.get('zones_overview', 'Performance Zones Overview') }}</h2>
   <p class="body-text">
-    Performance zones categorize captures based on their resource usage. This helps identify 
-    problematic areas requiring optimization and establish baseline performance expectations.
+    {{ content.zones_overview_intro|default('Performance zones categorize captures based on their resource usage. This helps identify problematic areas requiring optimization and establish baseline performance expectations.') }}
   </p>
   
   <div class="summary-grid">
@@ -27,9 +26,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.high_load }} {{ labels.get('frames', 'Frames') }}</h2>
   <p class="body-text">
-    High-load is defined as <strong>{{ labels.draw_calls }} ≥ {{ config.high_load_draw_threshold }}</strong> or
-    <strong>{{ labels.triangles }} ≥ {{ config.high_load_tri_threshold|format_number(0) }}</strong>.
-    These frames require immediate attention and optimization.
+    {{ content.high_load_description|default('High-load is defined as <strong>' ~ labels.draw_calls ~ ' ≥ ' ~ config.high_load_draw_threshold ~ '</strong> or <strong>' ~ labels.triangles ~ ' ≥ ' ~ (config.high_load_tri_threshold|format_number(0)) ~ '</strong>. These frames require immediate attention and optimization.')|safe }}
   </p>
   
   {{ llm.zones_analysis|sanitize }}
@@ -73,9 +70,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('low_load_baselines', 'Low-Load Baselines') }}</h2>
   <p class="body-text">
-    Low-load frames (<strong>{{ labels.draw_calls }} &lt; {{ config.low_load_draw_threshold }}</strong> and 
-    <strong>{{ labels.triangles }} &lt; {{ config.low_load_tri_threshold|format_number(0) }}</strong>)
-    represent baseline performance and are useful design references for optimal scenes.
+    {{ content.low_load_description|default('Low-load frames (<strong>' ~ labels.draw_calls ~ ' &lt; ' ~ config.low_load_draw_threshold ~ '</strong> and <strong>' ~ labels.triangles ~ ' &lt; ' ~ (config.low_load_tri_threshold|format_number(0)) ~ '</strong>) represent baseline performance and are useful design references for optimal scenes.')|safe }}
   </p>
   
   <table>
@@ -118,7 +113,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('critical_hotspot', 'Critical Hotspot') }}</h2>
   <p class="body-text">
-    The single worst-performing capture that demands the highest priority for optimization work.
+    {{ content.critical_hotspot_zones|default('The single worst-performing capture that demands the highest priority for optimization work.') }}
   </p>
   
   <div class="callout critical">
@@ -136,8 +131,7 @@
   {% endif %}
   
   <div class="body-text">
-    <strong>{{ labels.get('analysis', 'Analysis') }}:</strong> This frame represents the peak load in the capture session. 
-    Focus optimization efforts here first, as improvements will have the most significant impact.
+    <strong>{{ labels.get('analysis', 'Analysis') }}:</strong> {{ content.critical_hotspot_analysis|default('This frame represents the peak load in the capture session. Focus optimization efforts here first, as improvements will have the most significant impact.') }}
   </div>
 </section>
 {% endif %}

@@ -8,25 +8,33 @@
 {% endblock %}
 
 {% block content %}
+{# Set up dynamic metrics - use JSON config with fallback to draws/tris #}
+{% set primary_metric = metrics[0] if metrics else 'draws' %}
+{% set secondary_metric = metrics[1] if metrics|length > 1 else 'tris' %}
+{% set primary_label = metric_labels.get(primary_metric, labels.draw_calls) if metric_labels else labels.draw_calls %}
+{% set secondary_label = metric_labels.get(secondary_metric, labels.triangles) if metric_labels else labels.triangles %}
+{% set primary_stats = stats[primary_metric] if primary_metric in stats else stats.draws %}
+{% set secondary_stats = stats[secondary_metric] if secondary_metric in stats else stats.tris %}
+
 <section class="panel">
   <h2>{{ labels.metric_deep_dive }}</h2>
   
   {{ llm.metrics_analysis|sanitize }}
   
   <div class="summary-grid" style="margin-top: 24px;">
-    {{ stat_card(labels.draw_calls ~ ' ' ~ labels.average, stats.draws.mean|format_number(0), labels.range_label ~ ': ' ~ (stats.draws.min|format_number) ~ ' - ' ~ (stats.draws.max|format_number), 'ok') }}
-    {{ stat_card(labels.triangles ~ ' ' ~ labels.average, stats.tris.mean|format_number(0), labels.range_label ~ ': ' ~ (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number), 'ok') }}
+    {{ stat_card(primary_label ~ ' ' ~ labels.average, primary_stats.mean|format_number(0), labels.range_label ~ ': ' ~ (primary_stats.min|format_number) ~ ' - ' ~ (primary_stats.max|format_number), 'ok') }}
+    {{ stat_card(secondary_label ~ ' ' ~ labels.average, secondary_stats.mean|format_number(0), labels.range_label ~ ': ' ~ (secondary_stats.min|format_number) ~ ' - ' ~ (secondary_stats.max|format_number), 'ok') }}
   </div>
 </section>
 
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.draw_calls }} {{ labels.get('statistics', 'Statistics') }}</h2>
-  {{ metric_table(labels.draw_calls, stats.draws, labels) }}
+  <h2>{{ primary_label }} {{ labels.get('statistics', 'Statistics') }}</h2>
+  {{ metric_table(primary_label, primary_stats, labels) }}
 </section>
 
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.triangles }} {{ labels.get('statistics', 'Statistics') }}</h2>
-  {{ metric_table(labels.triangles, stats.tris, labels) }}
+  <h2>{{ secondary_label }} {{ labels.get('statistics', 'Statistics') }}</h2>
+  {{ metric_table(secondary_label, secondary_stats, labels) }}
 </section>
 
 {% if charts %}

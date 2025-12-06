@@ -154,29 +154,47 @@ class ReportSystemExecutor:
         """
         Calculate statistics based on metrics config.
         
+        Uses the metrics configuration from JSON to dynamically analyze
+        whatever fields are specified, not hardcoded draws/tris.
+        
         Parameters:
             data_points: List of parsed data points
         
         Returns:
             Statistical analysis results
         """
-        # Validate that data points have required fields
+        metrics_config = self.system_def.metrics
+        
+        # Get metric names from JSON config
+        metrics = metrics_config.primary
+        
+        # Build metric_config dict for analyze_data
+        metric_config = {
+            'timestamp_field': metrics_config.timestamp_field,
+            'identifier_field': metrics_config.identifier_field,
+            'threshold_mapping': metrics_config.threshold_mapping
+        }
+        
+        # Validate that data points have the required metrics
         if data_points:
             first_point = data_points[0]
-            required_fields = ['draws', 'tris', 'ts']  # Required by existing analysis
+            required_fields = metrics + [metrics_config.timestamp_field]
             missing_fields = [f for f in required_fields if f not in first_point]
             
             if missing_fields:
                 log_warning(
-                    f"Data points missing required fields: {', '.join(missing_fields)}. "
+                    f"Data points missing fields: {', '.join(missing_fields)}. "
                     f"Available fields: {', '.join(first_point.keys())}",
                     self.config
                 )
         
-        # Use existing analysis module (it already does what we need)
-        # In future, we could make this configurable based on JSON metrics config
         try:
-            return analyze_data(data_points, self.config)
+            return analyze_data(
+                data_points, 
+                self.config, 
+                metrics=metrics,
+                metric_config=metric_config
+            )
         except KeyError as e:
             raise ValueError(
                 f"Analysis failed: missing required field {e}. "
@@ -389,12 +407,19 @@ class ReportSystemExecutor:
                 for template_key, result_key in llm_key_map[page_config.id].items():
                     llm_content[template_key] = llm_results.get(result_key, '')
             
-            # Get critical point for homepage
+            # Get critical point - use dynamic metric names
+            metrics_config = self.system_def.metrics
+            primary_metrics = metrics_config.primary
+            critical_point = stats['critical'][1] if 'critical' in stats else {}
             critical = {
                 'index': stats['critical'][0] if 'critical' in stats else 0,
-                'draws': stats['critical'][1]['draws'] if 'critical' in stats else 0,
-                'tris': stats['critical'][1]['tris'] if 'critical' in stats else 0,
-            } if 'critical' in stats else {'index': 0, 'draws': 0, 'tris': 0}
+                **{m: critical_point.get(m, 0) for m in primary_metrics}
+            }
+            # Backward compat - keep draws/tris if they exist
+            if 'draws' not in critical and primary_metrics:
+                critical['draws'] = critical_point.get(primary_metrics[0], 0)
+            if 'tris' not in critical and len(primary_metrics) > 1:
+                critical['tris'] = critical_point.get(primary_metrics[1], 0)
             
             # Build base context for all templates
             context = {
@@ -408,6 +433,10 @@ class ReportSystemExecutor:
                 'has_images': len(images) > 0,
                 'critical': critical,
                 'meta_text': f"{stats['count']} captures · {self.config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                # New dynamic context
+                'content': self.system_def.content_blocks,
+                'metrics': primary_metrics,
+                'metric_labels': metrics_config.metric_labels,
             }
             
             # Add charts for visuals and metrics pages

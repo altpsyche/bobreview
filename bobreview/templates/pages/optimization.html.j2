@@ -46,8 +46,7 @@
 <section class="panel">
   <h2>{{ labels.get('performance_budgets', 'Performance Budgets') }}</h2>
   <p class="body-text">
-    Establish and maintain performance budgets to ensure consistent frame rates and responsive gameplay.
-    Any capture exceeding the hard cap should be treated as a performance issue.
+    {{ content.performance_budgets_intro|default('Establish and maintain performance budgets to ensure consistent frame rates and responsive gameplay. Any capture exceeding the hard cap should be treated as a performance issue.') }}
   </p>
   
   <div class="summary-grid">
@@ -73,9 +72,15 @@
   <div class="callout warn" style="margin-top: 16px;">
     <div class="callout-title">Budget Guidelines</div>
     <ul class="body-text">
+      {% if content.budget_guidelines %}
+      {% for item in content.budget_guidelines %}
+      <li><strong>{{ item.title }}:</strong> {{ item.description }}</li>
+      {% endfor %}
+      {% else %}
       <li><strong>Soft Cap:</strong> Target performance level for most scenes. Aim to stay below this threshold.</li>
       <li><strong>Hard Cap:</strong> Maximum acceptable performance cost. Exceeding this requires immediate optimization.</li>
       <li><strong>Budget Tracking:</strong> Monitor budgets across all development stages to prevent performance regressions.</li>
+      {% endif %}
     </ul>
   </div>
 </section>
@@ -84,8 +89,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('critical_hotspot', 'Critical Hotspot') }} - {{ labels.index }} {{ critical.index }}</h2>
   <p class="body-text">
-    The highest-priority optimization target. This frame has the worst performance characteristics 
-    and should be addressed first for maximum impact.
+    {{ content.critical_hotspot_intro|default('The highest-priority optimization target. This frame has the worst performance characteristics and should be addressed first for maximum impact.') }}
   </p>
   
   <div class="callout critical">
@@ -113,11 +117,17 @@
   <div class="callout" style="margin-top: 12px;">
     <div class="callout-title">Recommended Actions</div>
     <ul class="body-text">
+      {% if content.critical_hotspot_actions %}
+      {% for action in content.critical_hotspot_actions %}
+      <li>{{ action }}</li>
+      {% endfor %}
+      {% else %}
       <li>Profile this specific frame to identify expensive draw calls</li>
       <li>Look for redundant or unnecessary rendering operations</li>
       <li>Consider LOD (Level of Detail) systems for distant objects</li>
       <li>Investigate potential for object culling or occlusion</li>
       <li>Batch similar materials and meshes where possible</li>
+      {% endif %}
     </ul>
   </div>
 </section>
@@ -133,11 +143,17 @@
   <div class="callout" style="margin-top: 12px;">
     <div class="callout-title">Geometry Optimization Strategies</div>
     <ul class="body-text">
+      {% if content.geometry_strategies %}
+      {% for item in content.geometry_strategies %}
+      <li><strong>{{ item.title }}:</strong> {{ item.description }}</li>
+      {% endfor %}
+      {% else %}
       <li><strong>LOD Systems:</strong> Implement multiple levels of detail for complex meshes</li>
       <li><strong>Mesh Simplification:</strong> Reduce polygon counts on distant or less important objects</li>
       <li><strong>Frustum Culling:</strong> Ensure objects outside the camera view are not rendered</li>
       <li><strong>Occlusion Culling:</strong> Skip rendering objects hidden behind other geometry</li>
       <li><strong>Instancing:</strong> Use GPU instancing for repeated geometry</li>
+      {% endif %}
     </ul>
   </div>
 </section>
@@ -153,12 +169,18 @@
   <div class="callout" style="margin-top: 12px;">
     <div class="callout-title">Draw Call Optimization Strategies</div>
     <ul class="body-text">
+      {% if content.draw_call_strategies %}
+      {% for item in content.draw_call_strategies %}
+      <li><strong>{{ item.title }}:</strong> {{ item.description }}</li>
+      {% endfor %}
+      {% else %}
       <li><strong>Batching:</strong> Combine meshes with identical materials into single draw calls</li>
       <li><strong>Material Reduction:</strong> Minimize unique material instances and shader variants</li>
       <li><strong>Atlasing:</strong> Combine multiple textures into texture atlases</li>
       <li><strong>GPU Instancing:</strong> Render multiple copies of the same mesh in one call</li>
       <li><strong>Static Batching:</strong> Pre-combine static geometry at build time</li>
       <li><strong>Dynamic Batching:</strong> Combine small dynamic objects at runtime</li>
+      {% endif %}
     </ul>
   </div>
 </section>
