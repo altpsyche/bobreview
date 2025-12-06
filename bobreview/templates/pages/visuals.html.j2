@@ -1,4 +1,5 @@
 {% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, stats_item %}
 
 {% block title %}{{ config.title }} - {{ labels.visual_analysis }}{% endblock %}
 
@@ -9,52 +10,92 @@
 {% block content %}
 <section class="panel">
   <h2>{{ labels.visual_analysis }}</h2>
+  <p class="body-text">
+    Distribution charts reveal patterns in performance data, showing how draw calls and triangle counts 
+    are distributed across all captures. This helps identify clustering, outliers, and overall performance characteristics.
+  </p>
   
   {{ llm.visual_analysis|sanitize }}
-</section>
-
-<!-- Timeline Charts -->
-<section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.draw_calls }} {{ labels.get('timeline', 'Timeline') }}</h2>
-  <div class="chart-container">
-    <canvas id="drawsTimeline"></canvas>
+  
+  <div class="summary-grid" style="margin-top: 16px;">
+    <div class="stat-card">
+      <div class="stat-label">{{ labels.draw_calls }} Distribution</div>
+      <div class="stat-value">{{ stats.draws.min }} - {{ stats.draws.max }}</div>
+      <div class="stat-sub">Range of {{ stats.draws.max - stats.draws.min }} {{ labels.draw_calls|lower }}</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">{{ labels.triangles }} Distribution</div>
+      <div class="stat-value">{{ stats.tris.min|format_number }} - {{ stats.tris.max|format_number }}</div>
+      <div class="stat-sub">Range of {{ (stats.tris.max - stats.tris.min)|format_number }} {{ labels.triangles|lower }}</div>
+    </div>
   </div>
 </section>
 
+<!-- Draw Calls Timeline -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.draw_calls }} {{ labels.get('timeline', 'Timeline') }}</h2>
+  <p class="body-text">
+    Timeline showing how draw calls vary across captures.
+    Color-coded by performance zone: <span style="color: var(--ok);">●</span> good, 
+    <span style="color: var(--warn);">●</span> warning, 
+    <span style="color: var(--danger);">●</span> critical.
+  </p>
+  
+  <div class="chart-container">
+    <div class="chart-description">
+      Key percentiles: <span style="color: var(--accent);">Median (P50)</span> at {{ stats.draws.median|format_number(0) }}, 
+      <span style="color: var(--warn);">P90</span> at {{ stats.draws.p90|format_number(0) }}, 
+      <span style="color: var(--danger);">P95</span> at {{ stats.draws.p95|format_number(0) }}.
+    </div>
+    <canvas id="drawsTimeline"></canvas>
+  </div>
+  
+  <div class="stats-grid" style="margin-top: 16px;">
+    {{ stats_item('Q1 (25th percentile)', stats.draws.q1|format_number(0)) }}
+    {{ stats_item('Median (50th percentile)', stats.draws.median|format_number(0)) }}
+    {{ stats_item('Q3 (75th percentile)', stats.draws.q3|format_number(0)) }}
+    {{ stats_item('Standard Deviation', stats.draws.stdev|format_number(1)) }}
+  </div>
+</section>
+
+<!-- Triangle Count Timeline -->
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.triangles }} {{ labels.get('timeline', 'Timeline') }}</h2>
+  <p class="body-text">
+    Timeline showing how triangle counts vary across captures.
+    This reveals geometry complexity patterns in your scenes.
+  </p>
+  
   <div class="chart-container">
+    <div class="chart-description">
+      Key percentiles: <span style="color: var(--accent);">Median (P50)</span> at {{ stats.tris.median|format_number(0) }}, 
+      <span style="color: var(--warn);">P90</span> at {{ stats.tris.p90|format_number(0) }}, 
+      <span style="color: var(--danger);">P95</span> at {{ stats.tris.p95|format_number(0) }}.
+    </div>
     <canvas id="trisTimeline"></canvas>
+  </div>
+  
+  <div class="stats-grid" style="margin-top: 16px;">
+    {{ stats_item('Q1 (25th percentile)', stats.tris.q1|format_number(0)) }}
+    {{ stats_item('Median (50th percentile)', stats.tris.median|format_number(0)) }}
+    {{ stats_item('Q3 (75th percentile)', stats.tris.q3|format_number(0)) }}
+    {{ stats_item('Standard Deviation', stats.tris.stdev|format_number(0)) }}
   </div>
 </section>
 
 <!-- Scatter Plot -->
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.draw_calls }} vs {{ labels.triangles }}</h2>
+  <p class="body-text">
+    Scatter plot showing the relationship between draw calls and triangle counts.
+    Points are color-coded by performance zone.
+  </p>
+  
   <div class="chart-container">
     <canvas id="scatterPlot"></canvas>
   </div>
 </section>
-
-<!-- Sample Gallery -->
-{% if images %}
-<section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('sample_gallery', 'Sample Gallery') }}</h2>
-  <p class="body-text">{{ labels.get('sample_gallery_desc', 'Visual samples from the analysis:') }}</p>
-  
-  <div class="gallery-grid">
-    {% for img in images[:12] %}
-    <div class="gallery-item">
-      <img src="{{ img.src }}" alt="{{ img.testcase }}" loading="lazy" />
-      <div class="gallery-caption">
-        <strong>{{ img.testcase }}</strong><br>
-        {{ labels.draw_calls }}: {{ img.draws }} | {{ labels.triangles }}: {{ img.tris|format_number }}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}

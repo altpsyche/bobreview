@@ -94,11 +94,13 @@
         <td>{{ point.testcase }}</td>
         <td>{{ point.draws }}</td>
         <td>{{ point.tris|format_number }}</td>
-        <td>{{ point.timestamp }}</td>
-        {% if has_images and point.image_src %}
-        <td><img src="{{ point.image_src }}" alt="{{ point.testcase }}" class="thumb" loading="lazy" /></td>
-        {% elif has_images %}
-        <td>-</td>
+        <td>{{ point.ts }}</td>
+        {% if has_images %}
+        <td>
+          {% if images[loop.index0] is defined %}
+          <img src="{{ images[loop.index0].src }}" alt="{{ point.testcase }}" class="thumb-small" loading="lazy" />
+          {% else %}-{% endif %}
+        </td>
         {% endif %}
       </tr>
       {% endfor %}
