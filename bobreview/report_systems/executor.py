@@ -6,6 +6,8 @@ The executor takes a ReportSystemDefinition and executes it:
 2. Calculate statistics based on metrics config  
 3. Generate LLM content for configured generators
 4. Generate HTML pages from Jinja2 templates (CMS-style)
+
+NOTE: This executor now uses the services package for modular, pluggable processing.
 """
 
 from pathlib import Path
@@ -36,9 +38,22 @@ from ..llm.generators import (
     generate_statistical_interpretation
 )
 
+# Import services and plugin system
+from ..services import get_container, DataService, AnalyticsService, ChartService, LLMService
+from ..plugins import get_registry
+
 
 class ReportSystemExecutor:
-    """Executes a report system from JSON definition."""
+    """
+    Executes a report system from JSON definition.
+    
+    Uses the services package for modular processing:
+    - DataService for parsing
+    - AnalyticsService for statistics
+    - ChartService for chart generation
+    
+    Plugins can replace services via the ServiceContainer.
+    """
     
     def __init__(self, system_def: ReportSystemDefinition, config: ReportConfig):
         """
@@ -50,6 +65,11 @@ class ReportSystemExecutor:
         """
         self.system_def = system_def
         self.config = config
+        
+        # Get service container
+        self.container = get_container()
+        self._ensure_services()
+        
         self._merge_config()
     
     def _merge_config(self):
@@ -83,6 +103,35 @@ class ReportSystemExecutor:
         theme_cfg = self.system_def.theme
         self.config.theme_id = theme_cfg.default
     
+    def _ensure_services(self):
+        """
+        Ensure required services are available.
+        
+        Most services are registered by the core plugin.
+        LLMService is registered here because it needs runtime config.
+        """
+        # Verify core services are available (registered by core plugin)
+        required = ['data', 'analytics', 'charts']
+        for service_name in required:
+            if not self.container.has(service_name):
+                raise RuntimeError(
+                    f"Required service '{service_name}' not found. "
+                    f"Ensure the core plugin is loaded."
+                )
+        
+        # LLM service needs runtime config, so we register it here
+        if not self.container.has('llm'):
+            llm_config = {
+                'provider': self.config.llm_provider,
+                'api_key': self.config.llm_api_key,
+                'model': getattr(self.config, 'openai_model', None) or self.config.llm_model,
+                'temperature': self.config.llm_temperature,
+                'max_tokens': self.config.llm_max_tokens,
+                'use_cache': self.config.use_cache,
+            }
+            self.container.register('llm', LLMService(llm_config))
+            log_verbose("Registered LLMService with runtime config", self.config)
+    
     def execute(self, input_dir: Path, output_path: Path) -> bool:
         """
         Execute complete report generation pipeline.
@@ -97,7 +146,7 @@ class ReportSystemExecutor:
         log_info(f"Executing report system: {self.system_def.name}", self.config)
         log_verbose(f"System ID: {self.system_def.id} v{self.system_def.version}", self.config)
         
-        # 1. Parse data
+        # 1. Parse data (using DataService)
         data_points = self.parse_data(input_dir)
         if not data_points:
             log_warning("No data points found", self.config)
@@ -105,7 +154,7 @@ class ReportSystemExecutor:
         
         log_info(f"Parsed {len(data_points)} data points", self.config)
         
-        # 2. Calculate statistics
+        # 2. Calculate statistics (using AnalyticsService)
         stats = self.analyze_data(data_points)
         log_info("Statistical analysis complete", self.config)
         
@@ -120,7 +169,7 @@ class ReportSystemExecutor:
     
     def parse_data(self, input_dir: Path) -> List[Dict[str, Any]]:
         """
-        Parse data using configured data source.
+        Parse data using DataService from the container.
         
         Parameters:
             input_dir: Directory containing input files
@@ -128,31 +177,19 @@ class ReportSystemExecutor:
         Returns:
             List of parsed data points
         """
-        data_source_config = self.system_def.data_source
+        # Use DataService from container (allows plugin override)
+        data_service: DataService = self.container.get('data')
         
-        # Create appropriate parser based on type
-        parser: DataParser
-        if data_source_config.type == 'filename_pattern':
-            parser = FilenamePatternParser(data_source_config)
-        else:
-            raise ValueError(f"Unsupported data source type: {data_source_config.type}")
-        
-        # Parse directory
-        data_points = parser.parse_directory(input_dir)
-        
-        # Apply sampling if configured
-        if self.config.sample_size and self.config.sample_size < len(data_points):
-            data_points = random.sample(data_points, self.config.sample_size)
-        
-        # Sort by timestamp if available
-        if data_points and 'ts' in data_points[0]:
-            data_points.sort(key=lambda x: x.get('ts', 0))
-        
-        return data_points
+        return data_service.parse(
+            input_dir=input_dir,
+            data_source_config=self.system_def.data_source,
+            sample_size=self.config.sample_size,
+            sort_by=self.system_def.metrics.timestamp_field
+        )
     
     def analyze_data(self, data_points: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Calculate statistics based on metrics config.
+        Calculate statistics using AnalyticsService from the container.
         
         Uses the metrics configuration from JSON to dynamically analyze
         whatever fields are specified, not hardcoded draws/tris.
@@ -163,41 +200,20 @@ class ReportSystemExecutor:
         Returns:
             Statistical analysis results
         """
-        metrics_config = self.system_def.metrics
-        
-        # Get metric names from JSON config
-        metrics = metrics_config.primary
-        
-        # Build metric_config dict for analyze_data
-        metric_config = {
-            'timestamp_field': metrics_config.timestamp_field,
-            'identifier_field': metrics_config.identifier_field,
-            'threshold_mapping': metrics_config.threshold_mapping
-        }
-        
-        # Validate that data points have the required metrics
-        if data_points:
-            first_point = data_points[0]
-            required_fields = metrics + [metrics_config.timestamp_field]
-            missing_fields = [f for f in required_fields if f not in first_point]
-            
-            if missing_fields:
-                log_warning(
-                    f"Data points missing fields: {', '.join(missing_fields)}. "
-                    f"Available fields: {', '.join(first_point.keys())}",
-                    self.config
-                )
+        # Use AnalyticsService from container (allows plugin override)
+        analytics_service: AnalyticsService = self.container.get('analytics')
         
         try:
-            return analyze_data(
-                data_points, 
-                self.config, 
-                metrics=metrics,
-                metric_config=metric_config
+            # Pass the full report_config - service uses it directly
+            return analytics_service.analyze(
+                data_points=data_points,
+                metrics=self.system_def.metrics.primary,
+                metrics_config=self.system_def.metrics,
+                report_config=self.config  # Pass config directly, no dict building
             )
-        except KeyError as e:
+        except Exception as e:
             raise ValueError(
-                f"Analysis failed: missing required field {e}. "
+                f"Analysis failed: {e}. "
                 f"Check that your data source configuration produces the required fields."
             ) from e
     
@@ -207,7 +223,7 @@ class ReportSystemExecutor:
         stats: Dict[str, Any]
     ) -> Dict[str, str]:
         """
-        Generate content for all LLM generators.
+        Generate content for all LLM generators using LLMService.
         
         Parameters:
             data_points: List of data points
@@ -216,80 +232,26 @@ class ReportSystemExecutor:
         Returns:
             Dictionary mapping generator ID to generated content
         """
-        results = {}
+        # Use LLMService from container (allows plugin override)
+        llm_service: LLMService = self.container.get('llm')
         
-        # Direct mapping of generator IDs to functions
-        generator_funcs = {
-            'executive_summary': generate_executive_summary,
-            'Executive Summary': generate_executive_summary,
-            'metric_deep_dive': generate_metric_deep_dive,
-            'Metric Deep Dive': generate_metric_deep_dive,
-            'zones_hotspots': generate_zones_hotspots,
-            'Zones & Hotspots': generate_zones_hotspots,
-            'optimization_checklist': generate_optimization_checklist,
-            'Optimization Checklist': generate_optimization_checklist,
-            'system_recommendations': generate_system_recommendations,
-            'System Recommendations': generate_system_recommendations,
-            'visual_analysis': generate_visual_analysis,
-            'Visual Analysis': generate_visual_analysis,
-            'statistical_interpretation': generate_statistical_interpretation,
-            'Statistical Interpretation': generate_statistical_interpretation,
+        # Build context for generators
+        context = {
+            'location': self.config.location,
+            'title': self.config.title
         }
+        context.update(self.system_def.thresholds)
         
-        # Get enabled generators
-        enabled_generators = [g for g in self.system_def.llm_generators if g.enabled]
+        log_info(f"Generating LLM content for {len([g for g in self.system_def.llm_generators if g.enabled])} sections...", self.config)
         
-        log_info(f"Generating LLM content for {len(enabled_generators)} sections...", self.config)
-        
-        for i, gen_config in enumerate(enabled_generators, 1):
-            log_info(f"[{i}/{len(enabled_generators)}] Generating: {gen_config.name}", self.config)
-            
-            try:
-                # Check if there's a direct Python generator
-                gen_func = generator_funcs.get(gen_config.id) or generator_funcs.get(gen_config.name)
-                if gen_func:
-                    # Use direct Python generator
-                    log_verbose(f"  Using Python generator: {gen_config.name}", self.config)
-                    adapter = LLMGeneratorAdapter(gen_func, gen_config)
-                    content = adapter.generate(data_points, stats, self.config, "")
-                else:
-                    # Use template-based generator
-                    log_verbose(f"  Using template generator: {gen_config.name}", self.config)
-                    template = LLMGeneratorTemplate(gen_config)
-                    
-                    # Select data samples
-                    selected_data = template.select_data_samples(data_points, stats)
-                    
-                    # Build prompt
-                    context = {
-                        'location': self.config.location,
-                        'title': self.config.title
-                    }
-                    context.update(self.system_def.thresholds)
-                    
-                    prompt = template.build_prompt(stats, selected_data, context)
-                    
-                    # Format data table
-                    data_table = template.format_data_table(selected_data)
-                    
-                    # Call LLM
-                    if self.config.dry_run:
-                        content = f"<p>Dry run mode - {gen_config.name} would appear here</p>"
-                    else:
-                        content = call_llm(prompt, data_table=data_table, config=self.config)
-                
-                results[gen_config.id] = content
-                log_verbose(f"  ✓ Generated {gen_config.name}", self.config)
-                
-            except Exception as e:
-                log_error(f"Failed to generate {gen_config.name}: {e}")
-                if self.config.verbose:
-                    import traceback
-                    traceback.print_exc()
-                # Continue with other generators
-                results[gen_config.id] = f"<p>Error generating content: {e}</p>"
-        
-        return results
+        return llm_service.generate_all(
+            generators=self.system_def.llm_generators,
+            data_points=data_points,
+            stats=stats,
+            context=context,
+            dry_run=self.config.dry_run,
+            report_config=self.config
+        )
     
     def generate_pages(
         self,
@@ -480,36 +442,41 @@ class ReportSystemExecutor:
                 f.write(html)
     
     def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str, labels: LabelConfig) -> Dict[str, str]:
-        """Generate Chart.js JavaScript code for charts with performance zones."""
+        """
+        Generate Chart.js JavaScript code for charts with performance zones.
+        
+        Uses ChartService from the container for theme colors and helper methods.
+        """
         charts = {}
         # Labels is now a simple wrapper class with .data property, not a dataclass
         labels_dict = labels.data if hasattr(labels, 'data') else {}
         
-        # Get theme colors for charts
-        theme = get_theme()
+        # Get ChartService from container (allows plugin override)
+        chart_service: ChartService = self.container.get('charts')
         
-        # Helper to convert hex to rgba
-        def hex_to_rgba(hex_color: str, alpha: float = 1.0) -> str:
-            hex_color = hex_color.lstrip('#')
-            r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-            return f"rgba({r}, {g}, {b}, {alpha})"
+        # Get theme colors from service
+        colors = chart_service.get_theme_colors()
+        theme = chart_service.theme
         
-        # Theme-based colors
-        danger_color = hex_to_rgba(theme.danger, 0.9)
-        danger_color_soft = hex_to_rgba(theme.danger, 0.7)
-        danger_color_bg = hex_to_rgba(theme.danger, 0.8)
-        ok_color = hex_to_rgba(theme.ok, 0.9)
-        ok_color_soft = hex_to_rgba(theme.ok, 0.7)
-        ok_color_bg = hex_to_rgba(theme.ok, 0.8)
-        warn_color = hex_to_rgba(theme.warn, 0.9)
-        warn_color_soft = hex_to_rgba(theme.warn, 0.7)
-        accent_gradient_top = hex_to_rgba(theme.accent, 0.4)
-        accent_gradient_bottom = hex_to_rgba(theme.accent, 0.02)
-        accent_strong_gradient_top = hex_to_rgba(theme.accent_strong, 0.4)
-        accent_strong_gradient_bottom = hex_to_rgba(theme.accent_strong, 0.02)
-        grid_color = hex_to_rgba(theme.border_subtle, 0.5)
-        grid_color_light = hex_to_rgba(theme.border_subtle, 0.3)
-        tooltip_bg = hex_to_rgba(theme.bg_elevated, 0.95)
+        # Use service's hex_to_rgba helper
+        hex_to_rgba = chart_service.hex_to_rgba
+        
+        # Theme-based colors (from service)
+        danger_color = colors['danger']
+        danger_color_soft = colors['danger_soft']
+        danger_color_bg = colors['danger_bg']
+        ok_color = colors['ok']
+        ok_color_soft = colors['ok_soft']
+        ok_color_bg = colors['ok_bg']
+        warn_color = colors['warn']
+        warn_color_soft = colors['warn_soft']
+        accent_gradient_top = colors['accent_top']
+        accent_gradient_bottom = colors['accent_bottom']
+        accent_strong_gradient_top = colors['accent_strong_top']
+        accent_strong_gradient_bottom = colors['accent_strong_bottom']
+        grid_color = colors['grid']
+        grid_color_light = colors['grid_light']
+        tooltip_bg = colors['tooltip_bg']
         
         # Get labels
         draws_label = labels_dict.get('draw_calls', 'Draw Calls')

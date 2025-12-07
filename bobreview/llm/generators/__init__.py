@@ -2,6 +2,7 @@
 LLM content generators for BobReview.
 
 Each generator produces specific content sections for the report.
+Generators are registered by the core plugin, not directly here.
 """
 
 from .executive import generate_executive_summary

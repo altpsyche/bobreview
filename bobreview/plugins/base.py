@@ -53,6 +53,17 @@ class BasePlugin(ABC):
     # Optional metadata
     dependencies: List[str] = []
     
+    def __init__(self):
+        self._config = {}
+    
+    def get_config(self) -> dict:
+        """Get plugin configuration."""
+        return self._config
+    
+    def set_config(self, config: dict) -> None:
+        """Set plugin configuration."""
+        self._config = config or {}
+    
     @abstractmethod
     def on_load(self, registry: 'PluginRegistry') -> None:
         """

@@ -132,10 +132,14 @@ class TemplateEngine:
                     return match.group(0)
             
             # Format numbers nicely
+            # For game dev metrics, most values are counts (draws, tris) so show as integers
             if isinstance(value, float):
+                rounded = round(value)
+                # Always show as integer if it's a "typical count" value
                 if value >= 1000:
-                    return f"{value:,.0f}"
-                return f"{value:.1f}"
+                    return f"{rounded:,}"
+                # For smaller values, show as integer (no decimals for draws/tris)
+                return str(rounded)
             if isinstance(value, int) and value >= 1000:
                 return f"{value:,}"
             return str(value)

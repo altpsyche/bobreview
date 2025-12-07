@@ -167,8 +167,8 @@ def get_theme_css_variables(theme_id: Optional[str] = None) -> str:
 }}"""
 
 
-# Register default dark theme
-register_theme(ReportTheme(
+# Theme definitions (exported as constants for plugin registration)
+DARK_THEME = ReportTheme(
     id='dark',
     name='Dark (Default)',
     bg='#070b10',
@@ -186,10 +186,9 @@ register_theme(ReportTheme(
     warn_soft='rgba(230, 179, 92, 0.15)',
     ok='#4fd18b',
     ok_soft='rgba(79, 209, 139, 0.15)'
-))
+)
 
-# Register light theme
-register_theme(ReportTheme(
+LIGHT_THEME = ReportTheme(
     id='light',
     name='Light',
     bg='#f8f9fa',
@@ -208,10 +207,9 @@ register_theme(ReportTheme(
     ok='#28a745',
     ok_soft='rgba(40, 167, 69, 0.1)',
     shadow_soft='0 4px 12px rgba(0, 0, 0, 0.1)'
-))
+)
 
-# Register high contrast theme
-register_theme(ReportTheme(
+HIGH_CONTRAST_THEME = ReportTheme(
     id='high_contrast',
     name='High Contrast',
     bg='#000000',
@@ -229,4 +227,7 @@ register_theme(ReportTheme(
     warn_soft='rgba(255, 255, 0, 0.2)',
     ok='#00ff00',
     ok_soft='rgba(0, 255, 0, 0.2)'
-))
+)
+
+# All built-in themes (for easy iteration by plugins)
+BUILTIN_THEMES = [DARK_THEME, LIGHT_THEME, HIGH_CONTRAST_THEME]

@@ -1,0 +1,35 @@
+{
+    "name": "bobreview-core",
+    "version": "1.0.0",
+    "author": "BobReview Team",
+    "description": "Core BobReview functionality: LLM generators, data parsers, themes, and services.",
+    "entry_point": "plugin",
+    "dependencies": [],
+    "provides": [
+        "llm-generators",
+        "data-parsers",
+        "themes",
+        "services"
+    ],
+    "min_bobreview_version": "0.5.0",
+    "config_schema": {
+        "type": "object",
+        "properties": {
+            "register_default_theme": {
+                "type": "boolean",
+                "default": true,
+                "description": "Register the default dark theme"
+            },
+            "register_generators": {
+                "type": "boolean",
+                "default": true,
+                "description": "Register built-in LLM generators"
+            },
+            "register_services": {
+                "type": "boolean",
+                "default": true,
+                "description": "Register default service implementations"
+            }
+        }
+    }
+}

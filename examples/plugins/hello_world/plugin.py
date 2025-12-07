@@ -43,6 +43,9 @@ class HelloWorldPlugin(BasePlugin):
     description = "Example plugin demonstrating the plugin system"
     dependencies = []
     
+    def __init__(self):
+        super().__init__()
+    
     def on_load(self, registry: PluginRegistry) -> None:
         """
         Called when the plugin is loaded.

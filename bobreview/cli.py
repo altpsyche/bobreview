@@ -56,7 +56,14 @@ def _get_default_plugin_dirs():
 
 
 def _load_plugins(extra_dirs, config):
-    """Load plugins from default and extra directories."""
+    """
+    Load plugins from default and extra directories.
+    
+    The core plugin is always loaded first to provide built-in functionality.
+    """
+    # Load the core plugin first - it provides all default functionality
+    _load_core_plugin(config)
+    
     dirs = _get_default_plugin_dirs()
     
     # Add extra directories from CLI
@@ -66,17 +73,28 @@ def _load_plugins(extra_dirs, config):
             dirs.append(path)
     
     if not dirs:
-        log_verbose("No plugin directories configured", config)
+        log_verbose("No additional plugin directories configured", config)
         return
     
     loader = init_loader(dirs)
     discovered = loader.discover()
     
     if discovered:
-        log_verbose(f"Discovered {len(discovered)} plugins", config)
+        log_verbose(f"Discovered {len(discovered)} external plugins", config)
         plugins = loader.load_all_enabled()
         if plugins:
-            log_info(f"Loaded {len(plugins)} plugins", config)
+            log_info(f"Loaded {len(plugins)} external plugins", config)
+
+
+def _load_core_plugin(config):
+    """Load the built-in core plugin that provides default functionality."""
+    from .plugins import get_registry
+    from .plugins.core import CorePlugin
+    
+    registry = get_registry()
+    core = CorePlugin()
+    core.on_load(registry)
+    log_verbose("Loaded core plugin (generators, parsers, themes, services)", config)
 
 
 def handle_plugin_command(args):

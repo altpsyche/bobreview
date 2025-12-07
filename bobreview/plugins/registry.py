@@ -54,6 +54,9 @@ class PluginRegistry:
         # Service registry: name -> service instance/factory
         self._services: Dict[str, Any] = {}
         
+        # Report system registry: name -> system definition (parsed JSON)
+        self._report_systems: Dict[str, Any] = {}
+        
         # Track which plugin registered what
         self._component_owners: Dict[str, str] = {}  # component_key -> plugin_name
         
@@ -300,6 +303,43 @@ class PluginRegistry:
         self._services[name] = service
         self._component_owners[f"service:{name}"] = plugin_name
         logger.info(f"Service '{name}' replaced by {plugin_name or 'unknown'}")
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Report System Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_report_system(
+        self, 
+        name: str, 
+        system_def: Any, 
+        plugin_name: str = ""
+    ) -> None:
+        """
+        Register a report system definition.
+        
+        Parameters:
+            name: System name (e.g., 'png_data_points')
+            system_def: Parsed system definition (dict from JSON)
+            plugin_name: Name of the plugin registering this system
+        """
+        if name in self._report_systems:
+            logger.warning(f"Overwriting existing report system: {name}")
+        
+        self._report_systems[name] = system_def
+        self._component_owners[f"report_system:{name}"] = plugin_name
+        logger.debug(f"Registered report system: {name} from {plugin_name or 'core'}")
+    
+    def get_report_system(self, name: str) -> Optional[Any]:
+        """Get a report system definition by name."""
+        return self._report_systems.get(name)
+    
+    def get_all_report_systems(self) -> Dict[str, Any]:
+        """Get all registered report systems."""
+        return dict(self._report_systems)
+    
+    def get_report_system_names(self) -> List[str]:
+        """Get list of all registered report system names."""
+        return list(self._report_systems.keys())
     
     # ─────────────────────────────────────────────────────────────────────────
     # Utility Methods

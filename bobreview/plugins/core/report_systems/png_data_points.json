@@ -657,7 +657,7 @@
       },
       {
         "label": "High-Load Frames",
-        "value": "{stats.high_load_count}",
+        "value": "{high_load_count}",
         "sub": "Draw Calls ≥ {high_load_draw_threshold} or Triangles ≥ {high_load_tri_threshold}",
         "variant": "warn"
       }
@@ -677,11 +677,11 @@
       },
       {
         "label": "High-Load Frames",
-        "value": "{stats.high_load_count}"
+        "value": "{high_load_count}"
       },
       {
         "label": "Low-Load Frames",
-        "value": "{stats.low_load_count}"
+        "value": "{low_load_count}"
       },
       {
         "label": "Performance Variance",
@@ -691,7 +691,7 @@
     "zone_cards": [
       {
         "label": "High-Load Frames",
-        "value": "{stats.high_load_count}",
+        "value": "{high_load_count}",
         "sub": "{high_load_pct}% of captures",
         "variant": "danger"
       },
@@ -703,7 +703,7 @@
       },
       {
         "label": "Low-Load Frames",
-        "value": "{stats.low_load_count}",
+        "value": "{low_load_count}",
         "sub": "{low_load_pct}% of captures",
         "variant": "ok"
       }

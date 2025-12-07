@@ -70,7 +70,7 @@ def _discover_systems_in_directory(
 
 def discover_report_systems() -> List[Dict[str, Any]]:
     """
-    Discover all available report systems (built-in and user custom).
+    Discover all available report systems (plugin-registered, built-in, and user custom).
     
     Returns:
         List of dictionaries with 'id', 'name', 'version', 'path', 'source' keys
@@ -78,16 +78,36 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     logger = logging.getLogger(__name__)
     systems = []
     
-    # Discover built-in systems
+    # First, check plugin registry for report systems registered by plugins
+    try:
+        from ..plugins import get_registry
+        registry = get_registry()
+        for name, system_def in registry.get_all_report_systems().items():
+            systems.append({
+                'id': system_def.get('id', name),
+                'name': system_def.get('name', name),
+                'version': system_def.get('version', 'unknown'),
+                'description': system_def.get('description', ''),
+                'path': f'plugin:{name}',  # Indicate it's from a plugin
+                'source': 'plugin'
+            })
+    except ImportError:
+        pass
+    
+    # Discover built-in systems (filesystem fallback)
     builtin_dir = get_builtin_report_systems_dir()
-    systems.extend(_discover_systems_in_directory(builtin_dir, 'builtin', logger))
+    for system in _discover_systems_in_directory(builtin_dir, 'builtin', logger):
+        # Don't duplicate if already registered by plugin
+        if not any(s['id'] == system['id'] for s in systems):
+            systems.append(system)
     
     # Discover user custom systems
     user_dir = get_user_report_systems_dir()
     systems.extend(_discover_systems_in_directory(user_dir, 'user', logger))
     
-    # Return systems in deterministic order (sorted by source, then id)
-    return sorted(systems, key=lambda s: (s["source"], s["id"]))
+    # Return systems in deterministic order (sorted by source priority, then id)
+    source_priority = {'plugin': 0, 'user': 1, 'builtin': 2}
+    return sorted(systems, key=lambda s: (source_priority.get(s["source"], 99), s["id"]))
 
 
 def list_available_systems() -> List[Dict[str, Any]]:
@@ -227,7 +247,13 @@ def load_report_system(
     use_cache: bool = True
 ) -> ReportSystemDefinition:
     """
-    Load a report system definition from JSON.
+    Load a report system definition.
+    
+    Search order:
+    1. Plugin registry (systems registered by plugins)
+    2. User directory (~/.bobreview/report_systems/)
+    3. Built-in directory (bobreview/report_systems/builtin/)
+    4. Direct file path
     
     Parameters:
         id_or_path: Report system ID or path to JSON file
@@ -253,23 +279,40 @@ def load_report_system(
         # Return a deep copy to prevent mutation of cached instances
         return copy.deepcopy(_report_system_cache[cache_key])
     
-    # Find the JSON file
-    json_path = find_report_system_path(id_or_path)
-    if json_path is None:
-        available = [s['id'] for s in list_available_systems()]
-        raise FileNotFoundError(
-            f"Report system not found: {id_or_path}\n"
-            f"Available systems: {', '.join(available) if available else 'none'}\n"
-            f"Search paths:\n"
-            f"  - User: {get_user_report_systems_dir()}\n"
-            f"  - Built-in: {get_builtin_report_systems_dir()}"
-        )
+    system_data = None
+    source_description = None
     
-    # Load JSON data
+    # First, check plugin registry for the system
     try:
-        system_data = load_report_system_json(json_path)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in report system file {json_path}: {e}") from e
+        from ..plugins import get_registry
+        registry = get_registry()
+        plugin_system = registry.get_report_system(id_or_path)
+        if plugin_system is not None:
+            system_data = copy.deepcopy(plugin_system)
+            source_description = f"plugin:{id_or_path}"
+    except ImportError:
+        pass
+    
+    # If not found in registry, try filesystem
+    if system_data is None:
+        json_path = find_report_system_path(id_or_path)
+        if json_path is None:
+            available = [s['id'] for s in list_available_systems()]
+            raise FileNotFoundError(
+                f"Report system not found: {id_or_path}\n"
+                f"Available systems: {', '.join(available) if available else 'none'}\n"
+                f"Search paths:\n"
+                f"  - Plugin registry\n"
+                f"  - User: {get_user_report_systems_dir()}\n"
+                f"  - Built-in: {get_builtin_report_systems_dir()}"
+            )
+        
+        # Load JSON data from filesystem
+        try:
+            system_data = load_report_system_json(json_path)
+            source_description = str(json_path)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in report system file {json_path}: {e}") from e
     
     # Merge CLI overrides
     if cli_overrides:
@@ -279,7 +322,7 @@ def load_report_system(
     try:
         system_def = parse_report_system_definition(system_data)
     except ValueError as e:
-        raise ValueError(f"Failed to load report system from {json_path}: {e}") from e
+        raise ValueError(f"Failed to load report system from {source_description}: {e}") from e
     
     # Cache the result (deep copy to prevent mutation)
     if use_cache:
