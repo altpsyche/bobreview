@@ -80,6 +80,70 @@ class TemplateEngine:
         self.env.filters['sanitize'] = self._smart_sanitize
         self.env.filters['trend_icon'] = get_trend_icon
         self.env.filters['default_str'] = lambda x, d='': x if x else d
+        self.env.filters['interpolate'] = self._interpolate
+    
+    def _interpolate(self, template_str: str, context: Any = None) -> str:
+        """
+        Interpolate {key} placeholders in a string with values from context.
+        
+        Supports:
+        - {key} - direct lookup
+        - {config.draw_soft_cap} - nested path lookup
+        - Multiple placeholders in one string
+        
+        Example:
+            "Soft cap {draw_soft_cap} · hard cap {draw_hard_cap}" | interpolate(config)
+        
+        Parameters:
+            template_str: String with {key} placeholders
+            context: Dict or object to look up values from
+            
+        Returns:
+            String with placeholders replaced by values
+        """
+        import re
+        from markupsafe import Markup
+        
+        if not template_str or context is None:
+            return template_str or ''
+        
+        # Convert dataclass or object to dict if needed
+        if hasattr(context, '__dict__') and not isinstance(context, dict):
+            ctx = vars(context) if hasattr(context, '__dict__') else {}
+        elif isinstance(context, dict):
+            ctx = context
+        else:
+            ctx = {}
+        
+        def replace_var(match):
+            var_path = match.group(1)
+            
+            # Handle nested paths like config.draw_soft_cap
+            parts = var_path.split('.')
+            value = ctx
+            
+            for part in parts:
+                if isinstance(value, dict) and part in value:
+                    value = value[part]
+                elif hasattr(value, part):
+                    value = getattr(value, part)
+                else:
+                    # Variable not found, keep original placeholder
+                    return match.group(0)
+            
+            # Format numbers nicely
+            if isinstance(value, float):
+                if value >= 1000:
+                    return f"{value:,.0f}"
+                return f"{value:.1f}"
+            if isinstance(value, int) and value >= 1000:
+                return f"{value:,}"
+            return str(value)
+        
+        # Find all {var} or {var.path} patterns
+        result = re.sub(r'\{([^}]+)\}', replace_var, template_str)
+        return Markup(result)
+
     
     def _smart_sanitize(self, content):
         """
@@ -138,7 +202,8 @@ class TemplateEngine:
         # Copy context to avoid mutating caller's dict
         data = dict(context)
         if labels:
-            data['labels'] = asdict(labels)
+            # Labels is now a simple wrapper class, not a dataclass
+            data['labels'] = labels
         
         template = self.env.get_template(template_name)
         return template.render(**data)
@@ -163,7 +228,8 @@ class TemplateEngine:
         # Copy context to avoid mutating caller's dict
         data = dict(context)
         if labels:
-            data['labels'] = asdict(labels)
+            # Labels is now a simple wrapper class, not a dataclass
+            data['labels'] = labels
         
         template = self.env.from_string(template_string)
         return template.render(**data)

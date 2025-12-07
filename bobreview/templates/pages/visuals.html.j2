@@ -1,23 +1,25 @@
 {% extends "base.html.j2" %}
 {% from "components/macros.html.j2" import stat_card, stats_item %}
 
-{% block title %}{{ config.title }} - {{ labels.visual_analysis }}{% endblock %}
+{% block title %}{{ config.title }} - {{ labels.get('visual_analysis', 'Visual Analysis') }}{% endblock %}
 
 {% block head_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block content %}
-{# Set up dynamic metrics - use JSON config with fallback to draws/tris #}
-{% set primary_metric = metrics[0] if metrics else 'draws' %}
-{% set secondary_metric = metrics[1] if metrics|length > 1 else 'tris' %}
-{% set primary_label = metric_labels.get(primary_metric, labels.draw_calls) if metric_labels else labels.draw_calls %}
-{% set secondary_label = metric_labels.get(secondary_metric, labels.triangles) if metric_labels else labels.triangles %}
-{% set primary_stats = stats[primary_metric] if primary_metric in stats else stats.draws %}
-{% set secondary_stats = stats[secondary_metric] if secondary_metric in stats else stats.tris %}
+{# Build context for interpolation #}
+{% set draws_range = stats.draws.max - stats.draws.min %}
+{% set tris_range = stats.tris.max - stats.tris.min %}
+
+{% set ctx = {
+  'stats': stats,
+  'draws_range': draws_range,
+  'tris_range': tris_range|format_number
+} %}
 
 <section class="panel">
-  <h2>{{ labels.visual_analysis }}</h2>
+  <h2>{{ labels.get('visual_analysis', 'Visual Analysis') }}</h2>
   <p class="body-text">
     {{ content.visual_analysis_intro|default('Distribution charts reveal patterns in performance data, showing how metrics are distributed across all captures. This helps identify clustering, outliers, and overall performance characteristics.') }}
   </p>
@@ -25,73 +27,105 @@
   {{ llm.visual_analysis|sanitize }}
   
   <div class="summary-grid" style="margin-top: 16px;">
+    {# Data-driven distribution cards #}
+    {% if content.stat_distribution_cards %}
+    {% for card in content.stat_distribution_cards %}
     <div class="stat-card">
-      <div class="stat-label">{{ primary_label }} Distribution</div>
-      <div class="stat-value">{{ primary_stats.min }} - {{ primary_stats.max }}</div>
-      <div class="stat-sub">Range of {{ primary_stats.max - primary_stats.min }} {{ primary_label|lower }}</div>
+      <div class="stat-label">{{ card.label }}</div>
+      <div class="stat-value">{{ card.value|interpolate(ctx) }}</div>
+      <div class="stat-sub">{{ card.sub|interpolate(ctx) }}</div>
     </div>
-    
+    {% endfor %}
+    {% else %}
+    {# Fallback #}
     <div class="stat-card">
-      <div class="stat-label">{{ secondary_label }} Distribution</div>
-      <div class="stat-value">{{ secondary_stats.min|format_number }} - {{ secondary_stats.max|format_number }}</div>
-      <div class="stat-sub">Range of {{ (secondary_stats.max - secondary_stats.min)|format_number }} {{ secondary_label|lower }}</div>
+      <div class="stat-label">Draw Calls Distribution</div>
+      <div class="stat-value">{{ stats.draws.min }} - {{ stats.draws.max }}</div>
+      <div class="stat-sub">Range of {{ draws_range }} draw calls</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">Triangles Distribution</div>
+      <div class="stat-value">{{ stats.tris.min|format_number }} - {{ stats.tris.max|format_number }}</div>
+      <div class="stat-sub">Range of {{ tris_range|format_number }} triangles</div>
+    </div>
+    {% endif %}
   </div>
 </section>
 
-<!-- Primary Metric Timeline -->
+<!-- Draw Calls Timeline -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ primary_label }} {{ labels.get('timeline', 'Timeline') }}</h2>
+  <h2>{{ labels.get('draw_calls', 'Draw Calls') }} {{ labels.get('timeline', 'Timeline') }}</h2>
   <p class="body-text">
-    {{ content.primary_timeline_intro|default('Timeline showing how ' ~ primary_label|lower ~ ' vary across captures. Color-coded by performance zone: <span style="color: var(--ok);">●</span> good, <span style="color: var(--warn);">●</span> warning, <span style="color: var(--danger);">●</span> critical.')|safe }}
+    {{ content.primary_timeline_intro|default('Timeline showing how draw calls vary across captures. Color-coded by performance zone.')|safe }}
   </p>
   
   <div class="chart-container">
     <div class="chart-description">
-      Key percentiles: <span style="color: var(--accent);">Median (P50)</span> at {{ primary_stats.median|format_number(0) }}, 
-      <span style="color: var(--warn);">P90</span> at {{ primary_stats.p90|format_number(0) }}, 
-      <span style="color: var(--danger);">P95</span> at {{ primary_stats.p95|format_number(0) }}.
+      {{ labels.get('key_percentiles', 'Key percentiles') }}: 
+      <span style="color: var(--accent);">{{ labels.get('q2_label', 'Median (50th percentile)') }}</span> at {{ stats.draws.median|format_number(0) }}, 
+      <span style="color: var(--warn);">{{ labels.get('p90', 'P90') }}</span> at {{ stats.draws.p90|format_number(0) }}, 
+      <span style="color: var(--danger);">{{ labels.get('p95', 'P95') }}</span> at {{ stats.draws.p95|format_number(0) }}.
     </div>
     <canvas id="drawsTimeline"></canvas>
   </div>
   
   <div class="stats-grid" style="margin-top: 16px;">
-    {{ stats_item('Q1 (25th percentile)', primary_stats.q1|format_number(0)) }}
-    {{ stats_item('Median (50th percentile)', primary_stats.median|format_number(0)) }}
-    {{ stats_item('Q3 (75th percentile)', primary_stats.q3|format_number(0)) }}
-    {{ stats_item('Standard Deviation', primary_stats.stdev|format_number(1)) }}
+    {# Data-driven percentile stats #}
+    {% if content.percentile_stats %}
+    {% for item in content.percentile_stats %}
+    <div class="stats-item">
+      <div class="stats-item-label">{{ item.label }}</div>
+      <div class="stats-item-value">{{ stats.draws[item.key]|format_number(0) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {{ stats_item('Q1 (25th percentile)', stats.draws.q1|format_number(0)) }}
+    {{ stats_item('Median (50th percentile)', stats.draws.median|format_number(0)) }}
+    {{ stats_item('Q3 (75th percentile)', stats.draws.q3|format_number(0)) }}
+    {{ stats_item('Standard Deviation', stats.draws.stdev|format_number(1)) }}
+    {% endif %}
   </div>
 </section>
 
-<!-- Secondary Metric Timeline -->
+<!-- Triangles Timeline -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ secondary_label }} {{ labels.get('timeline', 'Timeline') }}</h2>
+  <h2>{{ labels.get('triangles', 'Triangles') }} {{ labels.get('timeline', 'Timeline') }}</h2>
   <p class="body-text">
-    {{ content.secondary_timeline_intro|default('Timeline showing how ' ~ secondary_label|lower ~ ' vary across captures. This reveals patterns in your data.')|safe }}
+    {{ content.secondary_timeline_intro|default('Timeline showing how triangles vary across captures. This reveals patterns in your data.')|safe }}
   </p>
   
   <div class="chart-container">
     <div class="chart-description">
-      Key percentiles: <span style="color: var(--accent);">Median (P50)</span> at {{ secondary_stats.median|format_number(0) }}, 
-      <span style="color: var(--warn);">P90</span> at {{ secondary_stats.p90|format_number(0) }}, 
-      <span style="color: var(--danger);">P95</span> at {{ secondary_stats.p95|format_number(0) }}.
+      {{ labels.get('key_percentiles', 'Key percentiles') }}: 
+      <span style="color: var(--accent);">{{ labels.get('q2_label', 'Median (50th percentile)') }}</span> at {{ stats.tris.median|format_number(0) }}, 
+      <span style="color: var(--warn);">{{ labels.get('p90', 'P90') }}</span> at {{ stats.tris.p90|format_number(0) }}, 
+      <span style="color: var(--danger);">{{ labels.get('p95', 'P95') }}</span> at {{ stats.tris.p95|format_number(0) }}.
     </div>
     <canvas id="trisTimeline"></canvas>
   </div>
   
   <div class="stats-grid" style="margin-top: 16px;">
-    {{ stats_item('Q1 (25th percentile)', secondary_stats.q1|format_number(0)) }}
-    {{ stats_item('Median (50th percentile)', secondary_stats.median|format_number(0)) }}
-    {{ stats_item('Q3 (75th percentile)', secondary_stats.q3|format_number(0)) }}
-    {{ stats_item('Standard Deviation', secondary_stats.stdev|format_number(0)) }}
+    {% if content.percentile_stats %}
+    {% for item in content.percentile_stats %}
+    <div class="stats-item">
+      <div class="stats-item-label">{{ item.label }}</div>
+      <div class="stats-item-value">{{ stats.tris[item.key]|format_number(0) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {{ stats_item('Q1 (25th percentile)', stats.tris.q1|format_number(0)) }}
+    {{ stats_item('Median (50th percentile)', stats.tris.median|format_number(0)) }}
+    {{ stats_item('Q3 (75th percentile)', stats.tris.q3|format_number(0)) }}
+    {{ stats_item('Standard Deviation', stats.tris.stdev|format_number(0)) }}
+    {% endif %}
   </div>
 </section>
 
 <!-- Scatter Plot -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ primary_label }} vs {{ secondary_label }}</h2>
+  <h2>{{ labels.get('draw_calls', 'Draw Calls') }} vs {{ labels.get('triangles', 'Triangles') }}</h2>
   <p class="body-text">
-    {{ content.scatter_plot_intro|default('Scatter plot showing the relationship between ' ~ primary_label|lower ~ ' and ' ~ secondary_label|lower ~ '. Points are color-coded by performance zone.')|safe }}
+    {{ content.scatter_plot_intro|default('Scatter plot showing the relationship between draw calls and triangles. Points are color-coded by performance zone.')|safe }}
   </p>
   
   <div class="chart-container">
@@ -109,3 +143,4 @@
 </script>
 {% endif %}
 {% endblock %}
+

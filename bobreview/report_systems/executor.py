@@ -482,7 +482,8 @@ class ReportSystemExecutor:
     def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str, labels: LabelConfig) -> Dict[str, str]:
         """Generate Chart.js JavaScript code for charts with performance zones."""
         charts = {}
-        labels_dict = asdict(labels)
+        # Labels is now a simple wrapper class with .data property, not a dataclass
+        labels_dict = labels.data if hasattr(labels, 'data') else {}
         
         # Get theme colors for charts
         theme = get_theme()

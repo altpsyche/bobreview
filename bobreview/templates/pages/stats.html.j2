@@ -1,53 +1,44 @@
 {% extends "base.html.j2" %}
 {% from "components/macros.html.j2" import metric_table, stats_item %}
 
-{% block title %}{{ config.title }} - {{ labels.statistical_summary }}{% endblock %}
+{% block title %}{{ config.title }} - {{ labels.get('statistical_summary', 'Statistical Summary') }}{% endblock %}
 
 {% block content %}
-{# Set up dynamic metrics - use JSON config with fallback to draws/tris #}
-{% set primary_metric = metrics[0] if metrics else 'draws' %}
-{% set secondary_metric = metrics[1] if metrics|length > 1 else 'tris' %}
-{% set primary_label = metric_labels.get(primary_metric, labels.draw_calls) if metric_labels else labels.draw_calls %}
-{% set secondary_label = metric_labels.get(secondary_metric, labels.triangles) if metric_labels else labels.triangles %}
-{% set primary_stats = stats[primary_metric] if primary_metric in stats else stats.draws %}
-{% set secondary_stats = stats[secondary_metric] if secondary_metric in stats else stats.tris %}
-{% set identifier_field = metrics.identifier_field if metrics.identifier_field is defined else 'testcase' %}
-
 <section class="panel">
-  <h2>{{ labels.statistical_summary }}</h2>
+  <h2>{{ labels.get('statistical_summary', 'Statistical Summary') }}</h2>
   
   {{ llm.stats_interpretation|sanitize }}
 </section>
 
 <!-- Complete Statistics -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ primary_label }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
-  {{ metric_table(primary_label, primary_stats, labels) }}
+  <h2>{{ labels.get('draw_calls', 'Draw Calls') }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
+  {{ metric_table(labels.get('draw_calls', 'Draw Calls'), stats.draws, labels) }}
 </section>
 
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ secondary_label }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
-  {{ metric_table(secondary_label, secondary_stats, labels) }}
+  <h2>{{ labels.get('triangles', 'Triangles') }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
+  {{ metric_table(labels.get('triangles', 'Triangles'), stats.tris, labels) }}
 </section>
 
 <!-- Outlier Analysis -->
 {% if stats.outliers %}
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('outlier_analysis', 'Outlier Analysis') }}</h2>
-  <p class="body-text">{{ labels.get('outlier_desc', 'Data points significantly deviating from the mean:') }}</p>
+  <p class="body-text">{{ content.outlier_desc|default('Data points significantly deviating from the mean:') }}</p>
   
   <div class="stats-grid">
     {{ stats_item(labels.get('outliers_detected', 'Outliers Detected'), stats.outliers|length) }}
-    {{ stats_item(labels.get('detection_method', 'Detection Method'), labels.get('zscore', 'Z-Score (σ=' ~ config.outlier_sigma ~ ')')) }}
+    {{ stats_item(labels.get('detection_method', 'Detection Method'), 'Z-Score (σ=' ~ config.outlier_sigma ~ ')') }}
   </div>
   
   <table style="margin-top: 16px;">
     <thead>
       <tr>
-        <th>{{ labels.index }}</th>
-        <th>{{ labels.testcase }}</th>
-        <th>{{ primary_label }}</th>
-        <th>{{ secondary_label }}</th>
+        <th>{{ labels.get('index', 'Index') }}</th>
+        <th>{{ labels.get('testcase', 'Test Case') }}</th>
+        <th>{{ labels.get('draw_calls', 'Draw Calls') }}</th>
+        <th>{{ labels.get('triangles', 'Triangles') }}</th>
         <th>{{ labels.get('zscore', 'Z-Score') }}</th>
       </tr>
     </thead>
@@ -55,9 +46,9 @@
       {% for outlier in stats.outliers[:15] %}
       <tr>
         <td>{{ outlier.index }}</td>
-        <td>{{ outlier[identifier_field]|default(outlier.testcase) }}</td>
-        <td>{{ outlier[primary_metric]|default(outlier.draws) }}</td>
-        <td>{{ outlier[secondary_metric]|default(outlier.tris)|format_number }}</td>
+        <td>{{ outlier.testcase }}</td>
+        <td>{{ outlier.draws }}</td>
+        <td>{{ outlier.tris|format_number }}</td>
         <td>{{ outlier.zscore|format_number(2) if outlier.zscore else 'N/A' }}</td>
       </tr>
       {% endfor %}
@@ -67,32 +58,32 @@
 {% endif %}
 
 <!-- Confidence Intervals -->
-{% if primary_stats.ci_lower is defined and primary_stats.ci_upper is defined %}
+{% if stats.draws.ci_lower is defined and stats.draws.ci_upper is defined %}
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('confidence_intervals', 'Confidence Intervals') }}</h2>
   
   <div class="stats-grid">
-    {{ stats_item(primary_label ~ ' 95% CI', (primary_stats.ci_lower|format_number(1)) ~ ' - ' ~ (primary_stats.ci_upper|format_number(1))) }}
-    {{ stats_item(secondary_label ~ ' 95% CI', (secondary_stats.ci_lower|default(0)|format_number(0)) ~ ' - ' ~ (secondary_stats.ci_upper|default(0)|format_number(0))) }}
+    {{ stats_item(labels.get('draw_calls', 'Draw Calls') ~ ' 95% CI', (stats.draws.ci_lower|format_number(1)) ~ ' - ' ~ (stats.draws.ci_upper|format_number(1))) }}
+    {{ stats_item(labels.get('triangles', 'Triangles') ~ ' 95% CI', (stats.tris.ci_lower|default(0)|format_number(0)) ~ ' - ' ~ (stats.tris.ci_upper|default(0)|format_number(0))) }}
   </div>
 </section>
 {% endif %}
 
 <!-- Full Data Table -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.full_sample_table }}</h2>
-  <p class="body-text">{{ labels.get('all_captures', 'All captured data points:') }}</p>
+  <h2>{{ labels.get('full_sample_table', 'Full Sample Table') }}</h2>
+  <p class="body-text">{{ content.all_captures|default('All captured data points:') }}</p>
   
   <table>
     <thead>
       <tr>
-        <th>{{ labels.index }}</th>
-        <th>{{ labels.testcase }}</th>
-        <th>{{ primary_label }}</th>
-        <th>{{ secondary_label }}</th>
-        <th>{{ labels.timestamp }}</th>
+        <th>{{ labels.get('index', 'Index') }}</th>
+        <th>{{ labels.get('testcase', 'Test Case') }}</th>
+        <th>{{ labels.get('draw_calls', 'Draw Calls') }}</th>
+        <th>{{ labels.get('triangles', 'Triangles') }}</th>
+        <th>{{ labels.get('timestamp', 'Timestamp') }}</th>
         {% if has_images %}
-        <th>{{ labels.screenshot }}</th>
+        <th>{{ labels.get('screenshot', 'Screenshot') }}</th>
         {% endif %}
       </tr>
     </thead>
@@ -100,14 +91,14 @@
       {% for point in data_points %}
       <tr>
         <td>{{ loop.index0 }}</td>
-        <td>{{ point[identifier_field]|default(point.testcase) }}</td>
-        <td>{{ point[primary_metric]|default(point.draws) }}</td>
-        <td>{{ point[secondary_metric]|default(point.tris)|format_number }}</td>
+        <td>{{ point.testcase }}</td>
+        <td>{{ point.draws }}</td>
+        <td>{{ point.tris|format_number }}</td>
         <td>{{ point.ts }}</td>
         {% if has_images %}
         <td>
           {% if images[loop.index0] is defined %}
-          <img src="{{ images[loop.index0].src }}" alt="{{ point[identifier_field]|default(point.testcase) }}" class="thumb-small" loading="lazy" />
+          <img src="{{ images[loop.index0].src }}" alt="{{ point.testcase }}" class="thumb-small" loading="lazy" />
           {% else %}-{% endif %}
         </td>
         {% endif %}
@@ -117,3 +108,4 @@
   </table>
 </section>
 {% endblock %}
+

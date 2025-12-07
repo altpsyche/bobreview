@@ -98,7 +98,7 @@
     Parameters:
         metric_name: Display name for the metric
         stats: Dictionary with min, max, q1, median, q3, mean, stdev, variance, cv
-        labels: Labels dictionary for localized text
+        labels: Labels object with get() method
 -#}
 {% macro metric_table(metric_name, stats, labels) %}
 <h3>{{ metric_name }}</h3>
@@ -110,15 +110,16 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td>{{ labels.minimum }}</td><td>{{ stats.min|format_number }}</td></tr>
+    <tr><td>{{ labels.get('minimum', 'Min') }}</td><td>{{ stats.min|format_number }}</td></tr>
     <tr><td>{{ labels.get('q1_label', 'Q1 (25th percentile)') }}</td><td>{{ stats.q1|format_number(0) }}</td></tr>
-    <tr><td>{{ labels.median }}{% if labels.get('median_suffix') %} {{ labels.median_suffix }}{% else %} (50th percentile){% endif %}</td><td>{{ stats.median|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.get('q2_label', 'Median (50th percentile)') }}</td><td>{{ stats.median|format_number(0) }}</td></tr>
     <tr><td>{{ labels.get('q3_label', 'Q3 (75th percentile)') }}</td><td>{{ stats.q3|format_number(0) }}</td></tr>
-    <tr><td>{{ labels.maximum }}</td><td>{{ stats.max|format_number }}</td></tr>
-    <tr><td>{{ labels.mean }}</td><td>{{ stats.mean|format_number(1) }}</td></tr>
-    <tr><td>{{ labels.std_dev }}</td><td>{{ stats.stdev|format_number(1) }}</td></tr>
-    <tr><td>{{ labels.variance }}</td><td>{{ stats.variance|format_number(1) }}</td></tr>
-    <tr><td>{{ labels.cv }}</td><td>{{ stats.cv|format_number(1) }}%</td></tr>
+    <tr><td>{{ labels.get('maximum', 'Max') }}</td><td>{{ stats.max|format_number }}</td></tr>
+    <tr><td>{{ labels.get('mean', 'Mean') }}</td><td>{{ stats.mean|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.get('standard_deviation', 'Standard Deviation') }}</td><td>{{ stats.stdev|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.get('variance', 'Variance') }}</td><td>{{ stats.variance|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.get('cv', 'CV') }}</td><td>{{ stats.cv|format_number(1) }}%</td></tr>
   </tbody>
 </table>
 {% endmacro %}
+
