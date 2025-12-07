@@ -1,0 +1,393 @@
+"""
+Plugin registry for managing plugin components.
+
+The registry provides methods to register and retrieve components
+from all extension points: widgets, parsers, themes, charts, pages, etc.
+"""
+
+from typing import TYPE_CHECKING, Dict, List, Type, Any, Optional, Callable
+import logging
+
+if TYPE_CHECKING:
+    from .base import BasePlugin
+
+logger = logging.getLogger(__name__)
+
+
+class PluginRegistry:
+    """
+    Central registry for all plugin components.
+    
+    Plugins register their components through this registry during on_load().
+    The application queries the registry to discover available components.
+    
+    Example:
+        registry = PluginRegistry()
+        
+        # Plugin registers a widget
+        registry.register_widget(MyCustomWidget)
+        
+        # Application queries widgets
+        widgets = registry.get_all_widgets()
+    """
+    
+    def __init__(self):
+        """Initialize empty registries for all extension points."""
+        # Widget registry: type -> widget class
+        self._widgets: Dict[str, Type] = {}
+        
+        # Data parser registry: name -> parser class
+        self._data_parsers: Dict[str, Type] = {}
+        
+        # LLM generator registry: name -> generator class
+        self._llm_generators: Dict[str, Type] = {}
+        
+        # Theme registry: name -> theme instance
+        self._themes: Dict[str, Any] = {}
+        
+        # Chart type registry: type -> chart config class
+        self._chart_types: Dict[str, Type] = {}
+        
+        # Page registry: id -> page definition
+        self._pages: Dict[str, Any] = {}
+        
+        # Service registry: name -> service instance/factory
+        self._services: Dict[str, Any] = {}
+        
+        # Track which plugin registered what
+        self._component_owners: Dict[str, str] = {}  # component_key -> plugin_name
+        
+    # ─────────────────────────────────────────────────────────────────────────
+    # Widget Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_widget(self, widget_cls: Type, plugin_name: str = "") -> None:
+        """
+        Register a widget class.
+        
+        Parameters:
+            widget_cls: Widget class with `widget_type` attribute
+            plugin_name: Name of the plugin registering this widget
+        """
+        widget_type = getattr(widget_cls, 'widget_type', None)
+        if not widget_type:
+            raise ValueError(f"Widget class must have 'widget_type' attribute: {widget_cls}")
+        
+        if widget_type in self._widgets:
+            logger.warning(f"Overwriting existing widget type: {widget_type}")
+        
+        self._widgets[widget_type] = widget_cls
+        self._component_owners[f"widget:{widget_type}"] = plugin_name
+        logger.debug(f"Registered widget: {widget_type} from {plugin_name or 'core'}")
+    
+    def get_widget(self, widget_type: str) -> Optional[Type]:
+        """Get a widget class by type."""
+        return self._widgets.get(widget_type)
+    
+    def get_all_widgets(self) -> Dict[str, Type]:
+        """Get all registered widgets."""
+        return dict(self._widgets)
+    
+    def get_widget_types(self) -> List[str]:
+        """Get list of all registered widget types."""
+        return list(self._widgets.keys())
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Data Parser Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_data_parser(self, parser_cls: Type, plugin_name: str = "") -> None:
+        """
+        Register a data parser class.
+        
+        Parameters:
+            parser_cls: Parser class with `parser_name` attribute
+            plugin_name: Name of the plugin registering this parser
+        """
+        parser_name = getattr(parser_cls, 'parser_name', parser_cls.__name__)
+        
+        if parser_name in self._data_parsers:
+            logger.warning(f"Overwriting existing parser: {parser_name}")
+        
+        self._data_parsers[parser_name] = parser_cls
+        self._component_owners[f"parser:{parser_name}"] = plugin_name
+        logger.debug(f"Registered parser: {parser_name} from {plugin_name or 'core'}")
+    
+    def get_data_parser(self, parser_name: str) -> Optional[Type]:
+        """Get a data parser class by name."""
+        return self._data_parsers.get(parser_name)
+    
+    def get_all_data_parsers(self) -> Dict[str, Type]:
+        """Get all registered data parsers."""
+        return dict(self._data_parsers)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # LLM Generator Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_llm_generator(self, generator_cls: Type, plugin_name: str = "") -> None:
+        """
+        Register an LLM generator class.
+        
+        Parameters:
+            generator_cls: Generator class with `generator_name` attribute
+            plugin_name: Name of the plugin registering this generator
+        """
+        generator_name = getattr(generator_cls, 'generator_name', generator_cls.__name__)
+        
+        if generator_name in self._llm_generators:
+            logger.warning(f"Overwriting existing LLM generator: {generator_name}")
+        
+        self._llm_generators[generator_name] = generator_cls
+        self._component_owners[f"llm:{generator_name}"] = plugin_name
+        logger.debug(f"Registered LLM generator: {generator_name} from {plugin_name or 'core'}")
+    
+    def get_llm_generator(self, generator_name: str) -> Optional[Type]:
+        """Get an LLM generator class by name."""
+        return self._llm_generators.get(generator_name)
+    
+    def get_all_llm_generators(self) -> Dict[str, Type]:
+        """Get all registered LLM generators."""
+        return dict(self._llm_generators)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Theme Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_theme(self, theme: Any, plugin_name: str = "") -> None:
+        """
+        Register a theme.
+        
+        Parameters:
+            theme: Theme instance with `name` attribute
+            plugin_name: Name of the plugin registering this theme
+        """
+        theme_name = getattr(theme, 'name', str(theme))
+        
+        if theme_name in self._themes:
+            logger.warning(f"Overwriting existing theme: {theme_name}")
+        
+        self._themes[theme_name] = theme
+        self._component_owners[f"theme:{theme_name}"] = plugin_name
+        logger.debug(f"Registered theme: {theme_name} from {plugin_name or 'core'}")
+        
+        # Also register with the existing registry module for backward compat
+        try:
+            from ..registry import register_theme as legacy_register_theme
+            # Legacy registry expects themes with 'id' attribute
+            if hasattr(theme, 'id'):
+                legacy_register_theme(theme)
+        except (ImportError, AttributeError, Exception) as e:
+            logger.debug(f"Could not register theme with legacy registry: {e}")
+    
+    def get_theme(self, theme_name: str) -> Optional[Any]:
+        """Get a theme by name."""
+        return self._themes.get(theme_name)
+    
+    def get_all_themes(self) -> Dict[str, Any]:
+        """Get all registered themes."""
+        return dict(self._themes)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Chart Type Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_chart_type(self, chart_cls: Type, plugin_name: str = "") -> None:
+        """
+        Register a chart type.
+        
+        Parameters:
+            chart_cls: Chart class with `chart_type` attribute
+            plugin_name: Name of the plugin registering this chart
+        """
+        chart_type = getattr(chart_cls, 'chart_type', chart_cls.__name__)
+        
+        if chart_type in self._chart_types:
+            logger.warning(f"Overwriting existing chart type: {chart_type}")
+        
+        self._chart_types[chart_type] = chart_cls
+        self._component_owners[f"chart:{chart_type}"] = plugin_name
+        logger.debug(f"Registered chart type: {chart_type} from {plugin_name or 'core'}")
+    
+    def get_chart_type(self, chart_type: str) -> Optional[Type]:
+        """Get a chart type class by name."""
+        return self._chart_types.get(chart_type)
+    
+    def get_all_chart_types(self) -> Dict[str, Type]:
+        """Get all registered chart types."""
+        return dict(self._chart_types)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Page Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_page(self, page: Any, plugin_name: str = "") -> None:
+        """
+        Register a page definition.
+        
+        Parameters:
+            page: Page definition with `id` attribute
+            plugin_name: Name of the plugin registering this page
+        """
+        page_id = getattr(page, 'id', getattr(page, 'page_id', str(page)))
+        
+        if page_id in self._pages:
+            logger.warning(f"Overwriting existing page: {page_id}")
+        
+        self._pages[page_id] = page
+        self._component_owners[f"page:{page_id}"] = plugin_name
+        logger.debug(f"Registered page: {page_id} from {plugin_name or 'core'}")
+        
+        # Also register with the existing registry module for backward compat
+        try:
+            from ..registry import register_page as legacy_register_page
+            legacy_register_page(page)
+        except ImportError:
+            pass
+    
+    def get_page(self, page_id: str) -> Optional[Any]:
+        """Get a page definition by ID."""
+        return self._pages.get(page_id)
+    
+    def get_all_pages(self) -> Dict[str, Any]:
+        """Get all registered pages."""
+        return dict(self._pages)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Service Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_service(self, name: str, service: Any, plugin_name: str = "") -> None:
+        """
+        Register a service.
+        
+        Parameters:
+            name: Service name (e.g., 'analytics', 'charts')
+            service: Service instance or factory callable
+            plugin_name: Name of the plugin registering this service
+        """
+        if name in self._services:
+            logger.warning(f"Overwriting existing service: {name}")
+        
+        self._services[name] = service
+        self._component_owners[f"service:{name}"] = plugin_name
+        logger.debug(f"Registered service: {name} from {plugin_name or 'core'}")
+    
+    def get_service(self, name: str) -> Optional[Any]:
+        """Get a service by name."""
+        service = self._services.get(name)
+        # If it's a factory/callable, call it
+        if callable(service) and not isinstance(service, type):
+            return service()
+        return service
+    
+    def get_all_services(self) -> Dict[str, Any]:
+        """Get all registered services."""
+        return dict(self._services)
+    
+    def replace_service(self, name: str, service: Any, plugin_name: str = "") -> None:
+        """
+        Replace an existing service (for plugins that want to override core services).
+        
+        Parameters:
+            name: Service name to replace
+            service: New service instance or factory
+            plugin_name: Name of the plugin replacing this service
+        """
+        if name not in self._services:
+            logger.warning(f"Replacing non-existent service: {name}")
+        
+        self._services[name] = service
+        self._component_owners[f"service:{name}"] = plugin_name
+        logger.info(f"Service '{name}' replaced by {plugin_name or 'unknown'}")
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Utility Methods
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def get_component_owner(self, component_key: str) -> str:
+        """Get the plugin that registered a component."""
+        return self._component_owners.get(component_key, "")
+    
+    def unregister_plugin_components(self, plugin_name: str) -> int:
+        """
+        Unregister all components from a specific plugin.
+        
+        Parameters:
+            plugin_name: Name of the plugin to unregister
+            
+        Returns:
+            Number of components unregistered
+        """
+        count = 0
+        
+        # Find all components owned by this plugin
+        to_remove = [
+            key for key, owner in self._component_owners.items()
+            if owner == plugin_name
+        ]
+        
+        for key in to_remove:
+            ext_type, name = key.split(':', 1)
+            
+            if ext_type == 'widget' and name in self._widgets:
+                del self._widgets[name]
+                count += 1
+            elif ext_type == 'parser' and name in self._data_parsers:
+                del self._data_parsers[name]
+                count += 1
+            elif ext_type == 'llm' and name in self._llm_generators:
+                del self._llm_generators[name]
+                count += 1
+            elif ext_type == 'theme' and name in self._themes:
+                del self._themes[name]
+                count += 1
+            elif ext_type == 'chart' and name in self._chart_types:
+                del self._chart_types[name]
+                count += 1
+            elif ext_type == 'page' and name in self._pages:
+                del self._pages[name]
+                count += 1
+            elif ext_type == 'service' and name in self._services:
+                del self._services[name]
+                count += 1
+            
+            del self._component_owners[key]
+        
+        logger.info(f"Unregistered {count} components from plugin: {plugin_name}")
+        return count
+    
+    def get_stats(self) -> Dict[str, int]:
+        """Get statistics about registered components."""
+        return {
+            'widgets': len(self._widgets),
+            'data_parsers': len(self._data_parsers),
+            'llm_generators': len(self._llm_generators),
+            'themes': len(self._themes),
+            'chart_types': len(self._chart_types),
+            'pages': len(self._pages),
+            'services': len(self._services),
+        }
+    
+    def __repr__(self) -> str:
+        stats = self.get_stats()
+        total = sum(stats.values())
+        return f"<PluginRegistry: {total} components>"
+
+
+# Global registry instance
+_global_registry: Optional[PluginRegistry] = None
+
+
+def get_registry() -> PluginRegistry:
+    """Get the global plugin registry instance."""
+    global _global_registry
+    if _global_registry is None:
+        _global_registry = PluginRegistry()
+    return _global_registry
+
+
+def reset_registry() -> None:
+    """Reset the global registry (mainly for testing)."""
+    global _global_registry
+    _global_registry = PluginRegistry()

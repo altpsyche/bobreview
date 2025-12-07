@@ -22,6 +22,9 @@ from .report_systems.executor import ReportSystemExecutor
 # Import provider listing
 from .llm.providers import list_providers, get_provider_info
 
+# Import plugin system
+from .plugins import get_loader, get_registry, init_loader
+
 # Check for tqdm availability
 try:
     from tqdm import tqdm
@@ -33,6 +36,170 @@ except ImportError:
             self.iterable = iterable
         def __iter__(self):
             return iter(self.iterable)
+
+
+def _get_default_plugin_dirs():
+    """Get default plugin directories."""
+    dirs = []
+    
+    # User plugin directory: ~/.bobreview/plugins
+    user_dir = Path.home() / ".bobreview" / "plugins"
+    if user_dir.exists():
+        dirs.append(user_dir)
+    
+    # Current directory plugins: ./plugins
+    local_dir = Path.cwd() / "plugins"
+    if local_dir.exists():
+        dirs.append(local_dir)
+    
+    return dirs
+
+
+def _load_plugins(extra_dirs, config):
+    """Load plugins from default and extra directories."""
+    dirs = _get_default_plugin_dirs()
+    
+    # Add extra directories from CLI
+    for d in extra_dirs:
+        path = Path(d).expanduser().resolve()
+        if path.exists() and path not in dirs:
+            dirs.append(path)
+    
+    if not dirs:
+        log_verbose("No plugin directories configured", config)
+        return
+    
+    loader = init_loader(dirs)
+    discovered = loader.discover()
+    
+    if discovered:
+        log_verbose(f"Discovered {len(discovered)} plugins", config)
+        plugins = loader.load_all_enabled()
+        if plugins:
+            log_info(f"Loaded {len(plugins)} plugins", config)
+
+
+def handle_plugin_command(args):
+    """Handle plugin subcommands."""
+    from .plugins import get_loader, init_loader
+    
+    # Initialize loader with default directories
+    dirs = _get_default_plugin_dirs()
+    loader = init_loader(dirs)
+    loader.discover()
+    
+    if args.plugin_command == 'list':
+        plugins = loader.get_discovered_plugins()
+        if not plugins:
+            print("No plugins found.")
+            print(f"\nPlugin directories searched:")
+            for d in dirs:
+                print(f"  - {d}")
+            print("\nTo add plugins, place them in ~/.bobreview/plugins/")
+            return 0
+        
+        print("Installed plugins:\n")
+        for p in plugins:
+            status = "✓ loaded" if p.loaded else "○ available"
+            print(f"  {p.name} v{p.version} [{status}]")
+            if args.verbose:
+                print(f"    Author: {p.author}")
+                print(f"    {p.description}")
+                if p.provides:
+                    provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
+                    print(f"    Provides: {provides_str}")
+                print()
+        return 0
+    
+    elif args.plugin_command == 'install':
+        plugin_path = Path(args.path).expanduser().resolve()
+        
+        if not plugin_path.exists():
+            print(f"Error: Path does not exist: {plugin_path}")
+            return 1
+        
+        manifest_path = plugin_path / "manifest.json"
+        if not manifest_path.exists():
+            print(f"Error: No manifest.json found in {plugin_path}")
+            return 1
+        
+        # Copy to user plugin directory
+        user_plugins = Path.home() / ".bobreview" / "plugins"
+        user_plugins.mkdir(parents=True, exist_ok=True)
+        
+        import shutil
+        dest = user_plugins / plugin_path.name
+        if dest.exists():
+            print(f"Plugin already installed at: {dest}")
+            print("Use 'bob plugins uninstall' first to reinstall.")
+            return 1
+        
+        shutil.copytree(plugin_path, dest)
+        print(f"✓ Installed plugin to: {dest}")
+        
+        # Reload and show info
+        loader.add_plugin_dir(user_plugins)
+        loader.discover()
+        
+        from .plugins import PluginManifest
+        manifest = PluginManifest.from_file(manifest_path)
+        print(f"  Name: {manifest.name} v{manifest.version}")
+        print(f"  Author: {manifest.author}")
+        return 0
+    
+    elif args.plugin_command == 'uninstall':
+        user_plugins = Path.home() / ".bobreview" / "plugins"
+        
+        # Find the plugin
+        found = None
+        for p in loader.get_discovered_plugins():
+            if p.name == args.name and p.path:
+                found = Path(p.path)
+                break
+        
+        if not found:
+            print(f"Error: Plugin not found: {args.name}")
+            return 1
+        
+        # Only allow uninstalling from user directory
+        if not str(found).startswith(str(user_plugins)):
+            print(f"Cannot uninstall built-in plugin: {args.name}")
+            return 1
+        
+        import shutil
+        shutil.rmtree(found)
+        print(f"✓ Uninstalled plugin: {args.name}")
+        return 0
+    
+    elif args.plugin_command == 'info':
+        plugins = loader.get_discovered_plugins()
+        found = None
+        for p in plugins:
+            if p.name == args.name:
+                found = p
+                break
+        
+        if not found:
+            print(f"Plugin not found: {args.name}")
+            return 1
+        
+        print(f"Plugin: {found.name}")
+        print(f"  Version: {found.version}")
+        print(f"  Author: {found.author}")
+        print(f"  Description: {found.description}")
+        print(f"  Path: {found.path}")
+        print(f"  Status: {'loaded' if found.loaded else 'not loaded'}")
+        if found.dependencies:
+            print(f"  Dependencies: {', '.join(found.dependencies)}")
+        if found.provides:
+            print("  Provides:")
+            for ext_type, items in found.provides.items():
+                print(f"    {ext_type}: {', '.join(items)}")
+        return 0
+    
+    else:
+        print("Usage: bob plugins <list|install|uninstall|info>")
+        return 1
 
 
 def main():
@@ -234,6 +401,36 @@ Examples:
         help='List all available report systems and exit'
     )
     
+    # Plugin arguments
+    parser.add_argument(
+        '--plugin-dir', action='append', dest='plugin_dirs', default=[],
+        metavar='DIR',
+        help='Additional plugin directory (can be used multiple times)'
+    )
+    parser.add_argument(
+        '--no-plugins', action='store_true',
+        help='Disable plugin loading'
+    )
+    
+    # Plugin subcommands
+    subparsers = parser.add_subparsers(dest='command', help='Plugin management commands')
+    
+    # bob plugins list
+    plugins_parser = subparsers.add_parser('plugins', help='Plugin management')
+    plugins_subparsers = plugins_parser.add_subparsers(dest='plugin_command')
+    
+    plugins_list = plugins_subparsers.add_parser('list', help='List installed plugins')
+    plugins_list.add_argument('--verbose', '-v', action='store_true', help='Show detailed info')
+    
+    plugins_install = plugins_subparsers.add_parser('install', help='Install a plugin')
+    plugins_install.add_argument('path', help='Path to plugin directory')
+    
+    plugins_uninstall = plugins_subparsers.add_parser('uninstall', help='Uninstall a plugin')
+    plugins_uninstall.add_argument('name', help='Plugin name to uninstall')
+    
+    plugins_info = plugins_subparsers.add_parser('info', help='Show plugin details')
+    plugins_info.add_argument('name', help='Plugin name')
+    
     # Parse args
     args = parser.parse_args()
     
@@ -264,6 +461,10 @@ Examples:
             print(f"    Path: {system['path']}")
             print()
         return 0
+    
+    # Handle plugin commands
+    if args.command == 'plugins':
+        return handle_plugin_command(args)
     
     # Handle quiet + verbose conflict
     if args.quiet and args.verbose:
@@ -357,6 +558,10 @@ Examples:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
     log_verbose(f"LLM Provider: {config.llm_provider} (model: {config.llm_model})", config)
+    
+    # Load plugins (unless disabled)
+    if not args.no_plugins:
+        _load_plugins(args.plugin_dirs, config)
     
     # Use the JSON-based report system framework
     try:
