@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2025-12-05
+
+### CMS-Style Jinja2 Template System
+
+This release introduces a fully data-driven template system where all UI text labels come from JSON configuration - no hardcoded strings in templates.
+
+#### New Template Package
+```
+bobreview/templates/
+├── base.html.j2              # Base layout with blocks
+├── components/
+│   └── macros.html.j2        # Reusable components (stat_card, pill, etc.)
+└── pages/
+    ├── homepage.html.j2
+    ├── metrics.html.j2
+    ├── zones.html.j2
+    ├── visuals.html.j2
+    ├── optimization.html.j2
+    └── stats.html.j2
+```
+
+### Added
+
+- **CMS-Style Labels**: All UI text configurable via JSON
+  ```json
+  {
+    "labels": {
+      "draw_calls": "GPU Draw Calls",
+      "triangles": "Vertex Count",
+      "executive_summary": "Performance Overview"
+    }
+  }
+  ```
+
+- **Template Engine** (`core/template_engine.py`):
+  - Multi-source loading: `~/.bobreview/templates/` → package built-ins
+  - Custom filters: `format_number`, `sanitize`, `trend_icon`
+  - Label injection into all templates
+
+- **LabelConfig** with 40+ configurable labels:
+  - Metric labels, section headers, status labels
+  - Trend labels, table headers, navigation
+  - Custom labels via `labels.custom` dict
+
+- **Jinja2 Templates**: All 6 pages converted from Python f-strings to Jinja2
+
+### Changed
+
+- **Executor**: Now uses Jinja2-first rendering with Python fallback
+- **Dependencies**: Added `jinja2>=3.1.0`
+
+---
+
 ## [1.0.5] - 2025-12-05
 
 ### Plug-and-Play LLM Provider System
@@ -499,6 +552,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.6]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.2...v1.0.3

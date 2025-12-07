@@ -5,7 +5,7 @@ This module defines the complete schema for JSON-based report system definitions
 including validation logic and dataclass representations of all configuration sections.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Dict, List, Any, Optional
 
 
@@ -63,8 +63,21 @@ class StatisticsConfig:
 
 @dataclass
 class MetricConfig:
-    """Configuration for metrics and analysis."""
+    """Configuration for metrics and analysis.
+    
+    Attributes:
+        primary: List of primary metric field names to analyze (e.g., ['draws', 'tris'])
+        metric_labels: Display names for metrics (e.g., {'draws': 'Draw Calls'})
+        threshold_mapping: Maps metric names to threshold config keys
+            e.g., {'draws': {'soft_cap': 'draw_soft_cap', 'hard_cap': 'draw_hard_cap', 'high': 'high_load_draw_threshold', 'low': 'low_load_draw_threshold'}}
+        timestamp_field: Field name for timestamps (default 'ts')
+        identifier_field: Field name for item identifier/name (default 'testcase')
+    """
     primary: List[str]
+    metric_labels: Dict[str, str] = field(default_factory=dict)
+    threshold_mapping: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    timestamp_field: str = 'ts'
+    identifier_field: str = 'testcase'
     derived: List[DerivedMetricConfig] = field(default_factory=list)
     statistics: StatisticsConfig = field(default_factory=StatisticsConfig)
 
@@ -155,6 +168,9 @@ class PageConfig:
     charts: List[ChartConfig] = field(default_factory=list)
     features: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    # Homepage card display
+    card_icon: str = ""
+    card_description: str = ""
 
 
 @dataclass
@@ -170,6 +186,58 @@ class OutputConfig:
     default_filename: str = 'performance_report.html'
     embed_images: bool = True
     linked_css: bool = False
+
+
+@dataclass
+class ContentBlockConfig:
+    """Configuration for a content block with title and description."""
+    title: str
+    description: str
+
+
+class Labels:
+    """
+    Simple dict-based label storage for UI text.
+    
+    Templates use: labels.get('key', 'Default Text')
+    JSON defines overrides in the 'labels' section.
+    No need to pre-define every label - just use get() with a default.
+    
+    This replaces the verbose dataclass approach with a simpler dict wrapper.
+    """
+    
+    def __init__(self, data: Dict[str, str] = None):
+        self._data = data or {}
+    
+    def get(self, key: str, default: str = '') -> str:
+        """Get a label by key with a default fallback."""
+        return self._data.get(key, default)
+    
+    def __getattr__(self, key: str) -> str:
+        """Allow attribute-style access: labels.foo returns labels._data.get('foo', '')"""
+        if key.startswith('_'):
+            raise AttributeError(key)
+        return self._data.get(key, '')
+    
+    def __getitem__(self, key: str) -> str:
+        """Allow dict-style access: labels['foo']"""
+        return self._data.get(key, '')
+    
+    def __contains__(self, key: str) -> bool:
+        return key in self._data
+    
+    def update(self, other: Dict[str, str]):
+        """Merge in additional labels."""
+        self._data.update(other)
+    
+    @property
+    def data(self) -> Dict[str, str]:
+        """Access the underlying dict."""
+        return self._data
+
+
+# Type alias for backward compatibility
+LabelConfig = Labels
 
 
 @dataclass
@@ -189,6 +257,12 @@ class ReportSystemDefinition:
     pages: List[PageConfig]
     theme: ThemeConfig
     output: OutputConfig
+    
+    # CMS-style labels - simple dict wrapper, templates use labels.get('key', 'default')
+    labels: Labels = field(default_factory=lambda: Labels({}))
+    
+    # Content blocks for longer descriptive text (lists of ContentBlockConfig or strings)
+    content_blocks: Dict[str, Any] = field(default_factory=dict)
     
     # Optional metadata
     tags: List[str] = field(default_factory=list)
@@ -390,6 +464,10 @@ def parse_metric_config(data: Dict[str, Any]) -> MetricConfig:
     
     return MetricConfig(
         primary=data['primary'],
+        metric_labels=data.get('metric_labels', {}),
+        threshold_mapping=data.get('threshold_mapping', {}),
+        timestamp_field=data.get('timestamp_field', 'ts'),
+        identifier_field=data.get('identifier_field', 'testcase'),
         derived=derived,
         statistics=statistics
     )
@@ -519,7 +597,9 @@ def parse_page_config(data: Dict[str, Any]) -> PageConfig:
         data_requirements=data_requirements,
         charts=charts,
         features=data.get('features', {}),
-        enabled=data.get('enabled', True)
+        enabled=data.get('enabled', True),
+        card_icon=data.get('card_icon', ''),
+        card_description=data.get('card_description', '')
     )
 
 
@@ -538,6 +618,28 @@ def parse_output_config(data: Dict[str, Any]) -> OutputConfig:
         embed_images=data.get('embed_images', True),
         linked_css=data.get('linked_css', False)
     )
+
+
+def parse_label_config(data: Optional[Dict[str, Any]]) -> Labels:
+    """
+    Parse label configuration from JSON.
+    
+    Simply wraps the JSON labels dict in a Labels object.
+    Templates use labels.get('key', 'Default Text') pattern.
+    
+    Parameters:
+        data: Optional dictionary from JSON labels section
+    
+    Returns:
+        Labels object wrapping the provided dict (or empty dict if None)
+    """
+    if data is None:
+        return Labels({})
+    
+    # Ensure all values are strings
+    string_data = {k: str(v) for k, v in data.items()}
+    return Labels(string_data)
+
 
 
 def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefinition:
@@ -578,6 +680,8 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         pages=pages,
         theme=parse_theme_config(data['theme']),
         output=parse_output_config(data['output']),
+        labels=parse_label_config(data.get('labels')),
+        content_blocks=data.get('content_blocks', {}),
         tags=data.get('tags', []),
         documentation_url=data.get('documentation_url'),
         examples=data.get('examples', [])

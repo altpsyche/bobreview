@@ -1,0 +1,164 @@
+{% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card %}
+
+{% block title %}{{ config.title }} - {{ labels.get('performance_zones', 'Performance Zones & Hotspots') }}{% endblock %}
+
+{% block content %}
+{# Calculate zone counts and build context for interpolation #}
+{% set high_pct = (stats.high_load|length / stats.count * 100) if stats.count > 0 else 0 %}
+{% set low_pct = (stats.low_load|length / stats.count * 100) if stats.count > 0 else 0 %}
+{% set medium_count = stats.count - stats.high_load|length - stats.low_load|length %}
+
+{% set ctx = {
+  'stats': stats,
+  'high_load_count': stats.high_load|length,
+  'low_load_count': stats.low_load|length,
+  'medium_count': medium_count,
+  'high_load_pct': high_pct|format_number(1),
+  'low_load_pct': low_pct|format_number(1),
+  'high_load_draw_threshold': config.high_load_draw_threshold,
+  'high_load_tri_threshold': config.high_load_tri_threshold|format_number(0),
+  'low_load_draw_threshold': config.low_load_draw_threshold,
+  'low_load_tri_threshold': config.low_load_tri_threshold|format_number(0)
+} %}
+
+<section class="panel">
+  <h2>{{ labels.get('zones_overview', 'Performance Zones Overview') }}</h2>
+  <p class="body-text">
+    {{ content.zones_overview_intro|default('Performance zones categorize captures based on their resource usage. This helps identify problematic areas requiring optimization and establish baseline performance expectations.') }}
+  </p>
+  
+  <div class="summary-grid">
+    {# Data-driven zone cards from JSON #}
+    {% if content.zone_cards %}
+    {% for card in content.zone_cards %}
+    <div class="stat-card {{ card.variant|default('ok') }}">
+      <div class="stat-label">{{ card.label }}</div>
+      <div class="stat-value">{{ card.value|interpolate(ctx) }}</div>
+      <div class="stat-sub">{{ card.sub|interpolate(ctx) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {# Fallback #}
+    {{ stat_card('High-Load Frames', stats.high_load|length, (high_pct|format_number(1)) ~ '% of captures', 'danger') }}
+    {{ stat_card('Medium-Load Frames', medium_count, 'Between thresholds', 'warn') }}
+    {{ stat_card('Low-Load Frames', stats.low_load|length, (low_pct|format_number(1)) ~ '% of captures', 'ok') }}
+    {% endif %}
+  </div>
+</section>
+
+<!-- High-Load Frames -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('high_load_frames', 'High-Load Frames') }}</h2>
+  <p class="body-text">
+    {{ content.high_load_description|interpolate(ctx)|default('High-load frames require immediate attention and optimization.')|safe }}
+  </p>
+  
+  {{ llm.zones_analysis|sanitize }}
+  
+  <table>
+    <thead>
+      <tr>
+        <th>{{ labels.get('index', 'Index') }}</th>
+        <th>{{ labels.get('draw_calls', 'Draw Calls') }}</th>
+        <th>{{ labels.get('triangles', 'Triangles') }}</th>
+        <th>{{ labels.get('image', 'Image') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if stats.high_load %}
+        {% for frame in stats.high_load %}
+        {% set idx = frame[0] %}
+        {% set data = frame[1] %}
+        <tr>
+          <td>{{ idx }}</td>
+          <td>{{ data.draws }}</td>
+          <td>{{ data.tris|format_number }}</td>
+          <td>
+            {{ data.img|default('N/A') }}
+            {% if data.img is defined and data.img and images[idx] is defined %}
+            <img class="thumb-small" src="{{ images[idx].src }}" alt="Index {{ idx }} high-load frame">
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; font-style: italic;">{{ labels.get('no_high_load_frames', 'No high-load frames detected') }}</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- Low-Load Baselines -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('low_load_baselines', 'Low-Load Baselines') }}</h2>
+  <p class="body-text">
+    {{ content.low_load_description|interpolate(ctx)|default('Low-load frames represent baseline performance and are useful design references.')|safe }}
+  </p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>{{ labels.get('index', 'Index') }}</th>
+        <th>{{ labels.get('draw_calls', 'Draw Calls') }}</th>
+        <th>{{ labels.get('triangles', 'Triangles') }}</th>
+        <th>{{ labels.get('image', 'Image') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if stats.low_load %}
+        {% for frame in stats.low_load %}
+        {% set idx = frame[0] %}
+        {% set data = frame[1] %}
+        <tr>
+          <td>{{ idx }}</td>
+          <td>{{ data.draws }}</td>
+          <td>{{ data.tris|format_number }}</td>
+          <td>
+            {{ data.img|default('N/A') }}
+            {% if data.img is defined and data.img and images[idx] is defined %}
+            <img class="thumb-small" src="{{ images[idx].src }}" alt="Index {{ idx }} low-load frame">
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; font-style: italic;">{{ labels.get('no_low_load_frames', 'No low-load frames detected') }}</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- Critical Hotspot -->
+{% if stats.count > 0 and critical %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('critical_hotspot', 'Critical Hotspot') }}</h2>
+  <p class="body-text">
+    {{ content.critical_hotspot_zones|default('The single worst-performing capture that demands the highest priority for optimization work.') }}
+  </p>
+  
+  <div class="callout critical">
+    <div class="callout-title">Index {{ critical.index }}{% if data_points[critical.index] is defined %} - {{ data_points[critical.index].img|default('') }}{% endif %}</div>
+    <div>{{ critical.draws }} Draw Calls &middot; {{ critical.tris|format_number }} Triangles</div>
+  </div>
+  
+  {% if images[critical.index] is defined %}
+  <img
+    class="thumb-large"
+    src="{{ images[critical.index].src }}"
+    alt="Critical hotspot frame (index {{ critical.index }})"
+    style="max-width: 100%;"
+  />
+  {% endif %}
+  
+  <div class="body-text">
+    <strong>{{ labels.get('analysis', 'Analysis') }}:</strong> {{ content.critical_hotspot_analysis|default('This frame represents the peak load in the capture session. Focus optimization efforts here first, as improvements will have the most significant impact.') }}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
