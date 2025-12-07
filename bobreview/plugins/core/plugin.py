@@ -54,6 +54,10 @@ class CorePlugin(BasePlugin):
         # Register report systems
         if config.get('register_report_systems', True):
             self._register_report_systems(registry)
+        
+        # Register templates
+        if config.get('register_templates', True):
+            self._register_templates(registry)
     
     def _register_generators(self, registry) -> None:
         """Register all built-in LLM generators."""
@@ -150,6 +154,19 @@ class CorePlugin(BasePlugin):
                     logging.getLogger(__name__).error(
                         f"Failed to load report system {json_file}: {e}"
                     )
+    
+    def _register_templates(self, registry) -> None:
+        """Register built-in templates from core plugin."""
+        from pathlib import Path
+        
+        template_dir = Path(__file__).parent / 'templates'
+        if template_dir.exists():
+            # Priority 1000 = low priority (user and other plugins can override)
+            registry.register_template_path(
+                template_dir, 
+                plugin_name=self.name,
+                priority=1000
+            )
     
     def on_unload(self) -> None:
         """Clean up when plugin is unloaded."""

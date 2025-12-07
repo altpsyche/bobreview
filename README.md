@@ -50,7 +50,7 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 ## Architecture
 
-BobReview v1.0.5 uses a clean modular architecture:
+BobReview v1.0.7 uses a **fully modular plugin architecture**:
 
 ```text
 bobreview/
@@ -62,52 +62,51 @@ bobreview/
 │   ├── config.py      # ReportConfig dataclass
 │   ├── cache.py       # LLM response caching
 │   ├── utils.py       # Logging, formatting
-│   └── analysis.py    # Statistics calculation
+│   ├── analysis.py    # Statistics calculation
+│   └── template_engine.py  # Jinja2 template loading
 │
-├── registry/          # Unified registries
-│   ├── themes.py      # Visual themes (dark, light, high_contrast)
-│   ├── charts.py      # Chart.js configurations
-│   └── pages.py       # Page definitions
+├── plugins/           # Plugin system (NEW in v1.0.7)
+│   ├── registry.py    # Extension point registry
+│   ├── base.py        # BasePlugin abstract class
+│   └── core/          # Core plugin (provides ALL defaults)
+│       ├── plugin.py  # CorePlugin class
+│       ├── report_systems/
+│       │   └── png_data_points.json
+│       └── templates/
+│           ├── base.html.j2
+│           ├── components/
+│           └── pages/
+│
+├── services/          # Pluggable services
+│   ├── container.py   # ServiceContainer
+│   ├── data_service.py
+│   ├── analytics_service.py
+│   ├── chart_service.py
+│   └── llm_service.py
 │
 ├── llm/               # LLM abstraction layer
 │   ├── client.py      # call_llm, call_llm_chunked
-│   ├── providers/     # Pluggable LLM providers (NEW in v1.0.5)
-│   │   ├── base.py    # BaseLLMProvider abstract class
-│   │   ├── factory.py # Provider registry & factory
-│   │   ├── openai.py  # OpenAI GPT implementation
-│   │   ├── anthropic.py # Anthropic Claude implementation
-│   │   └── ollama.py  # Ollama local models
+│   ├── providers/     # Pluggable LLM providers
 │   └── generators/    # Content generators
-│       ├── executive.py, metrics.py, zones.py
-│       ├── optimization.py, recommendations.py
-│       ├── visuals.py, stats.py
 │
-├── pages/             # HTML page renderers
-│   ├── base.py        # Shared templates
-│   ├── homepage.py, metrics.py, zones.py
-│   ├── visuals.py, optimization.py, stats.py
-│   └── styles.css
-│
-└── report_systems/    # JSON-based configuration
+└── report_systems/    # Report execution
     ├── schema.py, loader.py, executor.py
-    └── builtin/png_data_points.json
 ```
 
 **Design Principles:**
-- Single Responsibility - Each module has one clear purpose (max 200 lines)
-- Dependency Injection - Configuration passed through parameters
-- No Circular Dependencies - Clean import hierarchy
-- Testable - Each module can be tested independently
-- Registry Pattern - Self-registration for pages, LLM generators, and charts
+- **Plugin-First** - All functionality provided by plugins (core plugin is default)
+- **Single Responsibility** - Each module has one clear purpose
+- **Dependency Injection** - Configuration and services passed through
+- **Registry Pattern** - Self-registration for all extension points
 
 ### Package Overview
 
 | Package | Purpose |
 |---------|---------|
+| `plugins/` | Core plugin provides LLM generators, themes, services, templates |
 | `core/` | Configuration, caching, logging, analysis |
-| `registry/` | Themes, charts, pages (unified access) |
-| `llm/` | LLM client, providers (OpenAI/Anthropic/Ollama), 7 generators |
-| `pages/` | 6 HTML page renderers + CSS |
+| `services/` | Pluggable service container with data, analytics, charts, LLM |
+| `llm/` | LLM providers (OpenAI/Anthropic/Ollama), 7 generators |
 | `report_systems/` | JSON-based pipeline configuration |
 
 ---

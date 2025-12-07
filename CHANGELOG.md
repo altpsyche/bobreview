@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2025-12-08
+
+### Fully Modular Plugin Architecture
+
+BobReview is now a **minimal framework**. All built-in functionality comes from the `bobreview-core` plugin and can be replaced or extended by other plugins.
+
+#### New Core Plugin
+```
+bobreview/plugins/core/
+├── __init__.py
+├── manifest.json           # Plugin metadata
+├── plugin.py               # CorePlugin class
+├── report_systems/
+│   └── png_data_points.json  # Moved from builtin/
+└── templates/              # All Jinja2 templates
+    ├── base.html.j2
+    ├── components/
+    │   └── macros.html.j2
+    └── pages/*.html.j2
+```
+
+### Added
+
+- **Core Plugin** (`bobreview/plugins/core/`):
+  - Provides ALL default functionality
+  - LLM generators (7), themes (3), services (3), data parsers (1)
+  - Report systems and templates now plugin-provided
+  - Can be disabled/replaced entirely
+
+- **Plugin Registry Extensions**:
+  - `register_report_system()` / `get_report_system()` - Report system registration
+  - `register_template_path()` / `get_template_paths()` - Template path registration
+  - Priority-based template loading (lower number = higher priority)
+
+- **Template Overrides**: Plugins can provide alternative templates
+  ```python
+  registry.register_template_path(my_templates, "my-theme", priority=500)
+  ```
+
+- **Report System Overrides**: Custom report systems via plugins
+  ```python
+  registry.register_report_system("my_system", system_def, "my-plugin")
+  ```
+
+### Changed
+
+- **Template Loading Order**:
+  1. User templates (`~/.bobreview/templates/`) - highest priority
+  2. Plugin-registered templates - core plugin uses priority 1000
+  3. Package fallback (now empty)
+
+- **Report System Loading Order**:
+  1. Plugin registry - checked first
+  2. User directory (`~/.bobreview/report_systems/`)
+  3. Built-in directory (now empty)
+
+- **Moved to Core Plugin**:
+  - `report_systems/builtin/png_data_points.json` → `plugins/core/report_systems/`
+  - `templates/*` → `plugins/core/templates/`
+
+### Technical Details
+
+- **New files**: `plugins/core/plugin.py`, `plugins/core/manifest.json`
+- **Modified files**: 
+  - `plugins/registry.py` - Added report system and template registration
+  - `report_systems/loader.py` - Check plugin registry first
+  - `core/template_engine.py` - Include plugin template paths
+  - `cli.py` - Load core plugin at startup
+
+- **Architecture change**: 
+  - Main package is now a minimal framework
+  - All functionality injectable via plugins
+  - Core plugin can be replaced entirely
+
+---
+
 ## [1.0.6] - 2025-12-05
 
 ### CMS-Style Jinja2 Template System
@@ -552,6 +628,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.7]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.3...v1.0.4

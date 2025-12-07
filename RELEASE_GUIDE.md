@@ -2,17 +2,17 @@
 
 ## Performance Analysis Tool for Game Development
 
-Version 1.0.5
+Version 1.0.7
 
-### What's New in v1.0.5
+### What's New in v1.0.7
 
-- **Multi-Provider LLM Support**: Choose your AI provider
-  - OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) - default
-  - Anthropic (Claude 3 Opus, Sonnet, Haiku)
-  - Ollama (local models - Llama 2, Mistral, CodeLlama)
-- **Unified CLI Arguments**: `--llm-provider`, `--llm-api-key`, `--llm-model`
-- **Provider Factory**: Extensible architecture for custom providers
-- All v1.0.4 features preserved
+- **Fully Modular Plugin Architecture**: BobReview is now a minimal framework
+  - All functionality comes from the `bobreview-core` plugin
+  - LLM generators, themes, services, templates are all pluggable
+  - Report systems and templates can be overridden by plugins
+- **Plugin Registry Extensions**: Register report systems, templates, services
+- **Priority-Based Template Loading**: Plugins can provide alternative templates
+- All v1.0.6 features preserved
 
 ---
 
@@ -81,7 +81,7 @@ bobreview --dir . --llm-provider ollama --llm-model llama2
 bobreview --version
 ```
 
-You should see: `bobreview 1.0.5`
+You should see: `bobreview 1.0.7`
 
 ---
 
@@ -321,5 +321,5 @@ python -c "from bobreview import ReportConfig; print('OK')"
 
 ---
 
-**BobReview v1.0.5** - Performance analysis and review tool for game development  
-MIT License | Multi-provider LLM support (OpenAI, Anthropic, Ollama)
+**BobReview v1.0.7** - Performance analysis and review tool for game development  
+MIT License | Fully modular plugin architecture

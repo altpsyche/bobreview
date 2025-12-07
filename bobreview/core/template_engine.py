@@ -42,12 +42,18 @@ class TemplateEngine:
         """
         Initialize the template engine.
         
+        Load order (first match wins):
+        1. User templates: ~/.bobreview/templates/
+        2. Custom paths (if provided)
+        3. Plugin-registered templates (from PluginRegistry)
+        4. Package built-in templates (fallback)
+        
         Parameters:
             custom_paths: Optional list of additional template directories
         """
         loaders = []
         
-        # User templates directory
+        # User templates directory (highest priority)
         user_template_dir = Path.home() / '.bobreview' / 'templates'
         if user_template_dir.exists():
             loaders.append(FileSystemLoader(str(user_template_dir)))
@@ -58,7 +64,17 @@ class TemplateEngine:
                 if Path(path).exists():
                     loaders.append(FileSystemLoader(str(path)))
         
-        # Package built-in templates
+        # Plugin-registered template paths
+        try:
+            from ..plugins import get_registry
+            registry = get_registry()
+            for template_path in registry.get_template_paths():
+                if template_path.exists():
+                    loaders.append(FileSystemLoader(str(template_path)))
+        except ImportError:
+            pass
+        
+        # Package built-in templates (lowest priority fallback)
         loaders.append(PackageLoader('bobreview', 'templates'))
         
         self.env = Environment(

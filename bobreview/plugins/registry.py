@@ -57,6 +57,9 @@ class PluginRegistry:
         # Report system registry: name -> system definition (parsed JSON)
         self._report_systems: Dict[str, Any] = {}
         
+        # Template paths registered by plugins (ordered list for priority)
+        self._template_paths: List[tuple] = []  # [(path, plugin_name), ...]
+        
         # Track which plugin registered what
         self._component_owners: Dict[str, str] = {}  # component_key -> plugin_name
         
@@ -340,6 +343,53 @@ class PluginRegistry:
     def get_report_system_names(self) -> List[str]:
         """Get list of all registered report system names."""
         return list(self._report_systems.keys())
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Template Path Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_template_path(
+        self, 
+        path: Any,  # Path or str
+        plugin_name: str = "",
+        priority: int = 100
+    ) -> None:
+        """
+        Register a template directory path.
+        
+        Templates from registered paths are loaded in priority order
+        (lower numbers = higher priority).
+        
+        Parameters:
+            path: Path to template directory
+            plugin_name: Name of the plugin registering this path
+            priority: Loading priority (default 100, core plugin uses 1000)
+        """
+        from pathlib import Path as PathClass
+        path = PathClass(path)
+        
+        if not path.exists():
+            logger.warning(f"Template path does not exist: {path}")
+            return
+        
+        self._template_paths.append((path, plugin_name, priority))
+        # Keep sorted by priority (lower = higher priority)
+        self._template_paths.sort(key=lambda x: x[2])
+        self._component_owners[f"template_path:{path}"] = plugin_name
+        logger.debug(f"Registered template path: {path} from {plugin_name or 'core'}")
+    
+    def get_template_paths(self) -> List[Any]:
+        """
+        Get all registered template paths in priority order.
+        
+        Returns:
+            List of Path objects
+        """
+        return [path for path, _, _ in self._template_paths]
+    
+    def get_all_template_registrations(self) -> List[tuple]:
+        """Get all template path registrations with metadata."""
+        return list(self._template_paths)
     
     # ─────────────────────────────────────────────────────────────────────────
     # Utility Methods
