@@ -40,12 +40,16 @@
 {% if charts %}
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('distribution', 'Distribution') }}</h2>
+  {% if charts.draws_histogram %}
   <div class="chart-container">
-    <canvas id="drawsHistogram"></canvas>
+    <canvas id="draws_histogram"></canvas>
   </div>
+  {% endif %}
+  {% if charts.tris_histogram %}
   <div class="chart-container" style="margin-top: 20px;">
-    <canvas id="trisHistogram"></canvas>
+    <canvas id="tris_histogram"></canvas>
   </div>
+  {% endif %}
 </section>
 {% endif %}
 {% endblock %}
@@ -53,8 +57,8 @@
 {% block scripts %}
 {% if charts %}
 <script>
-{{ charts.draws_histogram|safe }}
-{{ charts.tris_histogram|safe }}
+{% if charts.draws_histogram %}{{ charts.draws_histogram|safe }}{% endif %}
+{% if charts.tris_histogram %}{{ charts.tris_histogram|safe }}{% endif %}
 </script>
 {% endif %}
 {% endblock %}

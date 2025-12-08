@@ -39,7 +39,7 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
               Config and thresholds are accessed via generate_chart() parameters.
         """
         self.config = config
-        self.thresholds = thresholds or {}
+        self.thresholds = thresholds or {} if thresholds is not None else {}
     
     def generate_chart(
         self,
@@ -75,13 +75,14 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
         tris_label = labels.get('triangles', 'Triangles')
         
         # Get thresholds from config parameter (core API provides config)
-        # Use config.thresholds if available, otherwise fallback to defaults
+        # ThresholdConfig is a dict, so use dict access
         if config and hasattr(config, 'thresholds'):
             thresholds = config.thresholds
-            high_draw = getattr(thresholds, 'high_load_draw_threshold', 600)
-            low_draw = getattr(thresholds, 'low_load_draw_threshold', 400)
-            high_tris = getattr(thresholds, 'high_load_tri_threshold', 100000)
-            low_tris = getattr(thresholds, 'low_load_tri_threshold', 50000)
+            # Use dict access since ThresholdConfig is a dict subclass
+            high_draw = thresholds.get('high_load_draw_threshold', 600)
+            low_draw = thresholds.get('low_load_draw_threshold', 400)
+            high_tris = thresholds.get('high_load_tri_threshold', 100000)
+            low_tris = thresholds.get('low_load_tri_threshold', 50000)
         else:
             # Fallback to self.thresholds or defaults
             thresholds_dict = self.thresholds or {}
@@ -90,16 +91,19 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
             high_tris = thresholds_dict.get('high_load_tri_threshold', 100000)
             low_tris = thresholds_dict.get('low_load_tri_threshold', 50000)
         
+        # Normalize chart type: 'line' is treated as 'timeline'
+        normalized_type = 'timeline' if chart_type == 'line' else chart_type
+        
         # Generate based on chart type
-        if chart_type == 'timeline' and y_field == 'draws':
+        if normalized_type == 'timeline' and y_field == 'draws':
             return self._generate_draws_timeline(data_points, chart_id, draws_label, high_draw, low_draw)
-        elif chart_type == 'timeline' and y_field == 'tris':
+        elif normalized_type == 'timeline' and y_field == 'tris':
             return self._generate_tris_timeline(data_points, chart_id, tris_label, high_tris, low_tris)
-        elif chart_type == 'scatter':
+        elif normalized_type == 'scatter':
             return self._generate_scatter_chart(data_points, chart_id, draws_label, tris_label, high_draw, low_draw, high_tris, low_tris)
-        elif chart_type == 'histogram' and y_field == 'draws':
+        elif normalized_type == 'histogram' and y_field == 'draws':
             return self._generate_draws_histogram(data_points, chart_id, draws_label, high_draw, low_draw)
-        elif chart_type == 'histogram' and y_field == 'tris':
+        elif normalized_type == 'histogram' and y_field == 'tris':
             return self._generate_tris_histogram(data_points, chart_id, tris_label, high_tris, low_tris)
         else:
             # Fallback: return empty chart

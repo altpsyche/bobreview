@@ -107,12 +107,21 @@ class LLMService(BaseService):
                     
                     # If it has 4 parameters (data_points, stats, config, context), it's interface-based
                     if len(params) == 4:
+                        # Ensure context is a dict
+                        if not isinstance(context, dict):
+                            # If context is a string or other type, convert to dict
+                            context = {'images_dir_rel': str(context)} if context else {}
                         return gen_func(data_points, stats, report_config, context)
                     else:
                         # Old-style function (data_points, stats, config, images_dir_rel)
                         from ..report_systems.llm_generator_base import LLMGeneratorAdapter
                         adapter = LLMGeneratorAdapter(gen_func, generator_config)
-                        return adapter.generate(data_points, stats, report_config, context.get('images_dir_rel', ''))
+                        # Extract images_dir from context
+                        if isinstance(context, dict):
+                            images_dir = context.get('images_dir_rel', '')
+                        else:
+                            images_dir = str(context) if context else ''
+                        return adapter.generate(data_points, stats, report_config, context if isinstance(context, dict) else {'images_dir_rel': images_dir})
                 except Exception as e:
                     logger.warning(f"Python generator failed, falling back to template: {e}")
         
@@ -135,21 +144,12 @@ class LLMService(BaseService):
         # Format data table
         data_table = generator.format_data_table(selected_data)
         
-        # Check cache
-        cache_key = self._make_cache_key(generator_config.id, prompt)
-        if self.cache:
-            cached = self.cache.get(cache_key)
-            if cached:
-                logger.debug(f"Cache hit for {generator_config.id}")
-                return cached
+        # Check cache - use the cache built into call_llm, which handles caching correctly
+        # The cache is checked inside call_llm with proper parameters
         
-        # Call LLM
+        # Call LLM (cache is handled inside call_llm)
         try:
             response = call_llm(prompt, data_table=data_table, config=report_config)
-            
-            # Cache response
-            if self.cache and response:
-                self.cache.set(cache_key, response)
             
             return response
             

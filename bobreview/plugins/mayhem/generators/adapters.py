@@ -32,7 +32,12 @@ class ExecutiveSummaryGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate executive summary."""
-        return generate_executive_summary(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_executive_summary(data_points, stats, config, images_dir)
 
 
 class MetricDeepDiveGenerator(LLMGeneratorInterface):
@@ -46,7 +51,12 @@ class MetricDeepDiveGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate metric deep dive."""
-        return generate_metric_deep_dive(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_metric_deep_dive(data_points, stats, config, images_dir)
 
 
 class ZonesHotspotsGenerator(LLMGeneratorInterface):
@@ -60,7 +70,12 @@ class ZonesHotspotsGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate zones and hotspots analysis."""
-        return generate_zones_hotspots(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_zones_hotspots(data_points, stats, config, images_dir)
 
 
 class OptimizationChecklistGenerator(LLMGeneratorInterface):
@@ -74,7 +89,12 @@ class OptimizationChecklistGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate optimization checklist."""
-        return generate_optimization_checklist(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_optimization_checklist(data_points, stats, config, images_dir)
 
 
 class SystemRecommendationsGenerator(LLMGeneratorInterface):
@@ -88,7 +108,12 @@ class SystemRecommendationsGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate system recommendations."""
-        return generate_system_recommendations(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_system_recommendations(data_points, stats, config, images_dir)
 
 
 class VisualAnalysisGenerator(LLMGeneratorInterface):
@@ -102,7 +127,12 @@ class VisualAnalysisGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate visual analysis."""
-        return generate_visual_analysis(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_visual_analysis(data_points, stats, config, images_dir)
 
 
 class StatisticalInterpretationGenerator(LLMGeneratorInterface):
@@ -116,5 +146,10 @@ class StatisticalInterpretationGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate statistical interpretation."""
-        return generate_statistical_interpretation(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_statistical_interpretation(data_points, stats, config, images_dir)
 

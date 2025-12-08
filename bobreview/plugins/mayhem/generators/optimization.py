@@ -27,11 +27,15 @@ def generate_optimization_checklist(
     else:
         log_warning(f"Critical index {critical_idx} out of range", config)
     
+    # Get thresholds using dict access (ThresholdConfig is a dict)
+    draw_hard_cap = config.thresholds.get('draw_hard_cap', 600)
+    tri_hard_cap = config.thresholds.get('tri_hard_cap', 120000)
+    
     prompt = f"""Generate optimization recommendations for critical hotspot:
 
 Index {critical_idx}: {critical_point['draws']} draws, {format_number(critical_point['tris'])} triangles
 Test case: {critical_point['testcase']}
-Thresholds: {config.thresholds.draw_hard_cap} draws, {format_number(config.thresholds.tri_hard_cap, 0)} tris
+Thresholds: {draw_hard_cap} draws, {format_number(tri_hard_cap, 0)} tris
 
 Generate:
 1. Inspection steps (3-4 bullet points)
@@ -42,30 +46,36 @@ Format as HTML <ul> and <li> tags. Be specific and actionable."""
     results['critical'] = call_llm_chunked(prompt, critical_samples, config)
     
     # High-geometry hotspots
+    high_load_tri_threshold = config.thresholds.get('high_load_tri_threshold', 80000)
+    tri_hard_cap = config.thresholds.get('tri_hard_cap', 120000)
+    
     high_geo_samples = []
     for idx, point in stats['high_load']:
-        if point['tris'] >= config.thresholds.high_load_tri_threshold and idx < len(data_points):
+        if point['tris'] >= high_load_tri_threshold and idx < len(data_points):
             high_geo_samples.append(data_points[idx])
     
     prompt = f"""Generate geometry optimization recommendations:
 
-{len(high_geo_samples)} frames above {format_number(config.thresholds.high_load_tri_threshold, 0)} triangles
-Target: below {format_number(config.thresholds.tri_hard_cap, 0)}
+{len(high_geo_samples)} frames above {format_number(high_load_tri_threshold, 0)} triangles
+Target: below {format_number(tri_hard_cap, 0)}
 
 Generate 4-5 actionable points for geometry/LOD optimization. Format as HTML <ul> with <li> tags."""
 
     results['high_geometry'] = call_llm_chunked(prompt, high_geo_samples, config)
     
     # High-draw hotspots
+    high_load_draw_threshold = config.thresholds.get('high_load_draw_threshold', 500)
+    draw_soft_cap = config.thresholds.get('draw_soft_cap', 550)
+    
     high_draw_samples = []
     for idx, point in stats['high_load']:
-        if point['draws'] >= config.thresholds.high_load_draw_threshold and idx < len(data_points):
+        if point['draws'] >= high_load_draw_threshold and idx < len(data_points):
             high_draw_samples.append(data_points[idx])
     
     prompt = f"""Generate draw call optimization recommendations:
 
-Focus: frames with draws ≥ {config.thresholds.high_load_draw_threshold}
-Target: below {config.thresholds.draw_soft_cap}
+Focus: frames with draws ≥ {high_load_draw_threshold}
+Target: below {draw_soft_cap}
 
 Generate 4-5 points for batching and material consolidation. Format as HTML <ul> with <li> tags."""
 

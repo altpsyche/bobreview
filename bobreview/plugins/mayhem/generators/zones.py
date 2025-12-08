@@ -29,9 +29,13 @@ def generate_zones_hotspots(
         for i, p in stats['high_load'][:5]
     ])
     
+    # Get thresholds using dict access (ThresholdConfig is a dict)
+    high_load_draw_threshold = config.thresholds.get('high_load_draw_threshold', 500)
+    high_load_tri_threshold = config.thresholds.get('high_load_tri_threshold', 80000)
+    
     prompt = f"""Analyze high-load performance frames (1-2 paragraphs):
 
-{len(stats['high_load'])} frames exceed thresholds (≥{config.thresholds.high_load_draw_threshold} draws or ≥{format_number(config.thresholds.high_load_tri_threshold, 0)} tris)
+{len(stats['high_load'])} frames exceed thresholds (≥{high_load_draw_threshold} draws or ≥{format_number(high_load_tri_threshold, 0)} tris)
 
 Top frames:
 {high_load_details}
@@ -46,9 +50,13 @@ Cover patterns, draw-call vs geometry dominance, and common characteristics. Use
         if idx < len(data_points):
             low_load_samples.append(data_points[idx])
     
+    # Get thresholds using dict access
+    low_load_draw_threshold = config.thresholds.get('low_load_draw_threshold', 400)
+    low_load_tri_threshold = config.thresholds.get('low_load_tri_threshold', 50000)
+    
     prompt = f"""Analyze low-load baseline frames (1 paragraph):
 
-{len(stats['low_load'])} frames below thresholds (<{config.thresholds.low_load_draw_threshold} draws and <{format_number(config.thresholds.low_load_tri_threshold, 0)} tris)
+{len(stats['low_load'])} frames below thresholds (<{low_load_draw_threshold} draws and <{format_number(low_load_tri_threshold, 0)} tris)
 
 Explain their significance as performance baselines. Use HTML <p> tags."""
     

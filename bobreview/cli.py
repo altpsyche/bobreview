@@ -252,6 +252,7 @@ Examples:
 
   # List available plugins and report systems
   bobreview plugins list
+  bobreview --list-plugins
   bobreview --list-report-systems
 
   # List available LLM providers
@@ -379,9 +380,9 @@ Examples:
     )
     # Plugin and report system selection
     parser.add_argument(
-        '--plugin', type=str, required=True,
+        '--plugin', type=str, required=False,
         metavar='PLUGIN_NAME',
-        help='Plugin to use (e.g., "mayhem", "game-review"). Auto-selects report system if only one exists, requires --report-system if multiple exist.'
+        help='Plugin to use (e.g., "mayhem", "MayhemAutomation", "game-review"). Use --list-plugins to see available plugins. Plugin name matching is case-insensitive.'
     )
     parser.add_argument(
         '--report-system', type=str, default=None,
@@ -391,6 +392,10 @@ Examples:
     parser.add_argument(
         '--list-report-systems', action='store_true',
         help='List all available report systems and exit'
+    )
+    parser.add_argument(
+        '--list-plugins', action='store_true',
+        help='List all available plugins and exit'
     )
     
     # Plugin arguments
@@ -454,9 +459,42 @@ Examples:
             print()
         return 0
     
+    # Handle --list-plugins
+    if args.list_plugins:
+        dirs = _get_default_plugin_dirs()
+        loader = init_loader(dirs)
+        loader.discover()
+        plugins = loader.get_discovered_plugins()
+        
+        if not plugins:
+            print("No plugins found.")
+            print(f"\nPlugin directories searched:")
+            for d in dirs:
+                print(f"  - {d}")
+            print("\nTo add plugins, place them in ~/.bobreview/plugins/")
+            return 0
+        
+        print("Available plugins:\n")
+        for p in plugins:
+            status = "✓ loaded" if p.loaded else "○ available"
+            print(f"  {p.name} v{p.version} [{status}]")
+            if p.description:
+                print(f"    {p.description}")
+            if p.author:
+                print(f"    Author: {p.author}")
+            if p.provides:
+                provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
+                print(f"    Provides: {provides_str}")
+            print()
+        return 0
+    
     # Handle plugin commands
     if args.command == 'plugins':
         return handle_plugin_command(args)
+    
+    # Validate that --plugin is provided if not using list commands
+    if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers):
+        parser.error("--plugin is required (unless using --list-plugins, --list-report-systems, or --list-providers)")
     
     # Handle quiet + verbose conflict
     if args.quiet and args.verbose:
@@ -579,10 +617,36 @@ Examples:
                 loader.discover()
             
             plugin_path = None
+            matched_manifest = None
+            plugin_name_normalized = args.plugin.lower().replace('-', '_').replace(' ', '')
             for manifest in loader.get_discovered_plugins():
-                if manifest.name == args.plugin or manifest.name.replace('-', '_') == args.plugin.replace('-', '_'):
+                manifest_name_normalized = manifest.name.lower().replace('-', '_').replace(' ', '')
+                # Exact match
+                if manifest.name == args.plugin:
                     plugin_path = Path(manifest.path) if manifest.path else None
+                    matched_manifest = manifest
                     break
+                # Normalized match (case-insensitive, dash/underscore agnostic)
+                elif manifest_name_normalized == plugin_name_normalized:
+                    plugin_path = Path(manifest.path) if manifest.path else None
+                    matched_manifest = manifest
+                    break
+                # Substring match (e.g., "mayhem" matches "MayhemAutomation")
+                elif plugin_name_normalized in manifest_name_normalized or manifest_name_normalized in plugin_name_normalized:
+                    plugin_path = Path(manifest.path) if manifest.path else None
+                    matched_manifest = manifest
+                    break
+            
+            # Load the plugin if found
+            if matched_manifest:
+                if not loader.is_loaded(matched_manifest.name):
+                    try:
+                        loader.load(matched_manifest.name)
+                        log_info(f"Loaded plugin: {matched_manifest.name}", config)
+                    except Exception as e:
+                        log_warning(f"Failed to load plugin '{matched_manifest.name}': {e}", config)
+                # Update args.plugin to the actual plugin name for consistency
+                args.plugin = matched_manifest.name
             
             if plugin_path:
                 # Find report systems in plugin
@@ -610,7 +674,23 @@ Examples:
                     log_error(f"Plugin '{args.plugin}' has no report_systems directory")
                     return 1
             else:
-                log_error(f"Plugin '{args.plugin}' not found")
+                # Plugin not found - provide helpful error message
+                available_plugins = [m.name for m in loader.get_discovered_plugins()]
+                if available_plugins:
+                    # Check if user included version number
+                    plugin_name_clean = args.plugin.split()[0] if ' ' in args.plugin else args.plugin
+                    suggestions = [p for p in available_plugins 
+                                 if plugin_name_clean.lower() in p.lower() or p.lower() in plugin_name_clean.lower()]
+                    error_msg = f"Plugin '{args.plugin}' not found.\n"
+                    if ' ' in args.plugin or 'v' in args.plugin.lower():
+                        error_msg += "Note: Do not include version numbers in the plugin name. "
+                        error_msg += f"Use just the plugin name (e.g., '{plugin_name_clean}').\n"
+                    error_msg += f"Available plugins: {', '.join(available_plugins)}"
+                    if suggestions:
+                        error_msg += f"\nDid you mean: {', '.join(suggestions)}?"
+                    log_error(error_msg)
+                else:
+                    log_error(f"Plugin '{args.plugin}' not found. No plugins are available.")
                 return 1
         
         log_info(f"Loading report system: {report_system_id}", config)

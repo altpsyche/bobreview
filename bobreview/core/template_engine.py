@@ -132,10 +132,12 @@ class TemplateEngine:
         original_context = context
         
         # Convert dataclass or object to dict if needed
-        if hasattr(context, '__dict__') and not isinstance(context, dict):
-            ctx = vars(context) if hasattr(context, '__dict__') else {}
-        elif isinstance(context, dict):
+        # Keep original context for attribute access (dataclasses, objects)
+        if isinstance(context, dict):
             ctx = context
+        elif hasattr(context, '__dict__'):
+            # For dataclasses/objects, create a dict but keep original for attribute access
+            ctx = vars(context) if hasattr(context, '__dict__') else {}
         else:
             ctx = {}
         
@@ -155,6 +157,14 @@ class TemplateEngine:
                 elif hasattr(value, part):
                     value = getattr(value, part)
                     found = True
+                elif isinstance(value, dict):
+                    # For dict subclasses like ThresholdConfig, try __getitem__ even if hasattr fails
+                    try:
+                        value = value[part]
+                        found = True
+                    except (KeyError, TypeError):
+                        found = False
+                        break
                 else:
                     found = False
                     break
@@ -179,16 +189,33 @@ class TemplateEngine:
                 # Priority 2: Try if context is a dict with 'config' key
                 if not found and isinstance(ctx, dict) and 'config' in ctx:
                     config_obj = ctx['config']
-                    if hasattr(config_obj, 'thresholds') and hasattr(config_obj.thresholds, simple_name):
-                        value = getattr(config_obj.thresholds, simple_name)
-                        found = True
+                    if hasattr(config_obj, 'thresholds'):
+                        thresholds = config_obj.thresholds
+                        # ThresholdConfig is a dict, so use dict access
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                        elif hasattr(thresholds, simple_name):
+                            value = getattr(thresholds, simple_name)
+                            found = True
                 
                 # Priority 3: Try if context itself is a config object with thresholds
                 if not found:
                     config_obj = original_context
-                    if hasattr(config_obj, 'thresholds'):
-                        if hasattr(config_obj.thresholds, simple_name):
-                            value = getattr(config_obj.thresholds, simple_name)
+                    # Handle both dict and object contexts
+                    if isinstance(config_obj, dict) and 'thresholds' in config_obj:
+                        thresholds = config_obj['thresholds']
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                    elif hasattr(config_obj, 'thresholds'):
+                        thresholds = config_obj.thresholds
+                        # ThresholdConfig is a dict subclass, so check dict access first
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                        elif hasattr(thresholds, simple_name):
+                            value = getattr(thresholds, simple_name)
                             found = True
             
             if not found:

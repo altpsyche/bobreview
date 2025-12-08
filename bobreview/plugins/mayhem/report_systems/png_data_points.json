@@ -436,16 +436,16 @@
       },
       "charts": [
         {
-          "id": "timeline_draws",
-          "type": "line",
-          "title": "Draw Calls Over Time",
+          "id": "draws_histogram",
+          "type": "histogram",
+          "title": "Draw Calls Distribution",
           "x_field": "index",
           "y_field": "draws"
         },
         {
-          "id": "timeline_tris",
-          "type": "line",
-          "title": "Triangles Over Time",
+          "id": "tris_histogram",
+          "type": "histogram",
+          "title": "Triangles Distribution",
           "x_field": "index",
           "y_field": "tris"
         }
@@ -500,7 +500,21 @@
       },
       "charts": [
         {
-          "id": "scatter_correlation",
+          "id": "draws_timeline",
+          "type": "timeline",
+          "title": "Draw Calls Timeline",
+          "x_field": "index",
+          "y_field": "draws"
+        },
+        {
+          "id": "tris_timeline",
+          "type": "timeline",
+          "title": "Triangles Timeline",
+          "x_field": "index",
+          "y_field": "tris"
+        },
+        {
+          "id": "scatter",
           "type": "scatter",
           "title": "Draw Calls vs Triangles",
           "x_field": "draws",

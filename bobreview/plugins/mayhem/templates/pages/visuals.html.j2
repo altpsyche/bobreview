@@ -66,7 +66,7 @@
       <span style="color: var(--warn);">{{ labels.get('p90', 'P90') }}</span> at {{ stats.draws.p90|format_number(0) }}, 
       <span style="color: var(--danger);">{{ labels.get('p95', 'P95') }}</span> at {{ stats.draws.p95|format_number(0) }}.
     </div>
-    <canvas id="drawsTimeline"></canvas>
+    <canvas id="draws_timeline"></canvas>
   </div>
   
   <div class="stats-grid" style="margin-top: 16px;">
@@ -101,7 +101,7 @@
       <span style="color: var(--warn);">{{ labels.get('p90', 'P90') }}</span> at {{ stats.tris.p90|format_number(0) }}, 
       <span style="color: var(--danger);">{{ labels.get('p95', 'P95') }}</span> at {{ stats.tris.p95|format_number(0) }}.
     </div>
-    <canvas id="trisTimeline"></canvas>
+    <canvas id="tris_timeline"></canvas>
   </div>
   
   <div class="stats-grid" style="margin-top: 16px;">
@@ -129,7 +129,7 @@
   </p>
   
   <div class="chart-container">
-    <canvas id="scatterPlot"></canvas>
+    <canvas id="scatter"></canvas>
   </div>
 </section>
 {% endblock %}

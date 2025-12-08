@@ -446,15 +446,28 @@ class ReportSystemExecutor:
                             'labels': labels_dict,  # Include labels in chart_config
                         }
                         # Call interface method
-                        chart_result = chart_generator.generate_chart(
-                            data_points=data_points,
-                            stats=stats,
-                            config=self.config,
-                            chart_config=chart_config_dict
-                        )
-                        charts_dict[chart_config.id] = chart_result
+                        try:
+                            chart_result = chart_generator.generate_chart(
+                                data_points=data_points,
+                                stats=stats,
+                                config=self.config,
+                                chart_config=chart_config_dict
+                            )
+                            charts_dict[chart_config.id] = chart_result
+                            log_verbose(f"Generated chart: {chart_config.id}", self.config)
+                        except Exception as e:
+                            log_warning(f"Failed to generate chart {chart_config.id}: {e}", self.config)
+                            if self.config.execution.verbose:
+                                import traceback
+                                traceback.print_exc()
                     
-                    context['charts'] = charts_dict
+                    if charts_dict:
+                        context['charts'] = charts_dict
+                        log_verbose(f"Added {len(charts_dict)} charts to context", self.config)
+                    else:
+                        log_warning(f"No charts generated for page {page_config.id}", self.config)
+                else:
+                    log_warning(f"No chart generator found for report system '{self.system_def.id}'", self.config)
             
             # Determine template to use - directly from page config
             template_name = None
