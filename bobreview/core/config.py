@@ -3,63 +3,28 @@
 Configuration and data models for BobReview.
 """
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional, List
+from typing import List
 
+# Import focused config classes
+from .config_classes import (
+    ReportConfig,
+    ThresholdConfig,
+    LLMConfig,
+    CacheConfig,
+    ExecutionConfig,
+    OutputConfig,
+)
 
-@dataclass
-class ReportConfig:
-    """Configuration for report generation."""
-    title: str = "Performance Analysis Report"
-    location: str = "Unknown Location"
-    draw_soft_cap: int = 550
-    draw_hard_cap: int = 600
-    tri_soft_cap: int = 100000
-    tri_hard_cap: int = 120000
-    high_load_draw_threshold: int = 600
-    high_load_tri_threshold: int = 100000
-    low_load_draw_threshold: int = 400
-    low_load_tri_threshold: int = 50000
-    outlier_sigma: float = 2.0
-    mad_threshold: float = 3.5  # MAD threshold for outlier detection
-    enable_recommendations: bool = True
-    
-    # LLM provider settings (unified across all providers)
-    llm_provider: str = "openai"  # 'openai', 'anthropic', 'ollama'
-    llm_api_key: Optional[str] = None  # API key for the selected provider
-    llm_api_base: Optional[str] = None  # Custom API base URL (e.g., for Ollama)
-    llm_model: str = "gpt-4o"  # Model name (provider-specific)
-    llm_temperature: float = 0.7
-    llm_max_tokens: int = 2000  # Max tokens for LLM responses
-    llm_chunk_size: int = 10  # Number of data samples to send per LLM call
-    llm_combine_warning_threshold: int = 100000  # Character count threshold for warning
-    
-    # Caching
-    cache_dir: Path = Path(".bobreview_cache")
-    use_cache: bool = True
-    clear_cache: bool = False
-    
-    # Execution
-    dry_run: bool = False
-    sample_size: Optional[int] = None
-    verbose: bool = False
-    quiet: bool = False
-    
-    # Output
-    embed_images: bool = True  # Embed images as base64 in HTML
-    linked_css: bool = False  # Use external CSS file
-    theme_id: str = 'dark'  # Report theme
-    disabled_pages: Optional[List[str]] = None  # Page IDs to exclude
-    
-    def __post_init__(self):
-        """
-        Initialize mutable default fields on construction.
-        
-        If `disabled_pages` was left as `None` during creation, set it to an empty list so each instance has its own mutable list rather than sharing a class-level default.
-        """
-        if self.disabled_pages is None:
-            self.disabled_pages = []
+# Re-export for backward compatibility
+__all__ = [
+    'ReportConfig',
+    'ThresholdConfig',
+    'LLMConfig',
+    'CacheConfig',
+    'ExecutionConfig',
+    'OutputConfig',
+    'validate_config',
+]
 
 
 def validate_config(config: ReportConfig) -> List[str]:
