@@ -4,14 +4,19 @@ Generate game review text using LLM.
 Creates a professional game review based on scores, pros, cons, and game details.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bobreview.core.config import ReportConfig
+
+from bobreview.llm.client import call_llm
 
 
 def generate_review_text(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
-    config: Any,
-    images_dir: str = ""
+    config: "ReportConfig",
+    _images_dir_rel: str = ""
 ) -> str:
     """
     Generate a professional game review using LLM.
@@ -21,7 +26,7 @@ def generate_review_text(
     - data_points: Raw data points (unused for game reviews)
     - stats: Parsed data - for game reviews, this IS the game data
     - config: Report configuration
-    - images_dir: Images directory (unused for game reviews)
+    - _images_dir_rel: Images directory (unused for game reviews)
     
     For game reviews, `stats` contains the game info from game.json:
     - title, developer, genre, scores, pros, cons, etc.
@@ -32,16 +37,6 @@ def generate_review_text(
     # For game reviews, stats IS the game data
     # The GameConfigParser returns the game dict as stats
     data = stats
-    
-    # Get LLM client from config if available
-    llm_client = None
-    if hasattr(config, 'llm_client'):
-        llm_client = config.llm_client
-    
-    if llm_client is None:
-        # When there's no LLM client, return empty (LLM will be called separately)
-        # The prompt is returned for template-based generation
-        pass
     
     # Calculate overall score
     scores = data.get('scores', {})
@@ -93,20 +88,5 @@ Write in a professional but engaging tone, similar to IGN or GameSpot reviews.
 Format the response with <p> tags for paragraphs.
 """
     
-    # Return the prompt - the LLM service will call the API
-    # For Python generators, we return the generated content
-    # In this case, we'd need the LLM to be called externally
-    
-    # If there's a direct LLM client, use it
-    if llm_client and callable(getattr(llm_client, 'call', None)):
-        try:
-            response = llm_client.call(prompt)
-            return response if response else ""
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to generate review text: {e}")
-            return ""
-    
-    # Otherwise return the prompt for template-based generation
-    # The executor will handle the LLM call
-    return prompt
+    # Call LLM using the standard client (handles caching, dry-run, etc.)
+    return call_llm(prompt, data_table=None, config=config)
