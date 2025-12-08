@@ -414,8 +414,9 @@ def analyze_data(
                 high_key = threshold_mapping[metric].get('high')
                 low_key = threshold_mapping[metric].get('low')
                 
-                high_threshold = getattr(config, high_key, None) if high_key else None
-                low_threshold = getattr(config, low_key, None) if low_key else None
+                # Access thresholds from config.thresholds (nested structure)
+                high_threshold = getattr(config.thresholds, high_key, None) if high_key else None
+                low_threshold = getattr(config.thresholds, low_key, None) if low_key else None
                 
                 val = p.get(metric, 0)
                 if high_threshold is not None and val >= high_threshold:

@@ -97,7 +97,7 @@
         <td>{{ point.ts }}</td>
         {% if has_images %}
         <td>
-          {% if images[loop.index0] is defined %}
+          {% if images[loop.index0] is defined and images[loop.index0] is not none %}
           <img src="{{ images[loop.index0].src }}" alt="{{ point.testcase }}" class="thumb-small" loading="lazy" />
           {% else %}-{% endif %}
         </td>

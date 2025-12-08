@@ -128,6 +128,9 @@ class TemplateEngine:
         if not template_str or context is None:
             return template_str or ''
         
+        # Keep reference to original context for nested lookups
+        original_context = context
+        
         # Convert dataclass or object to dict if needed
         if hasattr(context, '__dict__') and not isinstance(context, dict):
             ctx = vars(context) if hasattr(context, '__dict__') else {}
@@ -139,18 +142,58 @@ class TemplateEngine:
         def replace_var(match):
             var_path = match.group(1)
             
-            # Handle nested paths like config.draw_soft_cap
+            # Handle nested paths like config.draw_soft_cap or simple names like draw_soft_cap
             parts = var_path.split('.')
-            value = ctx
+            value = ctx if isinstance(ctx, dict) else original_context
+            found = False
             
+            # Try direct lookup first (works for dict or object with nested paths)
             for part in parts:
                 if isinstance(value, dict) and part in value:
                     value = value[part]
+                    found = True
                 elif hasattr(value, part):
                     value = getattr(value, part)
+                    found = True
                 else:
-                    # Variable not found, keep original placeholder
-                    return match.group(0)
+                    found = False
+                    break
+            
+            # If simple name not found, try looking in thresholds
+            # Priority: system_def.thresholds (report system JSON) > config.thresholds (defaults)
+            if not found and len(parts) == 1:
+                simple_name = parts[0]
+                
+                # Priority 1: Try system_def.thresholds (from report system JSON) - this is the source of truth
+                if isinstance(ctx, dict) and 'system_def' in ctx:
+                    system_def = ctx['system_def']
+                    if hasattr(system_def, 'thresholds'):
+                        thresholds = system_def.thresholds
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                        elif hasattr(thresholds, simple_name):
+                            value = getattr(thresholds, simple_name)
+                            found = True
+                
+                # Priority 2: Try if context is a dict with 'config' key
+                if not found and isinstance(ctx, dict) and 'config' in ctx:
+                    config_obj = ctx['config']
+                    if hasattr(config_obj, 'thresholds') and hasattr(config_obj.thresholds, simple_name):
+                        value = getattr(config_obj.thresholds, simple_name)
+                        found = True
+                
+                # Priority 3: Try if context itself is a config object with thresholds
+                if not found:
+                    config_obj = original_context
+                    if hasattr(config_obj, 'thresholds'):
+                        if hasattr(config_obj.thresholds, simple_name):
+                            value = getattr(config_obj.thresholds, simple_name)
+                            found = True
+            
+            if not found:
+                # Variable not found, keep original placeholder
+                return match.group(0)
             
             # Format numbers nicely
             # For game dev metrics, most values are counts (draws, tris) so show as integers
@@ -206,6 +249,26 @@ class TemplateEngine:
     def _register_globals(self):
         """Register global template functions."""
         self.env.globals['get_css'] = get_shared_css
+        
+        def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: dict = None) -> str:
+            """
+            Get image source - either base64 data URI or relative file path.
+            
+            Parameters:
+                image_name: Name of the image file
+                images_dir_rel: Relative path to images directory (if not embedding)
+                image_data_uris: Dict of base64 data URIs (if embedding)
+            
+            Returns:
+                Image src string (base64 URI or file path)
+            """
+            if image_data_uris and image_name in image_data_uris:
+                return image_data_uris[image_name]
+            if images_dir_rel:
+                return f"{images_dir_rel}/{image_name}".replace('\\', '/')
+            return image_name
+        
+        self.env.globals['get_image_src'] = get_image_src
     
     def render(
         self, 

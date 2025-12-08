@@ -379,6 +379,7 @@ class ReportSystemExecutor:
                 'stats': stats,
                 'data': stats,   # Universal alias - all templates can use data.*
                 'data_points': data_points,
+                'system_def': self.system_def,  # Add system_def for threshold lookups
                 
                 # LLM generated content
                 'llm': llm_content,
@@ -390,6 +391,10 @@ class ReportSystemExecutor:
                 
                 # Report system content blocks
                 'content': self.system_def.content_blocks,
+                
+                # Images
+                'image_data_uris': image_data_uris,  # Base64 encoded images if embedding
+                'images_dir_rel': images_dir_rel,  # Relative path to images if not embedding
                 
                 # Meta
                 'meta_text': f"{stats.get('count', len(data_points))} items · {self.config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}",
@@ -404,7 +409,8 @@ class ReportSystemExecutor:
                     stats=stats,
                     config=self.config,
                     system_def=self.system_def,
-                    input_dir=input_dir
+                    input_dir=input_dir,
+                    image_data_uris=image_data_uris
                 )
                 context.update(plugin_context)
             
