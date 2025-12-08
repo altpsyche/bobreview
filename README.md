@@ -68,10 +68,10 @@ bobreview/
 ├── plugins/           # Plugin system (NEW in v1.0.7)
 │   ├── registry.py    # Extension point registry
 │   ├── base.py        # BasePlugin abstract class
-│   └── core/          # Core plugin (provides ALL defaults)
-│       ├── plugin.py  # CorePlugin class
+│   └── game-review/  # Game Review plugin (provides game review functionality)
+│       ├── plugin.py  # GameReviewPlugin class
 │       ├── report_systems/
-│       │   └── png_data_points.json
+│       │   └── game_review.json
 │       └── templates/
 │           ├── base.html.j2
 │           ├── components/
@@ -94,7 +94,7 @@ bobreview/
 ```
 
 **Design Principles:**
-- **Plugin-First** - All functionality provided by plugins (core plugin is default)
+- **Plugin-First** - All functionality provided by plugins (game-review plugin provides default game review functionality)
 - **Single Responsibility** - Each module has one clear purpose
 - **Dependency Injection** - Configuration and services passed through
 - **Registry Pattern** - Self-registration for all extension points
@@ -103,7 +103,7 @@ bobreview/
 
 | Package | Purpose |
 |---------|---------|
-| `plugins/` | Core plugin provides LLM generators, themes, services, templates |
+| `plugins/` | Plugins provide LLM generators, themes, services, templates (game-review plugin is default) |
 | `core/` | Configuration, caching, logging, analysis |
 | `services/` | Pluggable service container with data, analytics, charts, LLM |
 | `llm/` | LLM providers (OpenAI/Anthropic/Ollama), 7 generators |

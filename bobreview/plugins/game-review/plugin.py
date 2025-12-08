@@ -1,7 +1,7 @@
 """
-BobReview Core Plugin - Video Game Review System.
+BobReview Game Review Plugin - Video Game Review System.
 
-This is the default plugin that ships with BobReview.
+This plugin provides game review functionality for BobReview.
 It provides:
 - Game Review LLM Generator (review_text)
 - JSON Config Parser (game.json)
@@ -20,15 +20,15 @@ from ...plugins import BasePlugin
 logger = logging.getLogger(__name__)
 
 
-class CorePlugin(BasePlugin):
+class GameReviewPlugin(BasePlugin):
     """
-    BobReview Core - Video Game Review Plugin.
+    BobReview Game Review Plugin.
     
     Provides the video game review system with LLM-powered
     review generation based on game.json configuration.
     """
     
-    name = "bobreview-core"
+    name = "game-review"
     version = "1.0.0"
     author = "BobReview Team"
     description = "Video Game Review: LLM-powered game reviews from JSON config"

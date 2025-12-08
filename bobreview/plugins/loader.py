@@ -262,11 +262,26 @@ class PluginLoader:
         try:
             if is_builtin:
                 # Built-in plugins: import from package
-                # e.g., bobreview.plugins.core.plugin:CorePlugin
-                # Extract the subdirectory name (core, mayhem, etc.)
+                # e.g., bobreview.plugins.game-review.plugin:GameReviewPlugin
+                # Extract the subdirectory name (core, mayhem, game-review, etc.)
                 plugin_dir_name = manifest.plugin_path.name
-                package_module = f"bobreview.plugins.{plugin_dir_name}.{module_name}"
-                module = importlib.import_module(package_module)
+                
+                # Handle hyphens in directory names (Python modules can't have hyphens)
+                # Use importlib.util.spec_from_file_location for directories with hyphens
+                if '-' in plugin_dir_name:
+                    module_path = manifest.plugin_path / f"{module_name}.py"
+                    if module_path.exists():
+                        spec = importlib.util.spec_from_file_location(
+                            f"bobreview.plugins.{plugin_dir_name.replace('-', '_')}.{module_name}",
+                            module_path
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    else:
+                        raise ImportError(f"Module file not found: {module_path}")
+                else:
+                    package_module = f"bobreview.plugins.{plugin_dir_name}.{module_name}"
+                    module = importlib.import_module(package_module)
             else:
                 # External plugins: load from file system
                 # Add plugin directory to path if needed

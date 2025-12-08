@@ -1,9 +1,9 @@
 {
-    "name": "bobreview-core",
+    "name": "game-review",
     "version": "1.0.0",
     "author": "BobReview Team",
     "description": "Video Game Review: LLM-powered game reviews from JSON config",
-    "entry_point": "plugin:CorePlugin",
+    "entry_point": "plugin:GameReviewPlugin",
     "dependencies": [],
     "provides": [
         "llm-generators",

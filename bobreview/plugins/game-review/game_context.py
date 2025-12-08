@@ -1,5 +1,5 @@
 """
-Game review context builder for bobreview-core.
+Game review context builder for game-review plugin.
 
 Adds game-specific template context: game data alias.
 """

@@ -165,7 +165,7 @@ class MayhemAutomationPlugin(BasePlugin):
                     )
     
     def _register_templates(self, registry) -> None:
-        """Register built-in templates from core plugin."""
+        """Register built-in templates."""
         from pathlib import Path
         
         template_dir = Path(__file__).parent / 'templates'

@@ -53,7 +53,7 @@ class ReportSystemExecutor:
         
         # Get service container
         self.container = get_container()
-        self._ensure_services()
+        self.services_available = self._ensure_services()
         
         self._merge_config()
     
@@ -95,14 +95,17 @@ class ReportSystemExecutor:
         Validates that all required services are registered, with clear error messages
         indicating which plugins should be loaded.
         
-        Most services are registered by plugins (MayhemAutomation or core).
+        Most services are registered by plugins (MayhemAutomation or game-review).
         LLMService is registered here because it needs runtime config.
+        
+        Returns:
+            bool: True if all services are available, False otherwise
         """
         # Verify core services are available (registered by plugins)
         required_services = {
-            'data': 'DataService (required by MayhemAutomation or core plugin)',
-            'analytics': 'AnalyticsService (required by MayhemAutomation or core plugin)',
-            'charts': 'ChartService (required by MayhemAutomation or core plugin)',
+            'data': 'DataService (required by a plugin like MayhemAutomation or game-review)',
+            'analytics': 'AnalyticsService (required by a plugin like MayhemAutomation or game-review)',
+            'charts': 'ChartService (required by a plugin like MayhemAutomation or game-review)',
         }
         
         missing_services = []
@@ -115,10 +118,22 @@ class ReportSystemExecutor:
             loader = get_loader()
             loaded_plugins = [p.name for p in loader.get_loaded_plugins() if p.loaded]
             
+            # If no plugins are loaded, this is expected - bobreview works without plugins
+            # but can't generate reports. Just log a message and return False.
+            if not loaded_plugins:
+                log_warning(
+                    "No plugins loaded. BobReview can run without plugins, but cannot generate reports "
+                    "without the required services. Load a plugin (like MayhemAutomation or game-review) "
+                    "to enable report generation.",
+                    self.config
+                )
+                return False
+            
+            # If plugins are loaded but services are missing, that's an error
             error_msg = (
                 f"Required services not found. Missing:\n" + "\n".join(missing_services) +
-                f"\n\nLoaded plugins: {', '.join(loaded_plugins) if loaded_plugins else 'none'}" +
-                f"\n\nEnsure the MayhemAutomation or core plugin is loaded."
+                f"\n\nLoaded plugins: {', '.join(loaded_plugins)}" +
+                f"\n\nThe loaded plugins may not be providing the required services."
             )
             raise RuntimeError(error_msg)
         
@@ -134,6 +149,8 @@ class ReportSystemExecutor:
             }
             self.container.register('llm', LLMService(llm_config))
             log_verbose("Registered LLMService with runtime config", self.config)
+        
+        return True
     
     def execute(self, input_dir: Path, output_path: Path) -> bool:
         """
@@ -146,6 +163,16 @@ class ReportSystemExecutor:
         Returns:
             True if report was generated successfully, False otherwise
         """
+        # Check if services are available (plugins loaded)
+        if not self.services_available:
+            log_warning(
+                "Cannot generate report: required services are not available. "
+                "BobReview works without plugins, but cannot generate reports without them. "
+                "Load a plugin (like MayhemAutomation or game-review) to enable report generation.",
+                self.config
+            )
+            return False
+        
         log_info(f"Executing report system: {self.system_def.name}", self.config)
         log_verbose(f"System ID: {self.system_def.id} v{self.system_def.version}", self.config)
         
@@ -349,8 +376,8 @@ class ReportSystemExecutor:
         # Calculate relative images directory
         images_dir_rel = os.path.relpath(input_dir, output_dir)
         
-            # Get template engine (refresh to pick up any new plugin templates)
-            engine = get_template_engine(force_refresh=False)
+        # Get template engine (refresh to pick up any new plugin templates)
+        engine = get_template_engine(force_refresh=False)
         
         # Get labels from system definition
         labels = self.system_def.labels

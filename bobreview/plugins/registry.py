@@ -423,7 +423,7 @@ class PluginRegistry:
         Parameters:
             path: Path to template directory
             plugin_name: Name of the plugin registering this path
-            priority: Loading priority (default 100, core plugin uses 1000)
+            priority: Loading priority (default 100, game-review plugin uses 1000)
         """
         from pathlib import Path as PathClass
         path = PathClass(path)
