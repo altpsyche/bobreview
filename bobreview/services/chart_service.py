@@ -45,7 +45,7 @@ class ChartService(BaseService):
     def theme(self):
         """Get current theme, loading default if not set."""
         if self._theme is None:
-            from ..registry import get_theme
+            from ..core.theme_utils import get_theme
             self._theme = get_theme()
         return self._theme
     

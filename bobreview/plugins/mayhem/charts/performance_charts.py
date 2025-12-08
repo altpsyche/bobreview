@@ -8,7 +8,7 @@ Moved from executor.py to make it plugin-specific.
 import json
 from typing import Dict, List, Any
 
-from bobreview.registry.themes import get_theme
+from bobreview.core.theme_utils import get_theme
 
 
 class PerformanceChartGenerator:

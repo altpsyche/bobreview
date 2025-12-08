@@ -174,27 +174,45 @@ class PluginRegistry:
             theme: Theme instance with `name` attribute
             plugin_name: Name of the plugin registering this theme
         """
-        theme_name = getattr(theme, 'name', str(theme))
+        # Use theme.id as the key (fallback to 'name' if no 'id')
+        theme_id = getattr(theme, 'id', getattr(theme, 'name', str(theme)))
         
-        if theme_name in self._themes:
-            logger.warning(f"Overwriting existing theme: {theme_name}")
+        if theme_id in self._themes:
+            logger.warning(f"Overwriting existing theme: {theme_id}")
         
-        self._themes[theme_name] = theme
+        self._themes[theme_id] = theme
         self._component_owners[f"theme:{theme_name}"] = plugin_name
         logger.debug(f"Registered theme: {theme_name} from {plugin_name or 'core'}")
         
-        # Also register with the existing registry module for backward compat
-        try:
-            from ..registry import register_theme as legacy_register_theme
-            # Legacy registry expects themes with 'id' attribute
-            if hasattr(theme, 'id'):
-                legacy_register_theme(theme)
-        except (ImportError, AttributeError, Exception) as e:
-            logger.debug(f"Could not register theme with legacy registry: {e}")
+        # Themes are now only registered in plugin registry
     
-    def get_theme(self, theme_name: str) -> Optional[Any]:
-        """Get a theme by name."""
-        return self._themes.get(theme_name)
+    def get_theme(self, theme_id: Optional[str] = None) -> Optional[Any]:
+        """
+        Get a theme by ID.
+        
+        Parameters:
+            theme_id: Theme ID (e.g., 'dark', 'light'). If None, returns first available theme.
+        
+        Returns:
+            Theme object or None if not found
+        """
+        if theme_id is None:
+            # Return first available theme if no ID specified
+            if self._themes:
+                return next(iter(self._themes.values()))
+            return None
+        
+        # Try direct lookup by ID
+        theme = self._themes.get(theme_id)
+        if theme:
+            return theme
+        
+        # Try lookup by theme.id attribute
+        for theme in self._themes.values():
+            if hasattr(theme, 'id') and theme.id == theme_id:
+                return theme
+        
+        return None
     
     def get_all_themes(self) -> Dict[str, Any]:
         """Get all registered themes."""
@@ -250,12 +268,7 @@ class PluginRegistry:
         self._component_owners[f"page:{page_id}"] = plugin_name
         logger.debug(f"Registered page: {page_id} from {plugin_name or 'core'}")
         
-        # Also register with the existing registry module for backward compat
-        try:
-            from ..registry import register_page as legacy_register_page
-            legacy_register_page(page)
-        except ImportError:
-            pass
+        # Pages are now only registered in plugin registry
     
     def get_page(self, page_id: str) -> Optional[Any]:
         """Get a page definition by ID."""

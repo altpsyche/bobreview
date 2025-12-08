@@ -1,12 +1,12 @@
 """
-Report theme registry for modular HTML report styling.
+Theme definitions and utilities for BobReview.
 
-This module provides a registry pattern for report themes,
-allowing easy customization of colors, fonts, and styling.
+This module provides theme dataclasses and built-in theme definitions.
+Themes are registered via the plugin registry, but the definitions live here.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Optional
 
 
 @dataclass
@@ -88,86 +88,7 @@ class ReportTheme:
     chart_grid_opacity: float = 0.5
 
 
-# Global theme registry
-_THEME_REGISTRY: Dict[str, ReportTheme] = {}
-
-# Active theme (can be changed at runtime)
-_active_theme_id: str = 'dark'
-
-
-def register_theme(theme: ReportTheme) -> None:
-    """Register a report theme."""
-    _THEME_REGISTRY[theme.id] = theme
-
-
-def get_theme(theme_id: Optional[str] = None) -> ReportTheme:
-    """
-    Get a theme by ID.
-    
-    If no theme_id provided, returns the active theme.
-    Falls back to dark theme if not found.
-    """
-    if theme_id is None:
-        theme_id = _active_theme_id
-    return _THEME_REGISTRY.get(theme_id, _THEME_REGISTRY.get('dark'))
-
-
-def set_active_theme(theme_id: str) -> bool:
-    """
-    Set the active theme.
-    
-    Returns True if theme exists, False otherwise.
-    """
-    global _active_theme_id
-    if theme_id in _THEME_REGISTRY:
-        _active_theme_id = theme_id
-        return True
-    return False
-
-
-def get_all_themes() -> Dict[str, ReportTheme]:
-    """Get all registered themes."""
-    return _THEME_REGISTRY.copy()
-
-
-def get_theme_css_variables(theme_id: Optional[str] = None) -> str:
-    """
-    Generate CSS :root block with theme variables.
-    
-    This can be used to override the default styles.css variables.
-    
-    Returns:
-        CSS string with :root { ... } block
-    """
-    theme = get_theme(theme_id)
-    if not theme:
-        return ''
-    
-    return f""":root {{
-  --bg: {theme.bg};
-  --bg-elevated: {theme.bg_elevated};
-  --bg-soft: {theme.bg_soft};
-  --accent: {theme.accent};
-  --accent-soft: {theme.accent_soft};
-  --accent-strong: {theme.accent_strong};
-  --text-main: {theme.text_main};
-  --text-soft: {theme.text_soft};
-  --border-subtle: {theme.border_subtle};
-  --danger: {theme.danger};
-  --danger-soft: {theme.danger_soft};
-  --warn: {theme.warn};
-  --warn-soft: {theme.warn_soft};
-  --ok: {theme.ok};
-  --ok-soft: {theme.ok_soft};
-  --mono: {theme.font_mono};
-  --sans: {theme.font_sans};
-  --radius-lg: {theme.radius_lg};
-  --radius-md: {theme.radius_md};
-  --shadow-soft: {theme.shadow_soft};
-}}"""
-
-
-# Theme definitions (exported as constants for plugin registration)
+# Built-in theme definitions
 DARK_THEME = ReportTheme(
     id='dark',
     name='Dark (Default)',
@@ -231,3 +152,43 @@ HIGH_CONTRAST_THEME = ReportTheme(
 
 # All built-in themes (for easy iteration by plugins)
 BUILTIN_THEMES = [DARK_THEME, LIGHT_THEME, HIGH_CONTRAST_THEME]
+
+
+def get_theme_css_variables(theme: ReportTheme) -> str:
+    """
+    Generate CSS :root block with theme variables.
+    
+    This can be used to override the default styles.css variables.
+    
+    Parameters:
+        theme: ReportTheme instance
+    
+    Returns:
+        CSS string with :root { ... } block
+    """
+    if not theme:
+        return ''
+    
+    return f""":root {{
+  --bg: {theme.bg};
+  --bg-elevated: {theme.bg_elevated};
+  --bg-soft: {theme.bg_soft};
+  --accent: {theme.accent};
+  --accent-soft: {theme.accent_soft};
+  --accent-strong: {theme.accent_strong};
+  --text-main: {theme.text_main};
+  --text-soft: {theme.text_soft};
+  --border-subtle: {theme.border_subtle};
+  --danger: {theme.danger};
+  --danger-soft: {theme.danger_soft};
+  --warn: {theme.warn};
+  --warn-soft: {theme.warn_soft};
+  --ok: {theme.ok};
+  --ok-soft: {theme.ok_soft};
+  --mono: {theme.font_mono};
+  --sans: {theme.font_sans};
+  --radius-lg: {theme.radius_lg};
+  --radius-md: {theme.radius_md};
+  --shadow-soft: {theme.shadow_soft};
+}}"""
+

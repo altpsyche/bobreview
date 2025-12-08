@@ -94,11 +94,10 @@ class GameReviewPlugin(BasePlugin):
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
-        from ...registry.themes import BUILTIN_THEMES, register_theme as legacy_register
+        from ...core.themes import BUILTIN_THEMES
         
         for theme in BUILTIN_THEMES:
             registry.register_theme(theme, plugin_name=self.name)
-            legacy_register(theme)
     
     def _register_report_systems(self, registry) -> None:
         """Register built-in report systems."""

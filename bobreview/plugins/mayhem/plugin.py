@@ -114,12 +114,11 @@ class MayhemAutomationPlugin(BasePlugin):
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
-        from ...registry.themes import BUILTIN_THEMES, register_theme as legacy_register
+        from ...core.themes import BUILTIN_THEMES
         
-        # Register each theme with both plugin registry and legacy registry
+        # Register each theme with plugin registry
         for theme in BUILTIN_THEMES:
             registry.register_theme(theme, plugin_name=self.name)
-            legacy_register(theme)  # Also register in legacy for get_theme() to work
     
     def _register_services(self) -> None:
         """Register default service implementations."""

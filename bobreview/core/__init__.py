@@ -12,6 +12,8 @@ from .utils import (
     format_number, image_to_base64
 )
 from .analysis import analyze_data
+from .theme_utils import get_theme, get_theme_css_variables
+from .themes import ReportTheme, BUILTIN_THEMES
 
 __all__ = [
     # Config
@@ -36,4 +38,10 @@ __all__ = [
     
     # Analysis
     'analyze_data',
+    
+    # Themes
+    'get_theme',
+    'get_theme_css_variables',
+    'ReportTheme',
+    'BUILTIN_THEMES',
 ]
