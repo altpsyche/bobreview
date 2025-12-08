@@ -471,7 +471,7 @@ class PluginLoader:
     def get_loaded_plugins(self) -> List[PluginInfo]:
         """Get information about all loaded plugins."""
         return [
-            plugin.get_info()
+            plugin.get_info(loaded=True)
             for plugin in self._loaded.values()
         ]
     

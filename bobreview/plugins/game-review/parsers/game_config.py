@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
 
-from ...core.api import DataParserInterface
+from bobreview.core.api import DataParserInterface
 
 if TYPE_CHECKING:
     from ...report_systems.schema import DataSourceConfig

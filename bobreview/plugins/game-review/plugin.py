@@ -94,7 +94,7 @@ class GameReviewPlugin(BasePlugin):
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
-        from ...core.themes import BUILTIN_THEMES
+        from bobreview.core.themes import BUILTIN_THEMES
         
         for theme in BUILTIN_THEMES:
             registry.themes.register(theme, plugin_name=self.name)
@@ -133,7 +133,7 @@ class GameReviewPlugin(BasePlugin):
     
     def _register_context_builders(self, registry) -> None:
         """Register context builders for our report systems."""
-        from .context import GameReviewContextBuilder
+        from .context.game_context import GameReviewContextBuilder
         
         registry.context_builders.register(
             report_system_id='game_review',

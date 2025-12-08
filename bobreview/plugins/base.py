@@ -106,7 +106,7 @@ class BasePlugin(ABC):
         """
         pass
     
-    def get_info(self) -> PluginInfo:
+    def get_info(self, loaded: bool = False) -> PluginInfo:
         """Get plugin information for display."""
         return PluginInfo(
             name=self.name,
@@ -114,6 +114,7 @@ class BasePlugin(ABC):
             author=self.author,
             description=self.description,
             dependencies=self.dependencies,
+            loaded=loaded,
         )
     
     def __repr__(self) -> str:

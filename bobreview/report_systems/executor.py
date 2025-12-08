@@ -104,6 +104,7 @@ class ReportSystemExecutor:
         """
         Ensure required services are available.
         
+        Auto-registers default services if plugins are loaded but services aren't registered.
         Delegates to ServiceValidator for validation.
         
         Returns:
@@ -114,6 +115,21 @@ class ReportSystemExecutor:
             'analytics': 'AnalyticsService (required by a plugin like MayhemAutomation or game-review)',
             'charts': 'ChartService (required by a plugin like MayhemAutomation or game-review)',
         }
+        
+        # Check if plugins are loaded
+        loaded_plugins = [p.name for p in self.plugin_loader.get_loaded_plugins() if p.loaded]
+        
+        # If plugins are loaded but services aren't registered, auto-register default services
+        if loaded_plugins and not all(self.container.has(name) for name in required_services.keys()):
+            log_verbose(f"Auto-registering default services for loaded plugins: {', '.join(loaded_plugins)}", self.config)
+            from ..services import DataService, AnalyticsService, ChartService
+            
+            if not self.container.has('data'):
+                self.container.register('data', DataService())
+            if not self.container.has('analytics'):
+                self.container.register('analytics', AnalyticsService())
+            if not self.container.has('charts'):
+                self.container.register('charts', ChartService())
         
         # Validate required services
         if not self.service_validator.validate_required(required_services, self.config):
@@ -216,11 +232,16 @@ class ReportSystemExecutor:
         # Use DataService from container (allows plugin override)
         data_service: DataService = self.container.get('data')
         
+        # Get timestamp field for sorting, if metrics are configured
+        sort_by = None
+        if hasattr(self.system_def, 'metrics') and self.system_def.metrics:
+            sort_by = getattr(self.system_def.metrics, 'timestamp_field', None)
+        
         return data_service.parse(
             input_dir=input_dir,
             data_source_config=self.system_def.data_source,
             sample_size=self.config.execution.sample_size,
-            sort_by=self.system_def.metrics.timestamp_field
+            sort_by=sort_by
         )
     
     def analyze_data(self, data_points: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -240,11 +261,25 @@ class ReportSystemExecutor:
         analytics_service: AnalyticsService = self.container.get('analytics')
         
         try:
+            # Get metrics config, if available
+            metrics = None
+            metrics_config = None
+            if hasattr(self.system_def, 'metrics') and self.system_def.metrics:
+                metrics = getattr(self.system_def.metrics, 'primary', None)
+                metrics_config = self.system_def.metrics
+            
+            # If no metrics config, return data as-is (for non-analytical report systems)
+            if not metrics_config:
+                # For report systems without metrics (like game-review), return the data as stats
+                if data_points:
+                    return data_points[0] if len(data_points) == 1 else {'data': data_points}
+                return {}
+            
             # Pass the full report_config - service uses it directly
             return analytics_service.analyze(
                 data_points=data_points,
-                metrics=self.system_def.metrics.primary,
-                metrics_config=self.system_def.metrics,
+                metrics=metrics,
+                metrics_config=metrics_config,
                 report_config=self.config  # Pass config directly, no dict building
             )
         except Exception as e:

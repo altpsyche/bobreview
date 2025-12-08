@@ -7,10 +7,10 @@ from core.api, making them compatible with the core API.
 
 from typing import Dict, List, Any, TYPE_CHECKING
 
-from ...core.api import LLMGeneratorInterface
+from bobreview.core.api import LLMGeneratorInterface
 
 if TYPE_CHECKING:
-    from ...core.config import ReportConfig
+    from bobreview.core.config import ReportConfig
 
 from .review_text import generate_review_text
 
@@ -26,5 +26,10 @@ class ReviewTextGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate review text."""
-        return generate_review_text(data_points, stats, config, context.get('images_dir_rel', ''))
+        # Ensure context is a dict and extract images_dir_rel safely
+        if isinstance(context, dict):
+            images_dir = context.get('images_dir_rel', '')
+        else:
+            images_dir = str(context) if context else ''
+        return generate_review_text(data_points, stats, config, images_dir)
 

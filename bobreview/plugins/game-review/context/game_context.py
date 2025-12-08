@@ -8,10 +8,10 @@ Implements ContextBuilderInterface from core.api.
 from typing import Dict, List, Any, TYPE_CHECKING
 from pathlib import Path
 
-from ...core.api import ContextBuilderInterface
+from bobreview.core.api import ContextBuilderInterface
 
 if TYPE_CHECKING:
-    from ...core.config import ReportConfig
+    from bobreview.core.config import ReportConfig
 
 
 class GameReviewContextBuilder(ContextBuilderInterface):
