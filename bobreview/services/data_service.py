@@ -3,13 +3,13 @@ Data service for parsing and validating input data.
 
 This service handles all data ingestion tasks:
 - File discovery
-- Parsing using configured parsers
+- Parsing using configured parsers (via ParserFactory)
 - Validation against schema
 - Sampling and sorting
 """
 
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Type
+from typing import List, Dict, Any, Optional
 import random
 import logging
 
@@ -22,10 +22,8 @@ class DataService(BaseService):
     """
     Service for parsing input data files.
     
-    Extracted from ReportSystemExecutor.parse_data() to enable:
-    - Independent testing
-    - Plugin replacement
-    - Reuse across different report types
+    Uses ParserFactory to create parsers from the plugin registry.
+    This ensures all registered parsers (built-in and plugin) are available.
     
     Example:
         service = DataService()
@@ -36,31 +34,17 @@ class DataService(BaseService):
         )
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize data service."""
-        super().__init__(config)
-        self._parsers: Dict[str, Type] = {}
-        self._register_builtin_parsers()
-    
-    def _register_builtin_parsers(self) -> None:
-        """Register built-in parser types."""
-        from ..report_systems.data_parser_base import FilenamePatternParser
-        self._parsers['filename_pattern'] = FilenamePatternParser
-    
-    def register_parser(self, parser_type: str, parser_cls: Type) -> None:
+    def __init__(self, config: Optional[Dict[str, Any]] = None, registry=None):
         """
-        Register a custom parser type.
+        Initialize data service.
         
         Parameters:
-            parser_type: Parser type identifier (for data_source.type)
-            parser_cls: Parser class that extends DataParser
+            config: Optional service configuration
+            registry: PluginRegistry instance (uses global if None)
         """
-        self._parsers[parser_type] = parser_cls
-        logger.debug(f"Registered parser: {parser_type}")
-    
-    def get_parser(self, parser_type: str) -> Optional[Type]:
-        """Get a parser class by type."""
-        return self._parsers.get(parser_type)
+        super().__init__(config)
+        from ..report_systems.parser_factory import ParserFactory
+        self.factory = ParserFactory(registry)
     
     def parse(
         self,
@@ -84,19 +68,9 @@ class DataService(BaseService):
         Raises:
             DataServiceError: If parsing fails
         """
-        # Get parser class
-        parser_type = data_source_config.type
-        parser_cls = self._parsers.get(parser_type)
-        
-        if not parser_cls:
-            raise DataServiceError(
-                f"Unsupported data source type: {parser_type}. "
-                f"Available types: {list(self._parsers.keys())}"
-            )
-        
         try:
-            # Create parser instance
-            parser = parser_cls(data_source_config)
+            # Create parser instance using factory
+            parser = self.factory.create(data_source_config)
             
             # Parse directory
             data_points = parser.parse_directory(input_dir)
@@ -119,6 +93,8 @@ class DataService(BaseService):
             
             return data_points
             
+        except ValueError as e:
+            raise DataServiceError(str(e)) from e
         except Exception as e:
             raise DataServiceError(f"Failed to parse data: {e}") from e
     
@@ -194,11 +170,8 @@ class DataService(BaseService):
         Returns:
             List of file paths that match the parser criteria
         """
-        parser_type = data_source_config.type
-        parser_cls = self._parsers.get(parser_type)
-        
-        if not parser_cls:
+        try:
+            parser = self.factory.create(data_source_config)
+            return parser.discover_files(directory)
+        except Exception:
             return []
-        
-        parser = parser_cls(data_source_config)
-        return parser.discover_files(directory)

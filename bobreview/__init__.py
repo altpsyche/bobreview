@@ -14,16 +14,13 @@ __description__ = "Performance analysis and review tool for game development"
 
 # Import from new package structure
 from .core import ReportConfig, analyze_data
-from .data_parser import parse_filename, DataPoint
 from .cli import main as cli_main
 
 __all__ = [
     '__author__',
     '__description__',
     '__version__',
-    'DataPoint',
     'ReportConfig',
     'analyze_data',
     'cli_main',
-    'parse_filename',
 ]

@@ -465,7 +465,8 @@ bobreview --dir . --sample 5
 
 ```python
 # test_bobreview.py
-from bobreview import ReportConfig, parse_filename
+from bobreview import ReportConfig
+from bobreview.plugins.mayhem.parsers import parse_filename  # MayhemAutomation-specific
 from pathlib import Path
 
 # Test import

@@ -50,6 +50,8 @@ from .data_parser_base import (
     FilenamePatternParser
 )
 
+from .parser_factory import ParserFactory
+
 from .llm_generator_base import (
     LLMGeneratorTemplate,
     LLMGeneratorAdapter
@@ -93,6 +95,7 @@ __all__ = [
     # Base classes
     'DataParser',
     'FilenamePatternParser',
+    'ParserFactory',
     'LLMGeneratorTemplate',
     'LLMGeneratorAdapter',
     'PageGeneratorTemplate',

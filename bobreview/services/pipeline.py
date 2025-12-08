@@ -136,9 +136,10 @@ class ReportPipeline:
                 sort_by=system_def.metrics.timestamp_field
             )
         else:
-            # Fallback to direct parsing
-            from ..report_systems.data_parser_base import FilenamePatternParser
-            parser = FilenamePatternParser(system_def.data_source)
+            # Fallback to direct parsing using factory
+            from ..report_systems.parser_factory import ParserFactory
+            factory = ParserFactory()
+            parser = factory.create(system_def.data_source)
             return parser.parse_directory(input_dir)
     
     def _analyze_data(

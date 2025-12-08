@@ -3,6 +3,11 @@ Abstract base class for data parsers.
 
 Data parsers are responsible for reading input files and converting them
 into structured data points that can be analyzed.
+
+Streamlined design:
+- Simple interface: parse_file() and discover_files()
+- parse_directory() is provided as default implementation
+- Validation is optional and can be overridden
 """
 
 from abc import ABC, abstractmethod
@@ -12,7 +17,11 @@ from .schema import DataSourceConfig, FieldConfig
 
 
 class DataParser(ABC):
-    """Abstract base class for data parsers."""
+    """
+    Abstract base class for data parsers.
+    
+    Simple, focused interface for parsing data files.
+    """
     
     def __init__(self, config: DataSourceConfig):
         """
@@ -49,7 +58,43 @@ class DataParser(ABC):
         """
         pass
     
-    def validate_data(self, data: Dict[str, Any]) -> bool:
+    def parse_directory(self, directory: Path) -> List[Dict[str, Any]]:
+        """
+        Parse all matching files in a directory.
+        
+        Default implementation that uses discover_files() and parse_file().
+        Can be overridden for more efficient batch parsing.
+        
+        Parameters:
+            directory: Directory to scan and parse
+        
+        Returns:
+            List of parsed data dictionaries
+        """
+        data_points = []
+        files = self.discover_files(directory)
+        
+        for file_path in files:
+            try:
+                data = self.parse_file(file_path)
+                if data is not None:
+                    # Validate data if not skipping invalid
+                    if not self.config.validation.skip_invalid:
+                        if not self._validate_data(data):
+                            if self.config.validation.strict_mode:
+                                raise ValueError(f"Invalid data in file: {file_path}")
+                            continue
+                    
+                    data_points.append(data)
+            except Exception as e:
+                if self.config.validation.strict_mode:
+                    raise
+                # Skip files that fail to parse
+                continue
+        
+        return data_points
+    
+    def _validate_data(self, data: Dict[str, Any]) -> bool:
         """
         Validate parsed data against field configuration.
         
@@ -99,46 +144,13 @@ class DataParser(ABC):
                     return False
         
         return True
-    
-    def parse_directory(self, directory: Path) -> List[Dict[str, Any]]:
-        """
-        Parse all matching files in a directory.
-        
-        Parameters:
-            directory: Directory to scan and parse
-        
-        Returns:
-            List of parsed data dictionaries
-        """
-        data_points = []
-        files = self.discover_files(directory)
-        
-        for file_path in files:
-            try:
-                data = self.parse_file(file_path)
-                if data is not None:
-                    # Validate data
-                    if self.validate_data(data):
-                        data_points.append(data)
-                    elif not self.config.validation.skip_invalid:
-                        # In strict mode, raise error on invalid data
-                        if self.config.validation.strict_mode:
-                            raise ValueError(f"Invalid data in file: {file_path}")
-            except Exception as e:
-                # Skip files that fail to parse unless in strict mode
-                if self.config.validation.strict_mode:
-                    raise
-                # Otherwise, just skip this file
-                continue
-        
-        return data_points
 
 
 class FilenamePatternParser(DataParser):
     """
     Parser for extracting data from filename patterns.
     
-    This parser extracts structured data from filenames using a pattern
+    Extracts structured data from filenames using a pattern
     like: {testcase}_{tris}_{draws}_{timestamp}.png
     """
     
@@ -174,20 +186,11 @@ class FilenamePatternParser(DataParser):
         import re
         field_names = re.findall(r'\{(\w+)\}', pattern_base)
         
-        # Count non-field parts to determine field positions
-        # Split pattern by field placeholders
-        pattern_parts = re.split(r'\{\w+\}', pattern_base)
-        
         # For simple underscore-separated patterns
         if '_' in pattern_base:
             # Split filename by underscores
             filename_parts = filename.split('_')
             
-            # Map fields to values based on pattern
-            # For patterns like {a}_{b}_{c}_{d}, we need to figure out which parts are which
-            
-            # Simple approach: if pattern has N fields, take last N parts as the fields
-            # Everything before is the first field (which might contain underscores)
             num_fields = len(field_names)
             
             if len(filename_parts) < num_fields:
@@ -210,8 +213,7 @@ class FilenamePatternParser(DataParser):
             # Add the filename itself
             data['img'] = file_path.name
             
-            # Legacy field name mapping for backward compatibility
-            # The existing analysis code expects 'ts' but JSON might use 'timestamp'
+            # Map 'timestamp' to 'ts' for compatibility
             if 'timestamp' in data and 'ts' not in data:
                 data['ts'] = data['timestamp']
             
@@ -237,4 +239,3 @@ class FilenamePatternParser(DataParser):
                 return value_str
         except (ValueError, AttributeError):
             return value_str
-

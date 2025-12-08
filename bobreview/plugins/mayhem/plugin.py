@@ -102,15 +102,15 @@ class MayhemAutomationPlugin(BasePlugin):
         return GeneratorWrapper
     
     def _register_parsers(self, registry) -> None:
-        """Register built-in data parsers."""
-        from ...report_systems.data_parser_base import FilenamePatternParser
+        """Register MayhemAutomation data parsers."""
+        from .parsers import MayhemParser
         
-        # Wrap the parser class
-        class FilenamePatternParserWrapper:
+        # Register MayhemParser as the filename_pattern parser for this plugin
+        class MayhemParserWrapper:
             parser_name = "filename_pattern"
-            parser_class = FilenamePatternParser
+            parser_class = MayhemParser
         
-        registry.data_parsers.register(FilenamePatternParserWrapper, plugin_name=self.name)
+        registry.data_parsers.register(MayhemParserWrapper, plugin_name=self.name)
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
