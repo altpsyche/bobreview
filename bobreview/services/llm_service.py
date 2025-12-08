@@ -160,11 +160,11 @@ class LLMService(BaseService):
         registry = get_registry()
         
         # Try to get from registry first (plugin-registered generators)
-        generator = registry.get_llm_generator(gen_id)
+        generator = registry.llm_generators.get(gen_id)
         if generator:
             return generator
         
-        generator = registry.get_llm_generator(gen_name)
+        generator = registry.llm_generators.get(gen_name)
         if generator:
             return generator
         

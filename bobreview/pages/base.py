@@ -342,16 +342,16 @@ def prepare_timeline_data(data_points: List[Dict[str, Any]], metric: str, config
         value = point[metric]
         # Classify performance zone
         if metric == 'draws':
-            if value >= config.high_load_draw_threshold:
+            if value >= config.thresholds.high_load_draw_threshold:
                 color = 'rgba(255, 92, 92, 0.8)'  # red
-            elif value < config.low_load_draw_threshold:
+            elif value < config.thresholds.low_load_draw_threshold:
                 color = 'rgba(79, 209, 139, 0.8)'  # green
             else:
                 color = 'rgba(230, 179, 92, 0.8)'  # yellow
         else:  # tris
-            if value >= config.high_load_tri_threshold:
+            if value >= config.thresholds.high_load_tri_threshold:
                 color = 'rgba(255, 92, 92, 0.8)'
-            elif value < config.low_load_tri_threshold:
+            elif value < config.thresholds.low_load_tri_threshold:
                 color = 'rgba(79, 209, 139, 0.8)'
             else:
                 color = 'rgba(230, 179, 92, 0.8)'
@@ -383,11 +383,11 @@ def prepare_scatter_data(data_points: List[Dict[str, Any]], config) -> str:
         tris = point['tris']
         
         # Classify by performance zone (either draws or tris high = red)
-        if (draws >= config.high_load_draw_threshold or 
-            tris >= config.high_load_tri_threshold):
+        if (draws >= config.thresholds.high_load_draw_threshold or 
+            tris >= config.thresholds.high_load_tri_threshold):
             color = 'rgba(255, 92, 92, 0.7)'
-        elif (draws < config.low_load_draw_threshold and 
-              tris < config.low_load_tri_threshold):
+        elif (draws < config.thresholds.low_load_draw_threshold and 
+              tris < config.thresholds.low_load_tri_threshold):
             color = 'rgba(79, 209, 139, 0.7)'
         else:
             color = 'rgba(230, 179, 92, 0.7)'

@@ -73,7 +73,7 @@ class GameReviewPlugin(BasePlugin):
         
         for gen_id, gen_func in generators:
             wrapper = self._create_generator_wrapper(gen_id, gen_func)
-            registry.register_llm_generator(wrapper, plugin_name=self.name)
+            registry.llm_generators.register(wrapper, plugin_name=self.name)
     
     def _create_generator_wrapper(self, name: str, func):
         """Create a wrapper class for registering functions."""
@@ -90,14 +90,14 @@ class GameReviewPlugin(BasePlugin):
             parser_name = "json_config"
             parser_class = GameConfigParser
         
-        registry.register_data_parser(GameConfigParserWrapper, plugin_name=self.name)
+        registry.data_parsers.register(GameConfigParserWrapper, plugin_name=self.name)
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
         from ...core.themes import BUILTIN_THEMES
         
         for theme in BUILTIN_THEMES:
-            registry.register_theme(theme, plugin_name=self.name)
+            registry.themes.register(theme, plugin_name=self.name)
     
     def _register_report_systems(self, registry) -> None:
         """Register built-in report systems."""
@@ -110,7 +110,7 @@ class GameReviewPlugin(BasePlugin):
                         system_def = json.load(f)
                     
                     system_name = json_file.stem
-                    registry.register_report_system(
+                    registry.report_systems.register(
                         name=system_name,
                         system_def=system_def,
                         plugin_name=self.name
@@ -122,7 +122,7 @@ class GameReviewPlugin(BasePlugin):
         """Register built-in templates."""
         template_dir = Path(__file__).parent / 'templates'
         if template_dir.exists():
-            registry.register_template_path(
+            registry.template_paths.register(
                 template_dir,
                 plugin_name=self.name,
                 priority=1000
@@ -135,7 +135,7 @@ class GameReviewPlugin(BasePlugin):
         """Register context builders for our report systems."""
         from .context import GameReviewContextBuilder
         
-        registry.register_context_builder(
+        registry.context_builders.register(
             report_system_id='game_review',
             builder=GameReviewContextBuilder,
             plugin_name=self.name

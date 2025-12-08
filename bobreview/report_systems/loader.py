@@ -289,7 +289,7 @@ def load_report_system(
     try:
         from ..plugins import get_registry, get_loader
         registry = get_registry()
-        plugin_system = registry.get_report_system(id_or_path)
+        plugin_system = registry.report_systems.get(id_or_path)
         if plugin_system is not None:
             system_data = copy.deepcopy(plugin_system)
             source_description = f"plugin:{id_or_path}"

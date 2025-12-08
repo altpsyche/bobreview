@@ -219,7 +219,7 @@ class ReportSystemExecutor:
         return data_service.parse(
             input_dir=input_dir,
             data_source_config=self.system_def.data_source,
-            sample_size=self.config.sample_size,
+            sample_size=self.config.execution.sample_size,
             sort_by=self.system_def.metrics.timestamp_field
         )
     
@@ -285,7 +285,7 @@ class ReportSystemExecutor:
             data_points=data_points,
             stats=stats,
             context=context,
-            dry_run=self.config.dry_run,
+            dry_run=self.config.execution.dry_run,
             report_config=self.config
         )
     
@@ -311,7 +311,7 @@ class ReportSystemExecutor:
         """
         # Pre-encode images if needed
         image_data_uris = {}
-        if self.config.embed_images:
+        if self.config.output.embed_images:
             log_info("Embedding images as base64...", self.config)
             unique_images = set(point.get('img', '') for point in data_points if 'img' in point)
             for img_name in unique_images:
@@ -396,7 +396,7 @@ class ReportSystemExecutor:
             }
             
             # Add plugin-provided context (images, critical points, game aliases, etc.)
-            context_builder_cls = self.registry.get_context_builder(self.system_def.id)
+            context_builder_cls = self.registry.context_builders.get(self.system_def.id)
             if context_builder_cls:
                 builder = context_builder_cls()
                 plugin_context = builder.build(
@@ -410,7 +410,7 @@ class ReportSystemExecutor:
             
             # Add charts if page has chart configurations - use plugin-provided generator
             if page_config.charts:
-                chart_generator_cls = self.registry.get_chart_generator(self.system_def.id)
+                chart_generator_cls = self.registry.chart_generators.get(self.system_def.id)
                 if chart_generator_cls:
                     # Instantiate with config and thresholds
                     chart_generator = chart_generator_cls(self.config, self.system_def.thresholds)
@@ -431,13 +431,13 @@ class ReportSystemExecutor:
                     html = engine.render(template_name, context, labels)
                 except jinja2.TemplateError as e:
                     log_error(f"Template error for {page_config.id}: {e}")
-                    if self.config.verbose:
+                    if self.config.execution.verbose:
                         import traceback
                         traceback.print_exc()
                     html = f"<html><body><h1>Template Error: {page_config.id}</h1><pre>{e}</pre></body></html>"
                 except Exception as e:
                     log_error(f"Unexpected error rendering {page_config.id}: {e}")
-                    if self.config.verbose:
+                    if self.config.execution.verbose:
                         import traceback
                         traceback.print_exc()
                     raise  # Re-raise unexpected errors

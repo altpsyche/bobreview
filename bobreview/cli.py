@@ -578,10 +578,10 @@ Examples:
         if cache:
             cache.clear()
     
-    if config.dry_run:
+    if config.execution.dry_run:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
-    log_verbose(f"LLM Provider: {config.llm_provider} (model: {config.llm_model})", config)
+    log_verbose(f"LLM Provider: {config.llm.provider} (model: {config.llm.model})", config)
     
     # Load plugins (unless disabled)
     # IMPORTANT: Plugins must be loaded BEFORE template engine is first accessed
@@ -600,33 +600,33 @@ Examples:
         # Build CLI overrides for the JSON system
         cli_overrides = {
             'thresholds': {
-                'draw_soft_cap': config.draw_soft_cap,
-                'draw_hard_cap': config.draw_hard_cap,
-                'tri_soft_cap': config.tri_soft_cap,
-                'tri_hard_cap': config.tri_hard_cap,
-                'high_load_draw_threshold': config.high_load_draw_threshold,
-                'high_load_tri_threshold': config.high_load_tri_threshold,
-                'low_load_draw_threshold': config.low_load_draw_threshold,
-                'low_load_tri_threshold': config.low_load_tri_threshold,
-                'outlier_sigma': config.outlier_sigma,
-                'mad_threshold': config.mad_threshold,
+                'draw_soft_cap': config.thresholds.draw_soft_cap,
+                'draw_hard_cap': config.thresholds.draw_hard_cap,
+                'tri_soft_cap': config.thresholds.tri_soft_cap,
+                'tri_hard_cap': config.thresholds.tri_hard_cap,
+                'high_load_draw_threshold': config.thresholds.high_load_draw_threshold,
+                'high_load_tri_threshold': config.thresholds.high_load_tri_threshold,
+                'low_load_draw_threshold': config.thresholds.low_load_draw_threshold,
+                'low_load_tri_threshold': config.thresholds.low_load_tri_threshold,
+                'outlier_sigma': config.thresholds.outlier_sigma,
+                'mad_threshold': config.thresholds.mad_threshold,
             },
             'llm_config': {
-                'provider': config.llm_provider,
-                'model': config.llm_model,
-                'temperature': config.llm_temperature,
-                'max_tokens': config.llm_max_tokens,
-                'chunk_size': config.llm_chunk_size,
-                'enable_cache': config.use_cache,
+                'provider': config.llm.provider,
+                'model': config.llm.model,
+                'temperature': config.llm.temperature,
+                'max_tokens': config.llm.max_tokens,
+                'chunk_size': config.llm.chunk_size,
+                'enable_cache': config.llm.use_cache,
             },
             'output': {
-                'embed_images': config.embed_images,
-                'linked_css': config.linked_css,
+                'embed_images': config.output.embed_images,
+                'linked_css': config.output.linked_css,
             },
             'theme': {
-                'default': config.theme_id,
+                'default': config.output.theme_id,
             },
-            'disabled_pages': config.disabled_pages
+            'disabled_pages': config.output.disabled_pages
         }
         
         # Load report system with CLI overrides
@@ -662,7 +662,7 @@ Examples:
         return 1
     except Exception as e:
         log_error(f"Failed to execute report system: {e}")
-        if config.verbose:
+        if config.execution.verbose:
             import traceback
             traceback.print_exc()
         return 1

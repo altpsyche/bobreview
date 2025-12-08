@@ -92,7 +92,7 @@ class MayhemAutomationPlugin(BasePlugin):
         
         for gen_id, gen_func in generators:
             wrapper = self._create_generator_wrapper(gen_id, gen_func)
-            registry.register_llm_generator(wrapper, plugin_name=self.name)
+            registry.llm_generators.register(wrapper, plugin_name=self.name)
     
     def _create_generator_wrapper(self, name: str, func):
         """Create a wrapper class for registering functions."""
@@ -110,7 +110,7 @@ class MayhemAutomationPlugin(BasePlugin):
             parser_name = "filename_pattern"
             parser_class = FilenamePatternParser
         
-        registry.register_data_parser(FilenamePatternParserWrapper, plugin_name=self.name)
+        registry.data_parsers.register(FilenamePatternParserWrapper, plugin_name=self.name)
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
@@ -118,7 +118,7 @@ class MayhemAutomationPlugin(BasePlugin):
         
         # Register each theme with plugin registry
         for theme in BUILTIN_THEMES:
-            registry.register_theme(theme, plugin_name=self.name)
+            registry.themes.register(theme, plugin_name=self.name)
     
     def _register_services(self) -> None:
         """Register default service implementations."""
@@ -152,7 +152,7 @@ class MayhemAutomationPlugin(BasePlugin):
                         system_def = json.load(f)
                     
                     system_name = json_file.stem  # e.g., 'png_data_points'
-                    registry.register_report_system(
+                    registry.report_systems.register(
                         name=system_name,
                         system_def=system_def,
                         plugin_name=self.name
@@ -170,7 +170,7 @@ class MayhemAutomationPlugin(BasePlugin):
         template_dir = Path(__file__).parent / 'templates'
         if template_dir.exists():
             # Priority 1000 = low priority (user and other plugins can override)
-            registry.register_template_path(
+            registry.template_paths.register(
                 template_dir, 
                 plugin_name=self.name,
                 priority=1000
@@ -182,7 +182,7 @@ class MayhemAutomationPlugin(BasePlugin):
         
         # Chart generator needs config and thresholds at generation time,
         # not at registration time -- we register a factory
-        registry.register_chart_generator(
+        registry.chart_generators.register(
             report_system_id='png_data_points',
             generator=PerformanceChartGenerator,  # Pass class, not instance
             plugin_name=self.name
@@ -193,7 +193,7 @@ class MayhemAutomationPlugin(BasePlugin):
         from .context import PerformanceContextBuilder
         
         # Context builder adds images/critical/metrics to template context
-        registry.register_context_builder(
+        registry.context_builders.register(
             report_system_id='png_data_points',
             builder=PerformanceContextBuilder,  # Pass class, not instance
             plugin_name=self.name

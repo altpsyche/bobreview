@@ -85,12 +85,12 @@ class ServiceValidator:
         """
         if not self.container.has('llm'):
             llm_config = {
-                'provider': config.llm_provider,
-                'api_key': config.llm_api_key,
-                'model': getattr(config, 'openai_model', None) or config.llm_model,
-                'temperature': config.llm_temperature,
-                'max_tokens': config.llm_max_tokens,
-                'use_cache': config.use_cache,
+                'provider': config.llm.provider,
+                'api_key': config.llm.api_key,
+                'model': config.llm.model,
+                'temperature': config.llm.temperature,
+                'max_tokens': config.llm.max_tokens,
+                'use_cache': config.llm.use_cache,
             }
             self.container.register('llm', LLMService(llm_config))
             log_verbose("Registered LLMService with runtime config", config)

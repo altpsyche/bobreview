@@ -22,11 +22,11 @@ def get_theme(theme_id: Optional[str] = None) -> Optional[ReportTheme]:
     from ..plugins import get_registry
     
     registry = get_registry()
-    theme = registry.get_theme(theme_id)
+    theme = registry.themes.get(theme_id)
     
     # If no theme found and no ID specified, try 'dark' as default
     if theme is None and theme_id is None:
-        theme = registry.get_theme('dark')
+        theme = registry.themes.get('dark')
     
     return theme
 
