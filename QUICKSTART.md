@@ -342,8 +342,10 @@ bobreview --dir PATH [OPTIONS]
 - Read [README.md](README.md) for complete documentation
 - Check [INSTALL.md](INSTALL.md) for advanced installation
 - Review [ROADMAP.md](ROADMAP.md) for upcoming features
+- See [CHANGELOG.md](CHANGELOG.md) for v1.0.7 changes
 - Try different configurations and explore options
 
 ---
 
-BobReview - Performance analysis and review tool.
+**BobReview v1.0.7** - Plugin System  
+Performance analysis and review tool for game development.

@@ -7,79 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.7] - 2025-12-08
+## [1.0.7] - 2024-12-XX
 
-### Fully Modular Plugin Architecture
+### Plugin System
 
-BobReview is now a **minimal framework**. All built-in functionality comes from the `MayhemAutomation` plugin and can be replaced or extended by other plugins.
-
-#### New Core Plugin
-```
-bobreview/plugins/core/
-├── __init__.py
-├── manifest.json           # Plugin metadata
-├── plugin.py               # CorePlugin class
-├── report_systems/
-│   └── png_data_points.json  # Moved from builtin/
-└── templates/              # All Jinja2 templates
-    ├── base.html.j2
-    ├── components/
-    │   └── macros.html.j2
-    └── pages/*.html.j2
-```
+BobReview v1.0.7 introduces a fully modular plugin system with focused architecture following SOLID and DRY principles.
 
 ### Added
 
-- **Core Plugin** (`bobreview/plugins/core/`):
-  - Provides ALL default functionality
-  - LLM generators (7), themes (3), services (3), data parsers (1)
-  - Report systems and templates now plugin-provided
-  - Can be disabled/replaced entirely
+- **Focused Registry System** (`bobreview/plugins/registries/`):
+  - `ThemeRegistry`, `WidgetRegistry`, `DataParserRegistry`, `LLMGeneratorRegistry`
+  - `ChartTypeRegistry`, `PageRegistry`, `ServiceRegistry`, `ReportSystemRegistry`
+  - `ChartGeneratorRegistry`, `ContextBuilderRegistry`, `TemplatePathRegistry`
+  - Each registry has a single, focused responsibility
 
-- **Plugin Registry Extensions**:
-  - `register_report_system()` / `get_report_system()` - Report system registration
-  - `register_template_path()` / `get_template_paths()` - Template path registration
-  - Priority-based template loading (lower number = higher priority)
+- **Focused Config Classes** (`bobreview/core/config_classes.py`):
+  - `ThresholdConfig` - All threshold values
+  - `LLMConfig` - All LLM provider settings
+  - `ExecutionConfig` - Execution behavior (dry_run, verbose, etc.)
+  - `OutputConfig` - Output settings (embed_images, theme_id, etc.)
+  - `CacheConfig` - Cache settings
 
-- **Template Overrides**: Plugins can provide alternative templates
-  ```python
-  registry.register_template_path(my_templates, "my-theme", priority=500)
-  ```
+- **Responsibility Classes** (`bobreview/report_systems/`):
+  - `ConfigMerger` - Handles configuration merging
+  - `ServiceValidator` - Validates required services
+  - `PluginLifecycleManager` - Manages plugin lifecycle hooks
 
-- **Report System Overrides**: Custom report systems via plugins
-  ```python
-  registry.register_report_system("my_system", system_def, "my-plugin")
-  ```
+- **Utility Functions** (`bobreview/core/`):
+  - `plugin_utils.py` - `safe_plugin_call()`, `call_plugin_lifecycle_hooks()`
+  - `config_utils.py` - `merge_config()`, `merge_nested_config()`
 
 ### Changed
 
-- **Template Loading Order**:
-  1. User templates (`~/.bobreview/templates/`) - highest priority
-  2. Plugin-registered templates - core plugin uses priority 1000
-  3. Package fallback (now empty)
+- Plugin Registry API:
+  ```python
+  # Old (backward compatible - removed)
+  registry.register_theme(theme)
+  theme = registry.get_theme('dark')
+  
+  # New (focused interfaces)
+  registry.themes.register(theme)
+  theme = registry.themes.get('dark')
+  ```
 
-- **Report System Loading Order**:
-  1. Plugin registry - checked first
-  2. User directory (`~/.bobreview/report_systems/`)
-  3. Built-in directory (now empty)
+- ReportConfig API:
+  ```python
+  # Old (backward compatible - removed)
+  config.draw_soft_cap = 600
+  config.llm_provider = 'openai'
+  config.dry_run = True
+  
+  # New (focused configs)
+  config.thresholds.draw_soft_cap = 600
+  config.llm.provider = 'openai'
+  config.execution.dry_run = True
+  ```
 
-- **Moved to Core Plugin**:
-  - `report_systems/builtin/png_data_points.json` → `plugins/core/report_systems/`
-  - `templates/*` → `plugins/core/templates/`
+- ReportSystemExecutor:
+  - Now accepts dependencies via constructor (dependency injection)
+  - Uses focused responsibility classes internally
+  - Better testability and maintainability
+
+- Plugin System:
+  - Renamed "core" plugin to "game-review" (more descriptive)
+  - All plugins use focused registry interfaces
+  - Cleaner, more predictable API
+
+### Removed
+
+- **Backward Compatibility**:
+  - Removed delegation methods from PluginRegistry (use focused registries directly)
+  - Removed property delegations from ReportConfig (use focused configs directly)
+  - All code updated to use focused interfaces
+  - Cleaner, more predictable system
 
 ### Technical Details
 
-- **New files**: `plugins/core/plugin.py`, `plugins/core/manifest.json`
-- **Modified files**: 
-  - `plugins/registry.py` - Added report system and template registration
-  - `report_systems/loader.py` - Check plugin registry first
-  - `core/template_engine.py` - Include plugin template paths
-  - `cli.py` - Load core plugin at startup
+New Files:
+- `bobreview/plugins/registries/` - 11 focused registry classes
+- `bobreview/core/config_classes.py` - Focused config classes
+- `bobreview/report_systems/config_merger.py` - Config merging responsibility
+- `bobreview/report_systems/service_validator.py` - Service validation responsibility
+- `bobreview/report_systems/plugin_lifecycle.py` - Plugin lifecycle responsibility
+- `bobreview/core/plugin_utils.py` - Plugin utility functions
+- `bobreview/core/config_utils.py` - Config utility functions
 
-- **Architecture change**: 
-  - Main package is now a minimal framework
-  - All functionality injectable via plugins
-  - Core plugin can be replaced entirely
+Modified Files:
+- `bobreview/plugins/registry.py` - Now composes focused registries
+- `bobreview/core/config.py` - Now uses focused config classes
+- `bobreview/report_systems/executor.py` - Uses dependency injection and responsibility classes
+- All plugin files - Updated to use focused registries
+- All service files - Updated to use focused configs
+
+Architecture Improvements:
+- Follows SOLID principles (SRP, OCP, LSP, ISP, DIP)
+- Follows DRY principle (no code duplication)
+- Better testability (dependency injection)
+- Better maintainability (focused responsibilities)
+- More predictable (no hidden delegation layers)
+
+### Benefits
+
+- Follows SOLID principles
+- Dependency injection enables better unit testing
+- Focused interfaces make code purpose clear
+- Type inference works better with focused classes
+- Single responsibility makes changes safer
 
 ---
 

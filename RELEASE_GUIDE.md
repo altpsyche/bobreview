@@ -2,16 +2,33 @@
 
 ## Performance Analysis Tool for Game Development
 
-Version 1.0.7
+Version 1.0.7 - Plugin System
 
 ### What's New in v1.0.7
 
-- **Fully Modular Plugin Architecture**: BobReview is now a minimal framework
-  - All functionality comes from the `MayhemAutomation` plugin
-  - LLM generators, themes, services, templates are all pluggable
-  - Report systems and templates can be overridden by plugins
-- **Plugin Registry Extensions**: Register report systems, templates, services
-- **Priority-Based Template Loading**: Plugins can provide alternative templates
+- **Plugin System**: Fully modular plugin architecture with SOLID and DRY principles
+  - **Focused Registries**: PluginRegistry split into 11 focused registries (themes, generators, parsers, etc.)
+  - **Focused Config Classes**: ReportConfig split into 5 focused config classes (thresholds, LLM, execution, output, cache)
+  - **Dependency Injection**: No global singletons - dependencies passed explicitly
+  - **Single Responsibility**: Executor split into focused classes (ConfigMerger, ServiceValidator, PluginLifecycleManager)
+  - **DRY Utilities**: Common patterns extracted (safe_plugin_call, merge_config)
+
+- **Cleaner API**: Removed backward compatibility for more predictable system
+  - Use `registry.themes.register()` instead of `registry.register_theme()`
+  - Use `config.thresholds.draw_soft_cap` instead of `config.draw_soft_cap`
+  - Use `config.llm.provider` instead of `config.llm_provider`
+
+- **Better Code Quality**: 
+  - Follows industry-standard SOLID principles
+  - Easier to test (dependency injection)
+  - Better IDE support (type inference)
+  - Clearer intent (focused interfaces)
+
+- **Plugin System Improvements**:
+  - Renamed "core" plugin to "game-review" (more descriptive)
+  - All plugins use focused registry interfaces
+  - Cleaner, more predictable plugin API
+
 - All v1.0.6 features preserved
 
 ---
@@ -294,7 +311,7 @@ bobreview --dir /path/to/screenshots
 --theme THEME            # Report theme: dark (default), light, high_contrast
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 
-# LLM Provider Configuration (v1.0.5)
+# LLM Provider Configuration
 --llm-provider PROVIDER  # Provider: openai (default), anthropic, ollama
 --llm-api-key KEY        # API key for selected provider
 --llm-model MODEL        # Model name (default depends on provider)
@@ -308,8 +325,10 @@ bobreview --dir /path/to/screenshots
 bobreview --version      # Check version
 
 # Test installation
-python -c "from bobreview import ReportConfig; print('OK')"
+python -c "from bobreview.core import ReportConfig; print('OK')"
 ```
+
+---
 
 ---
 
@@ -318,8 +337,9 @@ python -c "from bobreview import ReportConfig; print('OK')"
 - **Full Documentation:** See `README.md` in the installation folder
 - **Quick Start:** See `QUICKSTART.md` for more examples
 - **Detailed Install Guide:** See `INSTALL.md` for advanced setup
+- **Release Notes:** See `docs/V1.0.7_RELEASE_NOTES.md` for v1.0.7 details
 
 ---
 
 **BobReview v1.0.7** - Performance analysis and review tool for game development  
-MIT License | Fully modular plugin architecture
+MIT License | Focused Architecture - SOLID & DRY Principles

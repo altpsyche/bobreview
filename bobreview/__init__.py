@@ -5,10 +5,10 @@ BobReview - Performance Analysis and Review Tool
 A comprehensive tool for analyzing game performance captures and generating
 detailed reports with LLM-powered insights.
 
-v1.0.6: CMS-Style Jinja2 Template System
+v1.0.7: Plugin System
 """
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 __author__ = "BobReview Contributors"
 __description__ = "Performance analysis and review tool for game development"
 

@@ -50,32 +50,38 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 ## Architecture
 
-BobReview v1.0.7 uses a **fully modular plugin architecture**:
+BobReview v1.0.7 uses a **fully modular plugin system** with focused architecture following SOLID and DRY principles:
 
 ```text
 bobreview/
 ├── __init__.py        # Package entry
 ├── cli.py             # Command-line interface
-├── data_parser.py     # PNG filename parsing
 │
 ├── core/              # Foundational utilities
-│   ├── config.py      # ReportConfig dataclass
+│   ├── config.py      # ReportConfig (composes focused configs)
+│   ├── config_classes.py  # Focused config classes (ThresholdConfig, LLMConfig, etc.)
 │   ├── cache.py       # LLM response caching
 │   ├── utils.py       # Logging, formatting
 │   ├── analysis.py    # Statistics calculation
-│   └── template_engine.py  # Jinja2 template loading
+│   ├── template_engine.py  # Jinja2 template loading
+│   ├── plugin_utils.py     # Plugin utility functions
+│   └── config_utils.py     # Config utility functions
 │
-├── plugins/           # Plugin system (NEW in v1.0.7)
-│   ├── registry.py    # Extension point registry
+├── plugins/           # Plugin system with focused registries
+│   ├── registry.py    # PluginRegistry (composes focused registries)
 │   ├── base.py        # BasePlugin abstract class
-│   └── game-review/  # Game Review plugin (provides game review functionality)
-│       ├── plugin.py  # GameReviewPlugin class
-│       ├── report_systems/
-│       │   └── game_review.json
-│       └── templates/
-│           ├── base.html.j2
-│           ├── components/
-│           └── pages/
+│   ├── registries/    # Focused registries (NEW in v1.0.7)
+│   │   ├── theme_registry.py
+│   │   ├── llm_generator_registry.py
+│   │   ├── data_parser_registry.py
+│   │   └── ... (11 focused registries)
+│   ├── game-review/  # Game Review plugin
+│   │   ├── plugin.py  # GameReviewPlugin class
+│   │   ├── report_systems/
+│   │   └── templates/
+│   └── mayhem/        # MayhemAutomation plugin
+│       ├── plugin.py
+│       └── ...
 │
 ├── services/          # Pluggable services
 │   ├── container.py   # ServiceContainer
@@ -84,30 +90,54 @@ bobreview/
 │   ├── chart_service.py
 │   └── llm_service.py
 │
-├── llm/               # LLM abstraction layer
-│   ├── client.py      # call_llm, call_llm_chunked
-│   ├── providers/     # Pluggable LLM providers
-│   └── generators/    # Content generators
+├── report_systems/    # Report execution
+│   ├── schema.py, loader.py, executor.py
+│   ├── config_merger.py      # Config merging responsibility
+│   ├── service_validator.py  # Service validation responsibility
+│   └── plugin_lifecycle.py   # Plugin lifecycle responsibility
 │
-└── report_systems/    # Report execution
-    ├── schema.py, loader.py, executor.py
+└── llm/               # LLM abstraction layer
+    ├── client.py      # call_llm, call_llm_chunked
+    ├── providers/     # Pluggable LLM providers
+    └── generators/    # Content generators
 ```
 
 **Design Principles:**
-- **Plugin-First** - All functionality provided by plugins (game-review plugin provides default game review functionality)
-- **Single Responsibility** - Each module has one clear purpose
-- **Dependency Injection** - Configuration and services passed through
+- **SOLID Principles** - Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **DRY Principle** - Don't Repeat Yourself (extracted utilities, no code duplication)
+- **Focused Interfaces** - Each registry/config handles one concern
+- **Dependency Injection** - Dependencies passed explicitly (no global singletons)
+- **Plugin-First** - All functionality provided by plugins
 - **Registry Pattern** - Self-registration for all extension points
 
 ### Package Overview
 
 | Package | Purpose |
 |---------|---------|
-| `plugins/` | Plugins provide LLM generators, themes, services, templates (game-review plugin is default) |
-| `core/` | Configuration, caching, logging, analysis |
+| `plugins/` | Plugin system with 11 focused registries (themes, generators, parsers, etc.) |
+| `plugins/registries/` | Focused registries following Interface Segregation Principle |
+| `core/` | Configuration (focused config classes), caching, logging, analysis, utilities |
+| `core/config_classes.py` | Focused config classes (ThresholdConfig, LLMConfig, ExecutionConfig, etc.) |
 | `services/` | Pluggable service container with data, analytics, charts, LLM |
-| `llm/` | LLM providers (OpenAI/Anthropic/Ollama), 7 generators |
-| `report_systems/` | JSON-based pipeline configuration |
+| `report_systems/` | JSON-based pipeline configuration with focused responsibility classes |
+| `llm/` | LLM providers (OpenAI/Anthropic/Ollama), generators |
+
+### Focused Architecture Benefits
+
+**Interface Segregation:**
+- Clients only depend on registries/configs they need
+- `registry.themes` for themes, `registry.llm_generators` for generators
+- `config.thresholds` for thresholds, `config.llm` for LLM settings
+
+**Dependency Injection:**
+- No global singletons (better testability)
+- Dependencies passed explicitly
+- Easier to mock in tests
+
+**Single Responsibility:**
+- Each class has one clear purpose
+- ConfigMerger merges config, ServiceValidator validates services
+- Executor orchestrates, doesn't merge or validate
 
 ---
 
@@ -308,32 +338,159 @@ bobreview --dir ./screenshots --no-embed-images
 
 ### Python API
 
-Use BobReview as a library:
+#### Basic Usage
 
 ```python
-from bobreview import ReportConfig, parse_filename, analyze_data, generate_html_report
+from bobreview import ReportConfig
+from bobreview.report_systems import load_report_system, ReportSystemExecutor
 from pathlib import Path
 
-# Parse data
-data_points = [parse_filename("Level1_85000_520_1234567890.png")]
-
-# Configure
+# Create configuration with focused config classes
 config = ReportConfig(
     title="Performance Analysis",
     location="Test Level",
-    openai_api_key="sk-...",
 )
 
-# Analyze
-stats = analyze_data(data_points, config)
+# Configure thresholds
+config.thresholds.draw_soft_cap = 550
+config.thresholds.draw_hard_cap = 600
+config.thresholds.tri_soft_cap = 100000
+config.thresholds.tri_hard_cap = 120000
 
-# Generate report
-html = generate_html_report(
-    data_points, stats, "./screenshots", Path("report.html"), config
-)
+# Configure LLM settings
+config.llm.provider = "openai"
+config.llm.api_key = "sk-..."
+config.llm.model = "gpt-4o"
+config.llm.temperature = 0.7
 
-# Save
-Path("report.html").write_text(html, encoding='utf-8')
+# Configure execution
+config.execution.dry_run = False
+config.execution.verbose = True
+config.execution.sample_size = None
+
+# Configure output
+config.output.theme_id = "dark"
+config.output.embed_images = True
+
+# Load report system and execute
+system_def = load_report_system("png_data_points")
+executor = ReportSystemExecutor(system_def, config)
+executor.execute(Path("./screenshots"), Path("report.html"))
+```
+
+#### Plugin API
+
+Create a custom plugin:
+
+```python
+from bobreview.plugins import BasePlugin
+from bobreview.core.themes import ReportTheme
+
+class MyCustomPlugin(BasePlugin):
+    name = "my-plugin"
+    version = "1.0.0"
+    author = "Your Name"
+    description = "Custom plugin with themes and generators"
+    dependencies = []
+    
+    def on_load(self, registry) -> None:
+        """Register plugin components using focused registries."""
+        
+        # Register a theme
+        custom_theme = ReportTheme(
+            id="custom",
+            name="Custom Theme",
+            primary_color="#FF5733",
+            secondary_color="#33FF57",
+            # ... other theme properties
+        )
+        registry.themes.register(custom_theme, plugin_name=self.name)
+        
+        # Register an LLM generator
+        def generate_custom_content(llm_provider, data_points, stats, context, dry_run, report_config):
+            # Your generator logic here
+            return "Custom content"
+        
+        class CustomGenerator:
+            @staticmethod
+            def generate(llm_provider, data_points, stats, context, dry_run, report_config):
+                return generate_custom_content(llm_provider, data_points, stats, context, dry_run, report_config)
+        
+        registry.llm_generators.register(CustomGenerator, plugin_name=self.name)
+        
+        # Register a data parser
+        def parse_custom_format(file_path):
+            # Your parser logic here
+            return {"data": "parsed"}
+        
+        registry.data_parsers.register("custom_format", parse_custom_format, plugin_name=self.name)
+        
+        # Register a report system
+        system_def = {
+            "id": "my_system",
+            "name": "My Custom System",
+            "version": "1.0.0",
+            # ... system definition
+        }
+        registry.report_systems.register("my_system", system_def, plugin_name=self.name)
+        
+        # Register template paths
+        template_path = Path(__file__).parent / "templates"
+        registry.template_paths.register(template_path, plugin_name=self.name, priority=50)
+```
+
+#### Accessing Registry Components
+
+```python
+from bobreview.plugins import get_registry
+
+registry = get_registry()
+
+# Get themes
+theme = registry.themes.get("dark")
+all_themes = registry.themes.get_all()
+
+# Get LLM generators
+generator = registry.llm_generators.get("summary")
+all_generators = registry.llm_generators.get_all()
+
+# Get data parsers
+parser = registry.data_parsers.get("png_filename")
+all_parsers = registry.data_parsers.get_all()
+
+# Get report systems
+system = registry.report_systems.get("png_data_points")
+all_systems = registry.report_systems.get_all()
+
+# Get template paths
+paths = registry.template_paths.get_paths()
+```
+
+#### Config API
+
+```python
+from bobreview import ReportConfig
+
+config = ReportConfig()
+
+# Access focused config classes
+config.thresholds.draw_soft_cap = 600
+config.thresholds.tri_hard_cap = 120000
+
+config.llm.provider = "openai"
+config.llm.model = "gpt-4o"
+config.llm.temperature = 0.7
+
+config.execution.dry_run = False
+config.execution.verbose = True
+config.execution.sample_size = 100
+
+config.output.theme_id = "dark"
+config.output.embed_images = True
+config.output.disabled_pages = ["stats"]
+
+config.cache.cache_dir = Path(".cache")
+config.cache.clear_cache = False
 ```
 
 ---
@@ -990,16 +1147,18 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-**Current:** v1.0.4
+**Current:** v1.0.7 - Plugin System
 
-**Features:**
+**Key Features:**
+- **Plugin System** - Fully modular plugin architecture with SOLID & DRY principles
+- **Focused Registries** - 11 focused registries (themes, generators, parsers, etc.)
+- **Focused Config Classes** - 5 focused config classes (thresholds, LLM, execution, output, cache)
+- **Dependency Injection** - No global singletons, better testability
+- **Single Responsibility** - Focused responsibility classes
+- **DRY Utilities** - Extracted common patterns
 - JSON-based report systems framework
-- Custom analysis pipelines without coding
-- Built-in `png_data_points` system
-- Report system discovery and loading
-- Template variable substitution
-- Backward compatible with v1.0.3
-- Modular architecture
+- Multi-provider LLM support (OpenAI, Anthropic, Ollama)
+- Plugin system with extensible registries
 - Global CLI command
 - Intelligent caching
 - Complete documentation
