@@ -16,12 +16,12 @@ from ...plugins import BasePlugin
 from ...services import get_container, DataService, AnalyticsService, ChartService, LLMService
 
 
-class CorePlugin(BasePlugin):
+class MayhemAutomationPlugin(BasePlugin):
     """
-    MayhemAutomation - the default plugin providing all built-in functionality.
+    MayhemAutomation - performance analysis plugin.
     
-    This is loaded automatically and provides default implementations
-    that other plugins can override.
+    Provides LLM generators, chart generators, context builders,
+    themes, and templates for performance analysis reports.
     """
     
     name = "MayhemAutomation"
@@ -70,7 +70,7 @@ class CorePlugin(BasePlugin):
     
     def _register_generators(self, registry) -> None:
         """Register all built-in LLM generators."""
-        from ...llm.generators import (
+        from .generators import (
             generate_executive_summary,
             generate_metric_deep_dive,
             generate_zones_hotspots,

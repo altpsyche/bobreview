@@ -1,8 +1,8 @@
 """
-LLM content generators for BobReview.
+Performance analysis LLM generators for MayhemAutomation plugin.
 
-Each generator produces specific content sections for the report.
-Generators are registered by the core plugin, not directly here.
+Each generator produces specific content sections for performance reports.
+These are MayhemAutomation-specific and registered by the plugin.
 """
 
 from .executive import generate_executive_summary

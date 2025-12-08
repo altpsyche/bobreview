@@ -15,28 +15,13 @@ from typing import Dict, List, Any, Optional
 from dataclasses import asdict
 from datetime import datetime
 import os
-import random
-import json
 import jinja2
 
 from .schema import ReportSystemDefinition, LabelConfig
-from .data_parser_base import DataParser, FilenamePatternParser
-from .llm_generator_base import LLMGeneratorTemplate, LLMGeneratorAdapter
 
 # Import from new package structure
-from ..core import ReportConfig, analyze_data, log_info, log_verbose, log_warning, log_error, image_to_base64
+from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, image_to_base64
 from ..core.template_engine import get_template_engine
-from ..registry.themes import get_theme
-from ..llm import call_llm, call_llm_chunked
-from ..llm.generators import (
-    generate_executive_summary,
-    generate_metric_deep_dive,
-    generate_zones_hotspots,
-    generate_optimization_checklist,
-    generate_system_recommendations,
-    generate_visual_analysis,
-    generate_statistical_interpretation
-)
 
 # Import services and plugin system
 from ..services import get_container, DataService, AnalyticsService, ChartService, LLMService

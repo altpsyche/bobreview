@@ -4,10 +4,10 @@ import statistics
 from typing import Dict, List, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...core.config import ReportConfig
+    from bobreview.core.config import ReportConfig
 
-from ...core.utils import format_number, log_warning
-from ..client import call_llm_chunked
+from bobreview.core.utils import format_number, log_warning
+from bobreview.llm.client import call_llm_chunked
 
 
 def generate_metric_deep_dive(

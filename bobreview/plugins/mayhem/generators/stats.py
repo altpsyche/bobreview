@@ -3,10 +3,10 @@
 from typing import Dict, List, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...core.config import ReportConfig
+    from bobreview.core.config import ReportConfig
 
-from ...core.utils import format_number
-from ..client import call_llm
+from bobreview.core.utils import format_number
+from bobreview.llm.client import call_llm
 
 
 def generate_statistical_interpretation(

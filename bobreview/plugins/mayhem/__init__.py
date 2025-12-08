@@ -1,7 +1,8 @@
-"""MayhemAutomation Plugin - Full-featured BobReview automation."""
-from .plugin import CorePlugin as MayhemPlugin
+"""MayhemAutomation Plugin - Performance analysis for BobReview."""
+from .plugin import MayhemAutomationPlugin
 
-# Alias for compatibility
-CorePlugin = MayhemPlugin
+# Aliases for compatibility
+MayhemPlugin = MayhemAutomationPlugin
+CorePlugin = MayhemAutomationPlugin  # Legacy alias
 
-__all__ = ['MayhemPlugin', 'CorePlugin']
+__all__ = ['MayhemAutomationPlugin', 'MayhemPlugin', 'CorePlugin']

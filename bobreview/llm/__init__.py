@@ -3,8 +3,9 @@ LLM package for BobReview.
 
 Provides a clean abstraction for LLM interactions:
 - client: Core API client and caching
-- generators: Individual content generators
 - providers: Pluggable LLM providers (OpenAI, Anthropic, Ollama)
+
+Note: LLM generators are now plugin-provided (e.g., plugins/mayhem/generators/).
 """
 
 from .client import call_llm, call_llm_chunked
