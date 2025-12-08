@@ -63,6 +63,10 @@ from .executor import (
     ReportSystemExecutor
 )
 
+from .config_merger import ConfigMerger
+from .service_validator import ServiceValidator
+from .plugin_lifecycle import PluginLifecycleManager
+
 __all__ = [
     # Schema classes
     'ReportSystemDefinition',
@@ -95,5 +99,10 @@ __all__ = [
     
     # Executor
     'ReportSystemExecutor',
+    
+    # Responsibility classes
+    'ConfigMerger',
+    'ServiceValidator',
+    'PluginLifecycleManager',
 ]
 

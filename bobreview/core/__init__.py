@@ -14,6 +14,8 @@ from .utils import (
 from .analysis import analyze_data
 from .theme_utils import get_theme, get_theme_css_variables
 from .themes import ReportTheme, BUILTIN_THEMES
+from .config_utils import merge_config, merge_nested_config
+from .plugin_utils import safe_plugin_call, call_plugin_lifecycle_hooks
 
 __all__ = [
     # Config
@@ -44,4 +46,12 @@ __all__ = [
     'get_theme_css_variables',
     'ReportTheme',
     'BUILTIN_THEMES',
+    
+    # Config utilities
+    'merge_config',
+    'merge_nested_config',
+    
+    # Plugin utilities
+    'safe_plugin_call',
+    'call_plugin_lifecycle_hooks',
 ]

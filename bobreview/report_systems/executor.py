@@ -11,7 +11,7 @@ NOTE: This executor now uses the services package for modular, pluggable process
 """
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from dataclasses import asdict
 from datetime import datetime
 import os
@@ -21,11 +21,18 @@ from .schema import ReportSystemDefinition, LabelConfig
 
 # Import from new package structure
 from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, image_to_base64
-from ..core.template_engine import get_template_engine
 
 # Import services and plugin system
-from ..services import get_container, DataService, AnalyticsService, ChartService, LLMService
-from ..plugins import get_registry
+from ..services import ServiceContainer, DataService, AnalyticsService, ChartService, LLMService
+from ..plugins import PluginRegistry, PluginLoader
+
+# Import new responsibility classes
+from .config_merger import ConfigMerger
+from .service_validator import ServiceValidator
+from .plugin_lifecycle import PluginLifecycleManager
+
+if TYPE_CHECKING:
+    from ..core.template_engine import TemplateEngine
 
 
 class ReportSystemExecutor:
@@ -38,117 +45,82 @@ class ReportSystemExecutor:
     - ChartService for chart generation
     
     Plugins can replace services via the ServiceContainer.
+    
+    Single Responsibility: Orchestrates the report generation pipeline.
     """
     
-    def __init__(self, system_def: ReportSystemDefinition, config: ReportConfig):
+    def __init__(
+        self,
+        system_def: ReportSystemDefinition,
+        config: ReportConfig,
+        container: Optional[ServiceContainer] = None,
+        registry: Optional[PluginRegistry] = None,
+        template_engine: Optional['TemplateEngine'] = None,
+        plugin_loader: Optional[PluginLoader] = None
+    ):
         """
         Initialize the executor with a report system definition.
         
         Parameters:
             system_def: Report system definition from JSON
             config: Report configuration (merged with JSON settings)
+            container: ServiceContainer (injected dependency, uses global if None)
+            registry: PluginRegistry (injected dependency, uses global if None)
+            template_engine: TemplateEngine (injected dependency, uses global if None)
+            plugin_loader: PluginLoader (injected dependency, uses global if None)
         """
         self.system_def = system_def
         self.config = config
         
-        # Get service container
-        self.container = get_container()
+        # Use dependency injection with fallback to globals for backward compatibility
+        if container is None:
+            from ..services import get_container
+            container = get_container()
+        if registry is None:
+            from ..plugins import get_registry
+            registry = get_registry()
+        if template_engine is None:
+            from ..core.template_engine import get_template_engine
+            template_engine = get_template_engine()
+        if plugin_loader is None:
+            from ..plugins import get_loader
+            plugin_loader = get_loader()
+        
+        self.container = container
+        self.registry = registry
+        self.template_engine = template_engine
+        self.plugin_loader = plugin_loader
+        
+        # Initialize responsibility classes
+        self.config_merger = ConfigMerger()
+        self.service_validator = ServiceValidator(container)
+        self.lifecycle_manager = PluginLifecycleManager(plugin_loader)
+        
+        # Merge configuration and validate services
+        self.config_merger.merge(self.config, self.system_def)
         self.services_available = self._ensure_services()
-        
-        self._merge_config()
     
-    def _merge_config(self):
-        """
-        Merge JSON configuration into ReportConfig.
-        
-        Note: CLI overrides have already been merged into the JSON definition
-        by the loader, so we just update the config with JSON values.
-        The loader's merge_cli_overrides() ensures CLI arguments take precedence.
-        """
-        # Thresholds have already been merged in loader
-        # The system_def.thresholds already contains CLI overrides
-        for key, value in self.system_def.thresholds.items():
-            if hasattr(self.config, key):
-                setattr(self.config, key, value)
-        
-        # LLM config has already been merged
-        llm_cfg = self.system_def.llm_config
-        self.config.openai_model = llm_cfg.model
-        self.config.llm_temperature = llm_cfg.temperature
-        self.config.llm_max_tokens = llm_cfg.max_tokens
-        self.config.llm_chunk_size = llm_cfg.chunk_size
-        self.config.use_cache = llm_cfg.enable_cache
-        
-        # Output config has already been merged
-        output_cfg = self.system_def.output
-        self.config.embed_images = output_cfg.embed_images
-        self.config.linked_css = output_cfg.linked_css
-        
-        # Theme has already been merged
-        theme_cfg = self.system_def.theme
-        self.config.theme_id = theme_cfg.default
-    
-    def _ensure_services(self):
+    def _ensure_services(self) -> bool:
         """
         Ensure required services are available.
         
-        Validates that all required services are registered, with clear error messages
-        indicating which plugins should be loaded.
-        
-        Most services are registered by plugins (MayhemAutomation or game-review).
-        LLMService is registered here because it needs runtime config.
+        Delegates to ServiceValidator for validation.
         
         Returns:
             bool: True if all services are available, False otherwise
         """
-        # Verify core services are available (registered by plugins)
         required_services = {
             'data': 'DataService (required by a plugin like MayhemAutomation or game-review)',
             'analytics': 'AnalyticsService (required by a plugin like MayhemAutomation or game-review)',
             'charts': 'ChartService (required by a plugin like MayhemAutomation or game-review)',
         }
         
-        missing_services = []
-        for service_name, description in required_services.items():
-            if not self.container.has(service_name):
-                missing_services.append(f"  - {service_name}: {description}")
+        # Validate required services
+        if not self.service_validator.validate_required(required_services, self.config):
+            return False
         
-        if missing_services:
-            from ..plugins import get_loader
-            loader = get_loader()
-            loaded_plugins = [p.name for p in loader.get_loaded_plugins() if p.loaded]
-            
-            # If no plugins are loaded, this is expected - bobreview works without plugins
-            # but can't generate reports. Just log a message and return False.
-            if not loaded_plugins:
-                log_warning(
-                    "No plugins loaded. BobReview can run without plugins, but cannot generate reports "
-                    "without the required services. Load a plugin (like MayhemAutomation or game-review) "
-                    "to enable report generation.",
-                    self.config
-                )
-                return False
-            
-            # If plugins are loaded but services are missing, that's an error
-            error_msg = (
-                f"Required services not found. Missing:\n" + "\n".join(missing_services) +
-                f"\n\nLoaded plugins: {', '.join(loaded_plugins)}" +
-                f"\n\nThe loaded plugins may not be providing the required services."
-            )
-            raise RuntimeError(error_msg)
-        
-        # LLM service needs runtime config, so we register it here if not already registered
-        if not self.container.has('llm'):
-            llm_config = {
-                'provider': self.config.llm_provider,
-                'api_key': self.config.llm_api_key,
-                'model': getattr(self.config, 'openai_model', None) or self.config.llm_model,
-                'temperature': self.config.llm_temperature,
-                'max_tokens': self.config.llm_max_tokens,
-                'use_cache': self.config.use_cache,
-            }
-            self.container.register('llm', LLMService(llm_config))
-            log_verbose("Registered LLMService with runtime config", self.config)
+        # Ensure LLM service is registered
+        self.service_validator.ensure_llm_service(self.config)
         
         return True
     
@@ -186,15 +158,7 @@ class ReportSystemExecutor:
         }
         
         # Call plugin lifecycle hooks: on_report_start
-        from ..plugins import get_loader
-        loader = get_loader()
-        for plugin_name in loader._loaded.keys():
-            plugin_instance = loader.get_loaded_plugin(plugin_name)
-            if plugin_instance:
-                try:
-                    plugin_instance.on_report_start(report_context)
-                except Exception as e:
-                    log_warning(f"Plugin '{plugin_name}' on_report_start failed: {e}", self.config)
+        self.lifecycle_manager.call_report_start(report_context, self.config)
         
         try:
             # 1. Parse data (using DataService)
@@ -226,13 +190,7 @@ class ReportSystemExecutor:
             }
             
             # Call plugin lifecycle hooks: on_report_complete
-            for plugin_name in loader._loaded.keys():
-                plugin_instance = loader.get_loaded_plugin(plugin_name)
-                if plugin_instance:
-                    try:
-                        plugin_instance.on_report_complete(report_result)
-                    except Exception as e:
-                        log_warning(f"Plugin '{plugin_name}' on_report_complete failed: {e}", self.config)
+            self.lifecycle_manager.call_report_complete(report_result, self.config)
             
             return True
             
@@ -242,13 +200,7 @@ class ReportSystemExecutor:
                 'success': False,
                 'error': str(e),
             }
-            for plugin_name in loader._loaded.keys():
-                plugin_instance = loader.get_loaded_plugin(plugin_name)
-                if plugin_instance:
-                    try:
-                        plugin_instance.on_report_complete(report_result)
-                    except Exception:
-                        pass  # Ignore errors in error handling
+            self.lifecycle_manager.call_report_complete(report_result, self.config)
             raise
     
     def parse_data(self, input_dir: Path) -> List[Dict[str, Any]]:
@@ -376,8 +328,8 @@ class ReportSystemExecutor:
         # Calculate relative images directory
         images_dir_rel = os.path.relpath(input_dir, output_dir)
         
-        # Get template engine (refresh to pick up any new plugin templates)
-        engine = get_template_engine(force_refresh=False)
+        # Use injected template engine
+        engine = self.template_engine
         
         # Get labels from system definition
         labels = self.system_def.labels
@@ -444,8 +396,7 @@ class ReportSystemExecutor:
             }
             
             # Add plugin-provided context (images, critical points, game aliases, etc.)
-            from ..plugins import get_registry
-            context_builder_cls = get_registry().get_context_builder(self.system_def.id)
+            context_builder_cls = self.registry.get_context_builder(self.system_def.id)
             if context_builder_cls:
                 builder = context_builder_cls()
                 plugin_context = builder.build(
@@ -459,7 +410,7 @@ class ReportSystemExecutor:
             
             # Add charts if page has chart configurations - use plugin-provided generator
             if page_config.charts:
-                chart_generator_cls = get_registry().get_chart_generator(self.system_def.id)
+                chart_generator_cls = self.registry.get_chart_generator(self.system_def.id)
                 if chart_generator_cls:
                     # Instantiate with config and thresholds
                     chart_generator = chart_generator_cls(self.config, self.system_def.thresholds)
