@@ -82,12 +82,12 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     try:
         from ..plugins import get_registry
         registry = get_registry()
-        for name, system_def in registry.get_all_report_systems().items():
+        for name, system_def in registry.report_systems.get_all().items():
             systems.append({
-                'id': system_def.get('id', name),
-                'name': system_def.get('name', name),
-                'version': system_def.get('version', 'unknown'),
-                'description': system_def.get('description', ''),
+                'id': system_def.get('id', name) if isinstance(system_def, dict) else getattr(system_def, 'id', name),
+                'name': system_def.get('name', name) if isinstance(system_def, dict) else getattr(system_def, 'name', name),
+                'version': system_def.get('version', 'unknown') if isinstance(system_def, dict) else getattr(system_def, 'version', 'unknown'),
+                'description': system_def.get('description', '') if isinstance(system_def, dict) else getattr(system_def, 'description', ''),
                 'path': f'plugin:{name}',  # Indicate it's from a plugin
                 'source': 'plugin'
             })

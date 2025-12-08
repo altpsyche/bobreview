@@ -29,13 +29,13 @@ def log_info(message: str, config: "Optional[ReportConfig]" = None):
     """
     Log an informational message to standard output unless quiet mode is enabled.
     
-    If color support is available, the message is prefixed with a cyan "[INFO]" tag; otherwise a plain "[INFO]" tag is used. If a `config` is provided and `config.quiet` is True, the message is suppressed.
+    If color support is available, the message is prefixed with a cyan "[INFO]" tag; otherwise a plain "[INFO]" tag is used. If a `config` is provided and `config.execution.quiet` is True, the message is suppressed.
     
     Parameters:
         message (str): The message to log.
-        config (ReportConfig, optional): Configuration that may suppress output when `config.quiet` is True.
+        config (ReportConfig, optional): Configuration that may suppress output when `config.execution.quiet` is True.
     """
-    if config and config.quiet:
+    if config and config.execution.quiet:
         return
     if COLORAMA_AVAILABLE:
         print(f"{Fore.CYAN}[INFO]{Style.RESET_ALL} {message}")
@@ -47,14 +47,14 @@ def log_success(message: str, config: "Optional[ReportConfig]" = None):
     """
     Log a success message to stdout, prefixed with a check mark.
     
-    If a ReportConfig with `quiet=True` is provided, the message is suppressed.
+    If a ReportConfig with `execution.quiet=True` is provided, the message is suppressed.
     When terminal coloring is available, the check mark is rendered in green.
     
     Parameters:
         message (str): The message to print.
         config (ReportConfig, optional): Configuration used to determine whether output is suppressed.
     """
-    if config and config.quiet:
+    if config and config.execution.quiet:
         return
     if COLORAMA_AVAILABLE:
         print(f"{Fore.GREEN}[OK]{Style.RESET_ALL} {message}")
@@ -68,9 +68,9 @@ def log_warning(message: str, config: "Optional[ReportConfig]" = None):
     
     Parameters:
         message (str): The warning text to display.
-        config (ReportConfig, optional): If provided and `config.quiet` is True, the warning is not printed.
+        config (ReportConfig, optional): If provided and `config.execution.quiet` is True, the warning is not printed.
     """
-    if config and config.quiet:
+    if config and config.execution.quiet:
         return
     if COLORAMA_AVAILABLE:
         print(f"{Fore.YELLOW}[WARNING]{Style.RESET_ALL} {message}")
@@ -95,13 +95,13 @@ def log_verbose(message: str, config: "Optional[ReportConfig]" = None):
     """
     Log a debug message when verbose mode is enabled and not suppressed by quiet mode.
     
-    Prints the provided message to stdout only if `config` is provided, `config.verbose` is True, and `config.quiet` is False. When colorama is available, the log is prefixed with a colored `[DEBUG]` marker.
+    Prints the provided message to stdout only if `config` is provided, `config.execution.verbose` is True, and `config.execution.quiet` is False. When colorama is available, the log is prefixed with a colored `[DEBUG]` marker.
     
     Parameters:
         message (str): The message to log.
         config (ReportConfig, optional): Configuration controlling verbosity and quiet suppression. If omitted or falsy, no output is produced.
     """
-    if config and config.verbose and not config.quiet:
+    if config and config.execution.verbose and not config.execution.quiet:
         if COLORAMA_AVAILABLE:
             print(f"{Fore.BLUE}[DEBUG]{Style.RESET_ALL} {message}")
         else:

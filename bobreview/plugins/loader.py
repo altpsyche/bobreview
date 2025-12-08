@@ -271,11 +271,54 @@ class PluginLoader:
                 if '-' in plugin_dir_name:
                     module_path = manifest.plugin_path / f"{module_name}.py"
                     if module_path.exists():
+                        # Create a module name with underscores instead of hyphens
+                        safe_dir_name = plugin_dir_name.replace('-', '_')
+                        package_name = f"bobreview.plugins.{safe_dir_name}"
+                        safe_module_name = f"{package_name}.{module_name}"
+                        
+                        # Register parent package if not already registered
+                        if package_name not in sys.modules:
+                            package_spec = importlib.util.spec_from_file_location(
+                                package_name,
+                                manifest.plugin_path / "__init__.py"
+                            )
+                            if package_spec is not None and package_spec.loader is not None:
+                                package_module = importlib.util.module_from_spec(package_spec)
+                                sys.modules[package_name] = package_module
+                                # Set __path__ so Python knows this is a package
+                                package_module.__path__ = [str(manifest.plugin_path)]
+                                package_spec.loader.exec_module(package_module)
+                        
+                        # Also register generators subpackage if it exists
+                        generators_dir = manifest.plugin_path / "generators"
+                        if generators_dir.exists() and generators_dir.is_dir():
+                            generators_package_name = f"{package_name}.generators"
+                            if generators_package_name not in sys.modules:
+                                generators_init = generators_dir / "__init__.py"
+                                if generators_init.exists():
+                                    generators_spec = importlib.util.spec_from_file_location(
+                                        generators_package_name,
+                                        generators_init
+                                    )
+                                    if generators_spec is not None and generators_spec.loader is not None:
+                                        generators_module = importlib.util.module_from_spec(generators_spec)
+                                        sys.modules[generators_package_name] = generators_module
+                                        generators_module.__path__ = [str(generators_dir)]
+                                        generators_module.__package__ = generators_package_name
+                                        generators_spec.loader.exec_module(generators_module)
+                        
                         spec = importlib.util.spec_from_file_location(
-                            f"bobreview.plugins.{plugin_dir_name.replace('-', '_')}.{module_name}",
+                            safe_module_name,
                             module_path
                         )
+                        if spec is None or spec.loader is None:
+                            raise ImportError(f"Cannot create spec for: {module_path}")
+                        
                         module = importlib.util.module_from_spec(spec)
+                        # Set __package__ so relative imports work
+                        module.__package__ = package_name
+                        # Register in sys.modules so relative imports work
+                        sys.modules[safe_module_name] = module
                         spec.loader.exec_module(module)
                     else:
                         raise ImportError(f"Module file not found: {module_path}")

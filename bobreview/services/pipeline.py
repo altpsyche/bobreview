@@ -153,15 +153,15 @@ class ReportPipeline:
             
             # Build thresholds dict from config
             thresholds = {
-                'draw_soft_cap': config.draw_soft_cap,
-                'draw_hard_cap': config.draw_hard_cap,
-                'tri_soft_cap': config.tri_soft_cap,
-                'tri_hard_cap': config.tri_hard_cap,
-                'high_load_draw_threshold': config.high_load_draw_threshold,
-                'high_load_tri_threshold': config.high_load_tri_threshold,
-                'low_load_draw_threshold': config.low_load_draw_threshold,
-                'low_load_tri_threshold': config.low_load_tri_threshold,
-                'outlier_sigma': config.outlier_sigma,
+                'draw_soft_cap': config.thresholds.draw_soft_cap,
+                'draw_hard_cap': config.thresholds.draw_hard_cap,
+                'tri_soft_cap': config.thresholds.tri_soft_cap,
+                'tri_hard_cap': config.thresholds.tri_hard_cap,
+                'high_load_draw_threshold': config.thresholds.high_load_draw_threshold,
+                'high_load_tri_threshold': config.thresholds.high_load_tri_threshold,
+                'low_load_draw_threshold': config.thresholds.low_load_draw_threshold,
+                'low_load_tri_threshold': config.thresholds.low_load_tri_threshold,
+                'outlier_sigma': config.thresholds.outlier_sigma,
             }
             
             return analytics.analyze(
@@ -186,7 +186,7 @@ class ReportPipeline:
         config: Any
     ) -> Dict[str, str]:
         """Generate LLM content using LLMService."""
-        if not system_def.llm_config.enabled or config.dry_run:
+        if not system_def.llm_config.enabled or config.execution.dry_run:
             return {}
         
         if self.container.has('llm'):
@@ -202,7 +202,7 @@ class ReportPipeline:
                 data_points=data_points,
                 stats=stats,
                 context=context,
-                dry_run=config.dry_run
+                dry_run=config.execution.dry_run
             )
         else:
             # No LLM service registered

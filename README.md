@@ -1001,7 +1001,7 @@ def generate_custom_page(
       {sanitize_llm_html(custom_content)}
     </section>
 """
-    return get_html_template(f"{config.title} - Custom", body_content, linked_css=config.linked_css)
+    return get_html_template(f"{config.title} - Custom", body_content, linked_css=config.output.linked_css)
 
 
 # Register the page

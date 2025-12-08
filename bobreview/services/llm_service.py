@@ -199,7 +199,12 @@ class LLMService(BaseService):
         total = len(enabled)
         
         for i, generator in enumerate(enabled, 1):
-            logger.info(f"[{i}/{total}] Generating: {generator.name}")
+            # Use config-aware logging if report_config is available
+            if report_config:
+                from ..core import log_info, log_error
+                log_info(f"[{i}/{total}] Generating: {generator.name}", report_config)
+            else:
+                logger.info(f"[{i}/{total}] Generating: {generator.name}")
             
             try:
                 content = self.generate(
@@ -211,10 +216,18 @@ class LLMService(BaseService):
                     report_config=report_config
                 )
                 results[generator.id] = content
-                logger.debug(f"Generated content for: {generator.id}")
+                if report_config:
+                    from ..core import log_verbose
+                    log_verbose(f"Generated content for: {generator.id}", report_config)
+                else:
+                    logger.debug(f"Generated content for: {generator.id}")
                 
             except LLMServiceError as e:
-                logger.error(str(e))
+                if report_config:
+                    from ..core import log_error
+                    log_error(f"LLM generation failed for {generator.id}: {e}")
+                else:
+                    logger.error(str(e))
                 results[generator.id] = self._get_error_placeholder(generator.id, str(e))
         
         return results

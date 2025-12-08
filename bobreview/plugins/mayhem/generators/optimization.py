@@ -31,7 +31,7 @@ def generate_optimization_checklist(
 
 Index {critical_idx}: {critical_point['draws']} draws, {format_number(critical_point['tris'])} triangles
 Test case: {critical_point['testcase']}
-Thresholds: {config.draw_hard_cap} draws, {format_number(config.tri_hard_cap, 0)} tris
+Thresholds: {config.thresholds.draw_hard_cap} draws, {format_number(config.thresholds.tri_hard_cap, 0)} tris
 
 Generate:
 1. Inspection steps (3-4 bullet points)
@@ -44,13 +44,13 @@ Format as HTML <ul> and <li> tags. Be specific and actionable."""
     # High-geometry hotspots
     high_geo_samples = []
     for idx, point in stats['high_load']:
-        if point['tris'] >= config.high_load_tri_threshold and idx < len(data_points):
+        if point['tris'] >= config.thresholds.high_load_tri_threshold and idx < len(data_points):
             high_geo_samples.append(data_points[idx])
     
     prompt = f"""Generate geometry optimization recommendations:
 
-{len(high_geo_samples)} frames above {format_number(config.high_load_tri_threshold, 0)} triangles
-Target: below {format_number(config.tri_hard_cap, 0)}
+{len(high_geo_samples)} frames above {format_number(config.thresholds.high_load_tri_threshold, 0)} triangles
+Target: below {format_number(config.thresholds.tri_hard_cap, 0)}
 
 Generate 4-5 actionable points for geometry/LOD optimization. Format as HTML <ul> with <li> tags."""
 
@@ -59,13 +59,13 @@ Generate 4-5 actionable points for geometry/LOD optimization. Format as HTML <ul
     # High-draw hotspots
     high_draw_samples = []
     for idx, point in stats['high_load']:
-        if point['draws'] >= config.high_load_draw_threshold and idx < len(data_points):
+        if point['draws'] >= config.thresholds.high_load_draw_threshold and idx < len(data_points):
             high_draw_samples.append(data_points[idx])
     
     prompt = f"""Generate draw call optimization recommendations:
 
-Focus: frames with draws ≥ {config.high_load_draw_threshold}
-Target: below {config.draw_soft_cap}
+Focus: frames with draws ≥ {config.thresholds.high_load_draw_threshold}
+Target: below {config.thresholds.draw_soft_cap}
 
 Generate 4-5 points for batching and material consolidation. Format as HTML <ul> with <li> tags."""
 

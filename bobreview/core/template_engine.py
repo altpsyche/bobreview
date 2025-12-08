@@ -70,9 +70,9 @@ class TemplateEngine:
             from ..plugins import get_registry
             registry = get_registry()
             # Get template paths with priority information
-            template_registrations = registry.get_all_template_registrations()
-            # Sort by priority (lower number = higher priority)
-            sorted_registrations = sorted(template_registrations, key=lambda x: x[2])
+            template_registrations = registry.template_paths.get_all_registrations()
+            # Already sorted by priority (lower number = higher priority)
+            sorted_registrations = template_registrations
             for template_path, plugin_name, priority in sorted_registrations:
                 if template_path.exists():
                     loaders.append(FileSystemLoader(str(template_path)))

@@ -31,7 +31,7 @@ def generate_zones_hotspots(
     
     prompt = f"""Analyze high-load performance frames (1-2 paragraphs):
 
-{len(stats['high_load'])} frames exceed thresholds (≥{config.high_load_draw_threshold} draws or ≥{format_number(config.high_load_tri_threshold, 0)} tris)
+{len(stats['high_load'])} frames exceed thresholds (≥{config.thresholds.high_load_draw_threshold} draws or ≥{format_number(config.thresholds.high_load_tri_threshold, 0)} tris)
 
 Top frames:
 {high_load_details}
@@ -48,7 +48,7 @@ Cover patterns, draw-call vs geometry dominance, and common characteristics. Use
     
     prompt = f"""Analyze low-load baseline frames (1 paragraph):
 
-{len(stats['low_load'])} frames below thresholds (<{config.low_load_draw_threshold} draws and <{format_number(config.low_load_tri_threshold, 0)} tris)
+{len(stats['low_load'])} frames below thresholds (<{config.thresholds.low_load_draw_threshold} draws and <{format_number(config.thresholds.low_load_tri_threshold, 0)} tris)
 
 Explain their significance as performance baselines. Use HTML <p> tags."""
     

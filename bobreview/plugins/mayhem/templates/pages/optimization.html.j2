@@ -18,26 +18,26 @@
 {# Calculate hotspot counts #}
 {% for frame in stats.high_load %}
   {% set data = frame[1] %}
-  {% if data.tris >= config.high_load_tri_threshold %}
+  {% if data.tris >= config.thresholds.high_load_tri_threshold %}
     {% set ns.high_geometry_count = ns.high_geometry_count + 1 %}
   {% endif %}
-  {% if data.draws >= config.high_load_draw_threshold %}
+  {% if data.draws >= config.thresholds.high_load_draw_threshold %}
     {% set ns.high_draw_count = ns.high_draw_count + 1 %}
   {% endif %}
 {% endfor %}
 
 {# Count frames exceeding caps #}
 {% for p in data_points %}
-  {% if p.draws > config.draw_hard_cap or p.tris > config.tri_hard_cap %}
+  {% if p.draws > config.thresholds.draw_hard_cap or p.tris > config.thresholds.tri_hard_cap %}
     {% set ns.over_hard_cap = ns.over_hard_cap + 1 %}
   {% endif %}
-  {% if p.draws > config.draw_hard_cap * 1.2 or p.tris > config.tri_hard_cap * 1.2 %}
+  {% if p.draws > config.thresholds.draw_hard_cap * 1.2 or p.tris > config.thresholds.tri_hard_cap * 1.2 %}
     {% set ns.priority_critical = ns.priority_critical + 1 %}
-  {% elif (p.draws > config.draw_hard_cap and p.draws <= config.draw_hard_cap * 1.2) or (p.tris > config.tri_hard_cap and p.tris <= config.tri_hard_cap * 1.2) %}
+  {% elif (p.draws > config.thresholds.draw_hard_cap and p.draws <= config.thresholds.draw_hard_cap * 1.2) or (p.tris > config.thresholds.tri_hard_cap and p.tris <= config.thresholds.tri_hard_cap * 1.2) %}
     {% set ns.priority_high = ns.priority_high + 1 %}
-  {% elif (p.draws > config.draw_soft_cap and p.draws <= config.draw_hard_cap) or (p.tris > config.tri_soft_cap and p.tris <= config.tri_hard_cap) %}
+  {% elif (p.draws > config.thresholds.draw_soft_cap and p.draws <= config.thresholds.draw_hard_cap) or (p.tris > config.thresholds.tri_soft_cap and p.tris <= config.thresholds.tri_hard_cap) %}
     {% set ns.priority_medium = ns.priority_medium + 1 %}
-  {% elif p.draws <= config.draw_soft_cap and p.tris <= config.tri_soft_cap %}
+  {% elif p.draws <= config.thresholds.draw_soft_cap and p.tris <= config.thresholds.tri_soft_cap %}
     {% set ns.within_budget = ns.within_budget + 1 %}
   {% endif %}
 {% endfor %}
@@ -63,13 +63,13 @@
     {# Fallback if no budget_cards defined in JSON #}
     <div class="stat-card ok">
       <div class="stat-label">Draw Calls Budget</div>
-      <div class="stat-value">&le; {{ config.draw_soft_cap }}</div>
-      <div class="stat-sub">Soft cap {{ config.draw_soft_cap }} &middot; hard cap {{ config.draw_hard_cap }}</div>
+      <div class="stat-value">&le; {{ config.thresholds.draw_soft_cap }}</div>
+      <div class="stat-sub">Soft cap {{ config.thresholds.draw_soft_cap }} &middot; hard cap {{ config.thresholds.draw_hard_cap }}</div>
     </div>
     <div class="stat-card ok">
       <div class="stat-label">Triangles Budget</div>
-      <div class="stat-value">&le; {{ (config.tri_soft_cap / 1000)|format_number(0) }}k</div>
-      <div class="stat-sub">Soft cap {{ config.tri_soft_cap|format_number(0) }} &middot; hard cap {{ config.tri_hard_cap|format_number(0) }}</div>
+      <div class="stat-value">&le; {{ (config.thresholds.tri_soft_cap / 1000)|format_number(0) }}k</div>
+      <div class="stat-sub">Soft cap {{ config.thresholds.tri_soft_cap|format_number(0) }} &middot; hard cap {{ config.thresholds.tri_hard_cap|format_number(0) }}</div>
     </div>
     {% endif %}
     
@@ -108,9 +108,9 @@
     <div class="callout-title">{{ labels.index }} {{ critical.index }}{% if data_points[critical.index] is defined %} – {{ data_points[critical.index].img|default('') }}{% endif %}</div>
     <div><strong>{{ critical.draws }} {{ labels.draw_calls }}</strong> &middot; <strong>{{ critical.tris|format_number }} {{ labels.triangles }}</strong></div>
     <div style="margin-top: 8px; font-size: 12px;">
-      {{ labels.exceeds_budget_by }}: {{ [0, critical.draws - config.draw_hard_cap]|max }} {{ labels.draw_calls|lower }}
-      {% if critical.tris > config.tri_hard_cap %}
-       | {{ labels.exceeds_budget_by }}: {{ (critical.tris - config.tri_hard_cap)|format_number }} {{ labels.triangles|lower }}
+      {{ labels.exceeds_budget_by }}: {{ [0, critical.draws - config.thresholds.draw_hard_cap]|max }} {{ labels.draw_calls|lower }}
+      {% if critical.tris > config.thresholds.tri_hard_cap %}
+       | {{ labels.exceeds_budget_by }}: {{ (critical.tris - config.thresholds.tri_hard_cap)|format_number }} {{ labels.triangles|lower }}
       {% endif %}
     </div>
   </div>
@@ -148,7 +148,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('high_geometry_hotspots', 'High-Geometry Hotspots') }}</h2>
   <p class="body-text">
-    {{ labels.frames_with_excessive }} {{ labels.triangles|lower }} (≥ {{ config.high_load_tri_threshold|format_number(0) }}).
+    {{ labels.frames_with_excessive }} {{ labels.triangles|lower }} (≥ {{ config.thresholds.high_load_tri_threshold|format_number(0) }}).
     {{ labels.affects_frames }} <strong>{{ ns.high_geometry_count }} {{ labels.frame_count_suffix }}</strong>.
   </p>
   
@@ -174,7 +174,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('high_draw_hotspots', 'High-Draw Hotspots') }}</h2>
   <p class="body-text">
-    {{ labels.frames_with_excessive }} {{ labels.draw_calls|lower }} (≥ {{ config.high_load_draw_threshold }}).
+    {{ labels.frames_with_excessive }} {{ labels.draw_calls|lower }} (≥ {{ config.thresholds.high_load_draw_threshold }}).
     {{ labels.affects_frames }} <strong>{{ ns.high_draw_count }} {{ labels.frame_count_suffix }}</strong>.
   </p>
   

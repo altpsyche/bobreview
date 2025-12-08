@@ -270,7 +270,7 @@ def calculate_metric_stats(
     ci = _calculate_confidence_interval(values)
     
     # Outlier detection
-    sigma = config.outlier_sigma
+    sigma = config.thresholds.outlier_sigma
     outliers_high = []
     outliers_low = []
     if all_data_points and metric_name:
@@ -394,7 +394,7 @@ def analyze_data(
         if 'outliers_mad' not in result:
             result['outliers_mad'] = {}
         result['outliers_iqr'][metric] = _detect_outliers_iqr(values, indices)
-        result['outliers_mad'][metric] = _detect_outliers_mad(values, indices, config.mad_threshold)
+        result['outliers_mad'][metric] = _detect_outliers_mad(values, indices, config.thresholds.mad_threshold)
     
     # Frame time analysis using timestamp field
     timestamps = [p.get(timestamp_field, 0) for p in data_points]

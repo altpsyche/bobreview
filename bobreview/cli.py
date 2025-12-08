@@ -13,6 +13,7 @@ from pathlib import Path
 from . import __version__
 from .core import ReportConfig, validate_config, log_info, log_success, log_warning, log_error, log_verbose, format_number
 from .core import init_cache, get_cache, analyze_data
+from .core.config import LLMConfig, CacheConfig, ExecutionConfig, OutputConfig
 from .data_parser import parse_filename
 
 # Import report systems framework
@@ -248,9 +249,8 @@ Examples:
   # Use local Ollama
   bobreview --dir ./screenshots --llm-provider ollama --llm-model llama2
 
-  # Custom thresholds and title
-  bobreview --dir ./screenshots --title "My Level Analysis" \\
-    --draw-hard-cap 700 --tri-hard-cap 150000 --location "City District"
+  # Custom title and location
+  bobreview --dir ./screenshots --title "My Level Analysis" --location "City District"
 
   # Dry run to test without calling LLM
   bobreview --dir ./screenshots --dry-run
@@ -279,43 +279,6 @@ Examples:
         help='Location/level name (default: "Unknown Location")'
     )
     
-    # Threshold arguments
-    parser.add_argument(
-        '--draw-soft-cap', type=int, default=550,
-        help='Soft cap for draw calls (default: 550)'
-    )
-    parser.add_argument(
-        '--draw-hard-cap', type=int, default=600,
-        help='Hard cap for draw calls (default: 600)'
-    )
-    parser.add_argument(
-        '--tri-soft-cap', type=int, default=100000,
-        help='Soft cap for triangles (default: 100000)'
-    )
-    parser.add_argument(
-        '--tri-hard-cap', type=int, default=120000,
-        help='Hard cap for triangles (default: 120000)'
-    )
-    parser.add_argument(
-        '--high-load-draws', type=int, default=None,
-        help='High-load threshold for draw calls (default: same as draw-hard-cap)'
-    )
-    parser.add_argument(
-        '--high-load-tris', type=int, default=None,
-        help='High-load threshold for triangles (default: same as tri-hard-cap)'
-    )
-    parser.add_argument(
-        '--low-load-draws', type=int, default=400,
-        help='Low-load threshold for draw calls (default: 400)'
-    )
-    parser.add_argument(
-        '--low-load-tris', type=int, default=50000,
-        help='Low-load threshold for triangles (default: 50000)'
-    )
-    parser.add_argument(
-        '--outlier-sigma', type=float, default=2.0,
-        help='Sigma multiplier for outlier detection (default: 2.0)'
-    )
     parser.add_argument(
         '--no-recommendations', action='store_true',
         help='Disable system-level recommendations section'
@@ -527,38 +490,40 @@ Examples:
         )
     
     # Build configuration
+    # Note: Thresholds are defined in report system JSON files, not via CLI
     config = ReportConfig(
         title=args.title or "Performance Analysis Report",
         location=args.location or "Unknown Location",
-        draw_soft_cap=args.draw_soft_cap,
-        draw_hard_cap=args.draw_hard_cap,
-        tri_soft_cap=args.tri_soft_cap,
-        tri_hard_cap=args.tri_hard_cap,
-        high_load_draw_threshold=args.high_load_draws or args.draw_hard_cap,
-        high_load_tri_threshold=args.high_load_tris or args.tri_hard_cap,
-        low_load_draw_threshold=args.low_load_draws,
-        low_load_tri_threshold=args.low_load_tris,
-        outlier_sigma=args.outlier_sigma,
-        enable_recommendations=not args.no_recommendations,
-        llm_provider=args.llm_provider,
-        llm_api_key=llm_api_key,
-        llm_api_base=args.llm_api_base,
-        llm_model=args.llm_model,
-        llm_temperature=args.llm_temperature,
-        llm_max_tokens=args.llm_max_tokens,
-        llm_chunk_size=args.llm_chunk_size,
-        llm_combine_warning_threshold=args.llm_combine_warning_threshold,
-        cache_dir=Path(args.cache_dir),
-        use_cache=args.use_cache and not args.dry_run,
-        clear_cache=args.clear_cache,
-        dry_run=args.dry_run,
-        sample_size=args.sample_size,
-        verbose=args.verbose,
-        quiet=args.quiet,
-        embed_images=args.embed_images,
-        linked_css=args.linked_css,
-        theme_id=args.theme_id,
-        disabled_pages=args.disabled_pages
+        # Use default ThresholdConfig - thresholds come from report system JSON
+        llm=LLMConfig(
+            provider=args.llm_provider,
+            api_key=llm_api_key,
+            api_base=args.llm_api_base,
+            model=args.llm_model,
+            temperature=args.llm_temperature,
+            max_tokens=args.llm_max_tokens,
+            chunk_size=args.llm_chunk_size,
+            combine_warning_threshold=args.llm_combine_warning_threshold,
+            use_cache=args.use_cache and not args.dry_run,
+        ),
+        cache=CacheConfig(
+            cache_dir=Path(args.cache_dir),
+            use_cache=args.use_cache and not args.dry_run,
+            clear_cache=args.clear_cache,
+        ),
+        execution=ExecutionConfig(
+            dry_run=args.dry_run,
+            sample_size=args.sample_size,
+            verbose=args.verbose,
+            quiet=args.quiet,
+            enable_recommendations=not args.no_recommendations,
+        ),
+        output=OutputConfig(
+            embed_images=args.embed_images,
+            linked_css=args.linked_css,
+            theme_id=args.theme_id,
+            disabled_pages=args.disabled_pages,
+        )
     )
     
     # Validate configuration
@@ -573,7 +538,7 @@ Examples:
     init_cache(config)
     
     # Clear cache if requested
-    if config.clear_cache:
+    if config.cache.clear_cache:
         cache = get_cache()
         if cache:
             cache.clear()
@@ -598,19 +563,8 @@ Examples:
         log_info(f"Loading report system: {args.report_system}", config)
         
         # Build CLI overrides for the JSON system
+        # Note: Thresholds are defined in report system JSON files, not overridden via CLI
         cli_overrides = {
-            'thresholds': {
-                'draw_soft_cap': config.thresholds.draw_soft_cap,
-                'draw_hard_cap': config.thresholds.draw_hard_cap,
-                'tri_soft_cap': config.thresholds.tri_soft_cap,
-                'tri_hard_cap': config.thresholds.tri_hard_cap,
-                'high_load_draw_threshold': config.thresholds.high_load_draw_threshold,
-                'high_load_tri_threshold': config.thresholds.high_load_tri_threshold,
-                'low_load_draw_threshold': config.thresholds.low_load_draw_threshold,
-                'low_load_tri_threshold': config.thresholds.low_load_tri_threshold,
-                'outlier_sigma': config.thresholds.outlier_sigma,
-                'mad_threshold': config.thresholds.mad_threshold,
-            },
             'llm_config': {
                 'provider': config.llm.provider,
                 'model': config.llm.model,

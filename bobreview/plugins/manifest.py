@@ -75,6 +75,17 @@ class PluginManifest:
         if missing:
             raise ValueError(f"Missing required fields in manifest: {missing}")
         
+        # Handle provides - can be either a list (legacy format) or a dict
+        provides_raw = data.get('provides', {})
+        if isinstance(provides_raw, list):
+            # Convert list format ["widgets", "themes"] to dict format {"widgets": [], "themes": []}
+            # Legacy format: just lists the extension point types without specific items
+            provides = {item: [] for item in provides_raw}
+        elif isinstance(provides_raw, dict):
+            provides = provides_raw
+        else:
+            provides = {}
+        
         return cls(
             name=data['name'],
             version=data['version'],
@@ -83,7 +94,7 @@ class PluginManifest:
             description=data.get('description', ''),
             dependencies=data.get('dependencies', []),
             min_bobreview_version=data.get('min_bobreview_version', '1.0.0'),
-            provides=data.get('provides', {}),
+            provides=provides,
             config_schema=data.get('config_schema', {}),
             plugin_path=plugin_path,
         )
@@ -171,7 +182,13 @@ def validate_manifest(manifest: PluginManifest) -> List[str]:
         issues.append(str(e))
     
     # Check provides format
-    valid_extension_points = {'widgets', 'parsers', 'themes', 'charts', 'pages', 'llm_generators', 'services'}
+    # Accept both hyphenated (manifest.json format) and underscore (Python format) names
+    valid_extension_points = {
+        'widgets', 'parsers', 'themes', 'charts', 'pages', 'llm_generators', 'services',
+        'llm-generators', 'data-parsers', 'report-systems', 'templates',  # Hyphenated versions
+        'data_parsers', 'report_systems', 'template_paths', 'chart-generators', 'chart_generators',
+        'context-builders', 'context_builders'
+    }
     for key in manifest.provides:
         if key not in valid_extension_points:
             issues.append(f"Unknown extension point in 'provides': {key}")

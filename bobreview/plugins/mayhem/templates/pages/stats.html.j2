@@ -29,7 +29,7 @@
   
   <div class="stats-grid">
     {{ stats_item(labels.get('outliers_detected', 'Outliers Detected'), stats.outliers|length) }}
-    {{ stats_item(labels.get('detection_method', 'Detection Method'), 'Z-Score (σ=' ~ config.outlier_sigma ~ ')') }}
+    {{ stats_item(labels.get('detection_method', 'Detection Method'), 'Z-Score (σ=' ~ config.thresholds.outlier_sigma ~ ')') }}
   </div>
   
   <table style="margin-top: 16px;">
