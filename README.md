@@ -267,14 +267,14 @@ See [QUICKSTART.md](QUICKSTART.md) for a complete guide.
 ### Basic Usage
 
 ```bash
-# From any directory (after installation)
-bobreview --dir /path/to/screenshots
+# Plugin is required - use MayhemAutomation for performance analysis
+bobreview --plugin mayhem --dir /path/to/screenshots
 
 # With custom output
-bobreview --dir ./screenshots --output report.html
+bobreview --plugin mayhem --dir ./screenshots --output report.html
 
 # Custom title and location
-bobreview --dir ./screenshots \
+bobreview --plugin mayhem --dir ./screenshots \
   --title "Forest Level Performance" \
   --location "Dark Forest Area"
 ```
@@ -283,18 +283,19 @@ bobreview --dir ./screenshots \
 
 ```bash
 # Test without LLM API calls
-bobreview --dir ./screenshots --dry-run
+bobreview --plugin mayhem --dir ./screenshots --dry-run
 
 # Process subset of data
-bobreview --dir ./screenshots --sample 20
+bobreview --plugin mayhem --dir ./screenshots --sample 20
 
 # Verbose output
-bobreview --dir ./screenshots --verbose
+bobreview --plugin mayhem --dir ./screenshots --verbose
 
-# Custom thresholds
-bobreview --dir ./screenshots \
-  --draw-hard-cap 700 \
-  --tri-hard-cap 150000
+# List available plugins
+bobreview plugins list
+
+# List available report systems
+bobreview --list-report-systems
 ```
 
 ### Caching
@@ -508,10 +509,34 @@ Report systems are JSON files that define:
 - What pages to generate
 - How to theme and configure the output
 
-### Using Report Systems
+### Using Plugins (Recommended)
+
+Plugins provide report systems, templates, and generators. A plugin can provide **multiple report systems**. Use `--plugin` to select a plugin:
+
+```bash
+# Use MayhemAutomation plugin (uses default report system - first one alphabetically)
+bobreview --plugin mayhem --dir ./screenshots
+
+# Explicitly specify which report system from plugin (useful when plugin has multiple)
+bobreview --plugin mayhem --report-system png_data_points --dir ./screenshots
+
+# If plugin has multiple systems, select a different one
+bobreview --plugin mayhem --report-system csv_analysis --dir ./data
+
+# Use Game Review plugin
+bobreview --plugin game-review --dir ./game_data
+```
+
+**Note:** 
+- If a plugin has **only one** report system, it's automatically selected when using `--plugin`.
+- If a plugin has **multiple** report systems, you **must** specify `--report-system` to choose which one to use.
 
 #### List Available Systems
 ```bash
+# List available plugins
+bobreview plugins list
+
+# List available report systems
 bobreview --list-report-systems
 ```
 
@@ -519,21 +544,22 @@ Output:
 ```
 Available report systems:
 
-  png_data_points (built-in) - v1.0.0
+  png_data_points (plugin:mayhem) - v1.0.0
     Game performance analysis from PNG filename metadata
-    Path: bobreview/report_systems/builtin/png_data_points.json
+    Path: plugin:mayhem
+
+  game_review (plugin:game-review) - v1.0.0
+    Video game review system
+    Path: plugin:game-review
 ```
 
-#### Use a Specific System
+#### Custom Report Systems
 ```bash
-# Use built-in system (default)
-bobreview --report-system png_data_points --dir ./screenshots
+# Custom report systems can be placed in ~/.bobreview/report_systems/
+# They can be accessed via a plugin or directly by specifying the JSON file path
 
-# Use custom system
-bobreview --report-system my_custom_system --dir ./data
-
-# Use JSON file directly
-bobreview --report-system /path/to/system.json --dir ./data
+# Use a custom JSON file directly
+bobreview --plugin mayhem --report-system /path/to/custom_system.json --dir ./data
 ```
 
 ### Creating Custom Report Systems
@@ -565,7 +591,11 @@ bobreview --report-system /path/to/system.json --dir ./data
 
 2. **Use it:**
 ```bash
-bobreview --report-system my_system --dir ./data
+# Plugin is required
+bobreview --plugin my_plugin --report-system my_system --dir ./data
+
+# Or if it's a standalone JSON file
+bobreview --plugin mayhem --report-system /path/to/my_system.json --dir ./data
 ```
 
 ### Built-in Report Systems

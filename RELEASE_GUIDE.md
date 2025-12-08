@@ -133,7 +133,8 @@ Where:
 
 2. Run BobReview:
    ```bash
-   bobreview --dir .
+   # Plugin is required
+   bobreview --plugin mayhem --dir .
    ```
 
 3. Open the generated report:
@@ -151,29 +152,35 @@ Where:
 ### Common Commands
 
 ```bash
-# Custom report title and location
-bobreview --dir . --title "Forest Level" --location "Dark Forest"
+# Custom report title and location (using plugin)
+bobreview --plugin mayhem --dir . --title "Forest Level" --location "Dark Forest"
 
 # Custom output filename
-bobreview --dir . --output forest_analysis.html
+bobreview --plugin mayhem --dir . --output forest_analysis.html
 
 # Create standalone HTML with embedded images
-bobreview --dir .
+bobreview --plugin mayhem --dir .
 
 # Test without calling OpenAI API (no cost)
-bobreview --dir . --dry-run
+bobreview --plugin mayhem --dir . --dry-run
 
 # Process only 20 random samples (for quick testing)
-bobreview --dir . --sample 20
+bobreview --plugin mayhem --dir . --sample 20
 
 # Use light theme
-bobreview --dir . --theme light
+bobreview --plugin mayhem --dir . --theme light
 
 # Use Anthropic Claude instead of OpenAI
-bobreview --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
+bobreview --plugin mayhem --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
 
 # Use local Ollama
-bobreview --dir . --llm-provider ollama --llm-model mistral
+bobreview --plugin mayhem --dir . --llm-provider ollama --llm-model mistral
+
+# List available plugins
+bobreview plugins list
+
+# List available report systems
+bobreview --list-report-systems
 
 # List available providers
 bobreview --list-providers
@@ -227,11 +234,9 @@ bobreview --dir . --clear-cache
    - Invalid files are automatically skipped with warnings
 
 4. **Performance Thresholds**
-   - Default thresholds are conservative (600 draw calls, 120K triangles)
-   - Adjust based on your target platform:
-     ```bash
-     bobreview --dir . --draw-hard-cap 700 --tri-hard-cap 150000
-     ```
+   - Thresholds are defined in report system JSON files (part of plugins)
+   - For custom thresholds, create your own report system JSON or modify plugin configs
+   - See plugin documentation for threshold customization options
 
 5. **Standalone HTML Reports**
    - Creates a single HTML file with all images embedded (base64 encoding)
@@ -295,8 +300,13 @@ source ~/.bashrc
 ## Quick Reference
 
 ```bash
-# Basic usage
-bobreview --dir /path/to/screenshots
+# Basic usage - plugin is required
+bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
+
+# Plugin and Report System options
+--plugin PLUGIN_NAME      # Plugin to use (e.g., "mayhem", "game-review")
+--report-system SYSTEM    # Report system ID (optional, uses plugin default)
+--list-report-systems     # List all available report systems
 
 # Common options
 --title "TEXT"           # Custom report title

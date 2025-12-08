@@ -43,7 +43,8 @@ Test:
 
 ```bash
 cd /path/to/screenshots
-bobreview --dir .
+# Plugin is required
+bobreview --plugin mayhem --dir .
 ```
 
 ---

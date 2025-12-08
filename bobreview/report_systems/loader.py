@@ -72,25 +72,58 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     """
     Discover all available report systems (plugin-registered, built-in, and user custom).
     
+    Uses lazy discovery - checks plugin directories for report_systems/ subdirectories
+    without loading the plugins, then also checks loaded plugins in the registry.
+    
     Returns:
         List of dictionaries with 'id', 'name', 'version', 'path', 'source' keys
     """
     logger = logging.getLogger(__name__)
     systems = []
     
-    # First, check plugin registry for report systems registered by plugins
+    # First, discover report systems from plugin directories (without loading plugins)
+    # Check plugin directories for report_systems/ subdirectories
+    try:
+        from ..plugins import get_loader
+        loader = get_loader()
+        # Get discovered plugin manifests (not loaded plugins)
+        manifests = loader.get_discovered_plugins() if hasattr(loader, 'get_discovered_plugins') else []
+        if not manifests:
+            # Try discovering if not done yet
+            try:
+                loader.discover()
+                manifests = loader.get_discovered_plugins()
+            except:
+                pass
+        
+        # Check each plugin's directory for report_systems/ subdirectory
+        for plugin_info in manifests:
+            plugin_path = Path(plugin_info.path) if plugin_info.path else None
+            if plugin_path and plugin_path.exists():
+                report_systems_dir = plugin_path / 'report_systems'
+                if report_systems_dir.exists():
+                    for system in _discover_systems_in_directory(report_systems_dir, 'plugin', logger):
+                        # Don't duplicate
+                        if not any(s['id'] == system['id'] for s in systems):
+                            systems.append(system)
+    except (ImportError, AttributeError):
+        pass
+    
+    # Also check plugin registry for report systems from already-loaded plugins
     try:
         from ..plugins import get_registry
         registry = get_registry()
         for name, system_def in registry.report_systems.get_all().items():
-            systems.append({
-                'id': system_def.get('id', name) if isinstance(system_def, dict) else getattr(system_def, 'id', name),
-                'name': system_def.get('name', name) if isinstance(system_def, dict) else getattr(system_def, 'name', name),
-                'version': system_def.get('version', 'unknown') if isinstance(system_def, dict) else getattr(system_def, 'version', 'unknown'),
-                'description': system_def.get('description', '') if isinstance(system_def, dict) else getattr(system_def, 'description', ''),
-                'path': f'plugin:{name}',  # Indicate it's from a plugin
-                'source': 'plugin'
-            })
+            # Don't duplicate if already discovered from filesystem
+            if not any(s['id'] == (system_def.get('id', name) if isinstance(system_def, dict) else getattr(system_def, 'id', name)) for s in systems):
+                systems.append({
+                    'id': system_def.get('id', name) if isinstance(system_def, dict) else getattr(system_def, 'id', name),
+                    'name': system_def.get('name', name) if isinstance(system_def, dict) else getattr(system_def, 'name', name),
+                    'version': system_def.get('version', 'unknown') if isinstance(system_def, dict) else getattr(system_def, 'version', 'unknown'),
+                    'description': system_def.get('description', '') if isinstance(system_def, dict) else getattr(system_def, 'description', ''),
+                    'path': f'plugin:{name}',  # Indicate it's from a plugin
+                    'source': 'plugin'
+                })
     except ImportError:
         pass
     
@@ -120,17 +153,20 @@ def list_available_systems() -> List[Dict[str, Any]]:
     return discover_report_systems()
 
 
-def find_report_system_path(id_or_path: str) -> Optional[Path]:
+def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) -> Optional[Path]:
     """
     Find the path to a report system JSON file.
     
     Search order:
     1. If id_or_path is a valid file path, use it directly
-    2. Look in user directory (~/.bobreview/report_systems/)
-    3. Look in built-in directory (bobreview/report_systems/builtin/)
+    2. If plugin_name is specified, look in that plugin's report_systems/ directory first
+    3. Look in plugin directories (without loading plugins)
+    4. Look in user directory (~/.bobreview/report_systems/)
+    5. Look in built-in directory (bobreview/report_systems/builtin/)
     
     Parameters:
         id_or_path: Report system ID (e.g., 'png_data_points') or full path to JSON file
+        plugin_name: Optional plugin name to search in first
     
     Returns:
         Path to the JSON file, or None if not found
@@ -142,6 +178,48 @@ def find_report_system_path(id_or_path: str) -> Optional[Path]:
     
     # If it's a bare filename like "foo.json", also try its stem as an ID
     candidate_id = direct_path.stem if direct_path.suffix == ".json" and direct_path.parent == Path("") else id_or_path
+    
+    # If plugin_name is specified, try that plugin first
+    if plugin_name:
+        try:
+            from ..plugins import get_loader
+            loader = get_loader()
+            if not loader.get_discovered_plugins():
+                loader.discover()
+            
+            for manifest in loader.get_discovered_plugins():
+                if manifest.name == plugin_name or manifest.name.replace('-', '_') == plugin_name.replace('-', '_'):
+                    plugin_path = Path(manifest.path) if manifest.path else None
+                    if plugin_path and plugin_path.exists():
+                        plugin_json_path = plugin_path / 'report_systems' / f"{candidate_id}.json"
+                        if plugin_json_path.exists():
+                            return plugin_json_path.resolve()
+                    break
+        except (ImportError, AttributeError):
+            pass
+    
+    # Try in plugin directories (check filesystem without loading plugins)
+    try:
+        from ..plugins import get_loader
+        loader = get_loader()
+        manifests = loader.get_discovered_plugins() if hasattr(loader, 'get_discovered_plugins') else []
+        if not manifests:
+            # Try discovering if not done yet
+            try:
+                loader.discover()
+                manifests = loader.get_discovered_plugins()
+            except:
+                pass
+        
+        # Check each plugin's report_systems/ directory
+        for plugin_info in manifests:
+            plugin_path = Path(plugin_info.path) if plugin_info.path else None
+            if plugin_path and plugin_path.exists():
+                plugin_json_path = plugin_path / 'report_systems' / f"{candidate_id}.json"
+                if plugin_json_path.exists():
+                    return plugin_json_path.resolve()
+    except (ImportError, AttributeError):
+        pass
     
     # Try as ID in user directory
     user_dir = get_user_report_systems_dir()
@@ -244,16 +322,18 @@ def merge_cli_overrides(
 def load_report_system(
     id_or_path: str,
     cli_overrides: Optional[Dict[str, Any]] = None,
-    use_cache: bool = True
+    use_cache: bool = True,
+    plugin_name: Optional[str] = None
 ) -> ReportSystemDefinition:
     """
     Load a report system definition.
     
     Search order:
-    1. Plugin registry (systems registered by plugins)
-    2. User directory (~/.bobreview/report_systems/)
-    3. Built-in directory (bobreview/report_systems/builtin/)
-    4. Direct file path
+    1. If plugin_name is specified, search in that plugin first
+    2. Plugin registry (systems registered by plugins)
+    3. User directory (~/.bobreview/report_systems/)
+    4. Built-in directory (bobreview/report_systems/builtin/)
+    5. Direct file path
     
     Automatically loads required plugins if the report system is provided by a plugin.
     
@@ -261,6 +341,7 @@ def load_report_system(
         id_or_path: Report system ID or path to JSON file
         cli_overrides: Optional CLI argument overrides
         use_cache: Whether to use cached definitions
+        plugin_name: Optional plugin name to prioritize search in
     
     Returns:
         ReportSystemDefinition object

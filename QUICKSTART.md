@@ -74,7 +74,9 @@ Navigate to your screenshots folder and run:
 
 ```bash
 cd /path/to/screenshots
-bobreview --dir .
+
+# Plugin is required - use MayhemAutomation for performance analysis
+bobreview --plugin mayhem --dir .
 ```
 
 Output: `performance_report.html` in current directory
@@ -97,17 +99,17 @@ xdg-open performance_report.html
 
 ### Test Without API Calls
 ```bash
-bobreview --dir ./screenshots --dry-run
+bobreview --plugin mayhem --dir ./screenshots --dry-run
 ```
 
 ### Process Subset
 ```bash
-bobreview --dir ./screenshots --sample 20
+bobreview --plugin mayhem --dir ./screenshots --sample 20
 ```
 
 ### Custom Report
 ```bash
-bobreview --dir ./screenshots \
+bobreview --plugin mayhem --dir ./screenshots \
   --title "Forest Level Performance" \
   --location "Dark Forest" \
   --output forest_report.html
@@ -115,14 +117,16 @@ bobreview --dir ./screenshots \
 
 ### Verbose Output
 ```bash
-bobreview --dir ./screenshots --verbose
+bobreview --plugin mayhem --dir ./screenshots --verbose
 ```
 
-### Custom Thresholds
+### Using Different Plugins
 ```bash
-bobreview --dir ./screenshots \
-  --draw-hard-cap 700 \
-  --tri-hard-cap 150000
+# MayhemAutomation (performance analysis)
+bobreview --plugin mayhem --dir ./screenshots
+
+# Game Review
+bobreview --plugin game-review --dir ./game_data
 ```
 
 ### Change Theme
@@ -309,18 +313,24 @@ python -c "from bobreview.core import ReportConfig; print('Installation verified
 ## Command Reference
 
 ```bash
-# Basic
+# Basic (recommended: use plugin)
+bobreview --plugin PLUGIN_NAME --dir PATH
+
+# Legacy (backward compatible)
 bobreview --dir PATH
 
 # With options
-bobreview --dir PATH [OPTIONS]
+bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
+
+# Plugin and Report System:
+--plugin PLUGIN_NAME        # Plugin to use (e.g., "mayhem", "game-review")
+--report-system SYSTEM      # Report system ID (optional, uses plugin default)
+--list-report-systems       # List all available report systems
 
 # Common options:
 --output FILE              # Output filename
 --title "TITLE"            # Report title
 --location "LOCATION"      # Level/scene name
---draw-hard-cap N          # Draw call limit
---tri-hard-cap N           # Triangle limit
 --dry-run                  # Skip LLM API calls
 --sample N                 # Process N random samples
 --verbose                  # Detailed output

@@ -85,19 +85,12 @@ def _load_plugins(extra_dirs, config):
     discovered = loader.discover()
     
     if discovered:
-        log_verbose(f"Discovered {len(discovered)} plugins", config)
+        log_verbose(f"Discovered {len(discovered)} plugins (will load on-demand)", config)
         
-        # Load all discovered plugins (built-in and external)
-        # Built-in plugins should load first due to directory order
-        loaded_plugins = loader.load_all_enabled()
-        
-        if loaded_plugins:
-            builtin_count = sum(1 for p in loaded_plugins if 'bobreview/plugins' in str(p.get_info().path or ''))
-            external_count = len(loaded_plugins) - builtin_count
-            if builtin_count > 0:
-                log_info(f"Loaded {builtin_count} built-in plugin(s)", config)
-            if external_count > 0:
-                log_info(f"Loaded {external_count} external plugin(s)", config)
+        # Don't load all plugins upfront - let load_report_system() lazy-load
+        # only the plugin needed for the requested report system.
+        # This improves startup time and prevents errors from broken plugins
+        # that aren't actually needed.
 
 
 # Removed _load_core_plugin() - built-in plugins are now discovered and loaded
@@ -240,20 +233,27 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Basic usage with defaults (OpenAI)
-  bobreview --dir ./screenshots
+  # Basic usage with plugin (recommended)
+  bobreview --plugin mayhem --dir ./screenshots
 
-  # Use Anthropic Claude
-  bobreview --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
+  # Use Anthropic Claude with MayhemAutomation plugin
+  bobreview --plugin mayhem --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
 
   # Use local Ollama
-  bobreview --dir ./screenshots --llm-provider ollama --llm-model llama2
+  bobreview --plugin mayhem --dir ./screenshots --llm-provider ollama --llm-model llama2
 
   # Custom title and location
-  bobreview --dir ./screenshots --title "My Level Analysis" --location "City District"
+  bobreview --plugin mayhem --dir ./screenshots --title "My Level Analysis" --location "City District"
+
+  # Explicit report system from plugin (required if plugin has multiple systems)
+  bobreview --plugin mayhem --report-system png_data_points --dir ./screenshots
 
   # Dry run to test without calling LLM
-  bobreview --dir ./screenshots --dry-run
+  bobreview --plugin mayhem --dir ./screenshots --dry-run
+
+  # List available plugins and report systems
+  bobreview plugins list
+  bobreview --list-report-systems
 
   # List available LLM providers
   bobreview --list-providers
@@ -378,10 +378,16 @@ Examples:
         metavar='PAGE_ID',
         help='Disable a page by ID (can be used multiple times)'
     )
+    # Plugin and report system selection
     parser.add_argument(
-        '--report-system', type=str, default='png_data_points',
+        '--plugin', type=str, required=True,
+        metavar='PLUGIN_NAME',
+        help='Plugin to use (e.g., "mayhem", "game-review"). Auto-selects report system if only one exists, requires --report-system if multiple exist.'
+    )
+    parser.add_argument(
+        '--report-system', type=str, default=None,
         metavar='SYSTEM',
-        help='Report system to use (built-in name or path to JSON file)'
+        help='Report system to use (system ID). Required if --plugin has multiple systems. If omitted, uses the single report system from the plugin.'
     )
     parser.add_argument(
         '--list-report-systems', action='store_true',
@@ -560,7 +566,55 @@ Examples:
     
     # Use the JSON-based report system framework
     try:
-        log_info(f"Loading report system: {args.report_system}", config)
+        # Plugin is required - determine which report system to use
+        if args.report_system:
+            # Explicit system specified
+            report_system_id = args.report_system
+        else:
+            # No explicit system - auto-select if only one, require selection if multiple
+            from .plugins import get_loader
+            loader = get_loader()
+            
+            # Ensure plugins are discovered (if not already)
+            if not loader.get_discovered_plugins():
+                loader.discover()
+            
+            plugin_path = None
+            for manifest in loader.get_discovered_plugins():
+                if manifest.name == args.plugin or manifest.name.replace('-', '_') == args.plugin.replace('-', '_'):
+                    plugin_path = Path(manifest.path) if manifest.path else None
+                    break
+            
+            if plugin_path:
+                # Find report systems in plugin
+                plugin_systems_dir = plugin_path / 'report_systems'
+                if plugin_systems_dir.exists():
+                    json_files = sorted(plugin_systems_dir.glob('*.json'))  # Sort for deterministic order
+                    if json_files:
+                        if len(json_files) == 1:
+                            # Only one system - auto-select it
+                            report_system_id = json_files[0].stem
+                            log_info(f"Using report system '{report_system_id}' from plugin '{args.plugin}'", config)
+                        else:
+                            # Multiple systems - require explicit selection
+                            system_names = [f.stem for f in json_files]
+                            log_error(
+                                f"Plugin '{args.plugin}' has {len(json_files)} report systems. "
+                                f"Please specify which one to use with --report-system.\n"
+                                f"Available systems: {', '.join(system_names)}"
+                            )
+                            return 1
+                    else:
+                        log_error(f"Plugin '{args.plugin}' has no report systems")
+                        return 1
+                else:
+                    log_error(f"Plugin '{args.plugin}' has no report_systems directory")
+                    return 1
+            else:
+                log_error(f"Plugin '{args.plugin}' not found")
+                return 1
+        
+        log_info(f"Loading report system: {report_system_id}", config)
         
         # Build CLI overrides for the JSON system
         # Note: Thresholds are defined in report system JSON files, not overridden via CLI
@@ -583,8 +637,8 @@ Examples:
             'disabled_pages': config.output.disabled_pages
         }
         
-        # Load report system with CLI overrides
-        system_def = load_report_system(args.report_system, cli_overrides=cli_overrides)
+        # Load report system with CLI overrides, passing plugin name for prioritized search
+        system_def = load_report_system(report_system_id, cli_overrides=cli_overrides, plugin_name=args.plugin)
         
         # Create executor
         executor = ReportSystemExecutor(system_def, config)

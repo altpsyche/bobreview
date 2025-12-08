@@ -132,7 +132,7 @@ class ReportPipeline:
             return data_service.parse(
                 input_dir=input_dir,
                 data_source_config=system_def.data_source,
-                sample_size=getattr(config, 'sample_size', None),
+                sample_size=config.execution.sample_size,
                 sort_by=system_def.metrics.timestamp_field
             )
         else:

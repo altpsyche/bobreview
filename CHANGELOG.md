@@ -39,28 +39,29 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
 
 ### Changed
 
-- Plugin Registry API:
+- Plugin Registry API (v1.0.7):
   ```python
-  # Old (backward compatible - removed)
-  registry.register_theme(theme)
-  theme = registry.get_theme('dark')
-  
-  # New (focused interfaces)
+  # Focused interfaces
   registry.themes.register(theme)
   theme = registry.themes.get('dark')
   ```
 
-- ReportConfig API:
+- ReportConfig API (v1.0.7):
   ```python
-  # Old (backward compatible - removed)
-  config.draw_soft_cap = 600
-  config.llm_provider = 'openai'
-  config.dry_run = True
-  
-  # New (focused configs)
+  # Focused config classes
   config.thresholds.draw_soft_cap = 600
   config.llm.provider = 'openai'
   config.execution.dry_run = True
+  ```
+
+- CLI API (v1.0.7):
+  ```bash
+  # Plugin is required (no backward compatibility)
+  bobreview --plugin mayhem --dir ./screenshots
+  
+  # Report system selection:
+  # - If plugin has 1 system: auto-selected
+  # - If plugin has multiple: --report-system required
   ```
 
 - ReportSystemExecutor:
@@ -291,10 +292,12 @@ bobreview/
   - Theme and output settings
   
 - **New CLI Flags**:
-  - `--report-system SYSTEM`: Use a built-in or custom JSON report system
+  - `--plugin PLUGIN_NAME`: Plugin to use (required, e.g., "mayhem", "game-review")
+  - `--report-system SYSTEM`: Report system ID (optional, required if plugin has multiple systems)
   - `--list-report-systems`: List all available report systems
+  - `bobreview plugins list`: List all available plugins
 
-- **Built-in Report System**: `png_data_points` encapsulates the v1.0.3 workflow
+- **Plugin-Based Architecture**: Report systems are provided by plugins (e.g., `mayhem` plugin provides `png_data_points` which encapsulates the v1.0.3 workflow)
 
 - **User Custom Systems Directory**: `~/.bobreview/report_systems/` for custom JSON definitions
 
