@@ -404,24 +404,57 @@ class ReportSystemExecutor:
             context_builder_cls = self.registry.context_builders.get(self.system_def.id)
             if context_builder_cls:
                 builder = context_builder_cls()
-                plugin_context = builder.build(
+                # Use core API interface method: build_context()
+                # Build base_context with all needed values
+                base_context = {
+                    'system_def': self.system_def,
+                    'input_dir': input_dir,
+                    'image_data_uris': image_data_uris,
+                    'images_dir_rel': images_dir_rel,
+                }
+                # Call interface method
+                plugin_context = builder.build_context(
                     data_points=data_points,
                     stats=stats,
                     config=self.config,
-                    system_def=self.system_def,
-                    input_dir=input_dir,
-                    image_data_uris=image_data_uris
+                    base_context=base_context
                 )
+                # Merge plugin context (it should already include base_context)
                 context.update(plugin_context)
             
             # Add charts if page has chart configurations - use plugin-provided generator
             if page_config.charts:
                 chart_generator_cls = self.registry.chart_generators.get(self.system_def.id)
                 if chart_generator_cls:
-                    # Instantiate with config and thresholds
-                    chart_generator = chart_generator_cls(self.config, self.system_def.thresholds)
+                    # Instantiate with no args (core API interface)
+                    chart_generator = chart_generator_cls()
                     labels_dict = labels.data if hasattr(labels, 'data') else {}
-                    context['charts'] = chart_generator.generate(data_points, page_config.id, labels_dict)
+                    
+                    # Generate charts using core API interface method: generate_chart()
+                    # For each chart config, call generate_chart() with proper signature
+                    charts_dict = {}
+                    for chart_config in page_config.charts:
+                        # Build chart_config dict from ChartConfig dataclass
+                        chart_config_dict = {
+                            'id': chart_config.id,
+                            'type': chart_config.type,
+                            'title': chart_config.title,
+                            'x_field': chart_config.x_field,
+                            'y_field': chart_config.y_field,
+                            'performance_zones': chart_config.performance_zones,
+                            'options': chart_config.options,
+                            'labels': labels_dict,  # Include labels in chart_config
+                        }
+                        # Call interface method
+                        chart_result = chart_generator.generate_chart(
+                            data_points=data_points,
+                            stats=stats,
+                            config=self.config,
+                            chart_config=chart_config_dict
+                        )
+                        charts_dict[chart_config.id] = chart_result
+                    
+                    context['charts'] = charts_dict
             
             # Determine template to use - directly from page config
             template_name = None

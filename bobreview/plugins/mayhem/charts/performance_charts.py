@@ -27,13 +27,16 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
     Implements ChartGeneratorInterface from core.api.
     """
     
-    def __init__(self, config, thresholds: Dict[str, Any] = None):
+    def __init__(self, config=None, thresholds: Dict[str, Any] = None):
         """
         Initialize with config and thresholds.
         
         Args:
-            config: ReportConfig with threshold values
+            config: ReportConfig with threshold values (optional, can be None for interface compliance)
             thresholds: Dict of threshold values from report system JSON (optional)
+        
+        Note: Can be instantiated with no args for core API interface compliance.
+              Config and thresholds are accessed via generate_chart() parameters.
         """
         self.config = config
         self.thresholds = thresholds or {}
@@ -71,11 +74,21 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
         draws_label = labels.get('draw_calls', 'Draw Calls')
         tris_label = labels.get('triangles', 'Triangles')
         
-        # Get thresholds
-        high_draw = self._get_threshold('high_load_draw_threshold', 600)
-        low_draw = self._get_threshold('low_load_draw_threshold', 400)
-        high_tris = self._get_threshold('high_load_tri_threshold', 100000)
-        low_tris = self._get_threshold('low_load_tri_threshold', 50000)
+        # Get thresholds from config parameter (core API provides config)
+        # Use config.thresholds if available, otherwise fallback to defaults
+        if config and hasattr(config, 'thresholds'):
+            thresholds = config.thresholds
+            high_draw = getattr(thresholds, 'high_load_draw_threshold', 600)
+            low_draw = getattr(thresholds, 'low_load_draw_threshold', 400)
+            high_tris = getattr(thresholds, 'high_load_tri_threshold', 100000)
+            low_tris = getattr(thresholds, 'low_load_tri_threshold', 50000)
+        else:
+            # Fallback to self.thresholds or defaults
+            thresholds_dict = self.thresholds or {}
+            high_draw = thresholds_dict.get('high_load_draw_threshold', 600)
+            low_draw = thresholds_dict.get('low_load_draw_threshold', 400)
+            high_tris = thresholds_dict.get('high_load_tri_threshold', 100000)
+            low_tris = thresholds_dict.get('low_load_tri_threshold', 50000)
         
         # Generate based on chart type
         if chart_type == 'timeline' and y_field == 'draws':

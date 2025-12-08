@@ -3,10 +3,20 @@ Abstract base class for LLM generators.
 
 LLM generators are responsible for creating AI-generated content
 using configured prompts and templates.
+
+Note: LLMGeneratorTemplate is a framework utility class for template-based
+generation from JSON config. It is not an interface implementation.
+Plugins should implement LLMGeneratorInterface from core.api directly.
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TYPE_CHECKING
 from .schema import LLMGeneratorConfig, PromptCategoryConfig
+
+# Import core API interface for adapter
+from ..core.api import LLMGeneratorInterface
+
+if TYPE_CHECKING:
+    from ..core.config import ReportConfig
 
 
 class LLMGeneratorTemplate:
@@ -222,12 +232,16 @@ class LLMGeneratorTemplate:
         return f"{header}\n{separator}\n" + "\n".join(rows)
 
 
-class LLMGeneratorAdapter:
+class LLMGeneratorAdapter(LLMGeneratorInterface):
     """
     Adapter for using Python-based LLM generators with JSON configuration.
     
     This allows existing Python generator functions to work with the new
-    JSON-based system.
+    JSON-based system. Wraps old-style generator functions to implement
+    LLMGeneratorInterface from core.api.
+    
+    Note: This is a compatibility adapter. New plugins should implement
+    LLMGeneratorInterface directly.
     """
     
     def __init__(self, generator_func, config: LLMGeneratorConfig):
@@ -245,20 +259,25 @@ class LLMGeneratorAdapter:
         self,
         data_points: List[Dict[str, Any]],
         stats: Dict[str, Any],
-        report_config,
-        images_dir: str
+        config: 'ReportConfig',
+        context: Dict[str, Any]
     ) -> Any:
         """
         Call the Python generator function.
         
+        Implements LLMGeneratorInterface.generate() by adapting old-style
+        function signatures to the core API interface.
+        
         Parameters:
             data_points: List of data points
             stats: Statistical analysis results
-            report_config: Report configuration object
-            images_dir: Path to images directory
+            config: ReportConfig instance
+            context: Additional context (may contain 'images_dir_rel' for compatibility)
         
         Returns:
             Generated content (string or dict)
         """
-        return self.generator_func(data_points, stats, report_config, images_dir)
+        # Extract images_dir from context for backward compatibility with old-style functions
+        images_dir = context.get('images_dir_rel', '')
+        return self.generator_func(data_points, stats, config, images_dir)
 

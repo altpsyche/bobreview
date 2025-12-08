@@ -12,8 +12,12 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import re
 
-from ...report_systems.data_parser_base import FilenamePatternParser
-from ...report_systems.schema import DataSourceConfig, FieldConfig
+from ....report_systems.data_parser_base import FilenamePatternParser
+from ....report_systems.schema import DataSourceConfig, FieldConfig
+
+# Note: MayhemParser extends FilenamePatternParser, which extends DataParserInterface
+# from core.api. This maintains the core API contract while providing a concrete
+# implementation suitable for MayhemAutomation patterns.
 
 
 @dataclass
@@ -119,7 +123,7 @@ def parse_filename(filename: str, pattern: str) -> Dict[str, Any]:
     Raises:
         ValueError: If parsing fails or pattern is invalid.
     """
-    from ...report_systems.schema import DataSourceConfig, FieldConfig
+    from ....report_systems.schema import DataSourceConfig, FieldConfig
     
     # Build field configs from pattern
     field_names = re.findall(r'\{(\w+)\}', pattern)

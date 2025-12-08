@@ -12,6 +12,7 @@ Streamlined design:
 This class extends DataParserInterface from core.api.
 """
 
+from abc import abstractmethod
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from .schema import DataSourceConfig, FieldConfig
