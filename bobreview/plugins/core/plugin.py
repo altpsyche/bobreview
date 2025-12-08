@@ -1,55 +1,57 @@
 """
-BobReview Core Plugin.
+BobReview Core Plugin - Video Game Review System.
 
-This plugin provides all the default/built-in functionality:
-- LLM Generators (executive summary, metrics, zones, etc.)
-- Data Parsers (filename pattern parser)
+This is the default plugin that ships with BobReview.
+It provides:
+- Game Review LLM Generator (review_text)
+- JSON Config Parser (game.json)
 - Themes (dark, light, high contrast)
-- Default service implementations
+- Video Game Review report system and templates
 
-Without this plugin, BobReview is just an empty shell.
 Other plugins can override any of these components.
+For performance analysis, use the MayhemAutomation plugin.
 """
 
+import json
+import logging
+from pathlib import Path
 from ...plugins import BasePlugin
-from ...services import get_container, DataService, AnalyticsService, ChartService, LLMService
+
+logger = logging.getLogger(__name__)
 
 
 class CorePlugin(BasePlugin):
     """
-    Core plugin that registers all built-in functionality.
+    BobReview Core - Video Game Review Plugin.
     
-    This is loaded automatically and provides default implementations
-    that other plugins can override.
+    Provides the video game review system with LLM-powered
+    review generation based on game.json configuration.
     """
     
     name = "bobreview-core"
     version = "1.0.0"
     author = "BobReview Team"
-    description = "Core BobReview functionality"
+    description = "Video Game Review: LLM-powered game reviews from JSON config"
     dependencies = []
     
     def __init__(self):
         super().__init__()
     
     def on_load(self, registry) -> None:
-        """Register all built-in components."""
+        """Register all components."""
         config = self.get_config()
         
         # Register LLM generators
         if config.get('register_generators', True):
             self._register_generators(registry)
         
-        # Register data parsers
-        self._register_parsers(registry)
+        # Register data parsers (JSON config parser)
+        if config.get('register_parsers', True):
+            self._register_parsers(registry)
         
         # Register themes
-        if config.get('register_default_theme', True):
+        if config.get('register_themes', True):
             self._register_themes(registry)
-        
-        # Register default services
-        if config.get('register_services', True):
-            self._register_services()
         
         # Register report systems
         if config.get('register_report_systems', True):
@@ -58,27 +60,15 @@ class CorePlugin(BasePlugin):
         # Register templates
         if config.get('register_templates', True):
             self._register_templates(registry)
+        
+        logger.info(f"Loaded {self.name} - Video Game Review plugin")
     
     def _register_generators(self, registry) -> None:
-        """Register all built-in LLM generators."""
-        from ...llm.generators import (
-            generate_executive_summary,
-            generate_metric_deep_dive,
-            generate_zones_hotspots,
-            generate_optimization_checklist,
-            generate_system_recommendations,
-            generate_visual_analysis,
-            generate_statistical_interpretation
-        )
+        """Register game review LLM generators."""
+        from .generators import generate_review_text
         
         generators = [
-            ('executive_summary', generate_executive_summary),
-            ('metric_deep_dive', generate_metric_deep_dive),
-            ('zones_hotspots', generate_zones_hotspots),
-            ('optimization_checklist', generate_optimization_checklist),
-            ('system_recommendations', generate_system_recommendations),
-            ('visual_analysis', generate_visual_analysis),
-            ('statistical_interpretation', generate_statistical_interpretation),
+            ('review_text', generate_review_text),
         ]
         
         for gen_id, gen_func in generators:
@@ -93,48 +83,25 @@ class CorePlugin(BasePlugin):
         return GeneratorWrapper
     
     def _register_parsers(self, registry) -> None:
-        """Register built-in data parsers."""
-        from ...report_systems.data_parser_base import FilenamePatternParser
+        """Register JSON config parser for game.json files."""
+        from .parsers import GameConfigParser
         
-        # Wrap the parser class
-        class FilenamePatternParserWrapper:
-            parser_name = "filename_pattern"
-            parser_class = FilenamePatternParser
+        class GameConfigParserWrapper:
+            parser_name = "json_config"
+            parser_class = GameConfigParser
         
-        registry.register_data_parser(FilenamePatternParserWrapper, plugin_name=self.name)
+        registry.register_data_parser(GameConfigParserWrapper, plugin_name=self.name)
     
     def _register_themes(self, registry) -> None:
         """Register built-in themes."""
         from ...registry.themes import BUILTIN_THEMES, register_theme as legacy_register
         
-        # Register each theme with both plugin registry and legacy registry
         for theme in BUILTIN_THEMES:
             registry.register_theme(theme, plugin_name=self.name)
-            legacy_register(theme)  # Also register in legacy for get_theme() to work
-    
-    def _register_services(self) -> None:
-        """Register default service implementations."""
-        container = get_container()
-        
-        # Only register if not already present (allows other plugins to override)
-        if not container.has('data'):
-            container.register('data', DataService())
-        
-        if not container.has('analytics'):
-            container.register('analytics', AnalyticsService())
-        
-        if not container.has('charts'):
-            container.register('charts', ChartService())
-        
-        # LLM service is registered by executor with config
-        # Don't register a default here
+            legacy_register(theme)
     
     def _register_report_systems(self, registry) -> None:
         """Register built-in report systems."""
-        import json
-        from pathlib import Path
-        
-        # Load report systems from plugin's report_systems directory
         report_systems_dir = Path(__file__).parent / 'report_systems'
         
         if report_systems_dir.exists():
@@ -143,31 +110,38 @@ class CorePlugin(BasePlugin):
                     with open(json_file, 'r', encoding='utf-8') as f:
                         system_def = json.load(f)
                     
-                    system_name = json_file.stem  # e.g., 'png_data_points'
+                    system_name = json_file.stem
                     registry.register_report_system(
                         name=system_name,
                         system_def=system_def,
                         plugin_name=self.name
                     )
                 except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).error(
-                        f"Failed to load report system {json_file}: {e}"
-                    )
+                    logger.error(f"Failed to load report system {json_file}: {e}")
     
     def _register_templates(self, registry) -> None:
-        """Register built-in templates from core plugin."""
-        from pathlib import Path
-        
+        """Register built-in templates."""
         template_dir = Path(__file__).parent / 'templates'
         if template_dir.exists():
-            # Priority 1000 = low priority (user and other plugins can override)
             registry.register_template_path(
-                template_dir, 
+                template_dir,
                 plugin_name=self.name,
                 priority=1000
             )
+        
+        # Register context builder for game_review
+        self._register_context_builders(registry)
+    
+    def _register_context_builders(self, registry) -> None:
+        """Register context builders for our report systems."""
+        from .context import GameReviewContextBuilder
+        
+        registry.register_context_builder(
+            report_system_id='game_review',
+            builder=GameReviewContextBuilder,
+            plugin_name=self.name
+        )
     
     def on_unload(self) -> None:
         """Clean up when plugin is unloaded."""
-        pass  # Services remain - other plugins may depend on them
+        pass

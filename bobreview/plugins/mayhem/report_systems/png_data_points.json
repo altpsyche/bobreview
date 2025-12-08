@@ -392,8 +392,11 @@
       "nav_label": "Home",
       "nav_order": 10,
       "template": {
-        "type": "builtin",
-        "name": "homepage"
+        "type": "jinja2",
+        "name": "pages/homepage.html.j2"
+      },
+      "llm_mappings": {
+        "exec_summary": "executive_summary"
       },
       "llm_content": [
         "executive_summary"
@@ -417,8 +420,11 @@
       "card_icon": "fa-chart-line",
       "card_description": "Detailed statistical analysis of draw calls and triangle counts with interactive timelines and correlation charts.",
       "template": {
-        "type": "builtin",
-        "name": "metrics"
+        "type": "jinja2",
+        "name": "pages/metrics.html.j2"
+      },
+      "llm_mappings": {
+        "metrics_analysis": "metric_deep_dive"
       },
       "llm_content": [
         "metric_deep_dive"
@@ -454,8 +460,11 @@
       "card_icon": "fa-fire",
       "card_description": "Identify high-load and low-load frames, critical hotspots, and performance zones requiring optimization.",
       "template": {
-        "type": "builtin",
-        "name": "zones"
+        "type": "jinja2",
+        "name": "pages/zones.html.j2"
+      },
+      "llm_mappings": {
+        "zones_analysis": "zones_hotspots"
       },
       "llm_content": [
         "zones_hotspots"
@@ -475,8 +484,11 @@
       "card_icon": "fa-chart-bar",
       "card_description": "Distribution timelines and visual breakdowns showing performance patterns across all captures.",
       "template": {
-        "type": "builtin",
-        "name": "visuals"
+        "type": "jinja2",
+        "name": "pages/visuals.html.j2"
+      },
+      "llm_mappings": {
+        "visual_analysis": "visual_analysis"
       },
       "llm_content": [
         "visual_analysis"
@@ -505,8 +517,12 @@
       "card_icon": "fa-tasks",
       "card_description": "Actionable recommendations for addressing critical hotspots and high-load frames with budget guidelines.",
       "template": {
-        "type": "builtin",
-        "name": "optimization"
+        "type": "jinja2",
+        "name": "pages/optimization.html.j2"
+      },
+      "llm_mappings": {
+        "optimization": "optimization_checklist",
+        "recommendations": "system_recommendations"
       },
       "llm_content": [
         "optimization_checklist",
@@ -527,8 +543,11 @@
       "card_icon": "fa-calculator",
       "card_description": "Comprehensive statistical analysis including percentiles, confidence intervals, and outlier detection.",
       "template": {
-        "type": "builtin",
-        "name": "stats"
+        "type": "jinja2",
+        "name": "pages/stats.html.j2"
+      },
+      "llm_mappings": {
+        "stats_interpretation": "statistical_interpretation"
       },
       "llm_content": [
         "statistical_interpretation"

@@ -1,0 +1,455 @@
+{% extends "base.html.j2" %}
+
+{% block title %}{{ game.title }} - Review{% endblock %}
+
+{% block head_styles %}
+<style>
+    /* Hero Section */
+    .hero {
+        position: relative;
+        height: 60vh;
+        min-height: 500px;
+        overflow: hidden;
+        margin: -2rem -2rem 0 -2rem;
+    }
+    
+    .hero-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.4);
+    }
+    
+    .hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60%;
+        background: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
+    }
+    
+    .hero-content {
+        position: absolute;
+        bottom: 3rem;
+        left: 0;
+        right: 0;
+        padding: 0 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .game-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .meta-tag {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.35rem 0.75rem;
+        border-radius: 2rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        backdrop-filter: blur(10px);
+    }
+    
+    .game-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    .game-developer {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+    }
+    
+    /* Score Section */
+    .score-section {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 3rem;
+        margin: 3rem 0;
+    }
+    
+    .overall-score {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        text-align: center;
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .overall-score::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--accent);
+    }
+    
+    .score-number {
+        font-size: 6rem;
+        font-weight: 800;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    
+    .score-label {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 1.5rem;
+    }
+    
+    .score-verdict {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent);
+    }
+    
+    .category-scores {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+    
+    .category {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .category-name {
+        width: 120px;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+    
+    .category-bar {
+        flex: 1;
+        height: 12px;
+        background: var(--bg-soft);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .category-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 1s ease-out;
+    }
+    
+    .category-fill.excellent { background: var(--success); }
+    .category-fill.great { background: #7dd87d; }
+    .category-fill.good { background: var(--warning); }
+    .category-fill.okay { background: #ffa333; }
+    .category-fill.poor { background: var(--danger); }
+    
+    .category-value {
+        width: 50px;
+        text-align: right;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    
+    /* Pros & Cons */
+    .pros-cons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+    
+    .pros-section, .cons-section {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        border: 1px solid var(--border);
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .section-title.good { color: var(--success); }
+    .section-title.bad { color: var(--danger); }
+    
+    .section-title svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .list {
+        list-style: none;
+    }
+    
+    .list li {
+        padding: 0.75rem 0;
+        padding-left: 1.5rem;
+        position: relative;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .list li:last-child {
+        border-bottom: none;
+    }
+    
+    .list li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    
+    .pros-section .list li::before { background: var(--success); }
+    .cons-section .list li::before { background: var(--danger); }
+    
+    /* Review Text */
+    .review-section {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        margin-bottom: 3rem;
+        border: 1px solid var(--border);
+    }
+    
+    .review-section h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+    }
+    
+    .review-text {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        line-height: 1.8;
+    }
+    
+    .review-text p {
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Verdict Box */
+    .verdict-box {
+        background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-soft) 100%);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        text-align: center;
+        border: 2px solid var(--accent);
+        position: relative;
+    }
+    
+    .verdict-box h3 {
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .verdict-text {
+        font-size: 1.35rem;
+        line-height: 1.6;
+        color: var(--text-primary);
+    }
+    
+    /* Screenshot Gallery */
+    .screenshots {
+        margin-bottom: 3rem;
+    }
+    
+    .screenshots h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .screenshot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .screenshot-grid img {
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero { height: 50vh; min-height: 400px; }
+        .game-title { font-size: 2.5rem; }
+        .score-section { grid-template-columns: 1fr; }
+        .pros-cons { grid-template-columns: 1fr; }
+        .score-number { font-size: 4.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- Hero -->
+<section class="hero">
+    {% if game.cover_image %}
+    <img src="{{ game.cover_image }}" alt="{{ game.title }}" class="hero-bg">
+    {% else %}
+    <div class="hero-bg" style="background: linear-gradient(135deg, var(--accent), var(--accent-strong));"></div>
+    {% endif %}
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <div class="game-meta">
+            {% if game.genre %}<span class="meta-tag">{{ game.genre }}</span>{% endif %}
+            {% if game.developer %}<span class="meta-tag">{{ game.developer }}</span>{% endif %}
+            {% if game.release_date %}<span class="meta-tag">{{ game.release_date }}</span>{% endif %}
+        </div>
+        <h1 class="game-title">{{ game.title }}</h1>
+        {% if game.publisher %}
+        <p class="game-developer">Published by {{ game.publisher }}</p>
+        {% endif %}
+    </div>
+</section>
+
+<div class="container">
+    <!-- Scores -->
+    <section class="score-section">
+        <div class="overall-score">
+            {% set overall = ((game.scores.gameplay + game.scores.graphics + game.scores.story + game.scores.sound + game.scores.value) / 5)|round(1) %}
+            <div class="score-number">{{ overall }}</div>
+            <div class="score-label">Overall Score</div>
+            {% if overall >= 9 %}
+            <div class="score-verdict">Masterpiece</div>
+            {% elif overall >= 8 %}
+            <div class="score-verdict">Excellent</div>
+            {% elif overall >= 7 %}
+            <div class="score-verdict">Great</div>
+            {% elif overall >= 6 %}
+            <div class="score-verdict">Good</div>
+            {% elif overall >= 5 %}
+            <div class="score-verdict">Average</div>
+            {% else %}
+            <div class="score-verdict">Below Average</div>
+            {% endif %}
+        </div>
+        
+        <div class="category-scores">
+            {% set categories = [
+                ('Gameplay', game.scores.gameplay),
+                ('Graphics', game.scores.graphics),
+                ('Story', game.scores.story),
+                ('Sound', game.scores.sound),
+                ('Value', game.scores.value)
+            ] %}
+            {% for name, score in categories %}
+            <div class="category">
+                <span class="category-name">{{ name }}</span>
+                <div class="category-bar">
+                    {% if score >= 9 %}{% set bar_class = 'excellent' %}
+                    {% elif score >= 7 %}{% set bar_class = 'great' %}
+                    {% elif score >= 5 %}{% set bar_class = 'good' %}
+                    {% elif score >= 3 %}{% set bar_class = 'okay' %}
+                    {% else %}{% set bar_class = 'poor' %}{% endif %}
+                    <div class="category-fill {{ bar_class }}" style="width: {{ score * 10 }}%"></div>
+                </div>
+                <span class="category-value">{{ score }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    
+    <!-- Pros & Cons -->
+    <section class="pros-cons">
+        <div class="pros-section">
+            <h3 class="section-title good">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                The Good
+            </h3>
+            <ul class="list">
+                {% for pro in game.pros %}
+                <li>{{ pro }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="cons-section">
+            <h3 class="section-title bad">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                The Bad
+            </h3>
+            <ul class="list">
+                {% for con in game.cons %}
+                <li>{{ con }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+    
+    <!-- Summary -->
+    {% if game.summary %}
+    <section class="review-section">
+        <h2>Review</h2>
+        <div class="review-text">
+            <p>{{ game.summary }}</p>
+        </div>
+    </section>
+    {% endif %}
+    
+    <!-- LLM Review -->
+    {% if llm_content and llm_content.review_text %}
+    <section class="review-section">
+        <h2>Full Review</h2>
+        <div class="review-text">
+            {{ llm_content.review_text|safe }}
+        </div>
+    </section>
+    {% endif %}
+    
+    <!-- Screenshots -->
+    {% if game.screenshots and game.screenshots|length > 0 %}
+    <section class="screenshots">
+        <h2>Screenshots</h2>
+        <div class="screenshot-grid">
+            {% for screenshot in game.screenshots %}
+            <img src="{{ screenshot }}" alt="{{ game.title }} Screenshot">
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    
+    <!-- Verdict -->
+    {% if game.verdict %}
+    <section class="verdict-box">
+        <h3>The Verdict</h3>
+        <p class="verdict-text">{{ game.verdict }}</p>
+    </section>
+    {% endif %}
+    
+    <footer style="text-align: center; padding: 2rem 0; color: var(--text-secondary); font-size: 0.875rem; border-top: 1px solid var(--border); margin-top: 3rem;">
+        <p>Review generated by BobReview • {{ game.title }} • Score: {{ overall }}/10</p>
+    </footer>
+</div>
+{% endblock %}

@@ -57,6 +57,12 @@ class PluginRegistry:
         # Report system registry: name -> system definition (parsed JSON)
         self._report_systems: Dict[str, Any] = {}
         
+        # Chart generator registry: report_system_id -> generator class
+        self._chart_generators: Dict[str, Any] = {}
+        
+        # Context builder registry: report_system_id -> builder class
+        self._context_builders: Dict[str, Any] = {}
+        
         # Template paths registered by plugins (ordered list for priority)
         self._template_paths: List[tuple] = []  # [(path, plugin_name), ...]
         
@@ -258,6 +264,60 @@ class PluginRegistry:
     def get_all_pages(self) -> Dict[str, Any]:
         """Get all registered pages."""
         return dict(self._pages)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Chart Generator Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_chart_generator(self, report_system_id: str, generator: Any, plugin_name: str = "") -> None:
+        """
+        Register a chart generator for a report system.
+        
+        Parameters:
+            report_system_id: ID of the report system this generator handles
+            generator: Generator instance with `generate(data_points, page_id, labels)` method
+            plugin_name: Name of the plugin registering this generator
+        """
+        if report_system_id in self._chart_generators:
+            logger.warning(f"Overwriting existing chart generator: {report_system_id}")
+        
+        self._chart_generators[report_system_id] = generator
+        self._component_owners[f"chart_generator:{report_system_id}"] = plugin_name
+        logger.debug(f"Registered chart generator: {report_system_id} from {plugin_name or 'core'}")
+    
+    def get_chart_generator(self, report_system_id: str) -> Optional[Any]:
+        """Get a chart generator for a report system."""
+        return self._chart_generators.get(report_system_id)
+    
+    def get_all_chart_generators(self) -> Dict[str, Any]:
+        """Get all registered chart generators."""
+        return dict(self._chart_generators)
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Context Builder Registration
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    def register_context_builder(self, report_system_id: str, builder: Any, plugin_name: str = "") -> None:
+        """
+        Register a context builder for a report system.
+        
+        Context builders add report-specific template context (images, critical points, etc.)
+        
+        Parameters:
+            report_system_id: ID of the report system this builder handles
+            builder: Builder class with `build(data_points, stats, config, system_def)` method
+            plugin_name: Name of the plugin registering this builder
+        """
+        if report_system_id in self._context_builders:
+            logger.warning(f"Overwriting existing context builder: {report_system_id}")
+        
+        self._context_builders[report_system_id] = builder
+        self._component_owners[f"context_builder:{report_system_id}"] = plugin_name
+        logger.debug(f"Registered context builder: {report_system_id} from {plugin_name or 'core'}")
+    
+    def get_context_builder(self, report_system_id: str) -> Optional[Any]:
+        """Get a context builder for a report system."""
+        return self._context_builders.get(report_system_id)
     
     # ─────────────────────────────────────────────────────────────────────────
     # Service Registration

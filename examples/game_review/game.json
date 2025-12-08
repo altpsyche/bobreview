@@ -1,0 +1,37 @@
+{
+    "title": "Elden Ring",
+    "developer": "FromSoftware",
+    "publisher": "Bandai Namco",
+    "release_date": "February 25, 2022",
+    "platforms": [
+        "PC",
+        "PlayStation 5",
+        "PlayStation 4",
+        "Xbox Series X|S",
+        "Xbox One"
+    ],
+    "genre": "Action RPG",
+    "cover_image": "",
+    "screenshots": [],
+    "scores": {
+        "gameplay": 10,
+        "graphics": 9,
+        "story": 8,
+        "sound": 9,
+        "value": 10
+    },
+    "pros": [
+        "Vast, beautifully crafted open world",
+        "Challenging but fair combat system",
+        "Incredible sense of discovery and exploration",
+        "Deep character build variety",
+        "Masterful boss design"
+    ],
+    "cons": [
+        "Steep learning curve for newcomers",
+        "Some late-game boss difficulty spikes",
+        "Occasional performance issues on PC"
+    ],
+    "summary": "Elden Ring represents the pinnacle of FromSoftware's legendary game design philosophy, combining the studio's signature challenging combat with a breathtaking open world created in collaboration with George R.R. Martin.",
+    "verdict": "Elden Ring is a monumental achievement in game design. It successfully translates the Souls formula into an open world without losing what makes these games special. This is an essential experience for any action RPG fan."
+}

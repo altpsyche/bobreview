@@ -7,7 +7,7 @@ Version 1.0.7
 ### What's New in v1.0.7
 
 - **Fully Modular Plugin Architecture**: BobReview is now a minimal framework
-  - All functionality comes from the `bobreview-core` plugin
+  - All functionality comes from the `MayhemAutomation` plugin
   - LLM generators, themes, services, templates are all pluggable
   - Report systems and templates can be overridden by plugins
 - **Plugin Registry Extensions**: Register report systems, templates, services

@@ -310,44 +310,6 @@ class ReportSystemExecutor:
                 'active': False
             })
         
-        # Prepare image data for templates
-        images = []
-        for point in data_points:
-            if 'img' in point:
-                img_name = point['img']
-                if img_name in image_data_uris:
-                    src = image_data_uris[img_name]
-                elif images_dir_rel:
-                    src = f"{images_dir_rel}/{img_name}"
-                else:
-                    src = img_name
-                images.append({
-                    'src': src,
-                    'testcase': point.get('testcase', ''),
-                    'draws': point.get('draws', 0),
-                    'tris': point.get('tris', 0)
-                })
-        
-        # Template mapping for pages
-        template_map = {
-            'home': 'pages/homepage.html.j2',
-            'metrics': 'pages/metrics.html.j2',
-            'zones': 'pages/zones.html.j2',
-            'visuals': 'pages/visuals.html.j2',
-            'optimization': 'pages/optimization.html.j2',
-            'stats': 'pages/stats.html.j2',
-        }
-        
-        # LLM content mapping
-        llm_key_map = {
-            'home': {'exec_summary': 'executive_summary'},
-            'metrics': {'metrics_analysis': 'metric_deep_dive'},
-            'zones': {'zones_analysis': 'zones_hotspots'},
-            'visuals': {'visual_analysis': 'visual_analysis'},
-            'optimization': {'optimization': 'optimization_checklist', 'recommendations': 'system_recommendations'},
-            'stats': {'stats_interpretation': 'statistical_interpretation'},
-        }
-        
         # Generate each page
         log_info(f"Generating {len(enabled_pages)} HTML pages using Jinja2 templates...", self.config)
         
@@ -363,58 +325,69 @@ class ReportSystemExecutor:
                     'active': nav['url'] == page_config.filename
                 })
             
-            # Build LLM content dict for this page
+            # Build LLM content dict for this page using llm_mappings from config
             llm_content = {}
-            if page_config.id in llm_key_map:
-                for template_key, result_key in llm_key_map[page_config.id].items():
-                    llm_content[template_key] = llm_results.get(result_key, '')
+            # Use llm_mappings if available, otherwise fall back to llm_content list
+            if page_config.llm_mappings:
+                for template_key, generator_id in page_config.llm_mappings.items():
+                    llm_content[template_key] = llm_results.get(generator_id, '')
+            elif page_config.llm_content:
+                # Backward compat: use llm_content list as both key and generator ID
+                for generator_id in page_config.llm_content:
+                    llm_content[generator_id] = llm_results.get(generator_id, '')
             
-            # Get critical point - use dynamic metric names
-            metrics_config = self.system_def.metrics
-            primary_metrics = metrics_config.primary
-            critical_point = stats['critical'][1] if 'critical' in stats else {}
-            critical = {
-                'index': stats['critical'][0] if 'critical' in stats else 0,
-                **{m: critical_point.get(m, 0) for m in primary_metrics}
-            }
-            # Backward compat - keep draws/tris if they exist
-            if 'draws' not in critical and primary_metrics:
-                critical['draws'] = critical_point.get(primary_metrics[0], 0)
-            if 'tris' not in critical and len(primary_metrics) > 1:
-                critical['tris'] = critical_point.get(primary_metrics[1], 0)
-            
-            # Build base context for all templates
+            # Build base context for all templates (minimal universal context)
             context = {
+                # Core data - available to all templates
                 'config': self.config,
                 'stats': stats,
+                'data': stats,   # Universal alias - all templates can use data.*
                 'data_points': data_points,
+                
+                # LLM generated content
                 'llm': llm_content,
+                'llm_content': llm_content,  # Alias for consistency
+                
+                # Navigation
                 'nav_items': page_nav,
                 'pages': [asdict(p) for p in enabled_pages],
-                'images': images,
-                'has_images': len(images) > 0,
-                'critical': critical,
-                'meta_text': f"{stats['count']} captures · {self.config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                # New dynamic context
+                
+                # Report system content blocks
                 'content': self.system_def.content_blocks,
-                'metrics': primary_metrics,
-                'metric_labels': metrics_config.metric_labels,
+                
+                # Meta
+                'meta_text': f"{stats.get('count', len(data_points))} items · {self.config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}",
             }
             
-            # Add charts for visuals and metrics pages
-            if page_config.id == 'visuals':
-                context['charts'] = self._generate_charts(data_points, 'visuals', labels)
-            elif page_config.id == 'metrics':
-                context['charts'] = self._generate_charts(data_points, 'metrics', labels)
+            # Add plugin-provided context (images, critical points, game aliases, etc.)
+            from ..plugins import get_registry
+            context_builder_cls = get_registry().get_context_builder(self.system_def.id)
+            if context_builder_cls:
+                builder = context_builder_cls()
+                plugin_context = builder.build(
+                    data_points=data_points,
+                    stats=stats,
+                    config=self.config,
+                    system_def=self.system_def,
+                    input_dir=input_dir
+                )
+                context.update(plugin_context)
             
-            # Determine template to use
+            # Add charts if page has chart configurations - use plugin-provided generator
+            if page_config.charts:
+                chart_generator_cls = get_registry().get_chart_generator(self.system_def.id)
+                if chart_generator_cls:
+                    # Instantiate with config and thresholds
+                    chart_generator = chart_generator_cls(self.config, self.system_def.thresholds)
+                    labels_dict = labels.data if hasattr(labels, 'data') else {}
+                    context['charts'] = chart_generator.generate(data_points, page_config.id, labels_dict)
+            
+            # Determine template to use - directly from page config
             template_name = None
             
-            # Check for custom template in page config
-            if page_config.template.type == 'jinja2' and page_config.template.name:
+            # Use template from page config (unified approach)
+            if page_config.template.name:
                 template_name = page_config.template.name
-            elif page_config.id in template_map:
-                template_name = template_map[page_config.id]
             
             # Render with Jinja2 template
             if template_name and engine.template_exists(template_name):
@@ -443,471 +416,10 @@ class ReportSystemExecutor:
     
     def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str, labels: LabelConfig) -> Dict[str, str]:
         """
-        Generate Chart.js JavaScript code for charts with performance zones.
+        DEPRECATED: Chart generation is now handled by plugin-provided chart generators.
         
-        Uses ChartService from the container for theme colors and helper methods.
+        This method is kept for backward compatibility but should not be used.
+        Instead, register a chart generator with the plugin registry using:
+            registry.register_chart_generator(report_system_id, generator_class)
         """
-        charts = {}
-        # Labels is now a simple wrapper class with .data property, not a dataclass
-        labels_dict = labels.data if hasattr(labels, 'data') else {}
-        
-        # Get ChartService from container (allows plugin override)
-        chart_service: ChartService = self.container.get('charts')
-        
-        # Get theme colors from service
-        colors = chart_service.get_theme_colors()
-        theme = chart_service.theme
-        
-        # Use service's hex_to_rgba helper
-        hex_to_rgba = chart_service.hex_to_rgba
-        
-        # Theme-based colors (from service)
-        danger_color = colors['danger']
-        danger_color_soft = colors['danger_soft']
-        danger_color_bg = colors['danger_bg']
-        ok_color = colors['ok']
-        ok_color_soft = colors['ok_soft']
-        ok_color_bg = colors['ok_bg']
-        warn_color = colors['warn']
-        warn_color_soft = colors['warn_soft']
-        accent_gradient_top = colors['accent_top']
-        accent_gradient_bottom = colors['accent_bottom']
-        accent_strong_gradient_top = colors['accent_strong_top']
-        accent_strong_gradient_bottom = colors['accent_strong_bottom']
-        grid_color = colors['grid']
-        grid_color_light = colors['grid_light']
-        tooltip_bg = colors['tooltip_bg']
-        
-        # Get labels
-        draws_label = labels_dict.get('draw_calls', 'Draw Calls')
-        tris_label = labels_dict.get('triangles', 'Triangles')
-        frame_index_label = labels_dict.get('frame_index', 'Frame Index')
-        frequency_label = labels_dict.get('frequency', 'Frequency')
-        
-        # Performance thresholds
-        high_draw = self.config.high_load_draw_threshold
-        low_draw = self.config.low_load_draw_threshold
-        high_tris = self.config.high_load_tri_threshold
-        low_tris = self.config.low_load_tri_threshold
-        
-        if page_type == 'visuals':
-            # Build data with color-coded points based on performance zones
-            draws_points = []
-            tris_points = []
-            scatter_points = []
-            
-            for i, p in enumerate(data_points):
-                draws = p['draws']
-                tris = p['tris']
-                testcase = p.get('testcase', f'Frame {i}')
-                
-                # Color for draw calls
-                if draws >= high_draw:
-                    draw_color = danger_color  # Red - critical
-                elif draws < low_draw:
-                    draw_color = ok_color  # Green - good
-                else:
-                    draw_color = warn_color  # Yellow - warning
-                
-                # Color for triangles
-                if tris >= high_tris:
-                    tri_color = danger_color
-                elif tris < low_tris:
-                    tri_color = ok_color
-                else:
-                    tri_color = warn_color
-                
-                # Scatter color (worst of both)
-                if draws >= high_draw or tris >= high_tris:
-                    scatter_color = hex_to_rgba(theme.danger, 0.8)
-                elif draws < low_draw and tris < low_tris:
-                    scatter_color = hex_to_rgba(theme.ok, 0.8)
-                else:
-                    scatter_color = hex_to_rgba(theme.warn, 0.8)
-                
-                draws_points.append({'x': i, 'y': draws, 'color': draw_color, 'testcase': testcase})
-                tris_points.append({'x': i, 'y': tris, 'color': tri_color, 'testcase': testcase})
-                scatter_points.append({'x': draws, 'y': tris, 'color': scatter_color, 'testcase': testcase, 'index': i})
-            
-            draws_data = json.dumps(draws_points)
-            tris_data = json.dumps(tris_points)
-            scatter_data = json.dumps(scatter_points)
-            
-            charts['draws_timeline'] = f"""
-// Draw Calls Timeline with Performance Zones
-(function() {{
-    const ctx = document.getElementById('drawsTimeline').getContext('2d');
-    const data = {draws_data};
-    
-    // Create gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, '{accent_gradient_top}');
-    gradient.addColorStop(1, '{accent_gradient_bottom}');
-    
-    new Chart(ctx, {{
-        type: 'line',
-        data: {{
-            datasets: [{{
-                label: {json.dumps(draws_label)},
-                data: data.map(d => ({{x: d.x, y: d.y}})),
-                borderColor: '{theme.accent}',
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointHoverRadius: 7,
-                pointBackgroundColor: data.map(d => d.color),
-                pointBorderColor: data.map(d => d.color),
-                pointBorderWidth: 2
-            }}]
-        }},
-        options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {{ intersect: false, mode: 'index' }},
-            scales: {{
-                x: {{ 
-                    type: 'linear',
-                    title: {{ display: true, text: {json.dumps(frame_index_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}' }}
-                }},
-                y: {{ 
-                    title: {{ display: true, text: {json.dumps(draws_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}' }}
-                }}
-            }},
-            plugins: {{
-                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
-                tooltip: {{
-                    backgroundColor: '{tooltip_bg}',
-                    titleColor: '{theme.text_main}',
-                    bodyColor: '{theme.text_soft}',
-                    borderColor: '{theme.accent}',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {{
-                        title: function(items) {{ return 'Frame ' + items[0].parsed.x; }},
-                        label: function(ctx) {{ 
-                            const d = data[ctx.dataIndex];
-                            return [
-                                d.testcase,
-                                {json.dumps(draws_label)} + ': ' + d.y.toLocaleString()
-                            ];
-                        }}
-                    }}
-                }},
-                annotation: {{
-                    annotations: {{
-                        criticalLine: {{
-                            type: 'line',
-                            yMin: {high_draw},
-                            yMax: {high_draw},
-                            borderColor: '{danger_color_soft}',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {{ display: true, content: 'Critical ({high_draw})', position: 'end', backgroundColor: '{danger_color_bg}' }}
-                        }},
-                        warningLine: {{
-                            type: 'line',
-                            yMin: {low_draw},
-                            yMax: {low_draw},
-                            borderColor: '{ok_color_soft}',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            label: {{ display: true, content: 'Good ({low_draw})', position: 'start', backgroundColor: '{ok_color_bg}' }}
-                        }}
-                    }}
-                }}
-            }}
-        }}
-    }});
-}})();
-"""
-            charts['tris_timeline'] = f"""
-// Triangles Timeline with Performance Zones
-(function() {{
-    const ctx = document.getElementById('trisTimeline').getContext('2d');
-    const data = {tris_data};
-    
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, '{accent_strong_gradient_top}');
-    gradient.addColorStop(1, '{accent_strong_gradient_bottom}');
-    
-    new Chart(ctx, {{
-        type: 'line',
-        data: {{
-            datasets: [{{
-                label: {json.dumps(tris_label)},
-                data: data.map(d => ({{x: d.x, y: d.y}})),
-                borderColor: '{theme.accent_strong}',
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointHoverRadius: 7,
-                pointBackgroundColor: data.map(d => d.color),
-                pointBorderColor: data.map(d => d.color),
-                pointBorderWidth: 2
-            }}]
-        }},
-        options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {{ intersect: false, mode: 'index' }},
-            scales: {{
-                x: {{ 
-                    type: 'linear',
-                    title: {{ display: true, text: {json.dumps(frame_index_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}' }}
-                }},
-                y: {{ 
-                    title: {{ display: true, text: {json.dumps(tris_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}', callback: function(v) {{ return v.toLocaleString(); }} }}
-                }}
-            }},
-            plugins: {{
-                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
-                tooltip: {{
-                    backgroundColor: '{tooltip_bg}',
-                    titleColor: '{theme.text_main}',
-                    bodyColor: '{theme.text_soft}',
-                    borderColor: '{theme.accent_strong}',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {{
-                        title: function(items) {{ return 'Frame ' + items[0].parsed.x; }},
-                        label: function(ctx) {{ 
-                            const d = data[ctx.dataIndex];
-                            return [d.testcase, {json.dumps(tris_label)} + ': ' + d.y.toLocaleString()];
-                        }}
-                    }}
-                }}
-            }}
-        }}
-    }});
-}})();
-"""
-            scatter_label = f"{draws_label} vs {tris_label}"
-            charts['scatter'] = f"""
-// Scatter Plot with Performance Zone Colors
-(function() {{
-    const ctx = document.getElementById('scatterPlot').getContext('2d');
-    const data = {scatter_data};
-    
-    new Chart(ctx, {{
-        type: 'scatter',
-        data: {{
-            datasets: [{{
-                label: {json.dumps(scatter_label)},
-                data: data.map(d => ({{x: d.x, y: d.y}})),
-                backgroundColor: data.map(d => d.color),
-                borderColor: data.map(d => d.color.replace('0.8', '1')),
-                pointRadius: 6,
-                pointHoverRadius: 10,
-                pointBorderWidth: 2
-            }}]
-        }},
-        options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {{
-                x: {{ 
-                    title: {{ display: true, text: {json.dumps(draws_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}' }}
-                }},
-                y: {{ 
-                    title: {{ display: true, text: {json.dumps(tris_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}', callback: function(v) {{ return v.toLocaleString(); }} }}
-                }}
-            }},
-            plugins: {{
-                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
-                tooltip: {{
-                    backgroundColor: '{tooltip_bg}',
-                    titleColor: '{theme.text_main}',
-                    bodyColor: '{theme.text_soft}',
-                    borderColor: '{theme.accent}',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: false,
-                    callbacks: {{
-                        title: function(items) {{ return 'Frame ' + data[items[0].dataIndex].index; }},
-                        label: function(ctx) {{ 
-                            const d = data[ctx.dataIndex];
-                            return [
-                                d.testcase,
-                                {json.dumps(draws_label)} + ': ' + d.x.toLocaleString(),
-                                {json.dumps(tris_label)} + ': ' + d.y.toLocaleString()
-                            ];
-                        }}
-                    }}
-                }}
-            }}
-        }}
-    }});
-}})();
-"""
-        elif page_type == 'metrics':
-            # Histogram data with color-coded bars
-            draws_values = [p['draws'] for p in data_points]
-            tris_values = [p['tris'] for p in data_points]
-            
-            draws_hist = self._compute_histogram(draws_values, high_draw, low_draw)
-            tris_hist = self._compute_histogram(tris_values, high_tris, low_tris)
-            
-            charts['draws_histogram'] = f"""
-// Draw Calls Distribution
-(function() {{
-    const ctx = document.getElementById('drawsHistogram').getContext('2d');
-    
-    new Chart(ctx, {{
-        type: 'bar',
-        data: {{
-            labels: {json.dumps(draws_hist['labels'])},
-            datasets: [{{
-                label: {json.dumps(frequency_label)},
-                data: {json.dumps(draws_hist['counts'])},
-                backgroundColor: {json.dumps(draws_hist['colors'])},
-                borderColor: {json.dumps([c.replace('0.7', '1') for c in draws_hist['colors']])},
-                borderWidth: 1,
-                borderRadius: 4
-            }}]
-        }},
-        options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {{
-                x: {{ 
-                    title: {{ display: true, text: {json.dumps(draws_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color_light}' }},
-                    ticks: {{ color: '{theme.text_soft}', maxRotation: 45 }}
-                }},
-                y: {{ 
-                    title: {{ display: true, text: {json.dumps(frequency_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}' }},
-                    beginAtZero: true
-                }}
-            }},
-            plugins: {{
-                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
-                tooltip: {{
-                    backgroundColor: '{tooltip_bg}',
-                    titleColor: '{theme.text_main}',
-                    bodyColor: '{theme.text_soft}',
-                    borderColor: '{theme.accent}',
-                    borderWidth: 1,
-                    padding: 10
-                }}
-            }}
-        }}
-    }});
-}})();
-"""
-            charts['tris_histogram'] = f"""
-// Triangles Distribution
-(function() {{
-    const ctx = document.getElementById('trisHistogram').getContext('2d');
-    
-    new Chart(ctx, {{
-        type: 'bar',
-        data: {{
-            labels: {json.dumps(tris_hist['labels'])},
-            datasets: [{{
-                label: {json.dumps(frequency_label)},
-                data: {json.dumps(tris_hist['counts'])},
-                backgroundColor: {json.dumps(tris_hist['colors'])},
-                borderColor: {json.dumps([c.replace('0.7', '1') for c in tris_hist['colors']])},
-                borderWidth: 1,
-                borderRadius: 4
-            }}]
-        }},
-        options: {{
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {{
-                x: {{ 
-                    title: {{ display: true, text: {json.dumps(tris_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color_light}' }},
-                    ticks: {{ color: '{theme.text_soft}', maxRotation: 45 }}
-                }},
-                y: {{ 
-                    title: {{ display: true, text: {json.dumps(frequency_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
-                    grid: {{ color: '{grid_color}' }},
-                    ticks: {{ color: '{theme.text_soft}' }},
-                    beginAtZero: true
-                }}
-            }},
-            plugins: {{
-                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
-                tooltip: {{
-                    backgroundColor: '{tooltip_bg}',
-                    titleColor: '{theme.text_main}',
-                    bodyColor: '{theme.text_soft}',
-                    borderColor: '{theme.accent_strong}',
-                    borderWidth: 1,
-                    padding: 10
-                }}
-            }}
-        }}
-    }});
-}})();
-"""
-        return charts
-    
-    def _compute_histogram(self, values: List[float], high_threshold: float = None, low_threshold: float = None, num_bins: int = 15) -> Dict[str, Any]:
-        """Compute histogram bins with performance zone colors."""
-        if not values:
-            return {'labels': [], 'counts': [], 'colors': []}
-        
-        # Get theme colors
-        theme = get_theme()
-        
-        # Helper to convert hex to rgba
-        def hex_to_rgba(hex_color: str, alpha: float = 1.0) -> str:
-            hex_color = hex_color.lstrip('#')
-            r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-            return f"rgba({r}, {g}, {b}, {alpha})"
-        
-        danger_rgba = hex_to_rgba(theme.danger, 0.7)
-        ok_rgba = hex_to_rgba(theme.ok, 0.7)
-        warn_rgba = hex_to_rgba(theme.warn, 0.7)
-        accent_rgba = hex_to_rgba(theme.accent, 0.7)
-        
-        min_val, max_val = min(values), max(values)
-        if min_val == max_val:
-            return {'labels': [str(int(min_val))], 'counts': [len(values)], 'colors': [accent_rgba]}
-        
-        bin_width = (max_val - min_val) / num_bins
-        counts = [0] * num_bins
-        
-        for v in values:
-            idx = int((v - min_val) / bin_width)
-            if idx >= num_bins:
-                idx = num_bins - 1
-            counts[idx] += 1
-        
-        labels = []
-        colors = []
-        for i in range(num_bins):
-            bin_center = min_val + (i + 0.5) * bin_width
-            labels.append(f"{int(min_val + i * bin_width)}-{int(min_val + (i+1) * bin_width)}")
-            
-            # Color based on performance zone using theme colors
-            if high_threshold and bin_center >= high_threshold:
-                colors.append(danger_rgba)  # Red - critical
-            elif low_threshold and bin_center < low_threshold:
-                colors.append(ok_rgba)  # Green - good
-            else:
-                colors.append(warn_rgba)  # Yellow - warning
-        
-        return {'labels': labels, 'counts': counts, 'colors': colors}
-
+        return {}

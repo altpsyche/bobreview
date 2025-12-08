@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fully Modular Plugin Architecture
 
-BobReview is now a **minimal framework**. All built-in functionality comes from the `bobreview-core` plugin and can be replaced or extended by other plugins.
+BobReview is now a **minimal framework**. All built-in functionality comes from the `MayhemAutomation` plugin and can be replaced or extended by other plugins.
 
 #### New Core Plugin
 ```

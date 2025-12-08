@@ -164,6 +164,9 @@ class PageConfig:
     nav_order: int
     template: TemplateConfig
     llm_content: List[str] = field(default_factory=list)
+    # Maps template variable names to generator IDs
+    # e.g., {'review_text': 'review_text', 'exec_summary': 'executive_summary'}
+    llm_mappings: Dict[str, str] = field(default_factory=dict)
     data_requirements: DataRequirements = field(default_factory=DataRequirements)
     charts: List[ChartConfig] = field(default_factory=list)
     features: Dict[str, Any] = field(default_factory=dict)
@@ -243,6 +246,7 @@ LabelConfig = Labels
 @dataclass
 class ReportSystemDefinition:
     """Complete report system definition from JSON."""
+    # Required fields (no defaults)
     schema_version: str
     id: str
     name: str
@@ -250,13 +254,16 @@ class ReportSystemDefinition:
     description: str
     author: str
     data_source: DataSourceConfig
-    metrics: MetricConfig
-    thresholds: Dict[str, Any]
     llm_config: LLMConfig
     llm_generators: List[LLMGeneratorConfig]
     pages: List[PageConfig]
-    theme: ThemeConfig
-    output: OutputConfig
+    
+    # Optional fields with defaults
+    # Metrics is optional for non-analytics reports (e.g., game reviews)
+    metrics: Optional[MetricConfig] = None
+    thresholds: Dict[str, Any] = field(default_factory=dict)
+    theme: ThemeConfig = field(default_factory=ThemeConfig)
+    output: OutputConfig = field(default_factory=OutputConfig)
     
     # CMS-style labels - simple dict wrapper, templates use labels.get('key', 'default')
     labels: Labels = field(default_factory=lambda: Labels({}))
@@ -282,10 +289,9 @@ def validate_report_system(data: Dict[str, Any]) -> List[str]:
     """
     errors = []
     
-    # Required top-level fields
+    # Required top-level fields (metrics and thresholds are optional for non-analytics reports)
     required_fields = ['schema_version', 'id', 'name', 'version', 'description', 
-                      'author', 'data_source', 'metrics', 'thresholds', 
-                      'llm_config', 'llm_generators', 'pages', 'theme', 'output']
+                      'author', 'data_source', 'llm_config', 'llm_generators', 'pages']
     
     for field_name in required_fields:
         if field_name not in data:
@@ -310,9 +316,9 @@ def validate_report_system(data: Dict[str, Any]) -> List[str]:
     if 'input_format' not in data_source:
         errors.append("data_source.input_format is required")
     
-    # Validate metrics
+    # Validate metrics (optional - only required for analytics reports)
     metrics = data.get('metrics', {})
-    if 'primary' not in metrics or not isinstance(metrics['primary'], list):
+    if metrics and ('primary' not in metrics or not isinstance(metrics['primary'], list)):
         errors.append("metrics.primary must be a list of primary metric names")
     
     # Validate LLM generators
@@ -594,6 +600,7 @@ def parse_page_config(data: Dict[str, Any]) -> PageConfig:
         nav_order=data['nav_order'],
         template=parse_template_config(data['template']),
         llm_content=data.get('llm_content', []),
+        llm_mappings=data.get('llm_mappings', {}),
         data_requirements=data_requirements,
         charts=charts,
         features=data.get('features', {}),
@@ -673,13 +680,14 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         description=data['description'],
         author=data['author'],
         data_source=parse_data_source_config(data['data_source']),
-        metrics=parse_metric_config(data['metrics']),
-        thresholds=data['thresholds'],
+        # Metrics and thresholds are optional for non-analytics reports
+        metrics=parse_metric_config(data['metrics']) if 'metrics' in data else None,
+        thresholds=data.get('thresholds', {}),
         llm_config=parse_llm_config(data['llm_config']),
         llm_generators=llm_generators,
         pages=pages,
-        theme=parse_theme_config(data['theme']),
-        output=parse_output_config(data['output']),
+        theme=parse_theme_config(data.get('theme', {})),
+        output=parse_output_config(data.get('output', {})),
         labels=parse_label_config(data.get('labels')),
         content_blocks=data.get('content_blocks', {}),
         tags=data.get('tags', []),

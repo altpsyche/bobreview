@@ -1,14 +1,15 @@
 {
-    "name": "bobreview-core",
+    "name": "MayhemAutomation",
     "version": "1.0.0",
     "author": "BobReview Team",
-    "description": "Video Game Review: LLM-powered game reviews from JSON config",
+    "description": "Full-featured automation: LLM generators, themes, services, templates, and report systems.",
     "entry_point": "plugin",
     "dependencies": [],
     "provides": [
         "llm-generators",
         "data-parsers",
         "themes",
+        "services",
         "report-systems",
         "templates"
     ],
@@ -16,30 +17,30 @@
     "config_schema": {
         "type": "object",
         "properties": {
+            "register_default_theme": {
+                "type": "boolean",
+                "default": true,
+                "description": "Register the default dark theme"
+            },
             "register_generators": {
                 "type": "boolean",
                 "default": true,
-                "description": "Register game review LLM generators"
+                "description": "Register built-in LLM generators"
             },
-            "register_parsers": {
+            "register_services": {
                 "type": "boolean",
                 "default": true,
-                "description": "Register JSON config parser"
-            },
-            "register_themes": {
-                "type": "boolean",
-                "default": true,
-                "description": "Register built-in themes"
+                "description": "Register default service implementations"
             },
             "register_report_systems": {
                 "type": "boolean",
                 "default": true,
-                "description": "Register game review report system"
+                "description": "Register built-in report systems"
             },
             "register_templates": {
                 "type": "boolean",
                 "default": true,
-                "description": "Register game review templates"
+                "description": "Register built-in templates"
             }
         }
     }

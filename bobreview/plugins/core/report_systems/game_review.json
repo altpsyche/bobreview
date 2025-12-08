@@ -1,0 +1,148 @@
+{
+    "schema_version": "1.0",
+    "id": "game_review",
+    "name": "Video Game Review",
+    "version": "1.0.0",
+    "description": "Professional video game review report",
+    "author": "BobReview Team",
+    "data_source": {
+        "type": "json_config",
+        "input_format": "json",
+        "config_file": "game.json",
+        "fields": {
+            "title": {
+                "type": "string",
+                "required": true,
+                "description": "Game title"
+            },
+            "developer": {
+                "type": "string",
+                "description": "Game developer"
+            },
+            "publisher": {
+                "type": "string",
+                "description": "Game publisher"
+            },
+            "release_date": {
+                "type": "string",
+                "description": "Release date"
+            },
+            "platforms": {
+                "type": "array",
+                "description": "Available platforms"
+            },
+            "genre": {
+                "type": "string",
+                "description": "Game genre"
+            },
+            "cover_image": {
+                "type": "string",
+                "description": "Path to cover image"
+            },
+            "screenshots": {
+                "type": "array",
+                "description": "Screenshot paths"
+            },
+            "scores": {
+                "type": "object",
+                "properties": {
+                    "gameplay": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10
+                    },
+                    "graphics": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10
+                    },
+                    "story": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10
+                    },
+                    "sound": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10
+                    },
+                    "value": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10
+                    }
+                }
+            },
+            "pros": {
+                "type": "array",
+                "description": "List of pros"
+            },
+            "cons": {
+                "type": "array",
+                "description": "List of cons"
+            },
+            "summary": {
+                "type": "string",
+                "description": "Brief summary"
+            },
+            "verdict": {
+                "type": "string",
+                "description": "Final verdict text"
+            }
+        }
+    },
+    "llm_config": {
+        "enabled": true,
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "temperature": 0.8,
+        "max_tokens": 2000
+    },
+    "llm_generators": [
+        {
+            "id": "review_text",
+            "name": "Game Review Text",
+            "description": "Generate detailed review based on scores and notes",
+            "prompt_template": "Write a professional video game review for {game.title}.",
+            "enabled": true
+        }
+    ],
+    "pages": [
+        {
+            "id": "review",
+            "filename": "review.html",
+            "nav_label": "Game Review",
+            "nav_order": 10,
+            "template": {
+                "type": "jinja2",
+                "name": "pages/review.html.j2"
+            },
+            "llm_mappings": {
+                "review_text": "review_text"
+            },
+            "data_requirements": {
+                "stats": true,
+                "data_points": false,
+                "images": false
+            },
+            "enabled": true
+        }
+    ],
+    "theme": {
+        "id": "dark"
+    },
+    "output": {
+        "embed_images": true
+    },
+    "labels": {
+        "gameplay": "Gameplay",
+        "graphics": "Graphics",
+        "story": "Story",
+        "sound": "Sound & Music",
+        "value": "Value",
+        "overall": "Overall Score",
+        "pros": "The Good",
+        "cons": "The Bad",
+        "verdict": "The Verdict"
+    }
+}
