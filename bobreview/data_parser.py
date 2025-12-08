@@ -27,67 +27,75 @@ class DataPoint:
         }
 
 
-def parse_filename(filename: str) -> Dict[str, Any]:
+def parse_filename(filename: str, pattern: str = "{testcase}_{tris}_{draws}_{timestamp}.png") -> Dict[str, Any]:
     """
-    Parse a PNG filename encoding a test case, triangle count, draw calls, and timestamp.
+    Parse a PNG filename using a configurable pattern.
     
-    The filename must follow the pattern: TestCase_tricount_drawcalls_timestamp.png
-    The test case name can contain underscores; the last 3 underscore-separated parts are numeric fields.
-    Example: Level1_85000_520_1234567890.png or Dark_Forest_Level_85000_520_1234567890.png
+    The filename must match the provided pattern. Field names in curly braces are extracted.
+    Example patterns:
+    - "{testcase}_{tris}_{draws}_{timestamp}.png" (default)
+    - "{level}_{triangles}_{drawcalls}_{ts}.png"
     
     Parameters:
         filename (str): The PNG filename to parse.
+        pattern (str): Pattern string with field names in curly braces.
+                       Default: "{testcase}_{tris}_{draws}_{timestamp}.png"
     
     Returns:
-        dict: A dictionary with keys:
-            - 'testcase' (str): Test case name.
-            - 'tris' (int): Triangle count.
-            - 'draws' (int): Draw call count.
-            - 'ts' (int): Timestamp.
-            - 'img' (str): Original filename.
+        dict: A dictionary with parsed field values plus 'img' key with original filename.
+              Field 'timestamp' is also mapped to 'ts' for compatibility.
     
     Raises:
-        ValueError: If the file is not a PNG, the format is incorrect, numeric fields cannot be parsed,
-                    or any numeric field is negative.
+        ValueError: If the file is not a PNG, the format doesn't match the pattern,
+                    numeric fields cannot be parsed, or validation fails.
     """
-    if not filename.lower().endswith('.png'):
-        raise ValueError(f"File must be a PNG: {filename}")
+    from .report_systems.data_parser_base import FilenamePatternParser
+    from .report_systems.schema import DataSourceConfig, FieldConfig
+    from pathlib import Path
+    import re
     
-    # Remove .png extension (case-insensitive, already validated above)
-    base_name = filename[:-4]  # Remove last 4 chars (.png)
-    parts = base_name.split('_')
-    if len(parts) < 4:
-        raise ValueError(
-            f"Invalid filename format: {filename}\n"
-            f"Expected format: TestCase_tricount_drawcalls_timestamp.png\n"
-            f"Example: Level1_85000_520_1234567890.png or Dark_Forest_85000_520_1234567890.png\n"
-            f"Note: Test case names can contain underscores; last 3 parts must be numeric."
+    # Build field configs from pattern
+    field_names = re.findall(r'\{(\w+)\}', pattern)
+    
+    if not field_names:
+        raise ValueError(f"Pattern must contain at least one field: {pattern}")
+    
+    fields = {}
+    for field_name in field_names:
+        # Determine type based on field name
+        if field_name in ('tris', 'draws', 'timestamp', 'ts', 'triangles', 'drawcalls'):
+            field_type = 'integer'
+        else:
+            field_type = 'string'
+        
+        fields[field_name] = FieldConfig(
+            type=field_type,
+            required=True,
+            min=0 if field_type == 'integer' else None
         )
     
-    try:
-        # Last 3 parts are tricount, drawcalls, timestamp; rest is testcase
-        testcase = '_'.join(parts[:-3])
-        tricount = int(parts[-3])
-        drawcalls = int(parts[-2])
-        timestamp = int(parts[-1])
-    except ValueError as e:
-        raise ValueError(
-            f"Invalid numeric values in filename: {filename}\n"
-            f"Fields: tricount={parts[-3]}, drawcalls={parts[-2]}, timestamp={parts[-1]}\n"
-            f"Triangle count, draw calls, and timestamp must be integers.\n"
-            f"Error: {e}"
-        ) from e
+    # Create config
+    data_source_config = DataSourceConfig(
+        type='filename_pattern',
+        input_format='png',
+        pattern=pattern,
+        fields=fields
+    )
     
-    if tricount < 0 or drawcalls < 0 or timestamp < 0:
+    # Use modular parser
+    parser = FilenamePatternParser(data_source_config)
+    result = parser.parse_file(Path(filename))
+    
+    if result is None:
         raise ValueError(
-            f"Triangle count, draw calls, and timestamp must be non-negative: {filename}"
+            f"Failed to parse filename: {filename}\n"
+            f"Pattern: {pattern}\n"
+            f"Expected format matching the pattern with fields: {', '.join(field_names)}"
         )
     
-    return {
-        'testcase': testcase,
-        'tris': tricount,
-        'draws': drawcalls,
-        'ts': timestamp,
-        'img': filename
-    }
+    # Map 'timestamp' to 'ts' for compatibility with existing code
+    if 'timestamp' in result and 'ts' not in result:
+        result['ts'] = result['timestamp']
+    
+    return result
 

@@ -151,24 +151,11 @@ class ReportPipeline:
         if self.container.has('analytics'):
             analytics = self.container.get('analytics')
             
-            # Build thresholds dict from config
-            thresholds = {
-                'draw_soft_cap': config.thresholds.draw_soft_cap,
-                'draw_hard_cap': config.thresholds.draw_hard_cap,
-                'tri_soft_cap': config.thresholds.tri_soft_cap,
-                'tri_hard_cap': config.thresholds.tri_hard_cap,
-                'high_load_draw_threshold': config.thresholds.high_load_draw_threshold,
-                'high_load_tri_threshold': config.thresholds.high_load_tri_threshold,
-                'low_load_draw_threshold': config.thresholds.low_load_draw_threshold,
-                'low_load_tri_threshold': config.thresholds.low_load_tri_threshold,
-                'outlier_sigma': config.thresholds.outlier_sigma,
-            }
-            
             return analytics.analyze(
                 data_points=data_points,
                 metrics=system_def.metrics.primary,
                 metrics_config=system_def.metrics,
-                thresholds=thresholds
+                report_config=config
             )
         else:
             # Fallback to core analyze function
@@ -192,8 +179,9 @@ class ReportPipeline:
         if self.container.has('llm'):
             llm_service = self.container.get('llm')
             
+            # system_def.thresholds is already a Dict[str, Any] from the schema
             context = {
-                'thresholds': system_def.thresholds.__dict__ if hasattr(system_def.thresholds, '__dict__') else {},
+                'thresholds': system_def.thresholds if isinstance(system_def.thresholds, dict) else {},
                 'location': config.location,
             }
             
