@@ -58,8 +58,7 @@ class ServiceValidator:
             if not loaded_plugins:
                 log_warning(
                     "No plugins loaded. BobReview can run without plugins, but cannot generate reports "
-                    "without the required services. Load a plugin (like MayhemAutomation or game-review) "
-                    "to enable report generation.",
+                    "without the required services. Load a plugin to enable report generation.",
                     config
                 )
                 return False
