@@ -290,7 +290,7 @@ class ReportSystemExecutor:
             
             # If no metrics config, return data as-is (for non-analytical report systems)
             if not metrics_config:
-                # For report systems without metrics (like game-review), return the data as stats
+                # For report systems without metrics, return the data as stats
                 if data_points:
                     return data_points[0] if len(data_points) == 1 else {'data': data_points}
                 return {}

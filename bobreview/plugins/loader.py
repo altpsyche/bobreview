@@ -262,8 +262,8 @@ class PluginLoader:
         try:
             if is_builtin:
                 # Built-in plugins: import from package
-                # e.g., bobreview.plugins.game-review.plugin:GameReviewPlugin
-                # Extract the subdirectory name (core, mayhem, game-review, etc.)
+                # e.g., bobreview.plugins.<plugin-name>.plugin:PluginClass
+                # Extract the subdirectory name
                 plugin_dir_name = manifest.plugin_path.name
                 
                 # Handle hyphens in directory names (Python modules can't have hyphens)

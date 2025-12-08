@@ -232,23 +232,23 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Basic usage with plugin (recommended)
-  bobreview --plugin mayhem --dir ./screenshots
+  # Basic usage with plugin (required)
+  bobreview --plugin <plugin-name> --dir ./screenshots
 
-  # Use Anthropic Claude with MayhemAutomation plugin
-  bobreview --plugin mayhem --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
+  # Use Anthropic Claude
+  bobreview --plugin <plugin-name> --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
 
   # Use local Ollama
-  bobreview --plugin mayhem --dir ./screenshots --llm-provider ollama --llm-model llama2
+  bobreview --plugin <plugin-name> --dir ./screenshots --llm-provider ollama --llm-model llama2
 
   # Custom title
-  bobreview --plugin mayhem --dir ./screenshots --title "My Level Analysis"
+  bobreview --plugin <plugin-name> --dir ./screenshots --title "My Analysis"
 
   # Explicit report system from plugin (required if plugin has multiple systems)
-  bobreview --plugin mayhem --report-system png_data_points --dir ./screenshots
+  bobreview --plugin <plugin-name> --report-system <system-id> --dir ./screenshots
 
   # Dry run to test without calling LLM
-  bobreview --plugin mayhem --dir ./screenshots --dry-run
+  bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
 
   # List available plugins and report systems
   bobreview plugins list
@@ -378,7 +378,7 @@ Examples:
     parser.add_argument(
         '--plugin', type=str, required=False,
         metavar='PLUGIN_NAME',
-        help='Plugin to use (e.g., "mayhem", "MayhemAutomation", "game-review"). Use --list-plugins to see available plugins. Plugin name matching is case-insensitive.'
+        help='Plugin to use. Use --list-plugins to see available plugins. Plugin name matching is case-insensitive.'
     )
     parser.add_argument(
         '--report-system', type=str, default=None,
@@ -627,7 +627,7 @@ Examples:
                     plugin_path = Path(manifest.path) if manifest.path else None
                     matched_manifest = manifest
                     break
-                # Substring match (e.g., "mayhem" matches "MayhemAutomation")
+                # Substring match (e.g., partial plugin name matches full plugin name)
                 elif plugin_name_normalized in manifest_name_normalized or manifest_name_normalized in plugin_name_normalized:
                     plugin_path = Path(manifest.path) if manifest.path else None
                     matched_manifest = manifest
