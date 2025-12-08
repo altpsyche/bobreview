@@ -109,11 +109,11 @@ class TemplateEngine:
         
         Supports:
         - {key} - direct lookup
-        - {config.draw_soft_cap} - nested path lookup
+        - {config.threshold_name} - nested path lookup
         - Multiple placeholders in one string
         
         Example:
-            "Soft cap {draw_soft_cap} · hard cap {draw_hard_cap}" | interpolate(config)
+            "Threshold: {threshold_name} · Value: {value}" | interpolate(context)
         
         Parameters:
             template_str: String with {key} placeholders
@@ -196,13 +196,12 @@ class TemplateEngine:
                 return match.group(0)
             
             # Format numbers nicely
-            # For game dev metrics, most values are counts (draws, tris) so show as integers
             if isinstance(value, float):
                 rounded = round(value)
-                # Always show as integer if it's a "typical count" value
+                # Always show as integer if it's a large value
                 if value >= 1000:
                     return f"{rounded:,}"
-                # For smaller values, show as integer (no decimals for draws/tris)
+                # For smaller values, show as integer (no decimals)
                 return str(rounded)
             if isinstance(value, int) and value >= 1000:
                 return f"{value:,}"

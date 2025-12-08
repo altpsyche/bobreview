@@ -160,9 +160,16 @@ class ReportPipeline:
         else:
             # Fallback to core analyze function
             from ..core import analyze_data
+            # Build metric_config from system_def
+            metric_config = {
+                'timestamp_field': system_def.metrics.timestamp_field,
+                'identifier_field': system_def.metrics.identifier_field,
+                'threshold_mapping': system_def.metrics.threshold_mapping
+            }
             return analyze_data(
                 data_points, config,
-                metrics=system_def.metrics.primary
+                metrics=system_def.metrics.primary,
+                metric_config=metric_config
             )
     
     def _generate_llm_content(

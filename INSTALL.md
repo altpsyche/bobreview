@@ -473,7 +473,7 @@ print("Imports successful")
 
 # Test parsing
 try:
-    data = parse_filename("Level1_85000_520_1234567890.png")
+    data = parse_filename("Level1_85000_520_1234567890.png", pattern="{testcase}_{tris}_{draws}_{timestamp}.png")
     print("Parsing works")
 except Exception as e:
     print(f"Parsing failed: {e}")

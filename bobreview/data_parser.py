@@ -27,19 +27,19 @@ class DataPoint:
         }
 
 
-def parse_filename(filename: str, pattern: str = "{testcase}_{tris}_{draws}_{timestamp}.png") -> Dict[str, Any]:
+def parse_filename(filename: str, pattern: str) -> Dict[str, Any]:
     """
     Parse a PNG filename using a configurable pattern.
     
     The filename must match the provided pattern. Field names in curly braces are extracted.
     Example patterns:
-    - "{testcase}_{tris}_{draws}_{timestamp}.png" (default)
+    - "{testcase}_{tris}_{draws}_{timestamp}.png"
     - "{level}_{triangles}_{drawcalls}_{ts}.png"
     
     Parameters:
         filename (str): The PNG filename to parse.
         pattern (str): Pattern string with field names in curly braces.
-                       Default: "{testcase}_{tris}_{draws}_{timestamp}.png"
+                       Must be provided - no default to avoid plugin-specific assumptions.
     
     Returns:
         dict: A dictionary with parsed field values plus 'img' key with original filename.

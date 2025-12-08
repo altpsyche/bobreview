@@ -31,11 +31,12 @@ def validate_config(config: ReportConfig) -> List[str]:
     """
     Validate a ReportConfig for logical consistency.
     
-    Performs validation of numeric thresholds, size limits, and LLM settings and collects human-readable error messages for each violated constraint.
+    Performs generic validation of numeric thresholds, size limits, and LLM settings.
+    Threshold validation is generic - checks that numeric thresholds are non-negative
+    and that soft_cap <= hard_cap for any threshold pairs found.
     
     Checks performed:
-    - draw_soft_cap <= draw_hard_cap and tri_soft_cap <= tri_hard_cap
-    - draw/tri caps and high/low load thresholds are >= 0
+    - Generic threshold validation (non-negative values, soft_cap <= hard_cap pairs)
     - outlier_sigma > 0
     - mad_threshold > 0
     - llm_chunk_size > 0
@@ -56,43 +57,49 @@ def validate_config(config: ReportConfig) -> List[str]:
     llm = config.llm
     execution = config.execution
     
-    # Check threshold ordering
-    if thresholds.draw_soft_cap > thresholds.draw_hard_cap:
-        errors.append("draw_soft_cap must be <= draw_hard_cap")
+    # Generic threshold validation - check all numeric thresholds
+    threshold_dict = dict(thresholds) if isinstance(thresholds, dict) else {}
     
-    if thresholds.tri_soft_cap > thresholds.tri_hard_cap:
-        errors.append("tri_soft_cap must be <= tri_hard_cap")
+    # Find soft_cap/hard_cap pairs and validate ordering
+    soft_caps = {k: v for k, v in threshold_dict.items() if k.endswith('_soft_cap')}
+    for soft_key, soft_value in soft_caps.items():
+        if not isinstance(soft_value, (int, float)):
+            continue
+        
+        # Find corresponding hard_cap
+        hard_key = soft_key.replace('_soft_cap', '_hard_cap')
+        if hard_key in threshold_dict:
+            hard_value = threshold_dict[hard_key]
+            if isinstance(hard_value, (int, float)):
+                if soft_value > hard_value:
+                    errors.append(f"{soft_key} ({soft_value}) must be <= {hard_key} ({hard_value})")
+        
+        # Check non-negative
+        if soft_value < 0:
+            errors.append(f"{soft_key} must be non-negative")
     
-    # Check non-negative thresholds
-    if thresholds.draw_soft_cap < 0:
-        errors.append("draw_soft_cap must be non-negative")
+    # Validate hard_caps are non-negative
+    hard_caps = {k: v for k, v in threshold_dict.items() if k.endswith('_hard_cap')}
+    for hard_key, hard_value in hard_caps.items():
+        if isinstance(hard_value, (int, float)) and hard_value < 0:
+            errors.append(f"{hard_key} must be non-negative")
     
-    if thresholds.draw_hard_cap < 0:
-        errors.append("draw_hard_cap must be non-negative")
+    # Validate thresholds are non-negative
+    threshold_keys = {k: v for k, v in threshold_dict.items() if k.endswith('_threshold')}
+    for threshold_key, threshold_value in threshold_keys.items():
+        if isinstance(threshold_value, (int, float)) and threshold_value < 0:
+            errors.append(f"{threshold_key} must be non-negative")
     
-    if thresholds.tri_soft_cap < 0:
-        errors.append("tri_soft_cap must be non-negative")
-    
-    if thresholds.tri_hard_cap < 0:
-        errors.append("tri_hard_cap must be non-negative")
-    
-    if thresholds.high_load_draw_threshold < 0:
-        errors.append("high_load_draw_threshold must be non-negative")
-    
-    if thresholds.high_load_tri_threshold < 0:
-        errors.append("high_load_tri_threshold must be non-negative")
-    
-    if thresholds.low_load_draw_threshold < 0:
-        errors.append("low_load_draw_threshold must be non-negative")
-    
-    if thresholds.low_load_tri_threshold < 0:
-        errors.append("low_load_tri_threshold must be non-negative")
-    
-    if thresholds.outlier_sigma <= 0:
+    # Validate generic outlier thresholds (if present)
+    outlier_sigma = threshold_dict.get('outlier_sigma')
+    if outlier_sigma is not None and isinstance(outlier_sigma, (int, float)) and outlier_sigma <= 0:
         errors.append("outlier_sigma must be > 0")
     
-    if thresholds.mad_threshold <= 0:
+    mad_threshold = threshold_dict.get('mad_threshold')
+    if mad_threshold is not None and isinstance(mad_threshold, (int, float)) and mad_threshold <= 0:
         errors.append("mad_threshold must be > 0")
+    
+    # Note: All threshold validation is now generic - no hardcoded field names
     
     if llm.chunk_size <= 0:
         errors.append("llm_chunk_size must be > 0")

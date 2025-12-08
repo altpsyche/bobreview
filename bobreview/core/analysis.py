@@ -270,7 +270,7 @@ def calculate_metric_stats(
     ci = _calculate_confidence_interval(values)
     
     # Outlier detection
-    sigma = config.thresholds.outlier_sigma
+    sigma = config.thresholds.get('outlier_sigma', 2.0)
     outliers_high = []
     outliers_low = []
     if all_data_points and metric_name:
@@ -302,8 +302,8 @@ def calculate_metric_stats(
 def analyze_data(
     data_points: List[Dict[str, Any]],
     config: "ReportConfig",
-    metrics: List[str] = None,
-    metric_config: Dict[str, Any] = None
+    metrics: List[str],
+    metric_config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Calculate statistics and identify hotspots from data.
@@ -313,47 +313,37 @@ def analyze_data(
     Parameters:
         data_points: List of parsed data points
         config: ReportConfig object with thresholds and parameters
-        metrics: List of metric field names to analyze (default: ['draws', 'tris'])
-        metric_config: Optional MetricConfig-like dict with:
-            - timestamp_field: Field name for timestamps (default: 'ts')
-            - identifier_field: Field name for item identifier (default: 'testcase')
+        metrics: List of metric field names to analyze (required)
+        metric_config: MetricConfig-like dict with:
+            - timestamp_field: Field name for timestamps
+            - identifier_field: Field name for item identifier
             - threshold_mapping: Maps metrics to threshold config keys
     
     Returns:
         dict: Dictionary containing statistical analysis results for each metric,
               plus high_load, low_load, critical, frame_times, trends, etc.
+    
+    Raises:
+        ValueError: If metrics or metric_config are not provided
     """
     if not data_points:
         raise ValueError("analyze_data requires at least one data point")
     
-    # Defaults for backward compatibility
-    if metrics is None:
-        metrics = ['draws', 'tris']
+    if not metrics:
+        raise ValueError("metrics parameter is required - cannot assume specific metric names")
     
-    if metric_config is None:
-        metric_config = {
-            'timestamp_field': 'ts',
-            'identifier_field': 'testcase',
-            'threshold_mapping': {
-                'draws': {
-                    'high': 'high_load_draw_threshold',
-                    'low': 'low_load_draw_threshold',
-                    'soft_cap': 'draw_soft_cap',
-                    'hard_cap': 'draw_hard_cap'
-                },
-                'tris': {
-                    'high': 'high_load_tri_threshold',
-                    'low': 'low_load_tri_threshold',
-                    'soft_cap': 'tri_soft_cap',
-                    'hard_cap': 'tri_hard_cap'
-                }
-            }
-        }
+    if not metric_config:
+        raise ValueError("metric_config parameter is required - cannot assume specific field names or threshold mappings")
     
     n = len(data_points)
-    timestamp_field = metric_config.get('timestamp_field', 'ts')
-    identifier_field = metric_config.get('identifier_field', 'testcase')
+    timestamp_field = metric_config.get('timestamp_field')
+    identifier_field = metric_config.get('identifier_field')
     threshold_mapping = metric_config.get('threshold_mapping', {})
+    
+    if not timestamp_field:
+        raise ValueError("metric_config must specify 'timestamp_field'")
+    if not identifier_field:
+        raise ValueError("metric_config must specify 'identifier_field'")
     indices = list(range(n))
     
     result = {'count': n}
@@ -394,7 +384,8 @@ def analyze_data(
         if 'outliers_mad' not in result:
             result['outliers_mad'] = {}
         result['outliers_iqr'][metric] = _detect_outliers_iqr(values, indices)
-        result['outliers_mad'][metric] = _detect_outliers_mad(values, indices, config.thresholds.mad_threshold)
+        mad_threshold = config.thresholds.get('mad_threshold', 3.5)
+        result['outliers_mad'][metric] = _detect_outliers_mad(values, indices, mad_threshold)
     
     # Frame time analysis using timestamp field
     timestamps = [p.get(timestamp_field, 0) for p in data_points]
@@ -414,9 +405,9 @@ def analyze_data(
                 high_key = threshold_mapping[metric].get('high')
                 low_key = threshold_mapping[metric].get('low')
                 
-                # Access thresholds from config.thresholds (nested structure)
-                high_threshold = getattr(config.thresholds, high_key, None) if high_key else None
-                low_threshold = getattr(config.thresholds, low_key, None) if low_key else None
+                # Access thresholds from config.thresholds dict
+                high_threshold = config.thresholds.get(high_key) if high_key else None
+                low_threshold = config.thresholds.get(low_key) if low_key else None
                 
                 val = p.get(metric, 0)
                 if high_threshold is not None and val >= high_threshold:
@@ -476,19 +467,22 @@ def analyze_data(
 
 
 def format_data_table(
-    data_points: List[Dict[str, Any]], max_rows: int | None = None
+    data_points: List[Dict[str, Any]], 
+    max_rows: int | None = None,
+    fields: List[str] = None,
+    field_labels: Dict[str, str] = None
 ) -> str:
     """
     Render a list of data points as a markdown table suitable for embedding in prompts.
     
-    Each data point is expected to be a mapping containing the keys: `testcase`, `draws`, `tris`, and `ts`. When `max_rows` is provided, the output is truncated to at most that many rows and a note is appended when truncation occurs.
-    
     Parameters:
-        data_points (List[Dict[str, Any]]): Sequence of data point dictionaries with keys `testcase`, `draws`, `tris`, and `ts`.
-        max_rows (int, optional): Maximum number of rows to include; when omitted, all rows are included.
+        data_points: Sequence of data point dictionaries
+        max_rows: Maximum number of rows to include; when omitted, all rows are included
+        fields: List of field names to include as columns (default: all fields from first data point)
+        field_labels: Dict mapping field names to display labels (default: field names as-is)
     
     Returns:
-        str: A markdown-formatted table with columns "Index", "Test Case", "Draw Calls", "Triangles", and "Timestamp", or the string "No data available." if `data_points` is empty.
+        str: A markdown-formatted table or "No data available." if `data_points` is empty.
     """
     from .utils import format_number
     
@@ -500,13 +494,40 @@ def format_data_table(
     if not display_points:
         return "No data available."
     
+    # Determine fields to display
+    if fields is None:
+        # Use all fields from first data point (excluding internal fields)
+        first_point = display_points[0]
+        fields = [k for k in first_point.keys() if not k.startswith('_')]
+    
+    if not fields:
+        return "No data available."
+    
+    # Get labels (default to field names)
+    if field_labels is None:
+        field_labels = {}
+    labels = {field: field_labels.get(field, field.replace('_', ' ').title()) for field in fields}
+    
     # Create table header
-    table = "| Index | Test Case | Draw Calls | Triangles | Timestamp |\n"
-    table += "|-------|-----------|------------|-----------|----------|\n"
+    header_row = "| Index | " + " | ".join(labels.values()) + " |\n"
+    separator_row = "|" + "|".join(["-------"] * (len(fields) + 1)) + "|\n"
+    table = header_row + separator_row
     
     # Add rows
     for idx, point in enumerate(display_points):
-        table += f"| {idx} | {point['testcase']} | {point['draws']} | {format_number(point['tris'])} | {point['ts']} |\n"
+        row_values = [str(idx)]
+        for field in fields:
+            value = point.get(field, '')
+            # Format numbers nicely
+            if isinstance(value, (int, float)):
+                if isinstance(value, float) and value >= 1000:
+                    value = format_number(int(value), 0)
+                elif isinstance(value, int) and value >= 1000:
+                    value = format_number(value, 0)
+                else:
+                    value = str(value)
+            row_values.append(str(value))
+        table += "| " + " | ".join(row_values) + " |\n"
     
     if max_rows is not None and total_samples > max_rows:
         table += f"\n(Showing first {max_rows} of {total_samples} total samples)"

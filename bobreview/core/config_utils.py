@@ -11,16 +11,22 @@ def merge_config(target: Any, source: Dict[str, Any], prefix: str = "") -> None:
     """
     Merge source configuration dictionary into target object.
     
-    Sets attributes on target if they exist. Ignores attributes that don't exist.
+    For dict-like objects (including ThresholdConfig), merges all keys.
+    For other objects, only sets existing attributes.
     
     Parameters:
-        target: Target object to merge into (must support setattr)
+        target: Target object to merge into (dict-like or object with attributes)
         source: Dictionary of configuration values to merge
         prefix: Optional prefix for logging/debugging
     """
-    for key, value in source.items():
-        if hasattr(target, key):
-            setattr(target, key, value)
+    # Check if target is dict-like
+    if isinstance(target, dict):
+        target.update(source)
+    else:
+        # For objects, only set existing attributes
+        for key, value in source.items():
+            if hasattr(target, key):
+                setattr(target, key, value)
 
 
 def merge_nested_config(target: Any, source: Dict[str, Any]) -> None:

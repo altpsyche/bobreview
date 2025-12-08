@@ -10,23 +10,24 @@ from pathlib import Path
 from typing import Optional, List
 
 
-@dataclass
-class ThresholdConfig:
+class ThresholdConfig(dict):
     """
-    Configuration for performance thresholds.
+    Generic configuration for performance thresholds.
+    
+    A dictionary that stores threshold key-value pairs.
+    No hardcoded field names - completely generic and plugin-agnostic.
     
     Single Responsibility: Threshold values only.
     """
-    draw_soft_cap: int = 550
-    draw_hard_cap: int = 600
-    tri_soft_cap: int = 100000
-    tri_hard_cap: int = 120000
-    high_load_draw_threshold: int = 600
-    high_load_tri_threshold: int = 100000
-    low_load_draw_threshold: int = 400
-    low_load_tri_threshold: int = 50000
-    outlier_sigma: float = 2.0
-    mad_threshold: float = 3.5  # MAD threshold for outlier detection
+    
+    def __init__(self, **kwargs):
+        """
+        Initialize thresholds from keyword arguments or empty dict.
+        
+        Parameters:
+            **kwargs: Threshold key-value pairs (e.g., outlier_sigma=2.0, mad_threshold=3.5)
+        """
+        super().__init__(kwargs if kwargs else {})
 
 
 @dataclass
