@@ -108,6 +108,7 @@
     "outlier_sigma": 2.0,
     "mad_threshold": 3.5
   },
+  "location": "Commercial District",
   "labels": {
     "_comment": "Labels are optional - templates have inline defaults. Only define overrides here.",
     "draw_calls": "Draw Calls",
@@ -127,7 +128,7 @@
       "id": "executive_summary",
       "name": "Executive Summary",
       "description": "High-level performance overview and key findings",
-      "prompt_template": "You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:\n\nLocation: {context.location}\nTotal samples: {stats.count}\n\nDraw Calls:\n- Mean: {stats.draws.mean}, Median: {stats.draws.median}\n- P90: {stats.draws.p90}, P95: {stats.draws.p95}, P99: {stats.draws.p99}\n- CV (variability): {stats.draws.cv}%\n- Trend: {stats.trends.draws.direction}\n\nTriangles:\n- Mean: {stats.tris.mean}, Median: {stats.tris.median}\n- P90: {stats.tris.p90}, P95: {stats.tris.p95}, P99: {stats.tris.p99}\n- CV (variability): {stats.tris.cv}%\n- Trend: {stats.trends.tris.direction}\n\nAnalyze the provided data table to understand performance patterns.\n\nWrite a professional executive summary covering:\n{categories}\n\nUse HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics.",
+      "prompt_template": "You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs) based on this data:\n\nTotal samples: {stats.count}\n\nDraw Calls:\n- Mean: {stats.draws.mean}, Median: {stats.draws.median}\n- P90: {stats.draws.p90}, P95: {stats.draws.p95}, P99: {stats.draws.p99}\n- CV (variability): {stats.draws.cv}%\n- Trend: {stats.trends.draws.direction}\n\nTriangles:\n- Mean: {stats.tris.mean}, Median: {stats.tris.median}\n- P90: {stats.tris.p90}, P95: {stats.tris.p95}, P99: {stats.tris.p99}\n- CV (variability): {stats.tris.cv}%\n- Trend: {stats.trends.tris.direction}\n\nAnalyze the provided data table to understand performance patterns.\n\nWrite a professional executive summary covering:\n{categories}\n\nUse HTML paragraph tags (<p>) for formatting. Be concise, data-driven, and reference the enhanced statistics.",
       "categories": [
         {
           "id": "health",

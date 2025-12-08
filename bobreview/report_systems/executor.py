@@ -111,9 +111,9 @@ class ReportSystemExecutor:
             bool: True if all services are available, False otherwise
         """
         required_services = {
-            'data': 'DataService (required by a plugin like MayhemAutomation or game-review)',
-            'analytics': 'AnalyticsService (required by a plugin like MayhemAutomation or game-review)',
-            'charts': 'ChartService (required by a plugin like MayhemAutomation or game-review)',
+            'data': 'DataService (required for data parsing)',
+            'analytics': 'AnalyticsService (required for statistical analysis)',
+            'charts': 'ChartService (required for chart generation)',
         }
         
         # Check if plugins are loaded
@@ -156,7 +156,7 @@ class ReportSystemExecutor:
             log_warning(
                 "Cannot generate report: required services are not available. "
                 "BobReview works without plugins, but cannot generate reports without them. "
-                "Load a plugin (like MayhemAutomation or game-review) to enable report generation.",
+                "Load a plugin to enable report generation.",
                 self.config
             )
             return False
@@ -188,6 +188,18 @@ class ReportSystemExecutor:
             # 2. Calculate statistics (using AnalyticsService)
             stats = self.analyze_data(data_points)
             log_info("Statistical analysis complete", self.config)
+            
+            # Extract title from parsed data if not already set
+            # Check if stats contains a title field
+            if self.config.title is None and isinstance(stats, dict):
+                if 'title' in stats:
+                    self.config.title = stats['title']
+                    log_verbose(f"Extracted title from parsed data: {self.config.title}", self.config)
+            
+            # Set default title if still None
+            if self.config.title is None:
+                self.config.title = "Report"
+                log_verbose("Using default title: Report", self.config)
             
             # 3. Generate LLM content
             llm_results = self.generate_llm_content(data_points, stats)
@@ -243,6 +255,14 @@ class ReportSystemExecutor:
             sample_size=self.config.execution.sample_size,
             sort_by=sort_by
         )
+    
+    def _build_meta_text(self, stats: Dict[str, Any], data_points: List[Dict[str, Any]]) -> str:
+        """
+        Build meta text for report header.
+        """
+        count = stats.get('count', len(data_points))
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+        return f"{count} items · Generated {timestamp}"
     
     def analyze_data(self, data_points: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -308,10 +328,13 @@ class ReportSystemExecutor:
         
         # Build context for generators
         context = {
-            'location': self.config.location,
             'title': self.config.title
         }
         context.update(self.system_def.thresholds)
+        
+        # Add location from system_def if present (optional metadata)
+        if hasattr(self.system_def, 'location') and self.system_def.location:
+            context['location'] = self.system_def.location
         
         log_info(f"Generating LLM content for {len([g for g in self.system_def.llm_generators if g.enabled])} sections...", self.config)
         
@@ -432,10 +455,10 @@ class ReportSystemExecutor:
                 'images_dir_rel': images_dir_rel,  # Relative path to images if not embedding
                 
                 # Meta
-                'meta_text': f"{stats.get('count', len(data_points))} items · {self.config.location} · Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                'meta_text': self._build_meta_text(stats, data_points),
             }
             
-            # Add plugin-provided context (images, critical points, game aliases, etc.)
+            # Add context from registered context builder (images, critical points, aliases, etc.)
             context_builder_cls = self.registry.context_builders.get(self.system_def.id)
             if context_builder_cls:
                 builder = context_builder_cls()
@@ -535,13 +558,4 @@ class ReportSystemExecutor:
             # Write HTML file
             with open(page_path, 'w', encoding='utf-8') as f:
                 f.write(html)
-    
-    def _generate_charts(self, data_points: List[Dict[str, Any]], page_type: str, labels: LabelConfig) -> Dict[str, str]:
-        """
-        DEPRECATED: Chart generation is now handled by plugin-provided chart generators.
-        
-        This method is kept for backward compatibility but should not be used.
-        Instead, register a chart generator with the plugin registry using:
-            registry.register_chart_generator(report_system_id, generator_class)
-        """
-        return {}
+

@@ -98,9 +98,10 @@ class ReportConfig:
     Main configuration for report generation.
     
     Composes focused config classes, following the Interface Segregation Principle.
+    
+    title: Report title. Can be extracted from parsed data (e.g., game.json) if not provided.
     """
-    title: str = "Performance Analysis Report"
-    location: str = "Unknown Location"
+    title: Optional[str] = None  # Can be extracted from parsed data if not provided
     
     # Focused config classes
     thresholds: ThresholdConfig = None

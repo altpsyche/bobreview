@@ -125,6 +125,21 @@ class PerformanceContextBuilder(ContextBuilderInterface):
         else:
             context['metric_labels'] = {}
         
+        # Get location from system_def (JSON config) or extract from data (MayhemAutomation-specific)
+        # Priority: 1) JSON config, 2) Extract from testcase field
+        location = None
+        if system_def and hasattr(system_def, 'location') and system_def.location:
+            location = system_def.location
+        
+        # Fall back to extracting from testcase field if not in JSON
+        if not location and data_points and 'testcase' in data_points[0]:
+            testcases = [dp.get('testcase', '') for dp in data_points if dp.get('testcase')]
+            if testcases:
+                location = testcases[0]
+        
+        if location:
+            context['location'] = location
+        
         # Merge with base_context and return
         return {
             **base_context,

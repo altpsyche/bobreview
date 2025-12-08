@@ -190,7 +190,6 @@ class ReportPipeline:
             # system_def.thresholds is already a Dict[str, Any] from the schema
             context = {
                 'thresholds': system_def.thresholds if isinstance(system_def.thresholds, dict) else {},
-                'location': config.location,
             }
             
             return llm_service.generate_all(

@@ -13,7 +13,7 @@ def generate_system_recommendations(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
     config: "ReportConfig",
-    _images_dir_rel: str,
+    context: Dict[str, Any],
 ) -> Dict[str, str]:
     """Generate system-level recommendations using LLM."""
     results = {}
@@ -39,10 +39,23 @@ def generate_system_recommendations(
             sample_data.append(data_points[idx])
             seen_indices.add(idx)
     
+    # Get location from context (from JSON config) or extract from data (MayhemAutomation-specific)
+    # Priority: 1) JSON config, 2) Extract from testcase field
+    location = None
+    if isinstance(context, dict):
+        location = context.get('location')
+    
+    # Fall back to extracting from testcase field if not in JSON
+    if not location and data_points and 'testcase' in data_points[0]:
+        testcases = [dp.get('testcase', '') for dp in data_points if dp.get('testcase')]
+        if testcases:
+            location = testcases[0]  # Use first testcase as location indicator
+    
+    location_line = f"Location: {location}\n" if location else ""
+    
     prompt = f"""Generate system-level performance recommendations:
 
-Location: {config.location}
-Samples: {stats['count']}
+{location_line}Samples: {stats['count']}
 
 Performance:
 - Draw Calls: Mean {format_number(stats['draws']['mean'], 0)}, P95 {format_number(stats['draws']['p95'], 0)}

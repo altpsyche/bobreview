@@ -13,7 +13,7 @@ def generate_executive_summary(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
     config: "ReportConfig",
-    _images_dir_rel: str,
+    context: Dict[str, Any],
 ) -> str:
     """Generate executive summary using LLM."""
     critical_idx, critical_point = stats['critical']
@@ -47,10 +47,23 @@ def generate_executive_summary(
         if critical_valid else "Data not available"
     )
     
+    # Get location from context (from JSON config) or extract from data (MayhemAutomation-specific)
+    # Priority: 1) JSON config, 2) Extract from testcase field
+    location = None
+    if isinstance(context, dict):
+        location = context.get('location')
+    
+    # Fall back to extracting from testcase field if not in JSON
+    if not location and data_points and 'testcase' in data_points[0]:
+        testcases = [dp.get('testcase', '') for dp in data_points if dp.get('testcase')]
+        if testcases:
+            location = testcases[0]  # Use first testcase as location indicator
+    
+    location_line = f"Location: {location}\n" if location else ""
+    
     prompt = f"""You are analyzing a performance report for a game level/scene. Generate a concise executive summary (2-3 paragraphs):
 
-Location: {config.location}
-Total samples: {stats['count']}
+{location_line}Total samples: {stats['count']}
 
 Draw Calls:
 - Mean: {format_number(stats['draws']['mean'], 0)}, Median: {format_number(stats['draws']['median'], 0)}

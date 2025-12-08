@@ -275,6 +275,7 @@ class ReportSystemDefinition:
     tags: List[str] = field(default_factory=list)
     documentation_url: Optional[str] = None
     examples: List[str] = field(default_factory=list)
+    location: Optional[str] = None  # Optional location/level name metadata
 
 
 def validate_report_system(data: Dict[str, Any]) -> List[str]:
@@ -692,5 +693,6 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         content_blocks=data.get('content_blocks', {}),
         tags=data.get('tags', []),
         documentation_url=data.get('documentation_url'),
-        examples=data.get('examples', [])
+        examples=data.get('examples', []),
+        location=data.get('location')  # Optional location field
     )

@@ -32,12 +32,10 @@ class ExecutiveSummaryGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate executive summary."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_executive_summary(data_points, stats, config, images_dir)
+        # Ensure context is a dict
+        if not isinstance(context, dict):
+            context = {'images_dir_rel': str(context) if context else ''}
+        return generate_executive_summary(data_points, stats, config, context)
 
 
 class MetricDeepDiveGenerator(LLMGeneratorInterface):
@@ -106,14 +104,12 @@ class SystemRecommendationsGenerator(LLMGeneratorInterface):
         stats: Dict[str, Any],
         config: "ReportConfig",
         context: Dict[str, Any]
-    ) -> str:
+    ) -> Dict[str, str]:
         """Generate system recommendations."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_system_recommendations(data_points, stats, config, images_dir)
+        # Ensure context is a dict
+        if not isinstance(context, dict):
+            context = {'images_dir_rel': str(context) if context else ''}
+        return generate_system_recommendations(data_points, stats, config, context)
 
 
 class VisualAnalysisGenerator(LLMGeneratorInterface):

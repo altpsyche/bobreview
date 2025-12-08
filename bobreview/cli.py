@@ -241,8 +241,8 @@ Examples:
   # Use local Ollama
   bobreview --plugin mayhem --dir ./screenshots --llm-provider ollama --llm-model llama2
 
-  # Custom title and location
-  bobreview --plugin mayhem --dir ./screenshots --title "My Level Analysis" --location "City District"
+  # Custom title
+  bobreview --plugin mayhem --dir ./screenshots --title "My Level Analysis"
 
   # Explicit report system from plugin (required if plugin has multiple systems)
   bobreview --plugin mayhem --report-system png_data_points --dir ./screenshots
@@ -272,11 +272,7 @@ Examples:
     )
     parser.add_argument(
         '--title', type=str, default=None,
-        help='Report title (default: "Performance Analysis Report")'
-    )
-    parser.add_argument(
-        '--location', type=str, default=None,
-        help='Location/level name (default: "Unknown Location")'
+        help='Report title (can also be extracted from parsed data, e.g., game.json)'
     )
     
     parser.add_argument(
@@ -534,9 +530,9 @@ Examples:
     
     # Build configuration
     # Note: Thresholds are defined in report system JSON files, not via CLI
+    # Title can come from parsed data (e.g., game.json), so default to None if not provided
     config = ReportConfig(
-        title=args.title or "Performance Analysis Report",
-        location=args.location or "Unknown Location",
+        title=args.title,  # None if not provided - will be extracted from parsed data if available
         # Use default ThresholdConfig - thresholds come from report system JSON
         llm=LLMConfig(
             provider=args.llm_provider,
