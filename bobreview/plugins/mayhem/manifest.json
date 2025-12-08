@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "author": "BobReview Team",
     "description": "Full-featured automation: LLM generators, themes, services, templates, and report systems.",
-    "entry_point": "plugin",
+    "entry_point": "plugin:MayhemAutomationPlugin",
     "dependencies": [],
     "provides": [
         "llm-generators",

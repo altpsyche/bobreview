@@ -42,6 +42,12 @@ def _get_default_plugin_dirs():
     """Get default plugin directories."""
     dirs = []
     
+    # Built-in plugins directory (highest priority)
+    from . import plugins
+    builtin_dir = Path(plugins.__file__).parent
+    if builtin_dir.exists():
+        dirs.append(builtin_dir)
+    
     # User plugin directory: ~/.bobreview/plugins
     user_dir = Path.home() / ".bobreview" / "plugins"
     if user_dir.exists():
@@ -59,11 +65,9 @@ def _load_plugins(extra_dirs, config):
     """
     Load plugins from default and extra directories.
     
-    The core plugin is always loaded first to provide built-in functionality.
+    All plugins (built-in and external) are discovered and loaded through
+    the unified plugin discovery mechanism.
     """
-    # Load the core plugin first - it provides all default functionality
-    _load_core_plugin(config)
-    
     dirs = _get_default_plugin_dirs()
     
     # Add extra directories from CLI
@@ -73,28 +77,30 @@ def _load_plugins(extra_dirs, config):
             dirs.append(path)
     
     if not dirs:
-        log_verbose("No additional plugin directories configured", config)
+        log_verbose("No plugin directories configured", config)
         return
     
     loader = init_loader(dirs)
     discovered = loader.discover()
     
     if discovered:
-        log_verbose(f"Discovered {len(discovered)} external plugins", config)
-        plugins = loader.load_all_enabled()
-        if plugins:
-            log_info(f"Loaded {len(plugins)} external plugins", config)
+        log_verbose(f"Discovered {len(discovered)} plugins", config)
+        
+        # Load all discovered plugins (built-in and external)
+        # Built-in plugins should load first due to directory order
+        loaded_plugins = loader.load_all_enabled()
+        
+        if loaded_plugins:
+            builtin_count = sum(1 for p in loaded_plugins if 'bobreview/plugins' in str(p.get_info().path or ''))
+            external_count = len(loaded_plugins) - builtin_count
+            if builtin_count > 0:
+                log_info(f"Loaded {builtin_count} built-in plugin(s)", config)
+            if external_count > 0:
+                log_info(f"Loaded {external_count} external plugin(s)", config)
 
 
-def _load_core_plugin(config):
-    """Load the built-in core plugin that provides default functionality."""
-    from .plugins import get_registry
-    from .plugins.core import CorePlugin
-    
-    registry = get_registry()
-    core = CorePlugin()
-    core.on_load(registry)
-    log_verbose("Loaded core plugin (generators, parsers, themes, services)", config)
+# Removed _load_core_plugin() - built-in plugins are now discovered and loaded
+# through the unified plugin discovery mechanism in _load_plugins()
 
 
 def handle_plugin_command(args):
@@ -578,8 +584,14 @@ Examples:
     log_verbose(f"LLM Provider: {config.llm_provider} (model: {config.llm_model})", config)
     
     # Load plugins (unless disabled)
+    # IMPORTANT: Plugins must be loaded BEFORE template engine is first accessed
+    # to ensure plugin templates are available
     if not args.no_plugins:
         _load_plugins(args.plugin_dirs, config)
+        
+        # Refresh template engine to pick up plugin templates
+        from .core.template_engine import reset_template_engine
+        reset_template_engine()
     
     # Use the JSON-based report system framework
     try:

@@ -255,6 +255,8 @@ def load_report_system(
     3. Built-in directory (bobreview/report_systems/builtin/)
     4. Direct file path
     
+    Automatically loads required plugins if the report system is provided by a plugin.
+    
     Parameters:
         id_or_path: Report system ID or path to JSON file
         cli_overrides: Optional CLI argument overrides
@@ -281,15 +283,33 @@ def load_report_system(
     
     system_data = None
     source_description = None
+    plugin_name = None
     
     # First, check plugin registry for the system
     try:
-        from ..plugins import get_registry
+        from ..plugins import get_registry, get_loader
         registry = get_registry()
         plugin_system = registry.get_report_system(id_or_path)
         if plugin_system is not None:
             system_data = copy.deepcopy(plugin_system)
             source_description = f"plugin:{id_or_path}"
+            
+            # Find which plugin provides this report system
+            component_key = f"report_system:{id_or_path}"
+            plugin_name = registry.get_component_owner(component_key)
+            
+            # Auto-load the plugin if not already loaded
+            if plugin_name:
+                loader = get_loader()
+                if not loader.is_loaded(plugin_name):
+                    _logger = logging.getLogger(__name__)
+                    _logger.info(f"Auto-loading required plugin: {plugin_name}")
+                    try:
+                        loader.load(plugin_name)
+                    except Exception as e:
+                        _logger.warning(
+                            f"Failed to auto-load plugin '{plugin_name}' for report system '{id_or_path}': {e}"
+                        )
     except ImportError:
         pass
     

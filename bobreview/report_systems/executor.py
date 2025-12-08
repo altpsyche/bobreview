@@ -92,19 +92,37 @@ class ReportSystemExecutor:
         """
         Ensure required services are available.
         
-        Most services are registered by the core plugin.
+        Validates that all required services are registered, with clear error messages
+        indicating which plugins should be loaded.
+        
+        Most services are registered by plugins (MayhemAutomation or core).
         LLMService is registered here because it needs runtime config.
         """
-        # Verify core services are available (registered by core plugin)
-        required = ['data', 'analytics', 'charts']
-        for service_name in required:
-            if not self.container.has(service_name):
-                raise RuntimeError(
-                    f"Required service '{service_name}' not found. "
-                    f"Ensure the core plugin is loaded."
-                )
+        # Verify core services are available (registered by plugins)
+        required_services = {
+            'data': 'DataService (required by MayhemAutomation or core plugin)',
+            'analytics': 'AnalyticsService (required by MayhemAutomation or core plugin)',
+            'charts': 'ChartService (required by MayhemAutomation or core plugin)',
+        }
         
-        # LLM service needs runtime config, so we register it here
+        missing_services = []
+        for service_name, description in required_services.items():
+            if not self.container.has(service_name):
+                missing_services.append(f"  - {service_name}: {description}")
+        
+        if missing_services:
+            from ..plugins import get_loader
+            loader = get_loader()
+            loaded_plugins = [p.name for p in loader.get_loaded_plugins() if p.loaded]
+            
+            error_msg = (
+                f"Required services not found. Missing:\n" + "\n".join(missing_services) +
+                f"\n\nLoaded plugins: {', '.join(loaded_plugins) if loaded_plugins else 'none'}" +
+                f"\n\nEnsure the MayhemAutomation or core plugin is loaded."
+            )
+            raise RuntimeError(error_msg)
+        
+        # LLM service needs runtime config, so we register it here if not already registered
         if not self.container.has('llm'):
             llm_config = {
                 'provider': self.config.llm_provider,
@@ -131,26 +149,80 @@ class ReportSystemExecutor:
         log_info(f"Executing report system: {self.system_def.name}", self.config)
         log_verbose(f"System ID: {self.system_def.id} v{self.system_def.version}", self.config)
         
-        # 1. Parse data (using DataService)
-        data_points = self.parse_data(input_dir)
-        if not data_points:
-            log_warning("No data points found", self.config)
-            return False
+        # Build report context for lifecycle hooks
+        report_context = {
+            'system_id': self.system_def.id,
+            'system_name': self.system_def.name,
+            'input_dir': str(input_dir),
+            'output_path': str(output_path),
+            'config': self.config,
+        }
         
-        log_info(f"Parsed {len(data_points)} data points", self.config)
+        # Call plugin lifecycle hooks: on_report_start
+        from ..plugins import get_loader
+        loader = get_loader()
+        for plugin_name in loader._loaded.keys():
+            plugin_instance = loader.get_loaded_plugin(plugin_name)
+            if plugin_instance:
+                try:
+                    plugin_instance.on_report_start(report_context)
+                except Exception as e:
+                    log_warning(f"Plugin '{plugin_name}' on_report_start failed: {e}", self.config)
         
-        # 2. Calculate statistics (using AnalyticsService)
-        stats = self.analyze_data(data_points)
-        log_info("Statistical analysis complete", self.config)
-        
-        # 3. Generate LLM content
-        llm_results = self.generate_llm_content(data_points, stats)
-        log_info("LLM content generation complete", self.config)
-        
-        # 4. Generate pages
-        self.generate_pages(data_points, stats, llm_results, input_dir, output_path)
-        log_info(f"Report generated: {output_path}", self.config)
-        return True
+        try:
+            # 1. Parse data (using DataService)
+            data_points = self.parse_data(input_dir)
+            if not data_points:
+                log_warning("No data points found", self.config)
+                return False
+            
+            log_info(f"Parsed {len(data_points)} data points", self.config)
+            
+            # 2. Calculate statistics (using AnalyticsService)
+            stats = self.analyze_data(data_points)
+            log_info("Statistical analysis complete", self.config)
+            
+            # 3. Generate LLM content
+            llm_results = self.generate_llm_content(data_points, stats)
+            log_info("LLM content generation complete", self.config)
+            
+            # 4. Generate pages
+            self.generate_pages(data_points, stats, llm_results, input_dir, output_path)
+            log_info(f"Report generated: {output_path}", self.config)
+            
+            # Build report result for lifecycle hooks
+            report_result = {
+                'success': True,
+                'output_path': str(output_path),
+                'data_points_count': len(data_points),
+                'stats': stats,
+            }
+            
+            # Call plugin lifecycle hooks: on_report_complete
+            for plugin_name in loader._loaded.keys():
+                plugin_instance = loader.get_loaded_plugin(plugin_name)
+                if plugin_instance:
+                    try:
+                        plugin_instance.on_report_complete(report_result)
+                    except Exception as e:
+                        log_warning(f"Plugin '{plugin_name}' on_report_complete failed: {e}", self.config)
+            
+            return True
+            
+        except Exception as e:
+            # Report failure to plugins
+            report_result = {
+                'success': False,
+                'error': str(e),
+            }
+            for plugin_name in loader._loaded.keys():
+                plugin_instance = loader.get_loaded_plugin(plugin_name)
+                if plugin_instance:
+                    try:
+                        plugin_instance.on_report_complete(report_result)
+                    except Exception:
+                        pass  # Ignore errors in error handling
+            raise
     
     def parse_data(self, input_dir: Path) -> List[Dict[str, Any]]:
         """
@@ -277,8 +349,8 @@ class ReportSystemExecutor:
         # Calculate relative images directory
         images_dir_rel = os.path.relpath(input_dir, output_dir)
         
-        # Get template engine
-        engine = get_template_engine()
+            # Get template engine (refresh to pick up any new plugin templates)
+            engine = get_template_engine(force_refresh=False)
         
         # Get labels from system definition
         labels = self.system_def.labels

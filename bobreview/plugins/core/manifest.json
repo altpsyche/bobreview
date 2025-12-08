@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "author": "BobReview Team",
     "description": "Video Game Review: LLM-powered game reviews from JSON config",
-    "entry_point": "plugin",
+    "entry_point": "plugin:CorePlugin",
     "dependencies": [],
     "provides": [
         "llm-generators",

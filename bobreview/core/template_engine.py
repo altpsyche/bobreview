@@ -64,11 +64,16 @@ class TemplateEngine:
                 if Path(path).exists():
                     loaders.append(FileSystemLoader(str(path)))
         
-        # Plugin-registered template paths
+        # Plugin-registered template paths (in priority order)
+        # Lower priority number = higher priority (loaded first)
         try:
             from ..plugins import get_registry
             registry = get_registry()
-            for template_path in registry.get_template_paths():
+            # Get template paths with priority information
+            template_registrations = registry.get_all_template_registrations()
+            # Sort by priority (lower number = higher priority)
+            sorted_registrations = sorted(template_registrations, key=lambda x: x[2])
+            for template_path, plugin_name, priority in sorted_registrations:
                 if template_path.exists():
                     loaders.append(FileSystemLoader(str(template_path)))
         except ImportError:
@@ -264,7 +269,7 @@ class TemplateEngine:
             return True
 
 
-def get_template_engine(custom_paths: Optional[list] = None) -> TemplateEngine:
+def get_template_engine(custom_paths: Optional[list] = None, force_refresh: bool = False) -> TemplateEngine:
     """
     Get or create the global template engine instance.
     
@@ -274,12 +279,13 @@ def get_template_engine(custom_paths: Optional[list] = None) -> TemplateEngine:
             Subsequent calls with different custom_paths will return the existing
             instance. To create a new instance with different paths, call
             reset_template_engine() first.
+        force_refresh: If True, recreate the engine to pick up new plugin templates.
     
     Returns:
         TemplateEngine instance
     """
     global _engine_instance
-    if _engine_instance is None:
+    if _engine_instance is None or force_refresh:
         _engine_instance = TemplateEngine(custom_paths)
     return _engine_instance
 

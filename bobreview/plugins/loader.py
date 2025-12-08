@@ -255,30 +255,43 @@ class PluginLoader:
         
         module_name, class_name = manifest.get_module_and_class()
         
-        # Add plugin directory to path if needed
-        plugin_dir = str(manifest.plugin_path)
-        if plugin_dir not in sys.path:
-            sys.path.insert(0, plugin_dir)
+        # Check if this is a built-in plugin (in bobreview.plugins package)
+        plugin_path_str = str(manifest.plugin_path)
+        is_builtin = 'bobreview' in plugin_path_str and 'plugins' in plugin_path_str
         
         try:
-            # Import the module
-            module_path = manifest.plugin_path / f"{module_name}.py"
-            
-            if module_path.exists():
-                # Load from file
-                spec = importlib.util.spec_from_file_location(
-                    f"bobreview_plugins.{manifest.name}.{module_name}",
-                    module_path
-                )
-                if spec is None or spec.loader is None:
-                    raise PluginLoadError(f"Cannot load module: {module_path}")
-                
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[spec.name] = module
-                spec.loader.exec_module(module)
+            if is_builtin:
+                # Built-in plugins: import from package
+                # e.g., bobreview.plugins.core.plugin:CorePlugin
+                # Extract the subdirectory name (core, mayhem, etc.)
+                plugin_dir_name = manifest.plugin_path.name
+                package_module = f"bobreview.plugins.{plugin_dir_name}.{module_name}"
+                module = importlib.import_module(package_module)
             else:
-                # Try as a package
-                module = importlib.import_module(module_name)
+                # External plugins: load from file system
+                # Add plugin directory to path if needed
+                plugin_dir = str(manifest.plugin_path)
+                if plugin_dir not in sys.path:
+                    sys.path.insert(0, plugin_dir)
+                
+                # Import the module
+                module_path = manifest.plugin_path / f"{module_name}.py"
+                
+                if module_path.exists():
+                    # Load from file
+                    spec = importlib.util.spec_from_file_location(
+                        f"bobreview_plugins.{manifest.name}.{module_name}",
+                        module_path
+                    )
+                    if spec is None or spec.loader is None:
+                        raise PluginLoadError(f"Cannot load module: {module_path}")
+                    
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[spec.name] = module
+                    spec.loader.exec_module(module)
+                else:
+                    # Try as a package
+                    module = importlib.import_module(module_name)
             
             # Get the plugin class
             if not hasattr(module, class_name):
