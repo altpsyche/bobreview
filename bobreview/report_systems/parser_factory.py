@@ -6,11 +6,12 @@ data source type, using the plugin registry.
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional, Type
+from typing import Dict, Any, Optional, Type, Union
 import logging
 
 from .schema import DataSourceConfig
 from .data_parser_base import DataParser
+from ..core.api import DataParserInterface
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class ParserFactory:
         from .data_parser_base import FilenamePatternParser
         self._builtin_parsers['filename_pattern'] = FilenamePatternParser
     
-    def create(self, config: DataSourceConfig) -> DataParser:
+    def create(self, config: DataSourceConfig) -> DataParserInterface:
         """
         Create a parser instance from configuration.
         

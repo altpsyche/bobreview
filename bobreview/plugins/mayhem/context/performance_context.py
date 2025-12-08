@@ -3,12 +3,19 @@ Performance context builder for MayhemAutomation.
 
 Adds performance-specific template context: images with draws/tris,
 critical point tracking, and metric labels.
+
+Implements ContextBuilderInterface from core.api.
 """
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TYPE_CHECKING
 from pathlib import Path
 
+from bobreview.core.api import ContextBuilderInterface
 
-class PerformanceContextBuilder:
+if TYPE_CHECKING:
+    from bobreview.core.config import ReportConfig
+
+
+class PerformanceContextBuilder(ContextBuilderInterface):
     """
     Builds template context for performance analysis reports.
     
@@ -18,30 +25,33 @@ class PerformanceContextBuilder:
     - metric_labels: Labels for primary metrics
     """
     
-    def build(
+    def build_context(
         self,
         data_points: List[Dict[str, Any]],
         stats: Dict[str, Any],
-        config: Any,
-        system_def: Any,
-        input_dir: Path = None,
-        image_data_uris: Dict[str, str] = None
+        config: "ReportConfig",
+        base_context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Build performance-specific template context.
+        Build template context from data and statistics.
         
-        Args:
-            data_points: List of data points
+        Implements ContextBuilderInterface.build_context().
+        
+        Parameters:
+            data_points: List of parsed data points
             stats: Statistical analysis results
-            config: Report configuration
-            system_def: Report system definition
-            input_dir: Input directory for images
-            image_data_uris: Dict mapping image names to base64 data URIs (if embedding)
-            
+            config: ReportConfig with settings
+            base_context: Base context already prepared by framework
+        
         Returns:
-            Dict of additional context to merge into base context
+            Enriched context dictionary. Should merge with base_context.
         """
         context = {}
+        
+        # Extract values from base_context that we need
+        input_dir = base_context.get('input_dir')
+        image_data_uris = base_context.get('image_data_uris')
+        system_def = base_context.get('system_def')
         
         # Build images list with performance metadata
         # IMPORTANT: Images list must match data_points by index for templates to work
@@ -110,6 +120,34 @@ class PerformanceContextBuilder:
         
         # Add metric labels from system definition
         context['metrics'] = primary_metrics if 'primary_metrics' in dir() else []
-        context['metric_labels'] = getattr(system_def.metrics, 'metric_labels', {}) if system_def.metrics else {}
+        if system_def and hasattr(system_def, 'metrics'):
+            context['metric_labels'] = getattr(system_def.metrics, 'metric_labels', {})
+        else:
+            context['metric_labels'] = {}
         
-        return context
+        # Merge with base_context and return
+        return {
+            **base_context,
+            **context
+        }
+    
+    def build(
+        self,
+        data_points: List[Dict[str, Any]],
+        stats: Dict[str, Any],
+        config: Any,
+        system_def: Any,
+        input_dir: Path = None,
+        image_data_uris: Dict[str, str] = None
+    ) -> Dict[str, Any]:
+        """
+        Legacy method for backward compatibility with framework.
+        
+        This method is kept for compatibility but should use build_context() instead.
+        """
+        base_context = {
+            'input_dir': input_dir,
+            'image_data_uris': image_data_uris,
+            'system_def': system_def
+        }
+        return self.build_context(data_points, stats, config, base_context)

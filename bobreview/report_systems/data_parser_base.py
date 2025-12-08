@@ -8,15 +8,17 @@ Streamlined design:
 - Simple interface: parse_file() and discover_files()
 - parse_directory() is provided as default implementation
 - Validation is optional and can be overridden
+
+This class extends DataParserInterface from core.api.
 """
 
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from .schema import DataSourceConfig, FieldConfig
+from ..core.api import DataParserInterface
 
 
-class DataParser(ABC):
+class DataParser(DataParserInterface):
     """
     Abstract base class for data parsers.
     

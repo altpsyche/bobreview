@@ -65,21 +65,21 @@ class GameReviewPlugin(BasePlugin):
     
     def _register_generators(self, registry) -> None:
         """Register game review LLM generators."""
-        from .generators import generate_review_text
+        from .generators.adapters import ReviewTextGenerator
         
         generators = [
-            ('review_text', generate_review_text),
+            ('review_text', ReviewTextGenerator),
         ]
         
-        for gen_id, gen_func in generators:
-            wrapper = self._create_generator_wrapper(gen_id, gen_func)
+        for gen_id, gen_class in generators:
+            wrapper = self._create_generator_wrapper(gen_id, gen_class)
             registry.llm_generators.register(wrapper, plugin_name=self.name)
     
-    def _create_generator_wrapper(self, name: str, func):
-        """Create a wrapper class for registering functions."""
+    def _create_generator_wrapper(self, name: str, gen_class):
+        """Create a wrapper class for registering generator classes."""
         class GeneratorWrapper:
             generator_name = name
-            generate = staticmethod(func)
+            generate = staticmethod(lambda *args, **kwargs: gen_class().generate(*args, **kwargs))
         return GeneratorWrapper
     
     def _register_parsers(self, registry) -> None:

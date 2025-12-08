@@ -4,32 +4,94 @@ Performance chart generator for MayhemAutomation.
 This module contains all the Chart.js chart generation code for
 performance analysis reports (draws/tris timelines, scatter plots, histograms).
 Moved from executor.py to make it plugin-specific.
+
+Implements ChartGeneratorInterface from core.api.
 """
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TYPE_CHECKING
 
 from bobreview.core.theme_utils import get_theme
+from bobreview.core.api import ChartGeneratorInterface
+
+if TYPE_CHECKING:
+    from bobreview.core.config import ReportConfig
 
 
-class PerformanceChartGenerator:
+class PerformanceChartGenerator(ChartGeneratorInterface):
     """
     Generates Chart.js JavaScript code for performance analysis charts.
     
     This generator is specific to the MayhemAutomation plugin and handles
     draws/tris metrics with performance zone coloring.
+    
+    Implements ChartGeneratorInterface from core.api.
     """
     
-    def __init__(self, config, thresholds: Dict[str, Any]):
+    def __init__(self, config, thresholds: Dict[str, Any] = None):
         """
         Initialize with config and thresholds.
         
         Args:
             config: ReportConfig with threshold values
-            thresholds: Dict of threshold values from report system JSON
+            thresholds: Dict of threshold values from report system JSON (optional)
         """
         self.config = config
-        self.thresholds = thresholds
+        self.thresholds = thresholds or {}
+    
+    def generate_chart(
+        self,
+        data_points: List[Dict[str, Any]],
+        stats: Dict[str, Any],
+        config: "ReportConfig",
+        chart_config: Dict[str, Any]
+    ) -> str:
+        """
+        Generate a single chart from data and statistics.
         
+        Implements ChartGeneratorInterface.generate_chart().
+        
+        Parameters:
+            data_points: List of parsed data points
+            stats: Statistical analysis results
+            config: ReportConfig with settings
+            chart_config: Chart-specific configuration from report system JSON
+                        Contains: id, type, title, x_field, y_field, options
+        
+        Returns:
+            Chart JavaScript code as string
+        """
+        chart_id = chart_config.get('id', 'chart')
+        chart_type = chart_config.get('type', 'line')
+        title = chart_config.get('title', 'Chart')
+        x_field = chart_config.get('x_field', 'index')
+        y_field = chart_config.get('y_field', 'draws')
+        
+        # Get labels from chart_config or use defaults
+        labels = chart_config.get('labels', {})
+        draws_label = labels.get('draw_calls', 'Draw Calls')
+        tris_label = labels.get('triangles', 'Triangles')
+        
+        # Get thresholds
+        high_draw = self._get_threshold('high_load_draw_threshold', 600)
+        low_draw = self._get_threshold('low_load_draw_threshold', 400)
+        high_tris = self._get_threshold('high_load_tri_threshold', 100000)
+        low_tris = self._get_threshold('low_load_tri_threshold', 50000)
+        
+        # Generate based on chart type
+        if chart_type == 'timeline' and y_field == 'draws':
+            return self._generate_draws_timeline(data_points, chart_id, draws_label, high_draw, low_draw)
+        elif chart_type == 'timeline' and y_field == 'tris':
+            return self._generate_tris_timeline(data_points, chart_id, tris_label, high_tris, low_tris)
+        elif chart_type == 'scatter':
+            return self._generate_scatter_chart(data_points, chart_id, draws_label, tris_label, high_draw, low_draw, high_tris, low_tris)
+        elif chart_type == 'histogram' and y_field == 'draws':
+            return self._generate_draws_histogram(data_points, chart_id, draws_label, high_draw, low_draw)
+        elif chart_type == 'histogram' and y_field == 'tris':
+            return self._generate_tris_histogram(data_points, chart_id, tris_label, high_tris, low_tris)
+        else:
+            # Fallback: return empty chart
+            return f"// Chart {chart_id}: Unsupported type {chart_type} or field {y_field}"
+    
     def generate(self, data_points: List[Dict[str, Any]], page_id: str, labels: Dict[str, str]) -> Dict[str, str]:
         """
         Generate chart JavaScript for a page.
@@ -559,3 +621,277 @@ class PerformanceChartGenerator:
                 colors.append(warn_rgba)
         
         return {'labels': labels, 'counts': counts, 'colors': colors}
+    
+    def _generate_draws_timeline(self, data_points: List[Dict[str, Any]], chart_id: str, label: str, high_threshold: float, low_threshold: float) -> str:
+        """Generate draws timeline chart."""
+        theme = get_theme()
+        colors = self._get_theme_colors(theme)
+        
+        points = []
+        for i, p in enumerate(data_points):
+            draws = p['draws']
+            testcase = p.get('testcase', f'Frame {i}')
+            if draws >= high_threshold:
+                color = colors['danger']
+            elif draws < low_threshold:
+                color = colors['ok']
+            else:
+                color = colors['warn']
+            points.append({'x': i, 'y': draws, 'color': color, 'testcase': testcase})
+        
+        data_json = json.dumps(points)
+        return self._build_timeline_chart_js(chart_id, data_json, label, theme, colors)
+    
+    def _generate_tris_timeline(self, data_points: List[Dict[str, Any]], chart_id: str, label: str, high_threshold: float, low_threshold: float) -> str:
+        """Generate tris timeline chart."""
+        theme = get_theme()
+        colors = self._get_theme_colors(theme)
+        
+        points = []
+        for i, p in enumerate(data_points):
+            tris = p['tris']
+            testcase = p.get('testcase', f'Frame {i}')
+            if tris >= high_threshold:
+                color = colors['danger']
+            elif tris < low_threshold:
+                color = colors['ok']
+            else:
+                color = colors['warn']
+            points.append({'x': i, 'y': tris, 'color': color, 'testcase': testcase})
+        
+        data_json = json.dumps(points)
+        return self._build_timeline_chart_js(chart_id, data_json, label, theme, colors)
+    
+    def _generate_scatter_chart(self, data_points: List[Dict[str, Any]], chart_id: str, x_label: str, y_label: str, 
+                                 x_high: float, x_low: float, y_high: float, y_low: float) -> str:
+        """Generate scatter plot chart."""
+        theme = get_theme()
+        colors = self._get_theme_colors(theme)
+        
+        def hex_to_rgba(hex_color: str, alpha: float = 1.0) -> str:
+            hex_color = hex_color.lstrip('#')
+            r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+            return f"rgba({r}, {g}, {b}, {alpha})"
+        
+        points = []
+        for i, p in enumerate(data_points):
+            draws = p['draws']
+            tris = p['tris']
+            testcase = p.get('testcase', f'Frame {i}')
+            if draws >= x_high or tris >= y_high:
+                color = hex_to_rgba(theme.danger, 0.8)
+            elif draws < x_low and tris < y_low:
+                color = hex_to_rgba(theme.ok, 0.8)
+            else:
+                color = hex_to_rgba(theme.warn, 0.8)
+            points.append({'x': draws, 'y': tris, 'color': color, 'testcase': testcase, 'index': i})
+        
+        scatter_data = json.dumps(points)
+        scatter_label = f"{x_label} vs {y_label}"
+        grid_color = colors['grid']
+        tooltip_bg = colors['tooltip_bg']
+        
+        return f"""
+// Scatter Plot: {scatter_label}
+(function() {{
+    const ctx = document.getElementById('{chart_id}').getContext('2d');
+    const data = {scatter_data};
+    
+    new Chart(ctx, {{
+        type: 'scatter',
+        data: {{
+            datasets: [{{
+                label: {json.dumps(scatter_label)},
+                data: data.map(d => ({{x: d.x, y: d.y}})),
+                backgroundColor: data.map(d => d.color),
+                borderColor: data.map(d => d.color.replace('0.8', '1')),
+                pointRadius: 6,
+                pointHoverRadius: 10,
+                pointBorderWidth: 2
+            }}]
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {{
+                x: {{ 
+                    title: {{ display: true, text: {json.dumps(x_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
+                    grid: {{ color: '{grid_color}' }},
+                    ticks: {{ color: '{theme.text_soft}' }}
+                }},
+                y: {{ 
+                    title: {{ display: true, text: {json.dumps(y_label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
+                    grid: {{ color: '{grid_color}' }},
+                    ticks: {{ color: '{theme.text_soft}', callback: function(v) {{ return v.toLocaleString(); }} }}
+                }}
+            }},
+            plugins: {{
+                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
+                tooltip: {{
+                    backgroundColor: '{tooltip_bg}',
+                    titleColor: '{theme.text_main}',
+                    bodyColor: '{theme.text_soft}',
+                    borderColor: '{theme.accent}',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {{
+                        title: function(items) {{ return 'Frame ' + data[items[0].dataIndex].index; }},
+                        label: function(ctx) {{ 
+                            const d = data[ctx.dataIndex];
+                            return [
+                                d.testcase,
+                                {json.dumps(x_label)} + ': ' + d.x.toLocaleString(),
+                                {json.dumps(y_label)} + ': ' + d.y.toLocaleString()
+                            ];
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    }});
+}})();
+"""
+    
+    def _generate_draws_histogram(self, data_points: List[Dict[str, Any]], chart_id: str, label: str, high_threshold: float, low_threshold: float) -> str:
+        """Generate draws histogram chart."""
+        values = [p['draws'] for p in data_points]
+        hist = self._compute_histogram(values, high_threshold, low_threshold)
+        return self._build_histogram_chart_js(chart_id, hist, label)
+    
+    def _generate_tris_histogram(self, data_points: List[Dict[str, Any]], chart_id: str, label: str, high_threshold: float, low_threshold: float) -> str:
+        """Generate tris histogram chart."""
+        values = [p['tris'] for p in data_points]
+        hist = self._compute_histogram(values, high_threshold, low_threshold)
+        return self._build_histogram_chart_js(chart_id, hist, label)
+    
+    def _build_timeline_chart_js(self, chart_id: str, data_json: str, label: str, theme, colors: Dict[str, str]) -> str:
+        """Build timeline chart JavaScript code."""
+        accent_gradient_top = colors['accent_top']
+        accent_gradient_bottom = colors['accent_bottom']
+        grid_color = colors['grid']
+        tooltip_bg = colors['tooltip_bg']
+        
+        return f"""
+// {label} Timeline
+(function() {{
+    const ctx = document.getElementById('{chart_id}').getContext('2d');
+    const data = {data_json};
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, '{accent_gradient_top}');
+    gradient.addColorStop(1, '{accent_gradient_bottom}');
+    
+    new Chart(ctx, {{
+        type: 'line',
+        data: {{
+            datasets: [{{
+                label: {json.dumps(label)},
+                data: data.map(d => ({{x: d.x, y: d.y}})),
+                borderColor: '{theme.accent}',
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointHoverRadius: 7,
+                pointBackgroundColor: data.map(d => d.color),
+                pointBorderColor: data.map(d => d.color),
+                pointBorderWidth: 2
+            }}]
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {{ intersect: false, mode: 'index' }},
+            scales: {{
+                x: {{ 
+                    type: 'linear',
+                    title: {{ display: true, text: 'Frame Index', color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
+                    grid: {{ color: '{grid_color}' }},
+                    ticks: {{ color: '{theme.text_soft}' }}
+                }},
+                y: {{ 
+                    title: {{ display: true, text: {json.dumps(label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
+                    grid: {{ color: '{grid_color}' }},
+                    ticks: {{ color: '{theme.text_soft}' }}
+                }}
+            }},
+            plugins: {{
+                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
+                tooltip: {{
+                    backgroundColor: '{tooltip_bg}',
+                    titleColor: '{theme.text_main}',
+                    bodyColor: '{theme.text_soft}',
+                    borderColor: '{theme.accent}',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {{
+                        title: function(items) {{ return 'Frame ' + items[0].parsed.x; }},
+                        label: function(ctx) {{ 
+                            const d = data[ctx.dataIndex];
+                            return [d.testcase, {json.dumps(label)} + ': ' + d.y.toLocaleString()];
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    }});
+}})();
+"""
+    
+    def _build_histogram_chart_js(self, chart_id: str, hist: Dict[str, Any], label: str) -> str:
+        """Build histogram chart JavaScript code."""
+        theme = get_theme()
+        grid_color = f"{theme.text_soft}20"
+        tooltip_bg = f"{theme.bg}F0"
+        
+        return f"""
+// {label} Distribution
+(function() {{
+    const ctx = document.getElementById('{chart_id}').getContext('2d');
+    
+    new Chart(ctx, {{
+        type: 'bar',
+        data: {{
+            labels: {json.dumps(hist['labels'])},
+            datasets: [{{
+                label: 'Frequency',
+                data: {json.dumps(hist['counts'])},
+                backgroundColor: {json.dumps(hist['colors'])},
+                borderColor: {json.dumps([c.replace('0.7', '1') for c in hist['colors']])},
+                borderWidth: 1,
+                borderRadius: 4
+            }}]
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {{
+                x: {{ 
+                    title: {{ display: true, text: {json.dumps(label)}, color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
+                    grid: {{ color: '{grid_color}' }},
+                    ticks: {{ color: '{theme.text_soft}', maxRotation: 45 }}
+                }},
+                y: {{ 
+                    title: {{ display: true, text: 'Frequency', color: '{theme.text_soft}', font: {{ weight: 'bold' }} }},
+                    grid: {{ color: '{grid_color}' }},
+                    ticks: {{ color: '{theme.text_soft}' }},
+                    beginAtZero: true
+                }}
+            }},
+            plugins: {{
+                legend: {{ labels: {{ color: '{theme.text_main}', font: {{ size: 12 }} }} }},
+                tooltip: {{
+                    backgroundColor: '{tooltip_bg}',
+                    titleColor: '{theme.text_main}',
+                    bodyColor: '{theme.text_soft}',
+                    borderColor: '{theme.accent}',
+                    borderWidth: 1,
+                    padding: 10
+                }}
+            }}
+        }}
+    }});
+}})();
+"""

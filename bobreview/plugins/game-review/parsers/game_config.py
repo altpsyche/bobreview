@@ -2,17 +2,24 @@
 Game Configuration Parser.
 
 Parses game.json files for video game reviews.
+
+Implements DataParserInterface from core.api.
 """
 
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
+
+from ...core.api import DataParserInterface
+
+if TYPE_CHECKING:
+    from ...report_systems.schema import DataSourceConfig
 
 logger = logging.getLogger(__name__)
 
 
-class GameConfigParser:
+class GameConfigParser(DataParserInterface):
     """
     Parser for game.json configuration files.
     
@@ -24,18 +31,68 @@ class GameConfigParser:
     - cover_image, screenshots
     """
     
-    def __init__(self, config_file: str = "game.json"):
+    def __init__(self, config: "DataSourceConfig"):
         """
-        Initialize parser.
+        Initialize parser with configuration.
         
-        Args:
-            config_file: Name of the config file to load (default: game.json)
+        Parameters:
+            config: DataSourceConfig from report system JSON definition
         """
-        self.config_file = config_file
+        super().__init__(config)
+        # Extract config file name from config if available, otherwise default
+        self.config_file = getattr(config, 'config_file', 'game.json')
+    
+    def parse_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
+        """
+        Parse a single game.json file.
+        
+        Implements DataParserInterface.parse_file().
+        
+        Parameters:
+            file_path: Path to the game.json file
+        
+        Returns:
+            Dictionary with game data, or None if parsing fails
+        """
+        if not file_path.exists():
+            logger.warning(f"Config file not found: {file_path}")
+            return None
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            return self._validate_and_normalize(data)
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in {file_path}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error loading {file_path}: {e}")
+            return None
+    
+    def discover_files(self, directory: Path) -> List[Path]:
+        """
+        Discover game.json files in a directory.
+        
+        Implements DataParserInterface.discover_files().
+        
+        Parameters:
+            directory: Directory to scan
+        
+        Returns:
+            List of game.json file paths
+        """
+        config_path = directory / self.config_file
+        if config_path.exists():
+            return [config_path]
+        return []
     
     def parse(self, directory: Path) -> Dict[str, Any]:
         """
+        Legacy method for backward compatibility.
+        
         Parse game.json from the specified directory.
+        This method is kept for compatibility but uses parse_file() internally.
         
         Args:
             directory: Directory containing game.json
@@ -44,22 +101,10 @@ class GameConfigParser:
             Dictionary with game data
         """
         config_path = directory / self.config_file
-        
-        if not config_path.exists():
-            logger.warning(f"Config file not found: {config_path}")
+        result = self.parse_file(config_path)
+        if result is None:
             return self._get_default_game()
-        
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            return self._validate_and_normalize(data)
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in {config_path}: {e}")
-            return self._get_default_game()
-        except Exception as e:
-            logger.error(f"Error loading {config_path}: {e}")
-            return self._get_default_game()
+        return result
     
     def _validate_and_normalize(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and normalize game data."""

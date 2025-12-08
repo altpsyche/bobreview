@@ -2,18 +2,52 @@
 Game review context builder for game-review plugin.
 
 Adds game-specific template context: game data alias.
+
+Implements ContextBuilderInterface from core.api.
 """
-from typing import Dict, List, Any
+from typing import Dict, List, Any, TYPE_CHECKING
 from pathlib import Path
 
+from ...core.api import ContextBuilderInterface
 
-class GameReviewContextBuilder:
+if TYPE_CHECKING:
+    from ...core.config import ReportConfig
+
+
+class GameReviewContextBuilder(ContextBuilderInterface):
     """
     Builds template context for game review reports.
     
     Adds:
     - game: Alias for stats/data (for {{ game.title }}, {{ game.scores }})
     """
+    
+    def build_context(
+        self,
+        data_points: List[Dict[str, Any]],
+        stats: Dict[str, Any],
+        config: "ReportConfig",
+        base_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Build template context from data and statistics.
+        
+        Implements ContextBuilderInterface.build_context().
+        
+        Parameters:
+            data_points: List of parsed data points
+            stats: Statistical analysis results (for game reviews, this IS the game data)
+            config: ReportConfig with settings
+            base_context: Base context already prepared by framework
+        
+        Returns:
+            Enriched context dictionary. Should merge with base_context.
+        """
+        # For game reviews, stats contains the game data from game.json
+        return {
+            **base_context,
+            'game': stats,  # Alias for {{ game.title }}, {{ game.scores }}
+        }
     
     def build(
         self,
@@ -24,18 +58,12 @@ class GameReviewContextBuilder:
         input_dir: Path = None
     ) -> Dict[str, Any]:
         """
-        Build game review-specific template context.
+        Legacy method for backward compatibility with framework.
         
-        Args:
-            data_points: List of data points
-            stats: Game data (title, scores, etc.)
-            config: Report configuration
-            system_def: Report system definition
-            input_dir: Input directory
-            
-        Returns:
-            Dict of additional context to merge into base context
+        This method is kept for compatibility but should use build_context() instead.
         """
-        return {
-            'game': stats,  # Alias for {{ game.title }}, {{ game.scores }}
+        base_context = {
+            'input_dir': input_dir,
+            'system_def': system_def
         }
+        return self.build_context(data_points, stats, config, base_context)

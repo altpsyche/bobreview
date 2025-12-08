@@ -3,6 +3,8 @@ MayhemAutomation Parser.
 
 Parser for MayhemAutomation performance data from PNG filenames.
 Extends FilenamePatternParser with MayhemAutomation-specific defaults.
+
+Implements DataParserInterface from core.api (via FilenamePatternParser).
 """
 
 from dataclasses import dataclass

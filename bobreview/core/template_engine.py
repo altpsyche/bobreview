@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ..report_systems.schema import LabelConfig
 
 from .utils import format_number
-from ..pages.base import sanitize_llm_html, get_shared_css, get_trend_icon
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
 
 
 # Global template engine instance

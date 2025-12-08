@@ -16,6 +16,14 @@ from .theme_utils import get_theme, get_theme_css_variables
 from .themes import ReportTheme, BUILTIN_THEMES
 from .config_utils import merge_config, merge_nested_config
 from .plugin_utils import safe_plugin_call, call_plugin_lifecycle_hooks
+from .api import (
+    DataParserInterface,
+    LLMGeneratorInterface,
+    ChartGeneratorInterface,
+    PageGeneratorInterface,
+    ContextBuilderInterface
+)
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
 
 __all__ = [
     # Config
@@ -54,4 +62,16 @@ __all__ = [
     # Plugin utilities
     'safe_plugin_call',
     'call_plugin_lifecycle_hooks',
+    
+    # Core API Interfaces
+    'DataParserInterface',
+    'LLMGeneratorInterface',
+    'ChartGeneratorInterface',
+    'PageGeneratorInterface',
+    'ContextBuilderInterface',
+    
+    # HTML Utilities
+    'sanitize_llm_html',
+    'get_shared_css',
+    'get_trend_icon',
 ]

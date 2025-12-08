@@ -70,35 +70,35 @@ class MayhemAutomationPlugin(BasePlugin):
     
     def _register_generators(self, registry) -> None:
         """Register all built-in LLM generators."""
-        from .generators import (
-            generate_executive_summary,
-            generate_metric_deep_dive,
-            generate_zones_hotspots,
-            generate_optimization_checklist,
-            generate_system_recommendations,
-            generate_visual_analysis,
-            generate_statistical_interpretation
+        from .generators.adapters import (
+            ExecutiveSummaryGenerator,
+            MetricDeepDiveGenerator,
+            ZonesHotspotsGenerator,
+            OptimizationChecklistGenerator,
+            SystemRecommendationsGenerator,
+            VisualAnalysisGenerator,
+            StatisticalInterpretationGenerator
         )
         
         generators = [
-            ('executive_summary', generate_executive_summary),
-            ('metric_deep_dive', generate_metric_deep_dive),
-            ('zones_hotspots', generate_zones_hotspots),
-            ('optimization_checklist', generate_optimization_checklist),
-            ('system_recommendations', generate_system_recommendations),
-            ('visual_analysis', generate_visual_analysis),
-            ('statistical_interpretation', generate_statistical_interpretation),
+            ('executive_summary', ExecutiveSummaryGenerator),
+            ('metric_deep_dive', MetricDeepDiveGenerator),
+            ('zones_hotspots', ZonesHotspotsGenerator),
+            ('optimization_checklist', OptimizationChecklistGenerator),
+            ('system_recommendations', SystemRecommendationsGenerator),
+            ('visual_analysis', VisualAnalysisGenerator),
+            ('statistical_interpretation', StatisticalInterpretationGenerator),
         ]
         
-        for gen_id, gen_func in generators:
-            wrapper = self._create_generator_wrapper(gen_id, gen_func)
+        for gen_id, gen_class in generators:
+            wrapper = self._create_generator_wrapper(gen_id, gen_class)
             registry.llm_generators.register(wrapper, plugin_name=self.name)
     
-    def _create_generator_wrapper(self, name: str, func):
-        """Create a wrapper class for registering functions."""
+    def _create_generator_wrapper(self, name: str, gen_class):
+        """Create a wrapper class for registering generator classes."""
         class GeneratorWrapper:
             generator_name = name
-            generate = staticmethod(func)
+            generate = staticmethod(lambda *args, **kwargs: gen_class().generate(*args, **kwargs))
         return GeneratorWrapper
     
     def _register_parsers(self, registry) -> None:

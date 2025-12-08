@@ -1,5 +1,8 @@
 """
 Base HTML utilities and shared components for BobReview reports.
+
+This module provides page-specific HTML utilities. Core HTML utilities
+(sanitize_llm_html, get_shared_css, get_trend_icon) are now in core.html_utils.
 """
 
 import json
@@ -8,98 +11,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from urllib.parse import quote
 
-try:
-    import bleach
-    BLEACH_AVAILABLE = True
-except ImportError:
-    BLEACH_AVAILABLE = False
-
-
-def sanitize_llm_html(content: str) -> str:
-    """
-    Sanitize LLM-generated HTML to prevent XSS while preserving safe formatting tags.
-    
-    Uses the bleach library (whitelist-based approach) when available, otherwise
-    returns escaped HTML as a fallback.
-    
-    Allowed tags: p, strong, em, b, i, u, ul, ol, li, br, span, div, h1-h6
-    Allowed attributes: class (on span/div), href (on a)
-    
-    Parameters:
-        content: HTML content from LLM
-    
-    Returns:
-        Sanitized HTML string
-    """
-    if not content:
-        return ""
-    
-    if not BLEACH_AVAILABLE:
-        # Fallback: escape all HTML if bleach is not available
-        return escape(content)
-    
-    # Whitelist of safe tags
-    allowed_tags = [
-        'p', 'strong', 'em', 'b', 'i', 'u', 
-        'ul', 'ol', 'li', 'br', 'span', 'div',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'a', 'code', 'pre', 'blockquote'
-    ]
-    
-    # Whitelist of safe attributes
-    allowed_attributes = {
-        'span': ['class'],
-        'div': ['class'],
-        'a': ['href'],
-        'code': ['class']
-    }
-    
-    # Whitelist of safe protocols for links
-    allowed_protocols = ['http', 'https', 'mailto']
-    
-    # Sanitize using bleach
-    sanitized = bleach.clean(
-        content,
-        tags=allowed_tags,
-        attributes=allowed_attributes,
-        protocols=allowed_protocols,
-        strip=True  # Strip disallowed tags instead of escaping them
-    )
-    
-    return sanitized.strip()
-
-
-def get_trend_icon(direction: str) -> str:
-    """
-    Return FontAwesome icon name for trend direction.
-    
-    Parameters:
-        direction: Trend direction ('improving', 'degrading', or 'stable')
-    
-    Returns:
-        FontAwesome icon name without 'fa-' prefix
-    """
-    if direction == 'improving':
-        return 'arrow-down'
-    elif direction == 'degrading':
-        return 'arrow-up'
-    else:  # stable
-        return 'arrow-right'
-
-
-def get_shared_css() -> str:
-    """
-    Read shared CSS from external styles.css file.
-    
-    This function reads the CSS content from the styles.css file located in the
-    same directory as this module. The CSS is the single source of truth for
-    all report styling.
-    
-    Returns:
-        str: Complete CSS content for embedding in HTML
-    """
-    css_path = Path(__file__).parent / "styles.css"
-    return css_path.read_text(encoding='utf-8')
+# Import core HTML utilities
+from ..core.html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
 
 
 def get_css_source_path() -> Path:
