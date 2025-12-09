@@ -9,7 +9,6 @@ It provides:
 - Video Game Review report system and templates
 
 Other plugins can override any of these components.
-For performance analysis, use the MayhemAutomation plugin.
 """
 
 import json

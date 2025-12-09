@@ -57,7 +57,7 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
 - CLI API (v1.0.7):
   ```bash
   # Plugin is required (no backward compatibility)
-  bobreview --plugin mayhem --dir ./screenshots
+  bobreview --plugin <plugin-name> --dir ./screenshots
   
   # Report system selection:
   # - If plugin has 1 system: auto-selected
@@ -292,12 +292,12 @@ bobreview/
   - Theme and output settings
   
 - **New CLI Flags**:
-  - `--plugin PLUGIN_NAME`: Plugin to use (required, e.g., "mayhem", "game-review")
+  - `--plugin PLUGIN_NAME`: Plugin to use (required, e.g., "my-plugin")
   - `--report-system SYSTEM`: Report system ID (optional, required if plugin has multiple systems)
   - `--list-report-systems`: List all available report systems
   - `bobreview plugins list`: List all available plugins
 
-- **Plugin-Based Architecture**: Report systems are provided by plugins (e.g., `mayhem` plugin provides `png_data_points` which encapsulates the v1.0.3 workflow)
+- **Plugin-Based Architecture**: Report systems are provided by plugins (e.g., a plugin provides report systems which encapsulate analysis workflows)
 
 - **User Custom Systems Directory**: `~/.bobreview/report_systems/` for custom JSON definitions
 
@@ -361,15 +361,15 @@ bobreview/
 
 - **New CLI Flags**: Enhanced control over report generation
   - `--theme THEME`: Choose report theme (dark, light, high_contrast)
-    - Example: `bobreview --dir . --theme light`
+    - Example: `bobreview --plugin <plugin-name> --dir . --theme light`
   - `--linked-css`: Use external CSS file instead of embedding
     - Creates `styles.css` in output directory for better maintainability
     - Reduces HTML file size, enables shared CSS across multiple reports
-    - Example: `bobreview --dir . --linked-css`
+    - Example: `bobreview --plugin <plugin-name> --dir . --linked-css`
   - `--disable-page PAGE_ID`: Exclude specific pages from report
     - Can be used multiple times to disable multiple pages
     - Valid IDs: home, metrics, zones, visuals, optimization, stats
-    - Example: `bobreview --dir . --disable-page stats --disable-page visuals`
+    - Example: `bobreview --plugin <plugin-name> --dir . --disable-page stats --disable-page visuals`
 
 - **CSS Handling Improvements**:
   - External CSS file support via `linked_css` config option

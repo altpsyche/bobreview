@@ -75,8 +75,8 @@ Navigate to your screenshots folder and run:
 ```bash
 cd /path/to/screenshots
 
-# Plugin is required - use MayhemAutomation for performance analysis
-bobreview --plugin mayhem --dir .
+# Plugin is required
+bobreview --plugin <plugin-name> --dir .
 ```
 
 Output: `performance_report.html` in current directory
@@ -99,17 +99,17 @@ xdg-open performance_report.html
 
 ### Test Without API Calls
 ```bash
-bobreview --plugin mayhem --dir ./screenshots --dry-run
+bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
 ```
 
 ### Process Subset
 ```bash
-bobreview --plugin mayhem --dir ./screenshots --sample 20
+bobreview --plugin <plugin-name> --dir ./screenshots --sample 20
 ```
 
 ### Custom Report
 ```bash
-bobreview --plugin mayhem --dir ./screenshots \
+bobreview --plugin <plugin-name> --dir ./screenshots \
   --title "Forest Level Performance" \
   --location "Dark Forest" \
   --output forest_report.html
@@ -117,27 +117,27 @@ bobreview --plugin mayhem --dir ./screenshots \
 
 ### Verbose Output
 ```bash
-bobreview --plugin mayhem --dir ./screenshots --verbose
+bobreview --plugin <plugin-name> --dir ./screenshots --verbose
 ```
 
 ### Using Different Plugins
 ```bash
-# MayhemAutomation (performance analysis)
-bobreview --plugin mayhem --dir ./screenshots
+# Example: Performance analysis plugin
+bobreview --plugin <plugin-name> --dir ./screenshots
 
-# Game Review
-bobreview --plugin game-review --dir ./game_data
+# Example: Different plugin for different data types
+bobreview --plugin <plugin-name> --dir ./game_data
 ```
 
 ### Change Theme
 ```bash
-bobreview --dir ./screenshots --theme light
+bobreview --plugin <plugin-name> --dir ./screenshots --theme light
 # Options: dark (default), light, high_contrast
 ```
 
 ### Standalone HTML (Embedded Images)
 ```bash
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 ```
 
 Creates a single HTML file with all images embedded (no separate image folder needed).
@@ -150,13 +150,13 @@ Cache is enabled by default to save costs:
 
 ```bash
 # First run - calls LLM and caches
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Second run - uses cache (instant)
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Clear cache
-bobreview --dir ./screenshots --clear-cache
+bobreview --plugin <plugin-name> --dir ./screenshots --clear-cache
 ```
 
 ---
@@ -171,7 +171,7 @@ cd ~/MyGame/PerformanceCaptures/Level_Forest
 cd C:\Users\YourName\MyGame\PerformanceCaptures\Level_Forest
 
 # Run BobReview
-bobreview --dir . --title "Forest Level" --location "Dark Forest Section"
+bobreview --plugin <plugin-name> --dir . --title "Forest Level" --location "Dark Forest Section"
 
 # Review report
 open performance_report.html     # macOS
@@ -179,10 +179,10 @@ start performance_report.html    # Windows
 xdg-open performance_report.html # Linux
 
 # Regenerate uses cache (instant)
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Fresh analysis (clears cache)
-bobreview --dir . --clear-cache
+bobreview --plugin <plugin-name> --dir . --clear-cache
 ```
 
 ---
@@ -211,17 +211,17 @@ Set via System Properties → Environment Variables
 **Linux/macOS:**
 Add to `~/.bashrc` or `~/.zshrc`:
 ```bash
-alias bob="bobreview --verbose"
-alias bobtest="bobreview --dry-run --verbose"
-alias bobquick="bobreview --sample 10"
+alias bob="bobreview --plugin <plugin-name> --verbose"
+alias bobtest="bobreview --plugin <plugin-name> --dry-run --verbose"
+alias bobquick="bobreview --plugin <plugin-name> --sample 10"
 ```
 
 **Windows PowerShell:**
 Add to your PowerShell profile:
 ```powershell
-function bob { bobreview --verbose @args }
-function bobtest { bobreview --dry-run --verbose @args }
-function bobquick { bobreview --sample 10 @args }
+function bob { bobreview --plugin <plugin-name> --verbose @args }
+function bobtest { bobreview --plugin <plugin-name> --dry-run --verbose @args }
+function bobquick { bobreview --plugin <plugin-name> --sample 10 @args }
 ```
 
 **Windows Command Prompt:**
@@ -229,7 +229,7 @@ Create batch files in a directory in your PATH:
 ```cmd
 @echo off
 :: bob.bat
-bobreview --verbose %*
+bobreview --plugin <plugin-name> --verbose %*
 ```
 
 Usage (all platforms):
@@ -244,20 +244,20 @@ bobquick --dir ./screenshots
 **Linux/macOS:**
 ```bash
 for dir in Level_*; do
-  bobreview --dir "$dir" --output "${dir}_report.html" --location "$dir"
+  bobreview --plugin <plugin-name> --dir "$dir" --output "${dir}_report.html" --location "$dir"
 done
 ```
 
 **Windows PowerShell:**
 ```powershell
 Get-ChildItem -Directory Level_* | ForEach-Object {
-  bobreview --dir $_.Name --output "$($_.Name)_report.html" --location $_.Name
+  bobreview --plugin <plugin-name> --dir $_.Name --output "$($_.Name)_report.html" --location $_.Name
 }
 ```
 
 **Windows Command Prompt:**
 ```cmd
-for /D %d in (Level_*) do bobreview --dir "%d" --output "%d_report.html" --location "%d"
+for /D %d in (Level_*) do bobreview --plugin <plugin-name> --dir "%d" --output "%d_report.html" --location "%d"
 ```
 
 ---
@@ -270,7 +270,7 @@ for /D %d in (Level_*) do bobreview --dir "%d" --output "%d_report.html" --locat
 pip install .
 
 # Or use module syntax
-python -m bobreview.cli --dir ./screenshots
+python -m bobreview.cli --plugin <plugin-name> --dir ./screenshots
 ```
 
 ### API Key Not Found
@@ -316,14 +316,14 @@ python -c "from bobreview.core import ReportConfig; print('Installation verified
 # Basic (recommended: use plugin)
 bobreview --plugin PLUGIN_NAME --dir PATH
 
-# Legacy (backward compatible)
-bobreview --dir PATH
+# Legacy (backward compatible - plugin required)
+bobreview --plugin <plugin-name> --dir PATH
 
 # With options
 bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
 
 # Plugin and Report System:
---plugin PLUGIN_NAME        # Plugin to use (e.g., "mayhem", "game-review")
+--plugin PLUGIN_NAME        # Plugin to use (e.g., "my-plugin")
 --report-system SYSTEM      # Report system ID (optional, uses plugin default)
 --list-report-systems       # List all available report systems
 

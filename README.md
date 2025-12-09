@@ -75,11 +75,11 @@ bobreview/
 │   │   ├── llm_generator_registry.py
 │   │   ├── data_parser_registry.py
 │   │   └── ... (11 focused registries)
-│   ├── game-review/  # Game Review plugin
-│   │   ├── plugin.py  # GameReviewPlugin class
+│   ├── game-review/  # Example plugin
+│   │   ├── plugin.py  # Plugin class
 │   │   ├── report_systems/
 │   │   └── templates/
-│   └── mayhem/        # MayhemAutomation plugin
+│   └── my-plugin/     # Example plugin
 │       ├── plugin.py
 │       └── ...
 │
@@ -165,17 +165,17 @@ set OPENAI_API_KEY=sk-your-api-key-here
 
 # Run from any directory
 cd /path/to/screenshots
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 ```
 
 **Alternative LLM Providers (v1.0.5):**
 ```bash
 # Use Anthropic Claude
 export ANTHROPIC_API_KEY=your-key
-bobreview --dir . --llm-provider anthropic
+bobreview --plugin <plugin-name> --dir . --llm-provider anthropic
 
 # Use local Ollama (no API key needed)
-bobreview --dir . --llm-provider ollama --llm-model llama2
+bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama2
 ```
 
 After installation, the `bobreview` command is available globally.
@@ -203,7 +203,7 @@ Run without installing the package:
 pip install -r requirements.txt
 
 # Run from source directory
-python bobreview.py --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
 ```
 
 **Important:** When using `bobreview.py` directly:
@@ -217,11 +217,11 @@ python bobreview.py --dir /path/to/screenshots
 cd /path/to/bobreview-source
 
 # Analyze any folder
-python bobreview.py --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
 
 # Won't work from other directories
 cd /some/other/directory
-python bobreview.py --dir .  # Error: file not found
+python bobreview.py --plugin <plugin-name> --dir .  # Error: file not found
 ```
 
 See [INSTALL.md](INSTALL.md) for detailed installation instructions.
@@ -250,7 +250,7 @@ set OPENAI_API_KEY=sk-your-api-key-here
 ### 3. Run
 ```bash
 cd /path/to/screenshots
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 ```
 
 ### 4. View Report
@@ -267,14 +267,14 @@ See [QUICKSTART.md](QUICKSTART.md) for a complete guide.
 ### Basic Usage
 
 ```bash
-# Plugin is required - use MayhemAutomation for performance analysis
-bobreview --plugin mayhem --dir /path/to/screenshots
+# Plugin is required
+bobreview --plugin <plugin-name> --dir /path/to/screenshots
 
 # With custom output
-bobreview --plugin mayhem --dir ./screenshots --output report.html
+bobreview --plugin <plugin-name> --dir ./screenshots --output report.html
 
 # Custom title and location
-bobreview --plugin mayhem --dir ./screenshots \
+bobreview --plugin <plugin-name> --dir ./screenshots \
   --title "Forest Level Performance" \
   --location "Dark Forest Area"
 ```
@@ -283,13 +283,13 @@ bobreview --plugin mayhem --dir ./screenshots \
 
 ```bash
 # Test without LLM API calls
-bobreview --plugin mayhem --dir ./screenshots --dry-run
+bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
 
 # Process subset of data
-bobreview --plugin mayhem --dir ./screenshots --sample 20
+bobreview --plugin <plugin-name> --dir ./screenshots --sample 20
 
 # Verbose output
-bobreview --plugin mayhem --dir ./screenshots --verbose
+bobreview --plugin <plugin-name> --dir ./screenshots --verbose
 
 # List available plugins
 bobreview plugins list
@@ -304,16 +304,16 @@ Caching is enabled by default to reduce costs:
 
 ```bash
 # First run - calls LLM and caches
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Second run - uses cache (instant)
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Clear cache and regenerate
-bobreview --dir ./screenshots --clear-cache
+bobreview --plugin <plugin-name> --dir ./screenshots --clear-cache
 
 # Disable caching
-bobreview --dir ./screenshots --no-cache
+bobreview --plugin <plugin-name> --dir ./screenshots --no-cache
 ```
 
 ### Standalone HTML Reports
@@ -322,7 +322,7 @@ BobReview creates self-contained HTML files with embedded images:
 
 ```bash
 # Generate standalone HTML
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Result: Single HTML file you can share without image folder
 # Perfect for email attachments or sharing via messaging apps
@@ -332,7 +332,7 @@ To use external image files instead (reduces HTML file size):
 
 ```bash
 # Use the --no-embed-images flag
-bobreview --dir ./screenshots --no-embed-images
+bobreview --plugin <plugin-name> --dir ./screenshots --no-embed-images
 ```
 
 **Note:** Embedded images increase HTML file size but eliminate external dependencies, making sharing much easier.
@@ -514,17 +514,17 @@ Report systems are JSON files that define:
 Plugins provide report systems, templates, and generators. A plugin can provide **multiple report systems**. Use `--plugin` to select a plugin:
 
 ```bash
-# Use MayhemAutomation plugin (uses default report system - first one alphabetically)
-bobreview --plugin mayhem --dir ./screenshots
+# Use plugin (uses default report system - first one alphabetically)
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Explicitly specify which report system from plugin (useful when plugin has multiple)
-bobreview --plugin mayhem --report-system png_data_points --dir ./screenshots
+bobreview --plugin <plugin-name> --report-system <system-id> --dir ./screenshots
 
 # If plugin has multiple systems, select a different one
-bobreview --plugin mayhem --report-system csv_analysis --dir ./data
+bobreview --plugin <plugin-name> --report-system <system-id> --dir ./data
 
-# Use Game Review plugin
-bobreview --plugin game-review --dir ./game_data
+# Example with different plugin
+bobreview --plugin <plugin-name> --dir ./game_data
 ```
 
 **Note:** 
@@ -544,13 +544,13 @@ Output:
 ```
 Available report systems:
 
-  png_data_points (plugin:mayhem) - v1.0.0
-    Game performance analysis from PNG filename metadata
-    Path: plugin:mayhem
+  system_1 (plugin:my-plugin) - v1.0.0
+    Description of what this system does
+    Path: plugin:my-plugin
 
-  game_review (plugin:game-review) - v1.0.0
-    Video game review system
-    Path: plugin:game-review
+  system_2 (plugin:my-plugin) - v1.0.0
+    Another report system description
+    Path: plugin:my-plugin
 ```
 
 #### Custom Report Systems
@@ -559,7 +559,7 @@ Available report systems:
 # They can be accessed via a plugin or directly by specifying the JSON file path
 
 # Use a custom JSON file directly
-bobreview --plugin mayhem --report-system /path/to/custom_system.json --dir ./data
+bobreview --plugin <plugin-name> --report-system /path/to/custom_system.json --dir ./data
 ```
 
 ### Creating Custom Report Systems
@@ -595,7 +595,7 @@ bobreview --plugin mayhem --report-system /path/to/custom_system.json --dir ./da
 bobreview --plugin my_plugin --report-system my_system --dir ./data
 
 # Or if it's a standalone JSON file
-bobreview --plugin mayhem --report-system /path/to/my_system.json --dir ./data
+bobreview --plugin <plugin-name> --report-system /path/to/my_system.json --dir ./data
 ```
 
 ### Built-in Report Systems
@@ -803,16 +803,16 @@ Generated HTML reports include:
 
 ```bash
 # Use cache (default behavior)
-bobreview --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./screenshots
 
 # Test with dry-run
-bobreview --dir ./screenshots --dry-run
+bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
 
 # Use sampling for quick tests
-bobreview --dir ./screenshots --sample 20
+bobreview --plugin <plugin-name> --dir ./screenshots --sample 20
 
 # Adjust chunk size if needed
-bobreview --dir ./screenshots --llm-chunk-size 5
+bobreview --plugin <plugin-name> --dir ./screenshots --llm-chunk-size 5
 ```
 
 ---
@@ -829,11 +829,11 @@ bobreview --dir ./screenshots --llm-chunk-size 5
 pip install .
 
 # Or use Python module syntax
-python -m bobreview.cli --dir ./screenshots
+python -m bobreview.cli --plugin <plugin-name> --dir ./screenshots
 
 # Or use script directly
 cd /path/to/bobreview-source
-python bobreview.py --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
 ```
 
 ### API Key Not Found
@@ -852,7 +852,7 @@ $env:OPENAI_API_KEY="sk-your-api-key-here"
 set OPENAI_API_KEY=sk-your-api-key-here
 
 # Or use command-line argument (all platforms)
-bobreview --dir ./screenshots --llm-api-key sk-your-api-key-here
+bobreview --plugin <plugin-name> --dir ./screenshots --llm-api-key sk-your-api-key-here
 
 # Add to shell profile for persistence (Linux/macOS)
 echo 'export OPENAI_API_KEY=sk-your-key' >> ~/.bashrc
@@ -950,7 +950,7 @@ set OPENAI_API_KEY=sk-your-key                 # Windows Command Prompt
 
 # Run analysis
 cd /path/to/screenshots
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Open report
 open performance_report.html                   # macOS
@@ -973,7 +973,8 @@ jobs:
       - name: Analyze Performance
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: bobreview --dir ./captures --output report.html
+        run: bobreview --plugin <plugin-name> --dir ./captures --output report.html
+```
       - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
@@ -1116,7 +1117,7 @@ config = ReportConfig(theme_id='light')
 
 **Or via CLI:**
 ```bash
-bobreview --dir . --theme light
+bobreview --plugin <plugin-name> --dir . --theme light
 ```
 
 **Create a custom theme:**

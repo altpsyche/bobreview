@@ -44,7 +44,7 @@ Test:
 ```bash
 cd /path/to/screenshots
 # Plugin is required
-bobreview --plugin mayhem --dir .
+bobreview --plugin <plugin-name> --dir .
 ```
 
 ---
@@ -84,7 +84,7 @@ Run without installing the package:
 pip install -r requirements.txt
 
 # Run from source directory
-python bobreview.py --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
 ```
 
 **Important:** When using `bobreview.py` directly:
@@ -98,11 +98,11 @@ python bobreview.py --dir /path/to/screenshots
 cd /path/to/bobreview-source
 
 # Run from here
-python bobreview.py --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
 
 # Won't work from other directories
 cd /some/other/directory
-python bobreview.py --dir .  # Error: file not found
+python bobreview.py --plugin <plugin-name> --dir .  # Error: file not found
 ```
 
 ---
@@ -128,7 +128,7 @@ python -c "from bobreview import ReportConfig; print('Installation successful')"
 ```bash
 mkdir test_screenshots
 cd test_screenshots
-bobreview --dir . --dry-run
+bobreview --plugin <plugin-name> --dir . --dry-run
 ```
 
 ---
@@ -142,7 +142,7 @@ bobreview --dir . --dry-run
 pip install .
 
 # Run
-bobreview --dir screenshots
+bobreview --plugin <plugin-name> --dir screenshots
 ```
 
 Python Scripts directory location: `C:\Python3X\Scripts\`
@@ -154,7 +154,7 @@ Python Scripts directory location: `C:\Python3X\Scripts\`
 pip3 install .
 
 # Run
-bobreview --dir screenshots
+bobreview --plugin <plugin-name> --dir screenshots
 ```
 
 ### Linux
@@ -164,7 +164,7 @@ bobreview --dir screenshots
 pip3 install .
 
 # Run
-bobreview --dir screenshots
+bobreview --plugin <plugin-name> --dir screenshots
 ```
 
 ---
@@ -189,7 +189,7 @@ venv\Scripts\activate
 pip install .
 
 # Use
-bobreview --dir screenshots
+bobreview --plugin <plugin-name> --dir screenshots
 
 # Deactivate
 deactivate
@@ -208,7 +208,7 @@ conda activate bobreview
 pip install .
 
 # Use
-bobreview --dir screenshots
+bobreview --plugin <plugin-name> --dir screenshots
 
 # Deactivate
 conda deactivate
@@ -251,13 +251,13 @@ set OPENAI_API_KEY=sk-your-api-key-here
 
 ```bash
 # OpenAI (default)
-bobreview --dir screenshots --llm-api-key sk-your-api-key-here
+bobreview --plugin <plugin-name> --dir screenshots --llm-api-key sk-your-api-key-here
 
 # Or specify provider
-bobreview --dir screenshots --llm-provider anthropic --llm-api-key your-key
+bobreview --plugin <plugin-name> --dir screenshots --llm-provider anthropic --llm-api-key your-key
 
 # Local Ollama (no API key needed)
-bobreview --dir screenshots --llm-provider ollama --llm-model llama2
+bobreview --plugin <plugin-name> --dir screenshots --llm-provider ollama --llm-model llama2
 ```
 
 ---
@@ -356,7 +356,7 @@ $env:PATH += ";$env:APPDATA\Python\Python3X\Scripts"
 # Use System Properties > Environment Variables to add Python Scripts directory
 
 # Solution 2: Use Python module syntax
-python -m bobreview.cli --dir screenshots
+python -m bobreview.cli --plugin <plugin-name> --dir screenshots
 
 # Solution 3: Reinstall
 pip uninstall bobreview
@@ -376,7 +376,7 @@ pip install .
 Or run from source:
 
 ```bash
-python bobreview.py --dir screenshots
+python bobreview.py --plugin <plugin-name> --dir screenshots
 ```
 
 ### Import Error
@@ -455,10 +455,10 @@ bobreview --help
 cd /path/to/test/screenshots
 
 # Dry run
-bobreview --dir . --dry-run --verbose
+bobreview --plugin <plugin-name> --dir . --dry-run --verbose
 
 # With API (if configured)
-bobreview --dir . --sample 5
+bobreview --plugin <plugin-name> --dir . --sample 5
 ```
 
 ### Python API Test
@@ -466,18 +466,10 @@ bobreview --dir . --sample 5
 ```python
 # test_bobreview.py
 from bobreview import ReportConfig
-from bobreview.plugins.mayhem.parsers import parse_filename  # MayhemAutomation-specific
 from pathlib import Path
 
 # Test import
 print("Imports successful")
-
-# Test parsing
-try:
-    data = parse_filename("Level1_85000_520_1234567890.png", pattern="{testcase}_{tris}_{draws}_{timestamp}.png")
-    print("Parsing works")
-except Exception as e:
-    print(f"Parsing failed: {e}")
 
 # Test config
 config = ReportConfig(title="Test")
@@ -501,19 +493,19 @@ Default cache directory: `.bobreview_cache/`
 ### Set Custom Cache Directory
 
 ```bash
-bobreview --dir screenshots --cache-dir /path/to/cache
+bobreview --plugin <plugin-name> --dir screenshots --cache-dir /path/to/cache
 ```
 
 ### Clear Cache
 
 ```bash
-bobreview --dir screenshots --clear-cache
+bobreview --plugin <plugin-name> --dir screenshots --clear-cache
 ```
 
 ### Disable Cache
 
 ```bash
-bobreview --dir screenshots --no-cache
+bobreview --plugin <plugin-name> --dir screenshots --no-cache
 ```
 
 ---

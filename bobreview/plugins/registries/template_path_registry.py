@@ -38,7 +38,7 @@ class TemplatePathRegistry(BaseRegistry):
         Parameters:
             path: Path to template directory
             plugin_name: Name of the plugin registering this path
-            priority: Loading priority (default 100, game-review plugin uses 1000)
+            priority: Loading priority (default 100, higher priority plugins use lower numbers)
         """
         path = Path(path)
         

@@ -56,7 +56,7 @@ def get_packages():
         "bobreview.pages",
     ]
     
-    # Auto-discover plugin packages (game-review, mayhem, etc.)
+    # Auto-discover plugin packages (plugins are not shipped with core)
     plugin_packages = find_packages(
         where=".",
         include=["bobreview.plugins.*"],

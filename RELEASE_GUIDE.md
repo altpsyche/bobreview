@@ -87,7 +87,7 @@ export ANTHROPIC_API_KEY=your-anthropic-key
 ollama serve
 
 # Then use with --llm-provider ollama
-bobreview --dir . --llm-provider ollama --llm-model llama2
+bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama2
 ```
 
 > **Tip:** Add the API key to your shell profile for persistence (see [Making It Permanent](#making-api-key-permanent))
@@ -134,7 +134,7 @@ Where:
 2. Run BobReview:
    ```bash
    # Plugin is required
-   bobreview --plugin mayhem --dir .
+   bobreview --plugin <plugin-name> --dir .
    ```
 
 3. Open the generated report:
@@ -153,28 +153,28 @@ Where:
 
 ```bash
 # Custom report title and location (using plugin)
-bobreview --plugin mayhem --dir . --title "Forest Level" --location "Dark Forest"
+bobreview --plugin <plugin-name> --dir . --title "Forest Level" --location "Dark Forest"
 
 # Custom output filename
-bobreview --plugin mayhem --dir . --output forest_analysis.html
+bobreview --plugin <plugin-name> --dir . --output forest_analysis.html
 
 # Create standalone HTML with embedded images
-bobreview --plugin mayhem --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Test without calling OpenAI API (no cost)
-bobreview --plugin mayhem --dir . --dry-run
+bobreview --plugin <plugin-name> --dir . --dry-run
 
 # Process only 20 random samples (for quick testing)
-bobreview --plugin mayhem --dir . --sample 20
+bobreview --plugin <plugin-name> --dir . --sample 20
 
 # Use light theme
-bobreview --plugin mayhem --dir . --theme light
+bobreview --plugin <plugin-name> --dir . --theme light
 
 # Use Anthropic Claude instead of OpenAI
-bobreview --plugin mayhem --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
+bobreview --plugin <plugin-name> --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
 
 # Use local Ollama
-bobreview --plugin mayhem --dir . --llm-provider ollama --llm-model mistral
+bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model mistral
 
 # List available plugins
 bobreview plugins list
@@ -195,13 +195,13 @@ bobreview --help
 
 ```bash
 # First run - calls OpenAI API and caches results
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Second run - uses cached results (instant, no API cost)
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Force fresh analysis (clears cache)
-bobreview --dir . --clear-cache
+bobreview --plugin <plugin-name> --dir . --clear-cache
 ```
 
 ---
@@ -254,7 +254,7 @@ bobreview --dir . --clear-cache
 **"Command not found" error:**
 ```bash
 # Ensure Python Scripts is in PATH, or use:
-python -m bobreview.cli --dir .
+python -m bobreview.cli --plugin <plugin-name> --dir .
 ```
 
 **"No PNG files found" error:**
@@ -264,8 +264,8 @@ python -m bobreview.cli --dir .
 
 **"API key not found" error:**
 - Verify environment variable is set: `echo $OPENAI_API_KEY` (Linux/macOS) or `echo %OPENAI_API_KEY%` (Windows)
-- Or provide key via command line: `bobreview --dir . --llm-api-key sk-your-key`
-- Or use Ollama for local inference: `bobreview --dir . --llm-provider ollama`
+- Or provide key via command line: `bobreview --plugin <plugin-name> --dir . --llm-api-key sk-your-key`
+- Or use Ollama for local inference: `bobreview --plugin <plugin-name> --dir . --llm-provider ollama`
 
 **Slow performance:**
 - First run is slow (normal - API calls take time)
@@ -304,7 +304,7 @@ source ~/.bashrc
 bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
 
 # Plugin and Report System options
---plugin PLUGIN_NAME      # Plugin to use (e.g., "mayhem", "game-review")
+--plugin PLUGIN_NAME      # Plugin to use (e.g., "my-plugin")
 --report-system SYSTEM    # Report system ID (optional, uses plugin default)
 --list-report-systems     # List all available report systems
 
