@@ -87,25 +87,6 @@ class GameConfigParser(DataParserInterface):
             return [config_path]
         return []
     
-    def parse(self, directory: Path) -> Dict[str, Any]:
-        """
-        Legacy method for backward compatibility.
-        
-        Parse game.json from the specified directory.
-        This method is kept for compatibility but uses parse_file() internally.
-        
-        Args:
-            directory: Directory containing game.json
-            
-        Returns:
-            Dictionary with game data
-        """
-        config_path = directory / self.config_file
-        result = self.parse_file(config_path)
-        if result is None:
-            return self._get_default_game()
-        return result
-    
     def _validate_and_normalize(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and normalize game data."""
         # Ensure required fields

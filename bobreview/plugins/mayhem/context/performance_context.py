@@ -145,24 +145,4 @@ class PerformanceContextBuilder(ContextBuilderInterface):
             **base_context,
             **context
         }
-    
-    def build(
-        self,
-        data_points: List[Dict[str, Any]],
-        stats: Dict[str, Any],
-        config: Any,
-        system_def: Any,
-        input_dir: Path = None,
-        image_data_uris: Dict[str, str] = None
-    ) -> Dict[str, Any]:
-        """
-        Legacy method for backward compatibility with framework.
-        
-        This method is kept for compatibility but should use build_context() instead.
-        """
-        base_context = {
-            'input_dir': input_dir,
-            'image_data_uris': image_data_uris,
-            'system_def': system_def
-        }
-        return self.build_context(data_points, stats, config, base_context)
+
