@@ -23,7 +23,7 @@ from .report_systems.executor import ReportSystemExecutor
 from .llm.providers import list_providers, get_provider_info
 
 # Import plugin system
-from .plugins import get_loader, get_registry, init_loader
+from .core.plugin_system import get_loader, get_registry, init_loader
 
 # Check for tqdm availability
 try:
@@ -98,7 +98,7 @@ def _load_plugins(extra_dirs, config):
 
 def handle_plugin_command(args):
     """Handle plugin subcommands."""
-    from .plugins import init_loader
+    from .core.plugin_system import init_loader
     
     # Initialize loader with default directories
     dirs = _get_default_plugin_dirs()
@@ -158,7 +158,7 @@ def handle_plugin_command(args):
         loader.add_plugin_dir(user_plugins)
         loader.discover()
         
-        from .plugins import PluginManifest
+        from .core.plugin_system import PluginManifest
         manifest = PluginManifest.from_file(manifest_path)
         print(f"  Name: {manifest.name} v{manifest.version}")
         print(f"  Author: {manifest.author}")
@@ -607,7 +607,7 @@ Examples:
             report_system_id = args.report_system
         else:
             # No explicit system - auto-select if only one, require selection if multiple
-            from .plugins import get_loader
+            from .core.plugin_system import get_loader
             loader = get_loader()
             
             # Ensure plugins are discovered (if not already)

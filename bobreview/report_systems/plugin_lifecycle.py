@@ -5,7 +5,7 @@ Responsible for calling plugin lifecycle hooks during report generation.
 """
 
 from typing import Dict, Any, List, Optional
-from ..plugins import PluginLoader
+from ..core.plugin_system import PluginLoader
 from ..core import ReportConfig
 from ..core.plugin_utils import safe_plugin_call
 

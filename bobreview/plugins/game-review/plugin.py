@@ -14,7 +14,7 @@ Other plugins can override any of these components.
 import json
 import logging
 from pathlib import Path
-from ...plugins import BasePlugin
+from ...core.plugin_system import BasePlugin
 
 logger = logging.getLogger(__name__)
 

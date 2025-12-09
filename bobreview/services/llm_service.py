@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 import logging
 
 from .base import BaseService, LLMServiceError
+from ..core.plugin_system import get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -165,8 +166,6 @@ class LLMService(BaseService):
         This allows plugins to register custom generators instead of
         hardcoding them in the service.
         """
-        from ..plugins import get_registry
-        
         registry = get_registry()
         
         # Try to get from registry first (plugin-registered generators)

@@ -12,7 +12,7 @@ Without this plugin, BobReview is just an empty shell.
 Other plugins can override any of these components.
 """
 
-from ...plugins import BasePlugin
+from ...core.plugin_system import BasePlugin
 from ...services import get_container, DataService, AnalyticsService, ChartService, LLMService
 
 

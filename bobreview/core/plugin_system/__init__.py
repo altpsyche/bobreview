@@ -1,12 +1,12 @@
 """
-BobReview Plugin System.
+BobReview Plugin System Infrastructure.
 
 This package provides the infrastructure for extending BobReview with plugins.
 Plugins can register widgets, data parsers, LLM generators, themes, charts,
 pages, and services.
 
 Quick Start:
-    from bobreview.plugins import BasePlugin, get_registry, get_loader
+    from bobreview.core.plugin_system import BasePlugin, get_registry, get_loader
 
     # Create a plugin
     class MyPlugin(BasePlugin):
@@ -14,7 +14,7 @@ Quick Start:
         version = "1.0.0"
         
         def on_load(self, registry):
-            registry.register_widget(MyWidget)
+            registry.widgets.register(MyWidget)
 
     # Load plugins at startup
     loader = get_loader()

@@ -24,7 +24,7 @@ from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, 
 
 # Import services and plugin system
 from ..services import ServiceContainer, DataService, AnalyticsService, ChartService, LLMService, get_container
-from ..plugins import PluginRegistry, PluginLoader, get_registry, get_loader
+from ..core.plugin_system import PluginRegistry, PluginLoader, get_registry, get_loader
 from ..core.template_engine import get_template_engine
 
 # Import new responsibility classes

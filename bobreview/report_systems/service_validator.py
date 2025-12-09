@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional
 from ..services import ServiceContainer
 from ..core import ReportConfig, log_warning, log_verbose
 from ..services import LLMService
+from ..core.plugin_system import get_loader
 
 
 class ServiceValidator:
@@ -50,7 +51,6 @@ class ServiceValidator:
                 missing_services.append(f"  - {service_name}: {description}")
         
         if missing_services:
-            from ..plugins import get_loader
             loader = get_loader()
             loaded_plugins = [p.name for p in loader.get_loaded_plugins() if p.loaded]
             

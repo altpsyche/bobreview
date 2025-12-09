@@ -47,10 +47,11 @@ def get_packages():
     core_packages = [
         "bobreview",
         "bobreview.core",
+        "bobreview.core.plugin_system",
+        "bobreview.core.plugin_system.registries",
         "bobreview.llm",
         "bobreview.llm.providers",
         "bobreview.plugins",
-        "bobreview.plugins.registries",
         "bobreview.services",
         "bobreview.report_systems",
         "bobreview.pages",
@@ -60,7 +61,7 @@ def get_packages():
     plugin_packages = find_packages(
         where=".",
         include=["bobreview.plugins.*"],
-        exclude=["bobreview.plugins.registries", "bobreview.plugins"]
+        exclude=["bobreview.plugins"]
     )
     
     return core_packages + plugin_packages

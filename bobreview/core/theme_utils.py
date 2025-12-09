@@ -7,6 +7,7 @@ CSS variables, using the plugin registry as the source of truth.
 
 from typing import Optional
 from .themes import ReportTheme, get_theme_css_variables as _get_theme_css_variables
+from .plugin_system import get_registry
 
 
 def get_theme(theme_id: Optional[str] = None) -> Optional[ReportTheme]:
@@ -19,8 +20,6 @@ def get_theme(theme_id: Optional[str] = None) -> Optional[ReportTheme]:
     Returns:
         ReportTheme instance or None if not found
     """
-    from ..plugins import get_registry
-    
     registry = get_registry()
     theme = registry.themes.get(theme_id)
     

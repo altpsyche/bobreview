@@ -12,6 +12,7 @@ import logging
 from .schema import DataSourceConfig
 from .data_parser_base import DataParser
 from ..core.api import DataParserInterface
+from ..core.plugin_system import get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -31,19 +32,14 @@ class ParserFactory:
         Parameters:
             registry: PluginRegistry instance (optional, uses lazy import if None)
         """
-        self.registry = registry  # Will be lazily loaded if needed
+        self.registry = registry  # Will use global registry if None
         self._builtin_parsers: Dict[str, Type[DataParser]] = {}
         self._register_builtin_parsers()
     
     def _get_registry(self):
-        """Lazily get registry to avoid import errors if plugins aren't available."""
+        """Get registry, using global if not injected."""
         if self.registry is None:
-            try:
-                from ..plugins import get_registry
-                self.registry = get_registry()
-            except ImportError:
-                # Plugins not available - factory will only use built-in parsers
-                self.registry = None
+            self.registry = get_registry()
         return self.registry
     
     def _register_builtin_parsers(self) -> None:
