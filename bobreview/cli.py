@@ -545,7 +545,7 @@ Examples:
             max_tokens=args.llm_max_tokens,
             chunk_size=args.llm_chunk_size,
             combine_warning_threshold=args.llm_combine_warning_threshold,
-            use_cache=args.use_cache and not args.dry_run,
+            enable_cache=args.use_cache and not args.dry_run,
         ),
         cache=CacheConfig(
             cache_dir=Path(args.cache_dir),
@@ -702,7 +702,7 @@ Examples:
                 'temperature': config.llm.temperature,
                 'max_tokens': config.llm.max_tokens,
                 'chunk_size': config.llm.chunk_size,
-                'enable_cache': config.llm.use_cache,
+                'enable_cache': config.llm.enable_cache,
             },
             'output': {
                 'embed_images': config.output.embed_images,

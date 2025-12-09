@@ -37,7 +37,7 @@ class ConfigMerger:
         config.llm.temperature = llm_cfg.temperature
         config.llm.max_tokens = llm_cfg.max_tokens
         config.llm.chunk_size = llm_cfg.chunk_size
-        config.llm.use_cache = llm_cfg.enable_cache
+        config.llm.enable_cache = llm_cfg.enable_cache
         
         # Merge output config
         output_cfg = system_def.output

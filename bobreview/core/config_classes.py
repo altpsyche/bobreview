@@ -45,7 +45,7 @@ class LLMConfig:
     max_tokens: int = 2000  # Max tokens for LLM responses
     chunk_size: int = 10  # Number of data samples to send per LLM call
     combine_warning_threshold: int = 100000  # Character count threshold for warning
-    use_cache: bool = True
+    enable_cache: bool = True
 
 
 @dataclass
