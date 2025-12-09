@@ -70,6 +70,10 @@ Evolve BobReview into a comprehensive performance analysis suite with:
   - Clear separation: infrastructure in `core/plugin_system/`, implementations in `plugins/`
   - Removed lazy imports - all imports at module top-level
   - No backward compatibility for old `bobreview.plugins` infrastructure imports
+- **COMPLETE** (v1.0.7) - Extension point abstraction
+  - `IExtensionPoint` interface for accessing plugin implementations
+  - `IPluginManager` interface for plugin lifecycle
+  - Core code depends on abstractions, not concrete registry/loader
 
 ### Visual Charts & Graphs
 - **COMPLETE** - Chart.js library integration

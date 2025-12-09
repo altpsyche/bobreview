@@ -23,7 +23,7 @@ from .report_systems.executor import ReportSystemExecutor
 from .llm.providers import list_providers, get_provider_info
 
 # Import plugin system
-from .core.plugin_system import get_loader, get_registry, init_loader
+from .core.plugin_system import get_plugin_manager, init_loader
 
 # Check for tqdm availability
 try:
@@ -607,17 +607,17 @@ Examples:
             report_system_id = args.report_system
         else:
             # No explicit system - auto-select if only one, require selection if multiple
-            from .core.plugin_system import get_loader
-            loader = get_loader()
+            from .core.plugin_system import get_plugin_manager
+            plugin_manager = get_plugin_manager()
             
             # Ensure plugins are discovered (if not already)
-            if not loader.get_discovered_plugins():
-                loader.discover()
+            if not plugin_manager.get_discovered_plugins():
+                plugin_manager.discover()
             
             plugin_path = None
             matched_manifest = None
             plugin_name_normalized = args.plugin.lower().replace('-', '_').replace(' ', '')
-            for manifest in loader.get_discovered_plugins():
+            for manifest in plugin_manager.get_discovered_plugins():
                 manifest_name_normalized = manifest.name.lower().replace('-', '_').replace(' ', '')
                 # Exact match
                 if manifest.name == args.plugin:
@@ -637,9 +637,9 @@ Examples:
             
             # Load the plugin if found
             if matched_manifest:
-                if not loader.is_loaded(matched_manifest.name):
+                if not plugin_manager.is_loaded(matched_manifest.name):
                     try:
-                        loader.load(matched_manifest.name)
+                        plugin_manager.load(matched_manifest.name)
                         log_info(f"Loaded plugin: {matched_manifest.name}", config)
                     except Exception as e:
                         log_warning(f"Failed to load plugin '{matched_manifest.name}': {e}", config)
@@ -673,7 +673,7 @@ Examples:
                     return 1
             else:
                 # Plugin not found - provide helpful error message
-                available_plugins = [m.name for m in loader.get_discovered_plugins()]
+                available_plugins = [m.name for m in plugin_manager.get_discovered_plugins()]
                 if available_plugins:
                     # Check if user included version number
                     plugin_name_clean = args.plugin.split()[0] if ' ' in args.plugin else args.plugin

@@ -24,7 +24,7 @@ from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, 
 
 # Import services and plugin system
 from ..services import ServiceContainer, DataService, AnalyticsService, ChartService, LLMService, get_container
-from ..core.plugin_system import PluginRegistry, PluginLoader, get_registry, get_loader
+from ..core.plugin_system import PluginRegistry, PluginLoader, get_extension_point, get_plugin_manager
 from ..core.template_engine import get_template_engine
 
 # Import new responsibility classes
@@ -77,21 +77,33 @@ class ReportSystemExecutor:
         if container is None:
             container = get_container()
         if registry is None:
-            registry = get_registry()
+            extension_point = get_extension_point()
+        else:
+            extension_point = None  # Will be set from registry if provided
         if template_engine is None:
             template_engine = get_template_engine()
         if plugin_loader is None:
-            plugin_loader = get_loader()
+            plugin_manager = get_plugin_manager()
+        else:
+            plugin_manager = None  # Will use provided plugin_loader
         
         self.container = container
         self.registry = registry
+        self._extension_point = extension_point
         self.template_engine = template_engine
         self.plugin_loader = plugin_loader
+        self._plugin_manager = plugin_manager
         
         # Initialize responsibility classes
         self.config_merger = ConfigMerger()
         self.service_validator = ServiceValidator(container)
-        self.lifecycle_manager = PluginLifecycleManager(plugin_loader)
+        # Use plugin_manager for lifecycle manager (fallback to plugin_loader if provided)
+        if plugin_loader is not None:
+            self.lifecycle_manager = PluginLifecycleManager(plugin_loader)
+        else:
+            # PluginLifecycleManager needs a PluginLoader, so get it from plugin_manager's internal loader
+            from .plugin_lifecycle import PluginLifecycleManager
+            self.lifecycle_manager = PluginLifecycleManager(self._plugin_manager.loader if hasattr(self._plugin_manager, 'loader') else None)
         
         # Merge configuration and validate services
         self.config_merger.merge(self.config, self.system_def)
@@ -114,7 +126,12 @@ class ReportSystemExecutor:
         }
         
         # Check if plugins are loaded
-        loaded_plugins = [p.name for p in self.plugin_loader.get_loaded_plugins() if p.loaded]
+        if self._plugin_manager:
+            loaded_plugins = [p.name for p in self._plugin_manager.get_loaded_plugins() if p.loaded]
+        elif self.plugin_loader:
+            loaded_plugins = [p.name for p in self.plugin_loader.get_loaded_plugins() if p.loaded]
+        else:
+            loaded_plugins = []
         
         # If plugins are loaded but services aren't registered, auto-register default services
         if loaded_plugins and not all(self.container.has(name) for name in required_services.keys()):
@@ -465,7 +482,12 @@ class ReportSystemExecutor:
             }
             
             # Add context from registered context builder (images, critical points, aliases, etc.)
-            context_builder_cls = self.registry.context_builders.get(self.system_def.id)
+            if self._extension_point:
+                context_builder_cls = self._extension_point.get_context_builder(self.system_def.id)
+            elif self.registry:
+                context_builder_cls = self.registry.context_builders.get(self.system_def.id)
+            else:
+                context_builder_cls = None
             if context_builder_cls:
                 builder = context_builder_cls()
                 # Use core API interface method: build_context()
@@ -488,7 +510,12 @@ class ReportSystemExecutor:
             
             # Add charts if page has chart configurations - use plugin-provided generator
             if page_config.charts:
-                chart_generator_cls = self.registry.chart_generators.get(self.system_def.id)
+                if self._extension_point:
+                    chart_generator_cls = self._extension_point.get_chart_generator(self.system_def.id)
+                elif self.registry:
+                    chart_generator_cls = self.registry.chart_generators.get(self.system_def.id)
+                else:
+                    chart_generator_cls = None
                 if chart_generator_cls:
                     # Instantiate with no args (core API interface)
                     chart_generator = chart_generator_cls()

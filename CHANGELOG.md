@@ -74,6 +74,24 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
   - All plugins use focused registry interfaces
   - Cleaner, more predictable API
 
+- **Extension Point Abstraction** (`interface.py`):
+  - New `IExtensionPoint` interface - abstract access to plugin-provided implementations
+  - New `IPluginManager` interface - abstract plugin lifecycle management
+  - Core code now depends on interfaces, not concrete registry/loader
+  - Enables dependency injection and easier testing
+  - Usage:
+    ```python
+    from bobreview.core.plugin_system import get_extension_point, get_plugin_manager
+    
+    # Access implementations
+    extension_point = get_extension_point()
+    theme = extension_point.get_theme('dark')
+    
+    # Manage plugins
+    plugin_manager = get_plugin_manager()
+    plugin_manager.discover()
+    ```
+
 ### Removed
 
 - **Backward Compatibility**:
@@ -87,6 +105,7 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
 New Files:
 - `bobreview/core/plugin_system/registries/` - 11 focused registry classes
 - `bobreview/core/plugin_system/` - Plugin infrastructure (base.py, loader.py, registry.py, manifest.py)
+- `bobreview/core/plugin_system/interface.py` - Extension point abstraction layer
 - `bobreview/core/config_classes.py` - Focused config classes
 - `bobreview/report_systems/config_merger.py` - Config merging responsibility
 - `bobreview/report_systems/service_validator.py` - Service validation responsibility

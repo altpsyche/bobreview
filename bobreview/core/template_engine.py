@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 from .utils import format_number
 from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
-from .plugin_system import get_registry
+from .plugin_system import get_extension_point
 
 
 # Global template engine instance
@@ -67,9 +67,9 @@ class TemplateEngine:
         
         # Plugin-registered template paths (in priority order)
         # Lower priority number = higher priority (loaded first)
-        registry = get_registry()
+        extension_point = get_extension_point()
         # Get template paths with priority information
-        template_registrations = registry.template_paths.get_all_registrations()
+        template_registrations = extension_point.get_template_paths()
         # Already sorted by priority (lower number = higher priority)
         sorted_registrations = template_registrations
         for template_path, plugin_name, priority in sorted_registrations:

@@ -6,21 +6,16 @@ Plugins can register widgets, data parsers, LLM generators, themes, charts,
 pages, and services.
 
 Quick Start:
-    from bobreview.core.plugin_system import BasePlugin, get_registry, get_loader
+    from bobreview.core.plugin_system import get_extension_point, get_plugin_manager
 
-    # Create a plugin
-    class MyPlugin(BasePlugin):
-        name = "My Plugin"
-        version = "1.0.0"
-        
-        def on_load(self, registry):
-            registry.widgets.register(MyWidget)
+    # Access plugin-provided implementations
+    extension_point = get_extension_point()
+    theme = extension_point.get_theme('dark')
 
-    # Load plugins at startup
-    loader = get_loader()
-    loader.add_plugin_dir(Path("~/.bobreview/plugins"))
-    loader.discover()
-    loader.load_all_enabled()
+    # Manage plugin lifecycle
+    plugin_manager = get_plugin_manager()
+    plugin_manager.discover()
+    plugin_manager.load('my-plugin')
 
 Extension Points:
     - Widgets: Custom UI components
@@ -46,8 +41,30 @@ from .loader import (
     get_loader,
     init_loader,
 )
+from .interface import (
+    IExtensionPoint,
+    IPluginManager,
+    ExtensionPointProvider,
+    PluginManagerProvider,
+    get_extension_point,
+    get_plugin_manager,
+    reset_extension_point,
+    reset_plugin_manager,
+)
 
 __all__ = [
+    # Abstract interfaces (preferred for core code)
+    'IExtensionPoint',
+    'IPluginManager',
+    'get_extension_point',
+    'get_plugin_manager',
+    'reset_extension_point',
+    'reset_plugin_manager',
+    
+    # Concrete implementations (for advanced use)
+    'ExtensionPointProvider',
+    'PluginManagerProvider',
+    
     # Base classes
     'BasePlugin',
     'PluginInfo',
@@ -56,12 +73,12 @@ __all__ = [
     'PluginManifest',
     'validate_manifest',
     
-    # Registry
+    # Registry (internal - prefer IExtensionPoint)
     'PluginRegistry',
     'get_registry',
     'reset_registry',
     
-    # Loader
+    # Loader (internal - prefer IPluginManager)
     'PluginLoader',
     'PluginLoadError',
     'PluginDependencyError',

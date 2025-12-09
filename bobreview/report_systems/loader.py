@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from .schema import ReportSystemDefinition, parse_report_system_definition
-from ..core.plugin_system import get_registry, get_loader
+from ..core.plugin_system import get_extension_point, get_plugin_manager
 
 
 # Cache for loaded report systems
@@ -84,14 +84,14 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     
     # First, discover report systems from plugin directories (without loading plugins)
     # Check plugin directories for report_systems/ subdirectories
-    loader = get_loader()
+    plugin_manager = get_plugin_manager()
     # Get discovered plugin manifests (not loaded plugins)
-    manifests = loader.get_discovered_plugins() if hasattr(loader, 'get_discovered_plugins') else []
+    manifests = plugin_manager.get_discovered_plugins() if hasattr(plugin_manager, 'get_discovered_plugins') else []
     if not manifests:
         # Try discovering if not done yet
         try:
-            loader.discover()
-            manifests = loader.get_discovered_plugins()
+            plugin_manager.discover()
+            manifests = plugin_manager.get_discovered_plugins()
         except:
             pass
     
@@ -107,8 +107,8 @@ def discover_report_systems() -> List[Dict[str, Any]]:
                         systems.append(system)
     
     # Also check plugin registry for report systems from already-loaded plugins
-    registry = get_registry()
-    for name, system_def in registry.report_systems.get_all().items():
+    extension_point = get_extension_point()
+    for name, system_def in extension_point.get_all_report_systems().items():
         # Don't duplicate if already discovered from filesystem
         if not any(s['id'] == (system_def.get('id', name) if isinstance(system_def, dict) else getattr(system_def, 'id', name)) for s in systems):
             systems.append({
@@ -174,11 +174,11 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
     
     # If plugin_name is specified, try that plugin first
     if plugin_name:
-        loader = get_loader()
-        if not loader.get_discovered_plugins():
-            loader.discover()
+        plugin_manager = get_plugin_manager()
+        if not plugin_manager.get_discovered_plugins():
+            plugin_manager.discover()
         
-        for manifest in loader.get_discovered_plugins():
+        for manifest in plugin_manager.get_discovered_plugins():
             if manifest.name == plugin_name or manifest.name.replace('-', '_') == plugin_name.replace('-', '_'):
                 plugin_path = Path(manifest.path) if manifest.path else None
                 if plugin_path and plugin_path.exists():
@@ -188,13 +188,13 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
                 break
     
     # Try in plugin directories (check filesystem without loading plugins)
-    loader = get_loader()
-    manifests = loader.get_discovered_plugins() if hasattr(loader, 'get_discovered_plugins') else []
+    plugin_manager = get_plugin_manager()
+    manifests = plugin_manager.get_discovered_plugins() if hasattr(plugin_manager, 'get_discovered_plugins') else []
     if not manifests:
         # Try discovering if not done yet
         try:
-            loader.discover()
-            manifests = loader.get_discovered_plugins()
+            plugin_manager.discover()
+            manifests = plugin_manager.get_discovered_plugins()
         except:
             pass
     
@@ -352,24 +352,24 @@ def load_report_system(
     found_plugin_name = None
     
     # First, check plugin registry for the system
-    registry = get_registry()
-    plugin_system = registry.report_systems.get(id_or_path)
+    extension_point = get_extension_point()
+    plugin_system = extension_point.get_report_system(id_or_path)
     if plugin_system is not None:
         system_data = copy.deepcopy(plugin_system)
         source_description = f"plugin:{id_or_path}"
         
         # Find which plugin provides this report system
         component_key = f"report_system:{id_or_path}"
-        found_plugin_name = registry.get_component_owner(component_key)
+        found_plugin_name = extension_point.get_component_owner(component_key)
         
         # Auto-load the plugin if not already loaded
         if found_plugin_name:
-            loader = get_loader()
-            if not loader.is_loaded(found_plugin_name):
+            plugin_manager = get_plugin_manager()
+            if not plugin_manager.is_loaded(found_plugin_name):
                 _logger = logging.getLogger(__name__)
                 _logger.info(f"Auto-loading required plugin: {found_plugin_name}")
                 try:
-                    loader.load(found_plugin_name)
+                    plugin_manager.load(found_plugin_name)
                 except Exception as e:
                     _logger.warning(
                         f"Failed to auto-load plugin '{found_plugin_name}' for report system '{id_or_path}': {e}"

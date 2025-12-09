@@ -12,7 +12,7 @@ import logging
 from .schema import DataSourceConfig
 from .data_parser_base import DataParser
 from ..core.api import DataParserInterface
-from ..core.plugin_system import get_registry
+from ..core.plugin_system import get_extension_point
 
 logger = logging.getLogger(__name__)
 
@@ -25,22 +25,23 @@ class ParserFactory:
     Falls back to built-in parsers if not found in registry.
     """
     
-    def __init__(self, registry=None):
+    def __init__(self, extension_point=None):
         """
         Initialize parser factory.
         
         Parameters:
-            registry: PluginRegistry instance (optional, uses lazy import if None)
+            extension_point: IExtensionPoint instance (optional, uses global if None)
         """
-        self.registry = registry  # Will use global registry if None
+        self._extension_point = extension_point  # Will use global if None
         self._builtin_parsers: Dict[str, Type[DataParser]] = {}
         self._register_builtin_parsers()
     
-    def _get_registry(self):
-        """Get registry, using global if not injected."""
-        if self.registry is None:
-            self.registry = get_registry()
-        return self.registry
+    @property
+    def extension_point(self):
+        """Get extension point, using global if not injected."""
+        if self._extension_point is None:
+            self._extension_point = get_extension_point()
+        return self._extension_point
     
     def _register_builtin_parsers(self) -> None:
         """Register built-in parser types."""
@@ -62,11 +63,8 @@ class ParserFactory:
         """
         parser_type = config.type
         
-        # Try plugin registry first (if available)
-        parser_cls = None
-        registry = self._get_registry()
-        if registry:
-            parser_cls = registry.data_parsers.get(parser_type)
+        # Try plugin extension point first
+        parser_cls = self.extension_point.get_data_parser(parser_type)
         
         # Fall back to built-in parsers
         if parser_cls is None:
@@ -74,11 +72,10 @@ class ParserFactory:
         
         if parser_cls is None:
             available = list(self._builtin_parsers.keys())
-            if registry:
-                try:
-                    available.extend(registry.data_parsers.get_all().keys())
-                except Exception:
-                    pass  # Ignore errors getting plugin parsers
+            try:
+                available.extend(self.extension_point.get_all_parsers().keys())
+            except Exception:
+                pass  # Ignore errors getting plugin parsers
             raise ValueError(
                 f"Unknown parser type: {parser_type}. "
                 f"Available types: {', '.join(sorted(set(available)))}"
@@ -97,11 +94,9 @@ class ParserFactory:
     def get_available_types(self) -> list[str]:
         """Get list of available parser types."""
         types = set(self._builtin_parsers.keys())
-        registry = self._get_registry()
-        if registry:
-            try:
-                types.update(registry.data_parsers.get_all().keys())
-            except Exception:
-                pass  # Ignore errors getting plugin parsers
+        try:
+            types.update(self.extension_point.get_all_parsers().keys())
+        except Exception:
+            pass  # Ignore errors getting plugin parsers
         return sorted(types)
 
