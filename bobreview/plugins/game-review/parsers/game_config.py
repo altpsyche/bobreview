@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from bobreview.core.api import DataParserInterface
 
 if TYPE_CHECKING:
-    from ...report_systems.schema import DataSourceConfig
+    from ...engine.schema import DataSourceConfig
 
 logger = logging.getLogger(__name__)
 

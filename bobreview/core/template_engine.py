@@ -18,7 +18,7 @@ from jinja2 import (
 )
 
 if TYPE_CHECKING:
-    from ..report_systems.schema import LabelConfig
+    from ..engine.schema import LabelConfig
 
 from .utils import format_number
 from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon

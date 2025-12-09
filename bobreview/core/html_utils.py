@@ -98,15 +98,13 @@ def get_shared_css() -> str:
     Returns CSS string with theme variables and base styles.
     
     This function reads the CSS content from the styles.css file located in the
-    pages directory. The CSS is the single source of truth for all report styling.
+    core/static directory. The CSS is the single source of truth for all report styling.
     
     Returns:
         str: Complete CSS content for embedding in HTML
     """
-    # CSS is in pages directory, not core directory
-    # We need to find it relative to the package root
-    from .. import pages
-    css_path = Path(pages.__file__).parent / "styles.css"
+    # CSS is in core/static directory
+    css_path = Path(__file__).parent / "static" / "styles.css"
     return css_path.read_text(encoding='utf-8')
 
 

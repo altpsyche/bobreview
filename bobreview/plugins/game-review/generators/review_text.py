@@ -9,7 +9,7 @@ from typing import Dict, List, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from bobreview.core.config import ReportConfig
 
-from bobreview.llm.client import call_llm
+from bobreview.services.llm.client import call_llm
 
 
 def generate_review_text(

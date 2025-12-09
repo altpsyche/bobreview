@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import re
 
-from ....report_systems.data_parser_base import FilenamePatternParser
-from ....report_systems.schema import DataSourceConfig, FieldConfig
+from ....engine.data_parser_base import FilenamePatternParser
+from ....engine.schema import DataSourceConfig, FieldConfig
 
 # Note: MayhemParser extends FilenamePatternParser, which extends DataParserInterface
 # from core.api. This maintains the core API contract while providing a concrete

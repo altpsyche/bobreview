@@ -137,7 +137,7 @@ class ReportPipeline:
             )
         else:
             # Fallback to direct parsing using factory
-            from ..report_systems.parser_factory import ParserFactory
+            from ..engine.parser_factory import ParserFactory
             factory = ParserFactory()
             parser = factory.create(system_def.data_source)
             data = parser.parse_directory(input_dir)

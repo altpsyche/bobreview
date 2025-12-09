@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from bobreview.core.config import ReportConfig
 
 from bobreview.core.utils import format_number, log_warning
-from bobreview.llm.client import call_llm_chunked
+from bobreview.services.llm.client import call_llm_chunked
 
 
 def generate_optimization_checklist(

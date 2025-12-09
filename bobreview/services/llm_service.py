@@ -46,7 +46,7 @@ class LLMService(BaseService):
     def client(self):
         """Get LLM client, initializing if needed."""
         if self._client is None:
-            from ..llm import LLMClient
+            from .llm import LLMClient
             self._client = LLMClient(
                 provider=self.config.get('provider', 'openai'),
                 api_key=self.config.get('api_key'),
@@ -115,7 +115,7 @@ class LLMService(BaseService):
                         return gen_func(data_points, stats, report_config, context)
                     else:
                         # Old-style function (data_points, stats, config, images_dir_rel)
-                        from ..report_systems.llm_generator_base import LLMGeneratorAdapter
+                        from ..engine.llm_generator_base import LLMGeneratorAdapter
                         adapter = LLMGeneratorAdapter(gen_func, generator_config)
                         # Extract images_dir from context
                         if isinstance(context, dict):
@@ -127,8 +127,8 @@ class LLMService(BaseService):
                     logger.warning(f"Python generator failed, falling back to template: {e}")
         
         # Use template-based generator
-        from ..report_systems.llm_generator_base import LLMGeneratorTemplate
-        from ..llm import call_llm
+        from ..engine.llm_generator_base import LLMGeneratorTemplate
+        from .llm import call_llm
         
         generator = LLMGeneratorTemplate(generator_config)
         

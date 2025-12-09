@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..report_systems.schema import DataSourceConfig
+    from ..engine.schema import DataSourceConfig
     from .config import ReportConfig
 
 

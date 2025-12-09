@@ -16,14 +16,14 @@ from .core import init_cache, get_cache, analyze_data
 from .core.config import LLMConfig, CacheConfig, ExecutionConfig, OutputConfig
 
 # Import report systems framework
-from .report_systems import load_report_system, list_available_systems
-from .report_systems.executor import ReportSystemExecutor
+from .engine import load_report_system, list_available_systems
+from .engine.executor import ReportSystemExecutor
 
 # Import provider listing
-from .llm.providers import list_providers, get_provider_info
+from .services.llm.providers import list_providers, get_provider_info
 
 # Import plugin system
-from .core.plugin_system import get_plugin_manager, init_loader
+from .core.plugin_system import get_loader, init_loader
 
 # Check for tqdm availability
 try:
@@ -607,8 +607,8 @@ Examples:
             report_system_id = args.report_system
         else:
             # No explicit system - auto-select if only one, require selection if multiple
-            from .core.plugin_system import get_plugin_manager
-            plugin_manager = get_plugin_manager()
+            from .core.plugin_system import get_loader
+            plugin_manager = get_loader()
             
             # Ensure plugins are discovered (if not already)
             if not plugin_manager.get_discovered_plugins():

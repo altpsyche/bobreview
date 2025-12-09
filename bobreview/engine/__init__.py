@@ -10,7 +10,7 @@ report generation pipelines. Each report system JSON defines:
 - Thresholds and configuration
 
 Usage:
-    from bobreview.report_systems import load_report_system, list_available_systems, ReportSystemExecutor
+    from bobreview.engine import load_report_system, list_available_systems, ReportSystemExecutor
     
     # List available systems
     systems = list_available_systems()

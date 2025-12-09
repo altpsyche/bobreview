@@ -9,11 +9,11 @@ import os
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from ..core.config import ReportConfig
+    from ...core.config import ReportConfig
 
-from ..core.cache import get_cache
-from ..core.utils import log_verbose, log_warning
-from ..core.analysis import format_data_table
+from ...core.cache import get_cache
+from ...core.utils import log_verbose, log_warning
+from ...core.analysis import format_data_table
 
 from .providers import get_provider, LLMProviderConfig
 

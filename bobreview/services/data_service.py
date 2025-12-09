@@ -43,7 +43,7 @@ class DataService(BaseService):
             registry: PluginRegistry instance (uses global if None)
         """
         super().__init__(config)
-        from ..report_systems.parser_factory import ParserFactory
+        from ..engine.parser_factory import ParserFactory
         self.factory = ParserFactory(registry)
     
     def parse(

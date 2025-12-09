@@ -48,13 +48,13 @@ def get_packages():
         "bobreview",
         "bobreview.core",
         "bobreview.core.plugin_system",
+        "bobreview.core.static",
         "bobreview.core.plugin_system.registries",
-        "bobreview.llm",
-        "bobreview.llm.providers",
         "bobreview.plugins",
         "bobreview.services",
-        "bobreview.report_systems",
-        "bobreview.pages",
+        "bobreview.services.llm",
+        "bobreview.services.llm.providers",
+        "bobreview.engine",
     ]
     
     # Auto-discover plugin packages (plugins are not shipped with core)

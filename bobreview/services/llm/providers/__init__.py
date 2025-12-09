@@ -7,7 +7,7 @@ Provides pluggable LLM providers for BobReview:
 - Ollama (local models)
 
 Usage:
-    from bobreview.llm.providers import get_provider, list_providers
+    from bobreview.services.llm.providers import get_provider, list_providers
     
     provider = get_provider("openai")
     response = provider.call(prompt, config)

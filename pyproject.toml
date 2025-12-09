@@ -56,9 +56,9 @@ bobreview = "bobreview.cli:main"
 [tool.setuptools.package-data]
 bobreview = [
     "py.typed",
-    "pages/styles.css",
-    "report_systems/builtin/*.json",
-    "report_systems/builtin/*.md",
+    "core/static/styles.css",
+    "engine/builtin/*.json",
+    "engine/builtin/*.md",
     "templates/**/*.j2",
 ]
 
