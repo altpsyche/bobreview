@@ -119,7 +119,7 @@ class PerformanceContextBuilder(ContextBuilderInterface):
         context['critical'] = critical
         
         # Add metric labels from system definition
-        context['metrics'] = primary_metrics if 'primary_metrics' in dir() else []
+        context['metrics'] = primary_metrics
         if system_def and hasattr(system_def, 'metrics'):
             context['metric_labels'] = getattr(system_def.metrics, 'metric_labels', {})
         else:
@@ -139,6 +139,15 @@ class PerformanceContextBuilder(ContextBuilderInterface):
         
         if location:
             context['location'] = location
+        
+        # Add high_load_count, low_load_count, high_load_pct, low_load_pct
+        high_load_count = len(stats.get('high_load', []))
+        low_load_count = len(stats.get('low_load', []))
+        total_count = stats.get('count', 1)
+        context['high_load_count'] = high_load_count
+        context['low_load_count'] = low_load_count
+        context['high_load_pct'] = (high_load_count / total_count) * 100 if total_count > 0 else 0
+        context['low_load_pct'] = (low_load_count / total_count) * 100 if total_count > 0 else 0
         
         # Merge with base_context and return
         return {

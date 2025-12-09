@@ -364,7 +364,7 @@ def load_report_system(
     
     system_data = None
     source_description = None
-    plugin_name = None
+    found_plugin_name = None
     
     # First, check plugin registry for the system
     try:
@@ -377,26 +377,26 @@ def load_report_system(
             
             # Find which plugin provides this report system
             component_key = f"report_system:{id_or_path}"
-            plugin_name = registry.get_component_owner(component_key)
+            found_plugin_name = registry.get_component_owner(component_key)
             
             # Auto-load the plugin if not already loaded
-            if plugin_name:
+            if found_plugin_name:
                 loader = get_loader()
-                if not loader.is_loaded(plugin_name):
+                if not loader.is_loaded(found_plugin_name):
                     _logger = logging.getLogger(__name__)
-                    _logger.info(f"Auto-loading required plugin: {plugin_name}")
+                    _logger.info(f"Auto-loading required plugin: {found_plugin_name}")
                     try:
-                        loader.load(plugin_name)
+                        loader.load(found_plugin_name)
                     except Exception as e:
                         _logger.warning(
-                            f"Failed to auto-load plugin '{plugin_name}' for report system '{id_or_path}': {e}"
+                            f"Failed to auto-load plugin '{found_plugin_name}' for report system '{id_or_path}': {e}"
                         )
     except ImportError:
         pass
     
     # If not found in registry, try filesystem
     if system_data is None:
-        json_path = find_report_system_path(id_or_path)
+        json_path = find_report_system_path(id_or_path, plugin_name=plugin_name)
         if json_path is None:
             available = [s['id'] for s in list_available_systems()]
             raise FileNotFoundError(

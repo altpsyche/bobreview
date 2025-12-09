@@ -85,8 +85,9 @@ class AnalyticsService(BaseService):
             if report_config is not None:
                 config = report_config
             elif thresholds:
-                # Build config from explicit thresholds (all required)
-                config = ReportConfig(**thresholds)
+                # Build config with thresholds
+                from ..core.config_classes import ThresholdConfig
+                config = ReportConfig(thresholds=ThresholdConfig(**thresholds))
             else:
                 raise AnalyticsServiceError(
                     "Either report_config or thresholds must be provided"

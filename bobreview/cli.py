@@ -98,7 +98,7 @@ def _load_plugins(extra_dirs, config):
 
 def handle_plugin_command(args):
     """Handle plugin subcommands."""
-    from .plugins import get_loader, init_loader
+    from .plugins import init_loader
     
     # Initialize loader with default directories
     dirs = _get_default_plugin_dirs()
@@ -179,7 +179,9 @@ def handle_plugin_command(args):
             return 1
         
         # Only allow uninstalling from user directory
-        if not str(found).startswith(str(user_plugins)):
+        try:
+            found.relative_to(user_plugins)
+        except ValueError:
             print(f"Cannot uninstall built-in plugin: {args.name}")
             return 1
         

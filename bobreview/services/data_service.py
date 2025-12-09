@@ -83,13 +83,18 @@ class DataService(BaseService):
             
             # Apply sampling if requested
             if sample_size and sample_size < len(data_points):
-                data_points = random.sample(data_points, sample_size)
+                # Preserve order by taking first N points
+                data_points = data_points[:sample_size]
                 logger.debug(f"Sampled down to {sample_size} points")
             
             # Sort if requested
-            if sort_by and data_points and sort_by in data_points[0]:
-                data_points.sort(key=lambda x: x.get(sort_by, 0))
-                logger.debug(f"Sorted by {sort_by}")
+            if sort_by and data_points:
+                # Only sort if all points have the field
+                if all(sort_by in point for point in data_points):
+                    data_points.sort(key=lambda x: x[sort_by])
+                    logger.debug(f"Sorted by {sort_by}")
+                else:
+                    logger.warning(f"Cannot sort: field '{sort_by}' missing in some points")
             
             return data_points
             
@@ -173,5 +178,6 @@ class DataService(BaseService):
         try:
             parser = self.factory.create(data_source_config)
             return parser.discover_files(directory)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to discover files in {directory}: {e}")
             return []

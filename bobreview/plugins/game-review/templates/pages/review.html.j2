@@ -423,7 +423,7 @@
     <section class="review-section">
         <h2>Full Review</h2>
         <div class="review-text">
-            {{ llm_content.review_text|safe }}
+            {{ llm_content.review_text|sanitize }}
         </div>
     </section>
     {% endif %}

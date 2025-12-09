@@ -5,7 +5,7 @@ Statistical analysis utilities for BobReview.
 
 import math
 import statistics
-from typing import Dict, List, Any, Tuple, TYPE_CHECKING
+from typing import Dict, List, Any, Tuple, TYPE_CHECKING, Optional
 from scipy import stats
 
 if TYPE_CHECKING:
@@ -468,9 +468,9 @@ def analyze_data(
 
 def format_data_table(
     data_points: List[Dict[str, Any]], 
-    max_rows: int | None = None,
-    fields: List[str] = None,
-    field_labels: Dict[str, str] = None
+    max_rows: Optional[int] = None,
+    fields: Optional[List[str]] = None,
+    field_labels: Optional[Dict[str, str]] = None
 ) -> str:
     """
     Render a list of data points as a markdown table suitable for embedding in prompts.

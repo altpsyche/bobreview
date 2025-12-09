@@ -224,12 +224,12 @@ class TemplateEngine:
             
             # Format numbers nicely
             if isinstance(value, float):
-                rounded = round(value)
-                # Always show as integer if it's a large value
                 if value >= 1000:
-                    return f"{rounded:,}"
-                # For smaller values, show as integer (no decimals)
-                return str(rounded)
+                    return f"{round(value):,}"
+                # For smaller values, preserve one decimal if fractional
+                if value != int(value):
+                    return f"{value:.1f}"
+                return str(int(value))
             if isinstance(value, int) and value >= 1000:
                 return f"{value:,}"
             return str(value)
@@ -276,7 +276,7 @@ class TemplateEngine:
         """Register global template functions."""
         self.env.globals['get_css'] = get_shared_css
         
-        def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: dict = None) -> str:
+        def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: Optional[dict] = None) -> str:
             """
             Get image source - either base64 data URI or relative file path.
             

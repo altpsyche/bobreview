@@ -65,9 +65,9 @@ class ServiceValidator:
             
             # If plugins are loaded but services are missing, that's an error
             error_msg = (
-                f"Required services not found. Missing:\n" + "\n".join(missing_services) +
+                "Required services not found. Missing:\n" + "\n".join(missing_services) +
                 f"\n\nLoaded plugins: {', '.join(loaded_plugins)}" +
-                f"\n\nThe loaded plugins may not be providing the required services."
+                "\n\nThe loaded plugins may not be providing the required services."
             )
             raise RuntimeError(error_msg)
         

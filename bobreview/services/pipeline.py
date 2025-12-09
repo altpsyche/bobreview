@@ -113,7 +113,7 @@ class ReportPipeline:
             
         except ServiceError as e:
             result['errors'].append(str(e))
-            logger.error(f"Pipeline failed: {e}")
+            logger.exception(f"Pipeline failed: {e}")
         except Exception as e:
             result['errors'].append(f"Unexpected error: {e}")
             logger.exception("Pipeline failed with unexpected error")
@@ -140,7 +140,10 @@ class ReportPipeline:
             from ..report_systems.parser_factory import ParserFactory
             factory = ParserFactory()
             parser = factory.create(system_def.data_source)
-            return parser.parse_directory(input_dir)
+            data = parser.parse_directory(input_dir)
+            if config.execution.sample_size:
+                data = data[:config.execution.sample_size]
+            return data
     
     def _analyze_data(
         self,
@@ -239,6 +242,10 @@ class ReportPipeline:
 def create_default_pipeline() -> ReportPipeline:
     """
     Create a pipeline with default services registered.
+    
+    Note: This function modifies the global service container by registering
+    default services. If you need a fresh container, create a ReportPipeline
+    with a custom ServiceContainer instance.
     
     Returns:
         ReportPipeline with DataService and AnalyticsService

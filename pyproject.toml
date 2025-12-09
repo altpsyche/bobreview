@@ -51,7 +51,20 @@ Repository = "https://github.com/DiggingNebula8/bobreview"
 bobreview = "bobreview.cli:main"
 
 [tool.setuptools]
-packages = ["bobreview", "bobreview.core", "bobreview.llm", "bobreview.llm.providers", "bobreview.plugins", "bobreview.plugins.registries", "bobreview.services", "bobreview.report_systems", "bobreview.pages"]
+# Core packages (explicitly listed)
+packages = [
+    "bobreview",
+    "bobreview.core",
+    "bobreview.llm",
+    "bobreview.llm.providers",
+    "bobreview.plugins",
+    "bobreview.plugins.registries",
+    "bobreview.services",
+    "bobreview.report_systems",
+    "bobreview.pages",
+    # Plugins (auto-discovered)
+    { find = { where = ".", include = ["bobreview.plugins.*"], exclude = ["bobreview.plugins.registries", "bobreview.plugins"] } }
+]
 
 [tool.setuptools.package-data]
 bobreview = [

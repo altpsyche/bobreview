@@ -181,6 +181,14 @@ class ReportSystemExecutor:
             data_points = self.parse_data(input_dir)
             if not data_points:
                 log_warning("No data points found", self.config)
+                report_result = {
+                    'success': False,
+                    'error': 'No data points found',
+                    'output_path': str(output_path),
+                    'data_points_count': 0,
+                    'stats': {},
+                }
+                self.lifecycle_manager.call_report_complete(report_result, self.config)
                 return False
             
             log_info(f"Parsed {len(data_points)} data points", self.config)
@@ -330,7 +338,8 @@ class ReportSystemExecutor:
         context = {
             'title': self.config.title
         }
-        context.update(self.system_def.thresholds)
+        if getattr(self.system_def, "thresholds", None):
+            context.update(self.system_def.thresholds)
         
         # Add location from system_def if present (optional metadata)
         if hasattr(self.system_def, 'location') and self.system_def.location:

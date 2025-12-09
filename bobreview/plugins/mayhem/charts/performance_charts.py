@@ -8,7 +8,7 @@ Moved from executor.py to make it plugin-specific.
 Implements ChartGeneratorInterface from core.api.
 """
 import json
-from typing import Dict, List, Any, TYPE_CHECKING
+from typing import Dict, List, Any, TYPE_CHECKING, Optional
 
 from bobreview.core.theme_utils import get_theme
 from bobreview.core.api import ChartGeneratorInterface
@@ -125,6 +125,8 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
         
         # Get theme colors
         theme = get_theme()
+        if theme is None:
+            raise ValueError("No theme registered. Ensure a theme plugin is loaded.")
         colors = self._get_theme_colors(theme)
         
         # Get labels with defaults
@@ -257,7 +259,7 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
         charts['draws_timeline'] = f"""
 // Draw Calls Timeline with Performance Zones
 (function() {{
-    const ctx = document.getElementById('drawsTimeline').getContext('2d');
+    const ctx = document.getElementById('draws_timeline').getContext('2d');
     const data = {draws_data};
     
     const gradient = ctx.createLinearGradient(0, 0, 0, 300);
@@ -346,7 +348,7 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
         charts['tris_timeline'] = f"""
 // Triangles Timeline with Performance Zones
 (function() {{
-    const ctx = document.getElementById('trisTimeline').getContext('2d');
+    const ctx = document.getElementById('tris_timeline').getContext('2d');
     const data = {tris_data};
     
     const gradient = ctx.createLinearGradient(0, 0, 0, 300);
@@ -414,7 +416,7 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
         charts['scatter'] = f"""
 // Scatter Plot with Performance Zone Colors
 (function() {{
-    const ctx = document.getElementById('scatterPlot').getContext('2d');
+    const ctx = document.getElementById('scatter').getContext('2d');
     const data = {scatter_data};
     
     new Chart(ctx, {{
@@ -593,7 +595,7 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
 """
         return charts
     
-    def _compute_histogram(self, values: List[float], high_threshold: float = None, low_threshold: float = None, num_bins: int = 15) -> Dict[str, Any]:
+    def _compute_histogram(self, values: List[float], high_threshold: Optional[float] = None, low_threshold: Optional[float] = None, num_bins: int = 15) -> Dict[str, Any]:
         """Compute histogram bins with performance zone colors."""
         if not values:
             return {'labels': [], 'counts': [], 'colors': []}
@@ -630,9 +632,9 @@ class PerformanceChartGenerator(ChartGeneratorInterface):
             labels.append(f"{int(min_val + i * bin_width)}-{int(min_val + (i+1) * bin_width)}")
             
             # Color based on performance zone using theme colors
-            if high_threshold and bin_center >= high_threshold:
+            if high_threshold is not None and bin_center >= high_threshold:
                 colors.append(danger_rgba)
-            elif low_threshold and bin_center < low_threshold:
+            elif low_threshold is not None and bin_center < low_threshold:
                 colors.append(ok_rgba)
             else:
                 colors.append(warn_rgba)

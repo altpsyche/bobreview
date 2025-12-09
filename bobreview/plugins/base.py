@@ -6,7 +6,7 @@ Plugins extend BobReview by registering components at load time.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, ClassVar
 
 if TYPE_CHECKING:
     from .registry import PluginRegistry
@@ -51,7 +51,7 @@ class BasePlugin(ABC):
     description: str = ""
     
     # Optional metadata
-    dependencies: List[str] = []
+    dependencies: ClassVar[List[str]] = []
     
     def __init__(self):
         self._config = {}

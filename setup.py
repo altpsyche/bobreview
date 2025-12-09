@@ -43,6 +43,7 @@ install_requires = read_requirements()
 # This setup.py exists to:
 # 1. Read dependencies from requirements.txt
 # 2. Provide backward compatibility with older tools
+# Package configuration is handled in pyproject.toml
 setup(
     install_requires=install_requires,
 )

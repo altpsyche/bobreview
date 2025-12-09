@@ -89,7 +89,7 @@ class DataParser(DataParserInterface):
                             continue
                     
                     data_points.append(data)
-            except Exception as e:
+            except Exception:
                 if self.config.validation.strict_mode:
                     raise
                 # Skip files that fail to parse

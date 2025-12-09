@@ -123,8 +123,6 @@ def parse_filename(filename: str, pattern: str) -> Dict[str, Any]:
     Raises:
         ValueError: If parsing fails or pattern is invalid.
     """
-    from ....report_systems.schema import DataSourceConfig, FieldConfig
-    
     # Build field configs from pattern
     field_names = re.findall(r'\{(\w+)\}', pattern)
     
