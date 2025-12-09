@@ -5,28 +5,47 @@ This module provides HTML sanitization and formatting utilities that plugins can
 Moved from pages.base to core to remove core dependency on framework modules.
 """
 
-from html import escape
 from pathlib import Path
 
-try:
-    import bleach
-    BLEACH_AVAILABLE = True
-except ImportError:
-    BLEACH_AVAILABLE = False
+import bleach
+import markdown
+
+
+def markdown_to_html(content: str) -> str:
+    """
+    Convert markdown content to HTML.
+    
+    Parameters:
+        content: Markdown content string
+    
+    Returns:
+        HTML string
+    """
+    if not content:
+        return ""
+    
+    # Convert markdown to HTML
+    # Extensions provide better markdown support (tables, fenced code, better lists)
+    # HTML will be sanitized by sanitize_llm_html after conversion
+    html = markdown.markdown(
+        content,
+        extensions=['extra', 'nl2br', 'sane_lists'],  # Support tables, fenced code, better lists
+    )
+    
+    return html
 
 
 def sanitize_llm_html(content: str) -> str:
     """
-    Sanitize LLM-generated HTML to prevent XSS while preserving safe formatting tags.
+    Sanitize LLM-generated markdown content to prevent XSS while preserving safe formatting.
     
-    Uses the bleach library (whitelist-based approach) when available, otherwise
-    returns escaped HTML as a fallback.
+    Converts markdown to HTML, then sanitizes the HTML using bleach.
     
     Allowed tags: p, strong, em, b, i, u, ul, ol, li, br, span, div, h1-h6, a, code, pre
     Allowed attributes: class (on span/div), href (on a)
     
     Parameters:
-        content: HTML content from LLM
+        content: Markdown content from LLM
     
     Returns:
         Sanitized HTML string
@@ -37,9 +56,8 @@ def sanitize_llm_html(content: str) -> str:
     if not content:
         return ""
     
-    if not BLEACH_AVAILABLE:
-        # Fallback: escape all HTML if bleach is not available
-        return escape(content)
+    # Convert markdown to HTML first
+    html_content = markdown_to_html(content)
     
     # Whitelist of safe tags
     allowed_tags = [
@@ -62,7 +80,7 @@ def sanitize_llm_html(content: str) -> str:
     
     # Sanitize using bleach
     sanitized = bleach.clean(
-        content,
+        html_content,
         tags=allowed_tags,
         attributes=allowed_attributes,
         protocols=allowed_protocols,

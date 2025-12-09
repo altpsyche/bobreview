@@ -8,7 +8,7 @@ version = "1.0.7"
 description = "Performance Analysis and Review Tool for Game Development"
 readme = "README.md"
 requires-python = ">=3.7"
-license = "MIT"
+license = {text = "MIT"}
 keywords = ["performance", "analysis", "game", "development", "profiling", "reports"]
 authors = [
     {name = "Siva Vadlamani"}
@@ -51,20 +51,7 @@ Repository = "https://github.com/DiggingNebula8/bobreview"
 bobreview = "bobreview.cli:main"
 
 [tool.setuptools]
-# Core packages (explicitly listed)
-packages = [
-    "bobreview",
-    "bobreview.core",
-    "bobreview.llm",
-    "bobreview.llm.providers",
-    "bobreview.plugins",
-    "bobreview.plugins.registries",
-    "bobreview.services",
-    "bobreview.report_systems",
-    "bobreview.pages",
-    # Plugins (auto-discovered)
-    { find = { where = ".", include = ["bobreview.plugins.*"], exclude = ["bobreview.plugins.registries", "bobreview.plugins"] } }
-]
+# Packages are managed in setup.py: explicit core packages + auto-discovered plugins
 
 [tool.setuptools.package-data]
 bobreview = [
