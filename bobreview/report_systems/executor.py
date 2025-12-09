@@ -23,8 +23,9 @@ from .schema import ReportSystemDefinition, LabelConfig
 from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, image_to_base64
 
 # Import services and plugin system
-from ..services import ServiceContainer, DataService, AnalyticsService, ChartService, LLMService
-from ..plugins import PluginRegistry, PluginLoader
+from ..services import ServiceContainer, DataService, AnalyticsService, ChartService, LLMService, get_container
+from ..plugins import PluginRegistry, PluginLoader, get_registry, get_loader
+from ..core.template_engine import get_template_engine
 
 # Import new responsibility classes
 from .config_merger import ConfigMerger
@@ -74,16 +75,12 @@ class ReportSystemExecutor:
         
         # Use dependency injection with fallback to globals for backward compatibility
         if container is None:
-            from ..services import get_container
             container = get_container()
         if registry is None:
-            from ..plugins import get_registry
             registry = get_registry()
         if template_engine is None:
-            from ..core.template_engine import get_template_engine
             template_engine = get_template_engine()
         if plugin_loader is None:
-            from ..plugins import get_loader
             plugin_loader = get_loader()
         
         self.container = container
