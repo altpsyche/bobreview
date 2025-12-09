@@ -1121,9 +1121,30 @@ bobreview --plugin <plugin-name> --dir . --theme light
 **Create a custom theme:**
 
 ```python
-from bobreview.theme_registry import register_theme, ReportTheme
+from bobreview.core.plugin_system import BasePlugin, get_registry
+from bobreview.core.themes import ReportTheme
 
-register_theme(ReportTheme(
+# Recommended: Via plugin
+class MyThemePlugin(BasePlugin):
+    name = "my-theme-plugin"
+    version = "1.0.0"
+    
+    def on_load(self, registry):
+        custom_theme = ReportTheme(
+            id='brand',
+            name='Brand Theme',
+            bg='#1a1a2e',
+            accent='#e94560',
+            text_main='#ffffff',
+            text_soft='#aaaaaa',
+            border_subtle='#333333'
+        )
+        registry.themes.register(custom_theme, plugin_name=self.name)
+
+# Or directly (if not using a plugin)
+from bobreview.core.plugin_system import get_registry
+registry = get_registry()
+registry.themes.register(ReportTheme(
     id='brand',
     name='Brand Theme',
     bg='#1a1a2e',
@@ -1131,7 +1152,7 @@ register_theme(ReportTheme(
     text_main='#ffffff',
     text_soft='#aaaaaa',
     border_subtle='#333333'
-))
+), plugin_name="custom")
 
 # Then use it
 config = ReportConfig(theme_id='brand')
@@ -1141,30 +1162,29 @@ config = ReportConfig(theme_id='brand')
 
 ### Customizing Chart Appearance
 
-Charts use colors directly from `ReportTheme`. To customize:
+Charts use colors directly from `ReportTheme`. To customize chart appearance, create a custom theme with chart-specific properties:
 
 ```python
-from bobreview.theme_registry import register_theme, ReportTheme
+from bobreview.core.plugin_system import BasePlugin
+from bobreview.core.themes import ReportTheme
 
-# Custom theme with adjusted chart grid opacity
-register_theme(ReportTheme(
-    id='custom',
-    name='Custom Theme',
-    text_soft='#aaaaaa',      # Chart text color
-    border_subtle='#333333',  # Chart grid color
-    chart_grid_opacity=0.3    # Subtle grid lines (0.0-1.0)
-))
-
-# Add custom dataset styles
-from bobreview.chart_registry import register_dataset, ChartDataset
-
-register_dataset(ChartDataset(
-    id='custom_metric',
-    label='Custom Metric',
-    primary_color='rgba(255, 0, 128, 0.8)',
-    secondary_color='rgba(255, 0, 128, 1)'
-))
+class MyChartThemePlugin(BasePlugin):
+    name = "my-chart-theme"
+    version = "1.0.0"
+    
+    def on_load(self, registry):
+        # Custom theme with adjusted chart grid opacity
+        custom_theme = ReportTheme(
+            id='custom',
+            name='Custom Theme',
+            text_soft='#aaaaaa',      # Chart text color
+            border_subtle='#333333',    # Chart grid color
+            chart_grid_opacity=0.3     # Subtle grid lines (0.0-1.0)
+        )
+        registry.themes.register(custom_theme, plugin_name=self.name)
 ```
+
+Chart colors are automatically derived from the theme's accent colors and status colors (danger, warn, ok). The `chart_grid_opacity` property controls the opacity of chart grid lines.
 
 ---
 
