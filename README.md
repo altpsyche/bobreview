@@ -65,21 +65,19 @@ bobreview/
 │   ├── analysis.py    # Statistics calculation
 │   ├── template_engine.py  # Jinja2 template loading
 │   ├── plugin_utils.py     # Plugin utility functions
-│   └── config_utils.py     # Config utility functions
+│   ├── config_utils.py     # Config utility functions
+│   └── plugin_system/      # Plugin infrastructure (v1.0.8)
+│       ├── registry.py     # PluginRegistry (composes focused registries)
+│       ├── base.py         # BasePlugin abstract class
+│       ├── loader.py       # PluginLoader for discovery and loading
+│       └── registries/     # Focused registries (11 files)
 │
-├── plugins/           # Plugin system with focused registries
-│   ├── registry.py    # PluginRegistry (composes focused registries)
-│   ├── base.py        # BasePlugin abstract class
-│   ├── registries/    # Focused registries (NEW in v1.0.7)
-│   │   ├── theme_registry.py
-│   │   ├── llm_generator_registry.py
-│   │   ├── data_parser_registry.py
-│   │   └── ... (11 focused registries)
-│   ├── game-review/  # Example plugin
+├── plugins/           # Actual plugin implementations
+│   ├── my-plugin/     # Example plugin
 │   │   ├── plugin.py  # Plugin class
 │   │   ├── report_systems/
 │   │   └── templates/
-│   └── my-plugin/     # Example plugin
+│   └── another-plugin/
 │       ├── plugin.py
 │       └── ...
 │
@@ -114,10 +112,10 @@ bobreview/
 
 | Package | Purpose |
 |---------|---------|
-| `plugins/` | Plugin system with 11 focused registries (themes, generators, parsers, etc.) |
-| `plugins/registries/` | Focused registries following Interface Segregation Principle |
+| `core/plugin_system/` | Plugin infrastructure with 11 focused registries (themes, generators, parsers, etc.) |
+| `core/plugin_system/registries/` | Focused registries following Interface Segregation Principle |
 | `core/` | Configuration (focused config classes), caching, logging, analysis, utilities |
-| `core/config_classes.py` | Focused config classes (ThresholdConfig, LLMConfig, ExecutionConfig, etc.) |
+| `plugins/` | Actual plugin implementations (user-provided) |
 | `services/` | Pluggable service container with data, analytics, charts, LLM |
 | `report_systems/` | JSON-based pipeline configuration with focused responsibility classes |
 | `llm/` | LLM providers (OpenAI/Anthropic/Ollama), generators |
@@ -384,7 +382,7 @@ executor.execute(Path("./screenshots"), Path("report.html"))
 Create a custom plugin:
 
 ```python
-from bobreview.plugins import BasePlugin
+from bobreview.core.plugin_system import BasePlugin
 from bobreview.core.themes import ReportTheme
 
 class MyCustomPlugin(BasePlugin):
@@ -443,7 +441,7 @@ class MyCustomPlugin(BasePlugin):
 #### Accessing Registry Components
 
 ```python
-from bobreview.plugins import get_registry
+from bobreview.core.plugin_system import get_registry
 
 registry = get_registry()
 

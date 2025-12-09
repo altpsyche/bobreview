@@ -15,7 +15,7 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
 
 ### Added
 
-- **Focused Registry System** (`bobreview/plugins/registries/`):
+- **Focused Registry System** (`bobreview/core/plugin_system/registries/`):
   - `ThemeRegistry`, `WidgetRegistry`, `DataParserRegistry`, `LLMGeneratorRegistry`
   - `ChartTypeRegistry`, `PageRegistry`, `ServiceRegistry`, `ReportSystemRegistry`
   - `ChartGeneratorRegistry`, `ContextBuilderRegistry`, `TemplatePathRegistry`
@@ -70,7 +70,7 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
   - Better testability and maintainability
 
 - Plugin System:
-  - Renamed "core" plugin to "game-review" (more descriptive)
+  - Plugin infrastructure moved to `bobreview.core.plugin_system`
   - All plugins use focused registry interfaces
   - Cleaner, more predictable API
 
@@ -85,7 +85,8 @@ BobReview v1.0.7 introduces a fully modular plugin system with focused architect
 ### Technical Details
 
 New Files:
-- `bobreview/plugins/registries/` - 11 focused registry classes
+- `bobreview/core/plugin_system/registries/` - 11 focused registry classes
+- `bobreview/core/plugin_system/` - Plugin infrastructure (base.py, loader.py, registry.py, manifest.py)
 - `bobreview/core/config_classes.py` - Focused config classes
 - `bobreview/report_systems/config_merger.py` - Config merging responsibility
 - `bobreview/report_systems/service_validator.py` - Service validation responsibility
@@ -94,7 +95,7 @@ New Files:
 - `bobreview/core/config_utils.py` - Config utility functions
 
 Modified Files:
-- `bobreview/plugins/registry.py` - Now composes focused registries
+- `bobreview/core/plugin_system/registry.py` - Composes focused registries
 - `bobreview/core/config.py` - Now uses focused config classes
 - `bobreview/report_systems/executor.py` - Uses dependency injection and responsibility classes
 - All plugin files - Updated to use focused registries

@@ -25,7 +25,7 @@ Version 1.0.7 - Plugin System
   - Clearer intent (focused interfaces)
 
 - **Plugin System Improvements**:
-  - Renamed "core" plugin to "game-review" (more descriptive)
+  - Plugin infrastructure moved to `bobreview.core.plugin_system`
   - All plugins use focused registry interfaces
   - Cleaner, more predictable plugin API
 

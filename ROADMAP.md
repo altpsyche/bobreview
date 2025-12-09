@@ -65,6 +65,11 @@ Evolve BobReview into a comprehensive performance analysis suite with:
   - 11 focused registries (themes, generators, parsers, etc.)
   - 5 focused config classes (thresholds, LLM, execution, output, cache)
   - Focused responsibility classes (ConfigMerger, ServiceValidator, PluginLifecycleManager)
+- **COMPLETE** (v1.0.7) - Plugin infrastructure relocation
+  - Moved plugin infrastructure to `bobreview/core/plugin_system/`
+  - Clear separation: infrastructure in `core/plugin_system/`, implementations in `plugins/`
+  - Removed lazy imports - all imports at module top-level
+  - No backward compatibility for old `bobreview.plugins` infrastructure imports
 
 ### Visual Charts & Graphs
 - **COMPLETE** - Chart.js library integration
@@ -85,7 +90,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Input validation for statistical functions
 
 ### Report Theming System
-- **COMPLETE** - Theme registry system (`theme_registry.py`)
+- **COMPLETE** - Theme registry system (`core/plugin_system/registries/theme_registry.py`)
 - **COMPLETE** - Three built-in themes (dark, light, high_contrast)
 - **COMPLETE** - `ReportTheme` dataclass with 18+ customizable properties
 - **COMPLETE** - Theme selection via CLI (`--theme`)
@@ -95,7 +100,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Custom theme registration API
 
 ### Chart Configuration System
-- **COMPLETE** - Chart registry system (`chart_registry.py`)
+- **COMPLETE** - Chart registry system (`core/plugin_system/registries/chart_type_registry.py`)
 - **COMPLETE** - `ChartDataset` dataclass for dataset styling
 - **COMPLETE** - `ChartConfig` dataclass for chart configuration
 - **COMPLETE** - Pre-registered standard datasets (draws, tris, histograms)
@@ -105,7 +110,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Custom dataset/chart registration API
 
 ### LLM Generator System
-- **COMPLETE** - LLM generator registry (`llm_registry.py`)
+- **COMPLETE** - LLM generator registry (`core/plugin_system/registries/llm_generator_registry.py`)
 - **COMPLETE** - `LLMGeneratorDefinition` dataclass
 - **COMPLETE** - `PromptCategory` system for structured prompts
 - **COMPLETE** - 7 registered generators with categories
@@ -444,6 +449,6 @@ Contributions are welcome. Consider:
 
 ---
 
-Last updated: December 5, 2025
-Current version: 1.0.5
-Next milestone: v1.0.6 - Jinja2 Template System and Plugin Architecture
+Last updated: December 9, 2025
+Current version: 1.0.7
+Next milestone: v2.0 - Enterprise Release
