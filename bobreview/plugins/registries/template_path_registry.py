@@ -46,6 +46,13 @@ class TemplatePathRegistry(BaseRegistry):
             logger.warning(f"Template path does not exist: {path}")
             return
         
+        # Remove any existing entries for the same (path, plugin_name) to prevent duplicates
+        self._template_paths = [
+            (p, pname, prio)
+            for p, pname, prio in self._template_paths
+            if not (p == path and pname == plugin_name)
+        ]
+        
         self._template_paths.append((path, plugin_name, priority))
         # Keep sorted by priority (lower = higher priority)
         self._template_paths.sort(key=lambda x: x[2])
@@ -67,18 +74,26 @@ class TemplatePathRegistry(BaseRegistry):
     
     def unregister_plugin_components(self, plugin_name: str) -> int:
         """Unregister all template paths from a specific plugin."""
-        count = 0
-        to_remove = [
+        # Collect paths owned by this plugin
+        owned_paths = {
+            path for path, pname, _ in self._template_paths if pname == plugin_name
+        }
+
+        # Remove all matching entries from the local list
+        original_len = len(self._template_paths)
+        self._template_paths = [
             (path, pname, priority)
             for path, pname, priority in self._template_paths
-            if pname == plugin_name
+            if pname != plugin_name
         ]
-        
-        for path, _, priority in to_remove:
-            self._template_paths.remove((path, plugin_name, priority))
-            del self._component_owners[f"template_path:{path}"]
-            count += 1
-        
+        count = original_len - len(self._template_paths)
+
+        # Drop ownership entries once per path (idempotent)
+        for path in owned_paths:
+            key = f"template_path:{path}"
+            if key in self._component_owners:
+                del self._component_owners[key]
+
         logger.info(f"Unregistered {count} template paths from plugin: {plugin_name}")
         return count
 
