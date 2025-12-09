@@ -96,9 +96,19 @@ class MayhemAutomationPlugin(BasePlugin):
     
     def _create_generator_wrapper(self, name: str, gen_class):
         """Create a wrapper class for registering generator classes."""
+        # Cache the generator instance at wrapper creation time
+        # This avoids creating a new instance on every generate() call
+        # All current generators are stateless, so reusing the instance is safe
+        generator_instance = gen_class()
+        
         class GeneratorWrapper:
             generator_name = name
-            generate = staticmethod(lambda *args, **kwargs: gen_class().generate(*args, **kwargs))
+            _instance = generator_instance  # Store instance as class attribute
+            
+            @staticmethod
+            def generate(*args, **kwargs):
+                return GeneratorWrapper._instance.generate(*args, **kwargs)
+        
         return GeneratorWrapper
     
     def _register_parsers(self, registry) -> None:
