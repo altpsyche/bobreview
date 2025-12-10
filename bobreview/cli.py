@@ -23,7 +23,10 @@ from .engine.executor import ReportSystemExecutor
 from .services.llm.providers import list_providers, get_provider_info
 
 # Import plugin system
-from .core.plugin_system import get_loader, init_loader
+from .core.plugin_system import get_loader, init_loader, PluginDiscovery, PluginManifest
+
+# Import template engine
+from .core.template_engine import reset_template_engine
 
 # Check for tqdm availability
 try:
@@ -38,43 +41,18 @@ except ImportError:
             return iter(self.iterable)
 
 
-def _get_default_plugin_dirs():
-    """Get default plugin directories."""
-    dirs = []
-    
-    # Built-in plugins directory (highest priority)
-    from . import plugins
-    builtin_dir = Path(plugins.__file__).parent
-    if builtin_dir.exists():
-        dirs.append(builtin_dir)
-    
-    # User plugin directory: ~/.bobreview/plugins
-    user_dir = Path.home() / ".bobreview" / "plugins"
-    if user_dir.exists():
-        dirs.append(user_dir)
-    
-    # Current directory plugins: ./plugins
-    local_dir = Path.cwd() / "plugins"
-    if local_dir.exists():
-        dirs.append(local_dir)
-    
-    return dirs
-
-
 def _load_plugins(extra_dirs, config):
     """
-    Load plugins from default and extra directories.
+    Load plugins from discovered directories.
     
-    All plugins (built-in and external) are discovered and loaded through
-    the unified plugin discovery mechanism.
+    Uses PluginDiscovery to find plugins from:
+    1. CLI --plugin-dirs
+    2. BOBREVIEW_PLUGIN_DIRS environment variable
+    3. ~/.bobreview/plugins/
+    4. ./plugins/
+    5. Bundled plugins (shipped with package)
     """
-    dirs = _get_default_plugin_dirs()
-    
-    # Add extra directories from CLI
-    for d in extra_dirs:
-        path = Path(d).expanduser().resolve()
-        if path.exists() and path not in dirs:
-            dirs.append(path)
+    dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=extra_dirs)
     
     if not dirs:
         log_verbose("No plugin directories configured", config)
@@ -98,10 +76,10 @@ def _load_plugins(extra_dirs, config):
 
 def handle_plugin_command(args):
     """Handle plugin subcommands."""
-    from .core.plugin_system import init_loader
+    from .core.plugin_system import init_loader, PluginDiscovery
     
-    # Initialize loader with default directories
-    dirs = _get_default_plugin_dirs()
+    # Initialize loader with discovered directories
+    dirs = PluginDiscovery.get_plugin_dirs()
     loader = init_loader(dirs)
     loader.discover()
     
@@ -158,7 +136,6 @@ def handle_plugin_command(args):
         loader.add_plugin_dir(user_plugins)
         loader.discover()
         
-        from .core.plugin_system import PluginManifest
         manifest = PluginManifest.from_file(manifest_path)
         print(f"  Name: {manifest.name} v{manifest.version}")
         print(f"  Author: {manifest.author}")
@@ -459,7 +436,7 @@ Examples:
     
     # Handle --list-plugins
     if args.list_plugins:
-        dirs = _get_default_plugin_dirs()
+        dirs = PluginDiscovery.get_plugin_dirs()
         loader = init_loader(dirs)
         loader.discover()
         plugins = loader.get_discovered_plugins()
@@ -596,7 +573,6 @@ Examples:
         _load_plugins(args.plugin_dirs, config)
         
         # Refresh template engine to pick up plugin templates
-        from .core.template_engine import reset_template_engine
         reset_template_engine()
     
     # Use the JSON-based report system framework
@@ -607,7 +583,6 @@ Examples:
             report_system_id = args.report_system
         else:
             # No explicit system - auto-select if only one, require selection if multiple
-            from .core.plugin_system import get_loader
             plugin_manager = get_loader()
             
             # Ensure plugins are discovered (if not already)

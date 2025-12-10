@@ -51,6 +51,7 @@ from .interface import (
     reset_extension_point,
     reset_plugin_manager,
 )
+from .discovery import PluginDiscovery
 
 __all__ = [
     # Abstract interfaces (preferred for core code)
@@ -84,4 +85,7 @@ __all__ = [
     'PluginDependencyError',
     'get_loader',
     'init_loader',
+    
+    # Discovery
+    'PluginDiscovery',
 ]

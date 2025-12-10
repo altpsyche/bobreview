@@ -36,7 +36,7 @@ class TemplateEngine:
     Load order (first match wins):
     1. User templates: ~/.bobreview/templates/
     2. Custom paths (if provided via custom_paths parameter)
-    3. Package built-in templates: bobreview/templates/
+    3. Plugin-registered templates (from PluginRegistry)
     """
     
     def __init__(self, custom_paths: Optional[list] = None):
@@ -47,7 +47,6 @@ class TemplateEngine:
         1. User templates: ~/.bobreview/templates/
         2. Custom paths (if provided)
         3. Plugin-registered templates (from PluginRegistry)
-        4. Package built-in templates (fallback)
         
         Parameters:
             custom_paths: Optional list of additional template directories
@@ -76,8 +75,12 @@ class TemplateEngine:
             if template_path.exists():
                 loaders.append(FileSystemLoader(str(template_path)))
         
-        # Package built-in templates (lowest priority fallback)
-        loaders.append(PackageLoader('bobreview', 'templates'))
+        # Require at least one template source
+        if not loaders:
+            raise ValueError(
+                "No template sources found. Templates must be provided by plugins. "
+                "Ensure at least one plugin with templates is loaded."
+            )
         
         self.env = Environment(
             loader=ChoiceLoader(loaders),
