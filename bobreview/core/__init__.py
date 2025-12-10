@@ -11,7 +11,6 @@ from .utils import (
     log_info, log_success, log_warning, log_error, log_verbose,
     format_number, image_to_base64
 )
-from .analysis import analyze_data
 from .theme_utils import get_theme, get_theme_css_variables
 from .themes import ReportTheme, BUILTIN_THEMES
 from .config_utils import merge_config, merge_nested_config
@@ -46,8 +45,8 @@ __all__ = [
     'format_number',
     'image_to_base64',
     
-    # Analysis
-    'analyze_data',
+    # Analysis - domain-specific functions moved to plugins
+    # Use plugin-provided analysis instead
     
     # Themes
     'get_theme',

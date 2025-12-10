@@ -12,7 +12,7 @@ from pathlib import Path
 
 from . import __version__
 from .core import ReportConfig, validate_config, log_info, log_success, log_warning, log_error, log_verbose, format_number
-from .core import init_cache, get_cache, analyze_data
+from .core import init_cache, get_cache
 from .core.config import LLMConfig, CacheConfig, ExecutionConfig, OutputConfig
 
 # Import report systems framework

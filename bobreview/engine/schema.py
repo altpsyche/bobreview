@@ -44,42 +44,8 @@ class DataSourceConfig:
     auth: Optional[Dict[str, str]] = None
 
 
-@dataclass
-class DerivedMetricConfig:
-    """Configuration for a derived metric calculation."""
-    id: str
-    description: str
-    calculation: str  # Expression or function name
-    dependencies: List[str] = field(default_factory=list)
-
-
-@dataclass
-class StatisticsConfig:
-    """Configuration for statistical calculations."""
-    basic: List[str] = field(default_factory=lambda: ['min', 'max', 'mean', 'median', 'stdev'])
-    advanced: List[str] = field(default_factory=lambda: ['p90', 'p95', 'p99', 'variance', 'cv'])
-    analysis: List[str] = field(default_factory=lambda: ['confidence_interval', 'trend', 'outliers'])
-
-
-@dataclass
-class MetricConfig:
-    """Configuration for metrics and analysis.
-    
-    Attributes:
-        primary: List of primary metric field names to analyze (e.g., ['draws', 'tris'])
-        metric_labels: Display names for metrics (e.g., {'draws': 'Draw Calls'})
-        threshold_mapping: Maps metric names to threshold config keys
-            e.g., {'draws': {'soft_cap': 'draw_soft_cap', 'hard_cap': 'draw_hard_cap', 'high': 'high_load_draw_threshold', 'low': 'low_load_draw_threshold'}}
-        timestamp_field: Field name for timestamps (default 'ts')
-        identifier_field: Field name for item identifier/name (default 'testcase')
-    """
-    primary: List[str]
-    metric_labels: Dict[str, str] = field(default_factory=dict)
-    threshold_mapping: Dict[str, Dict[str, str]] = field(default_factory=dict)
-    timestamp_field: str = 'ts'
-    identifier_field: str = 'testcase'
-    derived: List[DerivedMetricConfig] = field(default_factory=list)
-    statistics: StatisticsConfig = field(default_factory=StatisticsConfig)
+# Note: MetricConfig, StatisticsConfig, DerivedMetricConfig have been moved to
+# plugins/mayhem/schema.py - these are domain-specific and should be defined by plugins.
 
 
 @dataclass
@@ -135,7 +101,7 @@ class ChartConfig:
     title: str
     x_field: str
     y_field: str
-    performance_zones: Optional[Dict[str, Any]] = None
+    # Plugin-specific options go in the options dict (e.g., performance_zones)
     options: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -151,9 +117,11 @@ class TemplateConfig:
 @dataclass
 class DataRequirements:
     """What data a page needs to render."""
-    stats: bool = True
+    # All default to False - plugins opt-in to what they need
     data_points: bool = False
     images: bool = False
+    # Plugin-specific requirements go in extensions
+    extensions: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -187,7 +155,7 @@ class ThemeConfig:
 @dataclass
 class OutputConfig:
     """Configuration for output generation."""
-    default_filename: str = 'performance_report.html'
+    default_filename: str = 'report.html'
     embed_images: bool = True
     linked_css: bool = False
 
@@ -258,10 +226,9 @@ class ReportSystemDefinition:
     llm_config: LLMConfig
     llm_generators: List[LLMGeneratorConfig]
     pages: List[PageConfig]
-    
     # Optional fields with defaults
-    # Metrics is optional for non-analytics reports (e.g., game reviews)
-    metrics: Optional[MetricConfig] = None
+    # Plugin-specific extensions (metrics, analytics config, etc.)
+    extensions: Dict[str, Any] = field(default_factory=dict)
     thresholds: Dict[str, Any] = field(default_factory=dict)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
@@ -276,7 +243,7 @@ class ReportSystemDefinition:
     tags: List[str] = field(default_factory=list)
     documentation_url: Optional[str] = None
     examples: List[str] = field(default_factory=list)
-    location: Optional[str] = None  # Optional location/level name metadata
+    location: Optional[str] = None  # Optional metadata
 
 
 def validate_report_system(data: Dict[str, Any]) -> List[str]:
@@ -318,10 +285,8 @@ def validate_report_system(data: Dict[str, Any]) -> List[str]:
     if 'input_format' not in data_source:
         errors.append("data_source.input_format is required")
     
-    # Validate metrics (optional - only required for analytics reports)
-    metrics = data.get('metrics', {})
-    if metrics and ('primary' not in metrics or not isinstance(metrics['primary'], list)):
-        errors.append("metrics.primary must be a list of primary metric names")
+    # Note: metrics validation is now plugin responsibility
+    # Extensions are validated by plugins, not core
     
     # Validate LLM generators
     llm_generators = data.get('llm_generators', [])
@@ -440,45 +405,9 @@ def parse_data_source_config(data: Dict[str, Any]) -> DataSourceConfig:
         auth=data.get('auth')
     )
 
+# Note: parse_derived_metric_config, parse_statistics_config, parse_metric_config
+# have been moved to plugins/mayhem/schema.py
 
-def parse_derived_metric_config(data: Dict[str, Any]) -> DerivedMetricConfig:
-    """Parse derived metric configuration from JSON."""
-    return DerivedMetricConfig(
-        id=data['id'],
-        description=data['description'],
-        calculation=data['calculation'],
-        dependencies=data.get('dependencies', [])
-    )
-
-
-def parse_statistics_config(data: Dict[str, Any]) -> StatisticsConfig:
-    """Parse statistics configuration from JSON."""
-    return StatisticsConfig(
-        basic=data.get('basic', ['min', 'max', 'mean', 'median', 'stdev']),
-        advanced=data.get('advanced', ['p90', 'p95', 'p99', 'variance', 'cv']),
-        analysis=data.get('analysis', ['confidence_interval', 'trend', 'outliers'])
-    )
-
-
-def parse_metric_config(data: Dict[str, Any]) -> MetricConfig:
-    """Parse metric configuration from JSON."""
-    derived = []
-    if 'derived' in data:
-        derived = [parse_derived_metric_config(d) for d in data['derived']]
-    
-    statistics = StatisticsConfig()
-    if 'statistics' in data:
-        statistics = parse_statistics_config(data['statistics'])
-    
-    return MetricConfig(
-        primary=data['primary'],
-        metric_labels=data.get('metric_labels', {}),
-        threshold_mapping=data.get('threshold_mapping', {}),
-        timestamp_field=data.get('timestamp_field', 'ts'),
-        identifier_field=data.get('identifier_field', 'testcase'),
-        derived=derived,
-        statistics=statistics
-    )
 
 
 def parse_llm_config(data: Dict[str, Any]) -> LLMConfig:
@@ -563,7 +492,6 @@ def parse_chart_config(data: Dict[str, Any]) -> ChartConfig:
         title=data['title'],
         x_field=data['x_field'],
         y_field=data['y_field'],
-        performance_zones=data.get('performance_zones'),
         options=data.get('options', {})
     )
 
@@ -581,9 +509,9 @@ def parse_template_config(data: Dict[str, Any]) -> TemplateConfig:
 def parse_data_requirements(data: Dict[str, Any]) -> DataRequirements:
     """Parse data requirements from JSON."""
     return DataRequirements(
-        stats=data.get('stats', True),
         data_points=data.get('data_points', False),
-        images=data.get('images', False)
+        images=data.get('images', False),
+        extensions=data.get('extensions', {})
     )
 
 
@@ -684,8 +612,8 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         description=data['description'],
         author=data['author'],
         data_source=parse_data_source_config(data['data_source']),
-        # Metrics and thresholds are optional for non-analytics reports
-        metrics=parse_metric_config(data['metrics']) if 'metrics' in data else None,
+        # Plugin-specific extensions (metrics, analytics, etc.) - parsed by plugins
+        extensions=data.get('extensions', {}),
         thresholds=data.get('thresholds', {}),
         llm_config=parse_llm_config(data['llm_config']),
         llm_generators=llm_generators,
@@ -697,5 +625,5 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         tags=data.get('tags', []),
         documentation_url=data.get('documentation_url'),
         examples=data.get('examples', []),
-        location=data.get('location')  # Optional location field
+        location=data.get('location')
     )

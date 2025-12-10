@@ -144,7 +144,7 @@ class TemplateEngine:
         def replace_var(match):
             var_path = match.group(1)
             
-            # Handle nested paths like config.draw_soft_cap or simple names like draw_soft_cap
+            # Handle nested paths like config.threshold_name or simple names
             parts = var_path.split('.')
             value = ctx if isinstance(ctx, dict) else original_context
             found = False

@@ -105,8 +105,9 @@ class PerformanceContextBuilder(ContextBuilderInterface):
         # Build critical point data
         critical = {}
         try:
-            metrics_config = system_def.metrics
-            primary_metrics = metrics_config.primary if metrics_config else []
+            # Get metrics from extensions (plugin-provided)
+            metrics_ext = system_def.extensions.get('metrics', {})
+            primary_metrics = metrics_ext.get('primary', []) if metrics_ext else []
             if primary_metrics and 'critical' in stats:
                 critical_point = stats['critical'][1] if stats['critical'] else {}
                 critical = {
@@ -118,12 +119,10 @@ class PerformanceContextBuilder(ContextBuilderInterface):
         
         context['critical'] = critical
         
-        # Add metric labels from system definition
+        # Add metric labels from system definition extensions
         context['metrics'] = primary_metrics
-        if system_def and hasattr(system_def, 'metrics'):
-            context['metric_labels'] = getattr(system_def.metrics, 'metric_labels', {})
-        else:
-            context['metric_labels'] = {}
+        metrics_ext = system_def.extensions.get('metrics', {})
+        context['metric_labels'] = metrics_ext.get('metric_labels', {}) if metrics_ext else {}
         
         # Get location from system_def (JSON config) or extract from data (MayhemAutomation-specific)
         # Priority: 1) JSON config, 2) Extract from testcase field

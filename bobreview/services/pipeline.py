@@ -127,13 +127,17 @@ class ReportPipeline:
         config: Any
     ) -> List[Dict[str, Any]]:
         """Parse data using DataService."""
+        # Get metrics from extensions (plugin-provided)
+        metrics_ext = system_def.extensions.get('metrics', {})
+        sort_by = metrics_ext.get('timestamp_field') if metrics_ext else None
+        
         if self.container.has('data'):
             data_service = self.container.get('data')
             return data_service.parse(
                 input_dir=input_dir,
                 data_source_config=system_def.data_source,
                 sample_size=config.execution.sample_size,
-                sort_by=system_def.metrics.timestamp_field
+                sort_by=sort_by
             )
         else:
             # Fallback to direct parsing using factory
@@ -152,29 +156,30 @@ class ReportPipeline:
         config: Any
     ) -> Dict[str, Any]:
         """Analyze data using AnalyticsService."""
+        # Get metrics from extensions (plugin-provided)
+        metrics_ext = system_def.extensions.get('metrics', {})
+        
+        if not metrics_ext:
+            # No metrics configured - return data as-is for non-analytics reports
+            if data_points:
+                return data_points[0] if len(data_points) == 1 else {'data': data_points}
+            return {}
+        
         if self.container.has('analytics'):
             analytics = self.container.get('analytics')
             
             return analytics.analyze(
                 data_points=data_points,
-                metrics=system_def.metrics.primary,
-                metrics_config=system_def.metrics,
+                metrics=metrics_ext.get('primary', []),
+                metrics_config=metrics_ext,
                 report_config=config
             )
         else:
-            # Fallback to core analyze function
-            from ..core import analyze_data
-            # Build metric_config from system_def
-            metric_config = {
-                'timestamp_field': system_def.metrics.timestamp_field,
-                'identifier_field': system_def.metrics.identifier_field,
-                'threshold_mapping': system_def.metrics.threshold_mapping
-            }
-            return analyze_data(
-                data_points, config,
-                metrics=system_def.metrics.primary,
-                metric_config=metric_config
-            )
+            # No analytics service - return raw data
+            # Plugins should register an analytics service for analysis
+            from ..core import log_warning
+            log_warning("No analytics service registered - returning raw data", config)
+            return {'data': data_points, 'count': len(data_points)}
     
     def _generate_llm_content(
         self,

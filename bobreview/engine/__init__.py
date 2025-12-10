@@ -24,7 +24,6 @@ Usage:
 from .schema import (
     ReportSystemDefinition,
     DataSourceConfig,
-    MetricConfig,
     LLMConfig,
     LLMGeneratorConfig,
     PageConfig,
@@ -73,7 +72,6 @@ __all__ = [
     # Schema classes
     'ReportSystemDefinition',
     'DataSourceConfig',
-    'MetricConfig',
     'LLMConfig',
     'LLMGeneratorConfig',
     'PageConfig',

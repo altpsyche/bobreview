@@ -266,10 +266,11 @@ class ReportSystemExecutor:
         # Use DataService from container (allows plugin override)
         data_service: DataService = self.container.get('data')
         
-        # Get timestamp field for sorting, if metrics are configured
+        # Get timestamp field for sorting from extensions (plugin-provided metrics)
         sort_by = None
-        if hasattr(self.system_def, 'metrics') and self.system_def.metrics:
-            sort_by = getattr(self.system_def.metrics, 'timestamp_field', None)
+        metrics_ext = self.system_def.extensions.get('metrics')
+        if metrics_ext:
+            sort_by = metrics_ext.get('timestamp_field')
         
         return data_service.parse(
             input_dir=input_dir,
@@ -303,12 +304,14 @@ class ReportSystemExecutor:
         analytics_service: AnalyticsService = self.container.get('analytics')
         
         try:
-            # Get metrics config, if available
+            # Get metrics config from extensions (plugin-provided)
+            metrics_ext = self.system_def.extensions.get('metrics')
             metrics = None
             metrics_config = None
-            if hasattr(self.system_def, 'metrics') and self.system_def.metrics:
-                metrics = getattr(self.system_def.metrics, 'primary', None)
-                metrics_config = self.system_def.metrics
+            
+            if metrics_ext:
+                metrics = metrics_ext.get('primary')
+                metrics_config = metrics_ext
             
             # If no metrics config, return data as-is (for non-analytical report systems)
             if not metrics_config:
@@ -322,7 +325,7 @@ class ReportSystemExecutor:
                 data_points=data_points,
                 metrics=metrics,
                 metrics_config=metrics_config,
-                report_config=self.config  # Pass config directly, no dict building
+                report_config=self.config  # Pass config directly
             )
         except Exception as e:
             raise ValueError(
@@ -532,9 +535,8 @@ class ReportSystemExecutor:
                             'title': chart_config.title,
                             'x_field': chart_config.x_field,
                             'y_field': chart_config.y_field,
-                            'performance_zones': chart_config.performance_zones,
-                            'options': chart_config.options,
-                            'labels': labels_dict,  # Include labels in chart_config
+                            'options': chart_config.options,  # Plugin-specific options here
+                            'labels': labels_dict,
                         }
                         # Call interface method
                         try:

@@ -69,11 +69,11 @@ class DataParserInterface(ABC):
         Example:
             # For filename pattern parser
             return {
-                'testcase': 'Level1',
-                'tris': 85000,
-                'draws': 520,
+                'id': 'Item1',
+                'metric_a': 85000,
+                'metric_b': 520,
                 'timestamp': 1234567890,
-                'img': 'Level1_85000_520_1234567890.png'
+                'img': 'Item1_85000_520_1234567890.png'
             }
         """
         pass
@@ -302,8 +302,8 @@ class ChartGeneratorInterface(ABC):
                 'data': {
                     'labels': [p['timestamp'] for p in data_points],
                     'datasets': [{
-                        'label': 'Draw Calls',
-                        'data': [p['draws'] for p in data_points]
+                        'label': 'Metric B',
+                        'data': [p['metric_b'] for p in data_points]
                     }]
                 }
             })

@@ -47,8 +47,8 @@ class AnalyticsService(BaseService):
         
         Parameters:
             data_points: List of data points to analyze
-            metrics: List of metric field names (e.g., ['draws', 'tris'])
-            metrics_config: MetricsConfig from report system
+            metrics: List of metric field names
+            metrics_config: Dict-like config with timestamp_field, identifier_field, threshold_mapping
             report_config: ReportConfig instance (preferred, contains all thresholds)
             thresholds: Dict of thresholds (fallback if report_config not provided)
             
@@ -58,17 +58,26 @@ class AnalyticsService(BaseService):
         Raises:
             AnalyticsServiceError: If analysis fails
         """
-        # Import here to avoid circular imports
-        from ..core import analyze_data, ReportConfig
-        
         if not data_points:
             raise AnalyticsServiceError("No data points to analyze")
         
-        # Build metric_config dict for core analyze_data function
+        # Handle dict-like or object metrics_config
+        if hasattr(metrics_config, 'get'):
+            # Dict-like
+            timestamp_field = metrics_config.get('timestamp_field')
+            identifier_field = metrics_config.get('identifier_field')
+            threshold_mapping = metrics_config.get('threshold_mapping', {})
+        else:
+            # Object with attributes
+            timestamp_field = getattr(metrics_config, 'timestamp_field', None)
+            identifier_field = getattr(metrics_config, 'identifier_field', None)
+            threshold_mapping = getattr(metrics_config, 'threshold_mapping', {})
+        
+        # Build metric_config dict
         metric_config = {
-            'timestamp_field': metrics_config.timestamp_field,
-            'identifier_field': metrics_config.identifier_field,
-            'threshold_mapping': metrics_config.threshold_mapping
+            'timestamp_field': timestamp_field,
+            'identifier_field': identifier_field,
+            'threshold_mapping': threshold_mapping
         }
         
         # Validate required fields exist
@@ -81,6 +90,10 @@ class AnalyticsService(BaseService):
             )
         
         try:
+            # Import plugin analysis function
+            from ..plugins.mayhem.analysis import analyze_performance_data
+            from ..core.config import ReportConfig
+            
             # Use provided config or build from thresholds
             if report_config is not None:
                 config = report_config
@@ -93,7 +106,7 @@ class AnalyticsService(BaseService):
                     "Either report_config or thresholds must be provided"
                 )
             
-            stats = analyze_data(
+            stats = analyze_performance_data(
                 data_points,
                 config,
                 metrics=metrics,
@@ -103,6 +116,10 @@ class AnalyticsService(BaseService):
             logger.debug(f"Analyzed {len(data_points)} points across {len(metrics)} metrics")
             return stats
             
+        except ImportError:
+            # Plugin not available - return basic stats only
+            logger.warning("Plugin analysis not available, returning basic data")
+            return {'data': data_points, 'count': len(data_points)}
         except KeyError as e:
             raise AnalyticsServiceError(
                 f"Analysis failed: missing required field {e}"

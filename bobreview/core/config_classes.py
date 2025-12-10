@@ -12,7 +12,7 @@ from typing import Optional, List
 
 class ThresholdConfig(dict):
     """
-    Generic configuration for performance thresholds.
+    Generic configuration for thresholds and limits.
     
     A dictionary that stores threshold key-value pairs.
     No hardcoded field names - completely generic and plugin-agnostic.

@@ -42,58 +42,60 @@
       "strict_mode": false
     }
   },
-  "metrics": {
-    "primary": [
-      "draws",
-      "tris"
-    ],
-    "metric_labels": {
-      "draws": "Draw Calls",
-      "tris": "Triangle Count"
-    },
-    "threshold_mapping": {
-      "draws": {
-        "soft_cap": "draw_soft_cap",
-        "hard_cap": "draw_hard_cap",
-        "high": "high_load_draw_threshold",
-        "low": "low_load_draw_threshold"
+  "extensions": {
+    "metrics": {
+      "primary": [
+        "draws",
+        "tris"
+      ],
+      "metric_labels": {
+        "draws": "Draw Calls",
+        "tris": "Triangle Count"
       },
-      "tris": {
-        "soft_cap": "tri_soft_cap",
-        "hard_cap": "tri_hard_cap",
-        "high": "high_load_tri_threshold",
-        "low": "low_load_tri_threshold"
-      }
-    },
-    "timestamp_field": "ts",
-    "identifier_field": "testcase",
-    "derived": [
-      {
-        "id": "frame_time",
-        "description": "Time between consecutive frames",
-        "calculation": "delta(timestamp)"
-      }
-    ],
-    "statistics": {
-      "basic": [
-        "min",
-        "max",
-        "mean",
-        "median",
-        "stdev"
+      "threshold_mapping": {
+        "draws": {
+          "soft_cap": "draw_soft_cap",
+          "hard_cap": "draw_hard_cap",
+          "high": "high_load_draw_threshold",
+          "low": "low_load_draw_threshold"
+        },
+        "tris": {
+          "soft_cap": "tri_soft_cap",
+          "hard_cap": "tri_hard_cap",
+          "high": "high_load_tri_threshold",
+          "low": "low_load_tri_threshold"
+        }
+      },
+      "timestamp_field": "ts",
+      "identifier_field": "testcase",
+      "derived": [
+        {
+          "id": "frame_time",
+          "description": "Time between consecutive frames",
+          "calculation": "delta(timestamp)"
+        }
       ],
-      "advanced": [
-        "p90",
-        "p95",
-        "p99",
-        "variance",
-        "cv"
-      ],
-      "analysis": [
-        "confidence_interval",
-        "trend",
-        "outliers"
-      ]
+      "statistics": {
+        "basic": [
+          "min",
+          "max",
+          "mean",
+          "median",
+          "stdev"
+        ],
+        "advanced": [
+          "p90",
+          "p95",
+          "p99",
+          "variance",
+          "cv"
+        ],
+        "analysis": [
+          "confidence_interval",
+          "trend",
+          "outliers"
+        ]
+      }
     }
   },
   "thresholds": {
@@ -403,7 +405,6 @@
         "executive_summary"
       ],
       "data_requirements": {
-        "stats": true,
         "data_points": false,
         "images": false
       },
@@ -431,7 +432,6 @@
         "metric_deep_dive"
       ],
       "data_requirements": {
-        "stats": true,
         "data_points": true,
         "images": false
       },
@@ -471,7 +471,6 @@
         "zones_hotspots"
       ],
       "data_requirements": {
-        "stats": true,
         "data_points": false,
         "images": true
       },
@@ -495,7 +494,6 @@
         "visual_analysis"
       ],
       "data_requirements": {
-        "stats": true,
         "data_points": true,
         "images": false
       },
@@ -544,7 +542,6 @@
         "system_recommendations"
       ],
       "data_requirements": {
-        "stats": true,
         "data_points": true,
         "images": false
       },
@@ -568,7 +565,6 @@
         "statistical_interpretation"
       ],
       "data_requirements": {
-        "stats": true,
         "data_points": true,
         "images": true
       },
