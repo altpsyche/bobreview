@@ -121,7 +121,6 @@
                 "review_text": "review_text"
             },
             "data_requirements": {
-                "stats": true,
                 "data_points": false,
                 "images": false
             },
