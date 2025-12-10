@@ -90,35 +90,48 @@ class AnalyticsService(BaseService):
             )
         
         try:
-            # Import plugin analysis function
-            from ..plugins.mayhem.analysis import analyze_performance_data
-            from ..core.config import ReportConfig
+            # Try to get analyzer from plugin registry
+            from ..core.plugin_system import get_extension_point
+            extension_point = get_extension_point()
             
-            # Use provided config or build from thresholds
-            if report_config is not None:
-                config = report_config
-            elif thresholds:
-                # Build config with thresholds
-                from ..core.config_classes import ThresholdConfig
-                config = ReportConfig(thresholds=ThresholdConfig(**thresholds))
-            else:
-                raise AnalyticsServiceError(
-                    "Either report_config or thresholds must be provided"
+            # Look for a registered analyzer function
+            analyzer = extension_point.get_analyzer() if hasattr(extension_point, 'get_analyzer') else None
+            
+            if analyzer:
+                from ..core.config import ReportConfig
+                
+                # Use provided config or build from thresholds
+                if report_config is not None:
+                    config = report_config
+                elif thresholds:
+                    from ..core.config_classes import ThresholdConfig
+                    config = ReportConfig(thresholds=ThresholdConfig(**thresholds))
+                else:
+                    raise AnalyticsServiceError(
+                        "Either report_config or thresholds must be provided"
+                    )
+                
+                stats = analyzer(
+                    data_points,
+                    config,
+                    metrics=metrics,
+                    metric_config=metrics_config
                 )
-            
-            stats = analyze_performance_data(
-                data_points,
-                config,
-                metrics=metrics,
-                metric_config=metric_config
-            )
-            
-            logger.debug(f"Analyzed {len(data_points)} points across {len(metrics)} metrics")
-            return stats
+                
+                logger.debug(f"Analyzed {len(data_points)} points across {len(metrics)} metrics")
+                return stats
+            else:
+                # No plugin analyzer - return basic data structure
+                logger.debug("No plugin analyzer available, returning basic data")
+                return {
+                    'data': data_points, 
+                    'count': len(data_points),
+                    'metrics': metrics
+                }
             
         except ImportError:
-            # Plugin not available - return basic stats only
-            logger.warning("Plugin analysis not available, returning basic data")
+            # Plugin system not available - return basic stats only
+            logger.warning("Plugin system not available, returning basic data")
             return {'data': data_points, 'count': len(data_points)}
         except KeyError as e:
             raise AnalyticsServiceError(

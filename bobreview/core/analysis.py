@@ -140,8 +140,6 @@ def _detect_outliers_mad(values: List[float], indices: List[int], threshold: flo
     return outliers
 
 
-# Note: _calculate_frame_times moved to plugins/mayhem/analysis.py
-# This is a domain-specific function for frame time analysis
 
 
 def _classify_trend(slope: float, stdev: float, mean: float) -> str:
@@ -171,7 +169,6 @@ def _classify_trend(slope: float, stdev: float, mean: float) -> str:
         return 'stable'
 
 
-# Note: Domain-specific analysis functions moved to plugins/mayhem/analysis.py
 
 
 def format_data_table(

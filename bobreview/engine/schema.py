@@ -44,8 +44,7 @@ class DataSourceConfig:
     auth: Optional[Dict[str, str]] = None
 
 
-# Note: MetricConfig, StatisticsConfig, DerivedMetricConfig have been moved to
-# plugins/mayhem/schema.py - these are domain-specific and should be defined by plugins.
+# Note: Domain-specific schema classes should be defined by plugins.
 
 
 @dataclass
@@ -405,8 +404,7 @@ def parse_data_source_config(data: Dict[str, Any]) -> DataSourceConfig:
         auth=data.get('auth')
     )
 
-# Note: parse_derived_metric_config, parse_statistics_config, parse_metric_config
-# have been moved to plugins/mayhem/schema.py
+# Note: Domain-specific parsers should be defined by plugins.
 
 
 
