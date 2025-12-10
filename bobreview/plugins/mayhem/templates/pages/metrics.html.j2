@@ -41,6 +41,7 @@
 <section class="panel" style="margin-top: 20px;">
   <h2>{{ labels.get('distribution', 'Distribution') }}</h2>
   {% if charts.draws_histogram %}
+  <h3>{{ primary_label }} {{ labels.get('distribution', 'Distribution') }}</h3>
   <div class="chart-container">
     <canvas id="draws_histogram"></canvas>
     {% if llm_content and llm_content.get('chart_explanations') %}
@@ -49,7 +50,8 @@
   </div>
   {% endif %}
   {% if charts.tris_histogram %}
-  <div class="chart-container" style="margin-top: 20px;">
+  <h3 style="margin-top: 24px;">{{ secondary_label }} {{ labels.get('distribution', 'Distribution') }}</h3>
+  <div class="chart-container">
     <canvas id="tris_histogram"></canvas>
     {% if llm_content and llm_content.get('chart_explanations') %}
     {{ chart_explanation(llm_content.get('chart_explanations'), 'tris_histogram') }}
