@@ -41,19 +41,24 @@
 
 .stat-label {
     font-size: 11px;
+    font-weight: var(--weight-medium);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--text-soft);
 }
 
 .stat-value {
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 24px;
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
 }
 
 .stat-sub {
     font-size: 12px;
+    font-weight: var(--weight-normal);
     color: var(--text-soft);
+    margin-top: 2px;
 }
 
 /* ============================================
@@ -88,8 +93,10 @@
 
 .metric-mono {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: var(--weight-medium);
     color: var(--text-main);
+    letter-spacing: -0.01em;
 }
 
 .notes {
@@ -118,8 +125,9 @@
 }
 
 .chart-title {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
     color: var(--text-main);
     margin-bottom: 12px;
     padding-bottom: 8px;
@@ -215,10 +223,11 @@
 }
 
 .stats-item-value {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: var(--weight-bold);
     font-family: var(--mono);
     color: var(--text-main);
+    letter-spacing: -0.02em;
 }
 
 /* ============================================
@@ -252,8 +261,10 @@
 }
 
 .feature-card h3 {
-    margin: 0 0 8px 0;
-    font-size: 16px;
+    margin: 0 0 10px 0;
+    font-size: 17px;
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
     color: var(--text-main);
     text-transform: none;
 }
@@ -261,8 +272,9 @@
 .feature-card p {
     margin: 0;
     font-size: 13px;
+    font-weight: var(--weight-normal);
     color: var(--text-soft);
-    line-height: 1.5;
+    line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     line-clamp: 3;
@@ -411,17 +423,19 @@
 }
 
 .grade-letter {
-    font-size: 48px;
-    font-weight: 700;
+    font-size: 52px;
+    font-weight: var(--weight-bold);
     line-height: 1;
+    letter-spacing: -0.03em;
 }
 
 .grade-label {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: var(--weight-medium);
     color: var(--text-soft);
-    margin-top: 4px;
+    margin-top: 6px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
 }
 
 .grade-detail {

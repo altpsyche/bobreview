@@ -31,8 +31,10 @@ header {
 
 header h1 {
     margin: 0;
-    font-size: 24px;
-    letter-spacing: 0.03em;
+    font-size: 26px;
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
 header .meta {
@@ -40,6 +42,7 @@ header .meta {
     flex-wrap: wrap;
     gap: 16px;
     font-size: 13px;
+    font-weight: var(--weight-medium);
     color: var(--text-soft);
 }
 
@@ -83,7 +86,7 @@ header .meta span {
 .nav-links a.active {
     background: var(--accent);
     color: var(--bg);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
 }
 
 /* ============================================
@@ -120,15 +123,18 @@ header .meta span {
 }
 
 .panel h2 {
-    margin: 0 0 10px;
-    font-size: 18px;
+    margin: 0 0 14px;
+    font-size: 19px;
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
     border-left: 3px solid var(--accent);
-    padding-left: 8px;
+    padding-left: 10px;
 }
 
 .panel h3 {
-    margin: 18px 0 6px;
-    font-size: 15px;
+    margin: 20px 0 8px;
+    font-size: 13px;
+    font-weight: var(--weight-semibold);
     color: var(--text-soft);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -140,12 +146,14 @@ header .meta span {
 
 .body-text {
     font-size: 14px;
+    font-weight: var(--weight-normal);
     color: var(--text-soft);
-    line-height: 1.6;
-    margin: 4px 0 0;
+    line-height: 1.7;
+    margin: 6px 0 0;
 }
 
 .body-text strong {
+    font-weight: var(--weight-semibold);
     color: var(--text-main);
 }
 
@@ -154,7 +162,7 @@ ul.body-text {
 }
 
 ul.body-text li {
-    margin: 6px 0;
+    margin: 8px 0;
 }
 
 /* ============================================
@@ -210,9 +218,11 @@ thead {
 }
 
 thead th {
-    padding: 8px 10px;
+    padding: 10px 12px;
     text-align: left;
-    font-weight: 500;
+    font-weight: var(--weight-semibold);
+    font-size: 12px;
+    letter-spacing: 0.02em;
     color: var(--text-soft);
     border-bottom: 1px solid var(--border-subtle);
     white-space: nowrap;
@@ -231,11 +241,12 @@ tbody tr:hover {
 }
 
 tbody td {
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border-subtle);
     vertical-align: top;
     white-space: nowrap;
     color: var(--text-soft);
+    font-weight: var(--weight-normal);
 }
 
 tbody td.notes {
