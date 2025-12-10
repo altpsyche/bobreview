@@ -52,6 +52,9 @@ class MayhemAutomationPlugin(BasePlugin):
         if config.get('register_services', True):
             self._register_services()
         
+        # Register analyzer function
+        self._register_analyzer()
+        
         # Register report systems
         if config.get('register_report_systems', True):
             self._register_report_systems(registry)
@@ -146,6 +149,18 @@ class MayhemAutomationPlugin(BasePlugin):
         
         # LLM service is registered by executor with config
         # Don't register a default here
+    
+    def _register_analyzer(self) -> None:
+        """Register the performance analyzer function."""
+        from ...core.plugin_system.registries import get_analyzer_registry
+        from .analysis import analyze_performance_data
+        
+        analyzer_registry = get_analyzer_registry()
+        analyzer_registry.register(
+            'performance', 
+            analyze_performance_data, 
+            default=True
+        )
     
     def _register_report_systems(self, registry) -> None:
         """Register built-in report systems."""

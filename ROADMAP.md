@@ -103,6 +103,15 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
 - **COMPLETE** - Chart colors integrated with themes
 - **COMPLETE** - Custom theme registration API
 
+### CSS Architecture (v1.0.7)
+- **COMPLETE** - Core CSS minimized (67 lines - theme tokens only)
+- **COMPLETE** - Plugin-specific CSS isolation (`templates/static/plugin.css`)
+- **COMPLETE** - Plugin base layout CSS (`templates/static/base.css`)
+- **COMPLETE** - Jinja2 include for CSS loading
+- **COMPLETE** - Aligned theme variable naming across all plugins
+- **COMPLETE** - Dynamic theme injection via Jinja templating
+- **COMPLETE** - Core free of all plugin-specific styles
+
 ### Chart Configuration System
 - **COMPLETE** - Chart registry system (`core/plugin_system/registries/chart_type_registry.py`)
 - **COMPLETE** - `ChartDataset` dataclass for dataset styling

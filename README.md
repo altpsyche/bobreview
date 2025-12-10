@@ -112,6 +112,15 @@ bobreview/
 - **Plugin-First** - All functionality provided by plugins
 - **Registry Pattern** - Self-registration for all extension points
 
+**CSS Architecture:**
+- **Self-Contained Plugins** - Each plugin defines its own styles (no core CSS dependency)
+- **Aligned Theme Tokens** - All plugins use consistent CSS variable naming
+- **Dynamic Themes** - Templates inject theme values via Jinja templating
+- **Plugin Files**:
+  - `templates/base.html.j2` - Base template with `:root` theme variables
+  - `templates/static/base.css` - Layout styles (header, nav, panels)
+  - `templates/static/plugin.css` - Plugin-specific components
+
 ### Package Overview
 
 | Package | Purpose |

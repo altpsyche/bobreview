@@ -24,6 +24,32 @@ The engine and core directories are now completely plugin-agnostic:
 - **Updated Parsing**: All parsing functions updated to handle new schema structure
 - **No Backward Compatibility**: Removed deprecated stubs and imports
 
+### CSS Architecture Overhaul
+
+Plugins are now fully self-contained with their own styles:
+
+- **Core CSS Minimized**: `core/static/styles.css` now only 67 lines (was 380+)
+  - Contains only theme token reference and minimal reset
+  - No plugin-specific components
+  
+- **Plugin CSS Separation**:
+  - Each plugin defines its own `templates/static/plugin.css`
+  - Each plugin defines its own `templates/static/base.css` (layout)
+  - Loaded via `{% include "static/plugin.css" %}` in templates
+  
+- **Theme Variable Alignment**: All plugins now use consistent variable names:
+  - `--bg`, `--bg-elevated`, `--bg-soft`
+  - `--accent`, `--accent-soft`, `--accent-strong`
+  - `--text-main`, `--text-soft`
+  - `--ok`, `--warn`, `--danger` (+ `-soft` variants)
+  - `--border-subtle`, `--radius-lg`, `--radius-md`
+  - `--shadow-soft`, `--sans`, `--mono`
+  
+- **Dynamic Theme Support**: Base templates use Jinja templating for theme injection:
+  ```jinja2
+  --accent: {{ theme.accent if theme else '#4ea1ff' }};
+  ```
+
 
 
 ### Added
@@ -32,6 +58,7 @@ The engine and core directories are now completely plugin-agnostic:
   - `ThemeRegistry`, `WidgetRegistry`, `DataParserRegistry`, `LLMGeneratorRegistry`
   - `ChartTypeRegistry`, `PageRegistry`, `ServiceRegistry`, `ReportSystemRegistry`
   - `ChartGeneratorRegistry`, `ContextBuilderRegistry`, `TemplatePathRegistry`
+  - `AnalyzerRegistry` - Plugins register their data analyzers here (v1.0.7)
   - Each registry has a single, focused responsibility
 
 - **Focused Config Classes** (`bobreview/core/config_classes.py`):

@@ -90,14 +90,13 @@ class AnalyticsService(BaseService):
             )
         
         try:
-            # Try to get analyzer from plugin registry
-            from ..core.plugin_system import get_extension_point
-            extension_point = get_extension_point()
+            # Get analyzer from the plugin registry
+            from ..core.plugin_system.registries import get_analyzer_registry
             
-            # Look for a registered analyzer function
-            analyzer = extension_point.get_analyzer() if hasattr(extension_point, 'get_analyzer') else None
+            analyzer_registry = get_analyzer_registry()
+            analyzer_func = analyzer_registry.get()  # Get default analyzer
             
-            if analyzer:
+            if analyzer_func:
                 from ..core.config import ReportConfig
                 
                 # Use provided config or build from thresholds
@@ -111,7 +110,7 @@ class AnalyticsService(BaseService):
                         "Either report_config or thresholds must be provided"
                     )
                 
-                stats = analyzer(
+                stats = analyzer_func(
                     data_points,
                     config,
                     metrics=metrics,
@@ -121,8 +120,8 @@ class AnalyticsService(BaseService):
                 logger.debug(f"Analyzed {len(data_points)} points across {len(metrics)} metrics")
                 return stats
             else:
-                # No plugin analyzer - return basic data structure
-                logger.debug("No plugin analyzer available, returning basic data")
+                # No plugin analyzer registered - return basic data structure
+                logger.debug("No plugin analyzer registered, returning basic data")
                 return {
                     'data': data_points, 
                     'count': len(data_points),
