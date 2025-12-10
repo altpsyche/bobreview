@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 BobReview v1.0.7 introduces a fully modular plugin system with focused architecture following SOLID and DRY principles.
 
+### Engine & Core Purification
+
+The engine and core directories are now completely plugin-agnostic:
+
+- **Removed from Core**: `analyze_data`, `calculate_metric_stats`, `_calculate_frame_times` moved to plugin
+- **Removed from Engine Schema**: `MetricConfig`, `StatisticsConfig`, `DerivedMetricConfig` moved to plugin
+- **Removed from Engine Schema**: `performance_zones` field from `ChartConfig`
+- **Added to Engine Schema**: `extensions: Dict[str, Any]` field for plugin-specific configuration
+- **Updated Parsing**: All parsing functions updated to handle new schema structure
+- **No Backward Compatibility**: Removed deprecated stubs and imports
+
+
+
 ### Added
 
 - **Focused Registry System** (`bobreview/core/plugin_system/registries/`):

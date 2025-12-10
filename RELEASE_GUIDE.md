@@ -1,6 +1,6 @@
 # BobReview - Release Guide
 
-## Performance Analysis Tool for Game Development
+## Extensible Report Generation Framework
 
 Version 1.0.7 - Plugin System
 
@@ -351,5 +351,5 @@ python -c "from bobreview.core import ReportConfig; print('OK')"
 
 ---
 
-**BobReview v1.0.7** - Performance analysis and review tool for game development  
+**BobReview v1.0.7** - Extensible report generation framework  
 MIT License | Focused Architecture - SOLID & DRY Principles

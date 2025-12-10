@@ -523,4 +523,4 @@ If installation issues persist:
 
 ---
 
-BobReview - Performance analysis and review tool.
+BobReview - Extensible report generation framework.

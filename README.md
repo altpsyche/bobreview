@@ -1,8 +1,8 @@
 # BobReview
 
-**Performance Analysis and Review Tool for Game Development**
+**Extensible Report Generation Framework**
 
-Generate comprehensive HTML performance reports from game engine performance capture screenshots using LLM-powered analysis.
+Generate comprehensive HTML reports from data using LLM-powered analysis. Plugins provide domain-specific parsing, analysis, and templates.
 
 ---
 
@@ -26,7 +26,11 @@ Generate comprehensive HTML performance reports from game engine performance cap
 
 ## Overview
 
-BobReview analyzes performance data extracted from PNG screenshot files and generates detailed HTML reports with statistical analysis, performance hotspots identification, and LLM-powered optimization recommendations.
+BobReview is a plugin-based report generation framework. Plugins define:
+- How to parse input data
+- What metrics to analyze
+- What analysis to perform
+- What templates to use for HTML output
 
 **Key Feature:** Sends structured data tables to the LLM instead of images, significantly reducing token usage and costs by approximately 90%.
 
@@ -34,11 +38,11 @@ BobReview analyzes performance data extracted from PNG screenshot files and gene
 
 ## Features
 
+- **Plugin System** - All domain-specific logic provided by plugins
 - **JSON-Based Report Systems** - Define custom analysis pipelines with JSON
 - **Multi-Provider LLM Support** - OpenAI, Anthropic Claude, or local Ollama
-- **Automated Data Extraction** - Parse performance metrics from PNG filenames
-- **Statistical Analysis** - Calculate comprehensive statistics and identify patterns
-- **Hotspot Identification** - Automatically find high-load and low-load performance zones
+- **Extensible Data Parsing** - Plugins define how to extract data
+- **Statistical Analysis** - Generic utilities for stats, outliers, trends
 - **LLM-Powered Insights** - Generate contextual analysis using AI models
 - **Professional Reports** - Generate presentation-ready HTML reports
 - **Standalone HTML** - Images embedded as base64 for easy sharing

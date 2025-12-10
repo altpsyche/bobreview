@@ -6,10 +6,10 @@ Future development plans for BobReview.
 
 ## Vision
 
-Evolve BobReview into a comprehensive performance analysis suite with:
-- Multi-format data ingestion
+Evolve BobReview into a comprehensive plugin-based report generation framework with:
+- Multi-format data ingestion via plugins
 - Interactive visualizations
-- Automated regression detection
+- Plugin marketplace
 - Team collaboration features
 - CI/CD integration
 

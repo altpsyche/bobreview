@@ -358,4 +358,4 @@ bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
 ---
 
 **BobReview v1.0.7** - Plugin System  
-Performance analysis and review tool for game development.
+Extensible report generation framework.
