@@ -13,7 +13,7 @@ def generate_visual_analysis(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
     config: "ReportConfig",
-    _images_dir_rel: str,
+    context: Dict[str, Any],
 ) -> str:
     """Generate visual analysis interpretation for distribution charts."""
     

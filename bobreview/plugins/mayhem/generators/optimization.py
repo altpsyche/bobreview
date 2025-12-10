@@ -13,7 +13,7 @@ def generate_optimization_checklist(
     data_points: List[Dict[str, Any]],
     stats: Dict[str, Any],
     config: "ReportConfig",
-    _images_dir_rel: str,
+    context: Dict[str, Any],
 ) -> Dict[str, str]:
     """Generate optimization checklist using LLM."""
     results = {}

@@ -49,12 +49,9 @@ class MetricDeepDiveGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate metric deep dive."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_metric_deep_dive(data_points, stats, config, images_dir)
+        if not isinstance(context, dict):
+            context = {}
+        return generate_metric_deep_dive(data_points, stats, config, context)
 
 
 class ZonesHotspotsGenerator(LLMGeneratorInterface):
@@ -68,12 +65,9 @@ class ZonesHotspotsGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate zones and hotspots analysis."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_zones_hotspots(data_points, stats, config, images_dir)
+        if not isinstance(context, dict):
+            context = {}
+        return generate_zones_hotspots(data_points, stats, config, context)
 
 
 class OptimizationChecklistGenerator(LLMGeneratorInterface):
@@ -87,12 +81,9 @@ class OptimizationChecklistGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate optimization checklist."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_optimization_checklist(data_points, stats, config, images_dir)
+        if not isinstance(context, dict):
+            context = {}
+        return generate_optimization_checklist(data_points, stats, config, context)
 
 
 class SystemRecommendationsGenerator(LLMGeneratorInterface):
@@ -106,9 +97,8 @@ class SystemRecommendationsGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> Dict[str, str]:
         """Generate system recommendations."""
-        # Ensure context is a dict
         if not isinstance(context, dict):
-            context = {'images_dir_rel': str(context) if context else ''}
+            context = {}
         return generate_system_recommendations(data_points, stats, config, context)
 
 
@@ -123,12 +113,9 @@ class VisualAnalysisGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate visual analysis."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_visual_analysis(data_points, stats, config, images_dir)
+        if not isinstance(context, dict):
+            context = {}
+        return generate_visual_analysis(data_points, stats, config, context)
 
 
 class StatisticalInterpretationGenerator(LLMGeneratorInterface):
@@ -142,10 +129,6 @@ class StatisticalInterpretationGenerator(LLMGeneratorInterface):
         context: Dict[str, Any]
     ) -> str:
         """Generate statistical interpretation."""
-        # Ensure context is a dict and extract images_dir_rel safely
-        if isinstance(context, dict):
-            images_dir = context.get('images_dir_rel', '')
-        else:
-            images_dir = str(context) if context else ''
-        return generate_statistical_interpretation(data_points, stats, config, images_dir)
-
+        if not isinstance(context, dict):
+            context = {}
+        return generate_statistical_interpretation(data_points, stats, config, context)
