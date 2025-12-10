@@ -31,7 +31,7 @@ header {
 
 header h1 {
     margin: 0;
-    font-size: 26px;
+    font-size: 30px;
     font-weight: var(--weight-bold);
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -41,7 +41,7 @@ header .meta {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: var(--weight-medium);
     color: var(--text-soft);
 }
@@ -123,21 +123,21 @@ header .meta span {
 }
 
 .panel h2 {
-    margin: 0 0 14px;
-    font-size: 19px;
+    margin: 0 0 16px;
+    font-size: 21px;
     font-weight: var(--weight-semibold);
     letter-spacing: -0.01em;
-    border-left: 3px solid var(--accent);
-    padding-left: 10px;
+    border-left: 4px solid var(--accent);
+    padding-left: 12px;
 }
 
 .panel h3 {
-    margin: 20px 0 8px;
-    font-size: 13px;
+    margin: 24px 0 10px;
+    font-size: 14px;
     font-weight: var(--weight-semibold);
     color: var(--text-soft);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
 }
 
 /* ============================================
@@ -145,11 +145,11 @@ header .meta span {
    ============================================ */
 
 .body-text {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: var(--weight-normal);
     color: var(--text-soft);
-    line-height: 1.7;
-    margin: 6px 0 0;
+    line-height: 1.75;
+    margin: 8px 0 0;
 }
 
 .body-text strong {
@@ -158,11 +158,11 @@ header .meta span {
 }
 
 ul.body-text {
-    margin-left: 20px;
+    margin-left: 22px;
 }
 
 ul.body-text li {
-    margin: 8px 0;
+    margin: 10px 0;
 }
 
 /* ============================================
@@ -218,10 +218,10 @@ thead {
 }
 
 thead th {
-    padding: 10px 12px;
+    padding: 12px 14px;
     text-align: left;
     font-weight: var(--weight-semibold);
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 0.02em;
     color: var(--text-soft);
     border-bottom: 1px solid var(--border-subtle);
@@ -241,11 +241,12 @@ tbody tr:hover {
 }
 
 tbody td {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-subtle);
     vertical-align: top;
     white-space: nowrap;
     color: var(--text-soft);
+    font-size: 14px;
     font-weight: var(--weight-normal);
 }
 
@@ -274,12 +275,12 @@ tbody td.notes {
    ============================================ */
 
 .callout {
-    margin-top: 10px;
-    padding: 10px 11px;
+    margin-top: 12px;
+    padding: 14px 16px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
     background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-soft);
 }
 
@@ -319,4 +320,75 @@ tbody td.notes {
 
 .section-anchor {
     scroll-margin-top: 20px;
+}
+
+/* ============================================
+   LLM GENERATED CONTENT
+   Styles for markdown-converted HTML from LLM
+   ============================================ */
+
+.panel>p,
+.panel>ul,
+.panel>ol {
+    font-size: 15px;
+    font-weight: var(--weight-normal);
+    color: var(--text-soft);
+    line-height: 1.8;
+    margin: 14px 0;
+}
+
+.panel>p:first-of-type {
+    margin-top: 0;
+}
+
+.panel>p strong,
+.panel>ul strong,
+.panel>ol strong {
+    font-weight: var(--weight-semibold);
+    color: var(--text-main);
+}
+
+.panel>ul,
+.panel>ol {
+    padding-left: 24px;
+}
+
+.panel>ul li,
+.panel>ol li {
+    margin: 10px 0;
+    padding-left: 6px;
+}
+
+.panel>ul li::marker {
+    color: var(--accent);
+}
+
+.panel>ol li::marker {
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
+}
+
+.panel>blockquote {
+    margin: 18px 0;
+    padding: 14px 18px;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--text-soft);
+}
+
+.panel>blockquote p {
+    margin: 0;
+}
+
+.panel code {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: var(--weight-medium);
+    background: var(--bg-soft);
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: var(--accent);
 }

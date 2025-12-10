@@ -40,25 +40,26 @@
 }
 
 .stat-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: var(--weight-medium);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     color: var(--text-soft);
 }
 
 .stat-value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: var(--weight-bold);
     letter-spacing: -0.02em;
     line-height: 1.1;
 }
 
 .stat-sub {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: var(--weight-normal);
     color: var(--text-soft);
-    margin-top: 2px;
+    margin-top: 4px;
+    line-height: 1.4;
 }
 
 /* ============================================
@@ -208,22 +209,23 @@
 }
 
 .stats-item {
-    padding: 8px 10px;
+    padding: 12px 14px;
     background: linear-gradient(135deg, var(--accent-soft), var(--bg-elevated));
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
 }
 
 .stats-item-label {
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: var(--weight-medium);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     color: var(--text-soft);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .stats-item-value {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: var(--weight-bold);
     font-family: var(--mono);
     color: var(--text-main);

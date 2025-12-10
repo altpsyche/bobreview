@@ -1,11 +1,11 @@
 {% extends "base.html.j2" %}
 {% from "components/macros.html.j2" import metric_table, stats_item %}
 
-{% block title %}{{ config.title }} - {{ labels.get('statistical_summary', 'Statistical Summary') }}{% endblock %}
+{% block title %}{{ config.title }} - {{ labels.get('statistical_summary', 'Performance Details') }}{% endblock %}
 
 {% block content %}
 <section class="panel">
-  <h2>{{ labels.get('statistical_summary', 'Statistical Summary') }}</h2>
+  <h2>{{ labels.get('statistical_summary', 'Performance Details') }}</h2>
   
   {{ llm.stats_interpretation|sanitize }}
 </section>
@@ -21,25 +21,25 @@
   {{ metric_table(labels.get('triangles', 'Triangles'), stats.tris, labels) }}
 </section>
 
-<!-- Outlier Analysis -->
+<!-- Performance Spikes -->
 {% if stats.outliers %}
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('outlier_analysis', 'Outlier Analysis') }}</h2>
-  <p class="body-text">{{ content.outlier_desc|default('Data points significantly deviating from the mean:') }}</p>
+  <h2>{{ labels.get('outlier_analysis', 'Performance Spikes') }}</h2>
+  <p class="body-text">{{ content.outlier_desc|default('These frames show unusual performance that differs significantly from the typical load:') }}</p>
   
   <div class="stats-grid">
-    {{ stats_item(labels.get('outliers_detected', 'Outliers Detected'), stats.outliers|length) }}
-    {{ stats_item(labels.get('detection_method', 'Detection Method'), 'Z-Score (σ=' ~ config.thresholds.outlier_sigma ~ ')') }}
+    {{ stats_item(labels.get('outliers_detected', 'Spikes Detected'), stats.outliers|length) }}
+    {{ stats_item(labels.get('detection_method', 'Sensitivity'), 'High (σ=' ~ config.thresholds.outlier_sigma ~ ')') }}
   </div>
   
   <table style="margin-top: 16px;">
     <thead>
       <tr>
-        <th>{{ labels.get('index', 'Index') }}</th>
-        <th>{{ labels.get('testcase', 'Test Case') }}</th>
+        <th>{{ labels.get('index', 'Frame') }}</th>
+        <th>{{ labels.get('testcase', 'Scene') }}</th>
         <th>{{ labels.get('draw_calls', 'Draw Calls') }}</th>
         <th>{{ labels.get('triangles', 'Triangles') }}</th>
-        <th>{{ labels.get('zscore', 'Z-Score') }}</th>
+        <th>{{ labels.get('severity', 'Severity') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -49,7 +49,7 @@
         <td>{{ outlier.testcase }}</td>
         <td>{{ outlier.draws }}</td>
         <td>{{ outlier.tris|format_number }}</td>
-        <td>{{ outlier.zscore|format_number(2) if outlier.zscore else 'N/A' }}</td>
+        <td>{% if outlier.zscore %}{% if outlier.zscore > 3 %}🔴 Critical{% elif outlier.zscore > 2.5 %}🟠 High{% else %}🟡 Moderate{% endif %}{% else %}—{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -57,22 +57,23 @@
 </section>
 {% endif %}
 
-<!-- Confidence Intervals -->
+<!-- Expected Performance Range -->
 {% if stats.draws.ci_lower is defined and stats.draws.ci_upper is defined %}
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('confidence_intervals', 'Confidence Intervals') }}</h2>
+  <h2>{{ labels.get('confidence_intervals', 'Expected Performance Range') }}</h2>
+  <p class="body-text">Based on your data, most frames should fall within these ranges:</p>
   
   <div class="stats-grid">
-    {{ stats_item(labels.get('draw_calls', 'Draw Calls') ~ ' 95% CI', (stats.draws.ci_lower|format_number(1)) ~ ' - ' ~ (stats.draws.ci_upper|format_number(1))) }}
-    {{ stats_item(labels.get('triangles', 'Triangles') ~ ' 95% CI', (stats.tris.ci_lower|default(0)|format_number(0)) ~ ' - ' ~ (stats.tris.ci_upper|default(0)|format_number(0))) }}
+    {{ stats_item(labels.get('draw_calls', 'Draw Calls') ~ ' typical range', (stats.draws.ci_lower|format_number(0)) ~ ' – ' ~ (stats.draws.ci_upper|format_number(0))) }}
+    {{ stats_item(labels.get('triangles', 'Triangles') ~ ' typical range', (stats.tris.ci_lower|default(0)|format_number(0)) ~ ' – ' ~ (stats.tris.ci_upper|default(0)|format_number(0))) }}
   </div>
 </section>
 {% endif %}
 
 <!-- Full Data Table -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('full_sample_table', 'Full Sample Table') }}</h2>
-  <p class="body-text">{{ content.all_captures|default('All captured data points:') }}</p>
+  <h2>{{ labels.get('full_sample_table', 'All Captured Frames') }}</h2>
+  <p class="body-text">{{ content.all_captures|default('Complete list of all captured frames:') }}</p>
   
   <table>
     <thead>

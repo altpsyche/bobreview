@@ -100,9 +100,9 @@
     {{ stats_item('Total Captures', stats.count) }}
     {{ stats_item('Draw Calls Range', stats.draws.min ~ ' - ' ~ stats.draws.max) }}
     {{ stats_item('Triangles Range', (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number)) }}
-    {{ stats_item('High-Load Frames', stats.high_load|length) }}
-    {{ stats_item('Low-Load Frames', stats.low_load|length) }}
-    {{ stats_item('Performance Variance', (stats.draws.cv|format_number(1)) ~ '%') }}
+    {{ stats_item('Hotspot Frames', stats.high_load|length) }}
+    {{ stats_item('Optimized Frames', stats.low_load|length) }}
+    {{ stats_item('Stability Score', (100 - (stats.draws.cv|round(0)|int)|abs) ~ '%') }}
     {% endif %}
   </div>
 </section>

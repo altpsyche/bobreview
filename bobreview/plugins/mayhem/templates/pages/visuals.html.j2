@@ -21,7 +21,7 @@
 <section class="panel">
   <h2>{{ labels.get('visual_analysis', 'Visual Analysis') }}</h2>
   <p class="body-text">
-    {{ content.visual_analysis_intro|default('Distribution charts reveal patterns in performance data, showing how metrics are distributed across all captures. This helps identify clustering, outliers, and overall performance characteristics.') }}
+    {{ content.visual_analysis_intro|default('These charts show how performance varies across your captured frames. Look for clusters, spikes, and patterns that indicate optimization opportunities.') }}
   </p>
   
   {{ llm.visual_analysis|sanitize }}
@@ -61,10 +61,10 @@
   
   <div class="chart-container">
     <div class="chart-description">
-      {{ labels.get('key_percentiles', 'Key percentiles') }}: 
-      <span style="color: var(--accent);">{{ labels.get('q2_label', 'Median (50th percentile)') }}</span> at {{ stats.draws.median|format_number(0) }}, 
-      <span style="color: var(--warn);">{{ labels.get('p90', 'P90') }}</span> at {{ stats.draws.p90|format_number(0) }}, 
-      <span style="color: var(--danger);">{{ labels.get('p95', 'P95') }}</span> at {{ stats.draws.p95|format_number(0) }}.
+      {{ labels.get('key_benchmarks', 'Key benchmarks') }}: 
+      <span style="color: var(--accent);">{{ labels.get('q2_label', 'Typical') }}</span> at {{ stats.draws.median|format_number(0) }}, 
+      <span style="color: var(--warn);">{{ labels.get('p90', 'Heavy Load') }}</span> at {{ stats.draws.p90|format_number(0) }}, 
+      <span style="color: var(--danger);">{{ labels.get('p95', 'Very Heavy') }}</span> at {{ stats.draws.p95|format_number(0) }}.
     </div>
     <canvas id="draws_timeline"></canvas>
   </div>
@@ -79,10 +79,10 @@
     </div>
     {% endfor %}
     {% else %}
-    {{ stats_item('Q1 (25th percentile)', stats.draws.q1|format_number(0)) }}
-    {{ stats_item('Median (50th percentile)', stats.draws.median|format_number(0)) }}
-    {{ stats_item('Q3 (75th percentile)', stats.draws.q3|format_number(0)) }}
-    {{ stats_item('Standard Deviation', stats.draws.stdev|format_number(1)) }}
+    {{ stats_item('Light Load (25%)', stats.draws.q1|format_number(0)) }}
+    {{ stats_item('Typical Load', stats.draws.median|format_number(0)) }}
+    {{ stats_item('Heavy Load (75%)', stats.draws.q3|format_number(0)) }}
+    {{ stats_item('Typical Spread', stats.draws.stdev|format_number(1)) }}
     {% endif %}
   </div>
 </section>
@@ -96,10 +96,10 @@
   
   <div class="chart-container">
     <div class="chart-description">
-      {{ labels.get('key_percentiles', 'Key percentiles') }}: 
-      <span style="color: var(--accent);">{{ labels.get('q2_label', 'Median (50th percentile)') }}</span> at {{ stats.tris.median|format_number(0) }}, 
-      <span style="color: var(--warn);">{{ labels.get('p90', 'P90') }}</span> at {{ stats.tris.p90|format_number(0) }}, 
-      <span style="color: var(--danger);">{{ labels.get('p95', 'P95') }}</span> at {{ stats.tris.p95|format_number(0) }}.
+      {{ labels.get('key_benchmarks', 'Key benchmarks') }}: 
+      <span style="color: var(--accent);">{{ labels.get('q2_label', 'Typical') }}</span> at {{ stats.tris.median|format_number(0) }}, 
+      <span style="color: var(--warn);">{{ labels.get('p90', 'Heavy Load') }}</span> at {{ stats.tris.p90|format_number(0) }}, 
+      <span style="color: var(--danger);">{{ labels.get('p95', 'Very Heavy') }}</span> at {{ stats.tris.p95|format_number(0) }}.
     </div>
     <canvas id="tris_timeline"></canvas>
   </div>
@@ -113,10 +113,10 @@
     </div>
     {% endfor %}
     {% else %}
-    {{ stats_item('Q1 (25th percentile)', stats.tris.q1|format_number(0)) }}
-    {{ stats_item('Median (50th percentile)', stats.tris.median|format_number(0)) }}
-    {{ stats_item('Q3 (75th percentile)', stats.tris.q3|format_number(0)) }}
-    {{ stats_item('Standard Deviation', stats.tris.stdev|format_number(0)) }}
+    {{ stats_item('Light Load (25%)', stats.tris.q1|format_number(0)) }}
+    {{ stats_item('Typical Load', stats.tris.median|format_number(0)) }}
+    {{ stats_item('Heavy Load (75%)', stats.tris.q3|format_number(0)) }}
+    {{ stats_item('Typical Spread', stats.tris.stdev|format_number(0)) }}
     {% endif %}
   </div>
 </section>
