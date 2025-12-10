@@ -1,0 +1,192 @@
+{
+    "schema_version": "1.0",
+    "id": "game_review",
+    "name": "Video Game Review",
+    "version": "2.0.0",
+    "description": "LLM-powered game review generator - write minimal input, get professional review",
+    "author": "BobReview Team",
+    "data_source": {
+        "type": "json_config",
+        "input_format": "json",
+        "config_file": "game.json",
+        "fields": {
+            "name": {
+                "type": "string",
+                "required": true,
+                "description": "Game title"
+            },
+            "my_review": {
+                "type": "string",
+                "required": true,
+                "description": "Your brief review (1-3 sentences)"
+            },
+            "what_i_liked": {
+                "type": "array",
+                "required": true,
+                "description": "List of things you liked"
+            },
+            "needs_improvement": {
+                "type": "array",
+                "required": false,
+                "description": "List of areas that could be better"
+            },
+            "my_score": {
+                "type": "number",
+                "min": 1,
+                "max": 10,
+                "required": false,
+                "description": "Your score (1-10)"
+            },
+            "genre": {
+                "type": "string",
+                "required": false,
+                "description": "Game genre"
+            },
+            "cover_image": {
+                "type": "string",
+                "required": false,
+                "description": "Path to cover image"
+            },
+            "screenshots": {
+                "type": "array",
+                "required": false,
+                "description": "Screenshot paths"
+            },
+            "scores": {
+                "type": "object",
+                "required": false,
+                "description": "Category scores (1-10)",
+                "properties": {
+                    "gameplay": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10,
+                        "description": "Gameplay score"
+                    },
+                    "graphics": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10,
+                        "description": "Graphics score"
+                    },
+                    "story": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10,
+                        "description": "Story score"
+                    },
+                    "sound": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10,
+                        "description": "Sound & Music score"
+                    },
+                    "value": {
+                        "type": "number",
+                        "min": 1,
+                        "max": 10,
+                        "description": "Value/Price score"
+                    }
+                }
+            }
+        }
+    },
+    "llm_config": {
+        "enabled": true,
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "temperature": 0.8,
+        "max_tokens": 2000
+    },
+    "llm_generators": [
+        {
+            "id": "full_review",
+            "name": "Full Review",
+            "description": "Expand user's brief review into professional paragraphs",
+            "prompt_template": "Generate a professional review for {game.name}",
+            "enabled": true
+        },
+        {
+            "id": "target_audience",
+            "name": "Target Audience",
+            "description": "Generate 'Perfect for...' audience section",
+            "prompt_template": "Describe the target audience for {game.name}",
+            "enabled": true
+        },
+        {
+            "id": "similar_games",
+            "name": "Similar Games",
+            "description": "Generate game recommendations",
+            "prompt_template": "Suggest similar games to {game.name}",
+            "enabled": true
+        },
+        {
+            "id": "expanded_pros",
+            "name": "Expanded Pros",
+            "description": "Expand brief likes into detailed pros",
+            "prompt_template": "Expand the pros for {game.name}",
+            "enabled": true
+        },
+        {
+            "id": "expanded_cons",
+            "name": "Expanded Cons",
+            "description": "Expand improvements into constructive criticism",
+            "prompt_template": "Expand the cons for {game.name}",
+            "enabled": true
+        },
+        {
+            "id": "verdict",
+            "name": "Verdict",
+            "description": "Generate compelling final verdict",
+            "prompt_template": "Write a verdict for {game.name}",
+            "enabled": true
+        }
+    ],
+    "pages": [
+        {
+            "id": "review",
+            "filename": "review.html",
+            "nav_label": "Game Review",
+            "nav_order": 10,
+            "template": {
+                "type": "jinja2",
+                "name": "pages/review.html.j2"
+            },
+            "llm_mappings": {
+                "full_review": "full_review",
+                "target_audience": "target_audience",
+                "similar_games": "similar_games",
+                "expanded_pros": "expanded_pros",
+                "expanded_cons": "expanded_cons",
+                "verdict": "verdict"
+            },
+            "data_requirements": {
+                "data_points": false,
+                "images": false
+            },
+            "enabled": true
+        }
+    ],
+    "theme": {
+        "id": "dark"
+    },
+    "output": {
+        "embed_images": true
+    },
+    "labels": {
+        "gameplay": "Gameplay",
+        "graphics": "Graphics",
+        "story": "Story",
+        "sound": "Sound & Music",
+        "value": "Value",
+        "overall": "Overall Score",
+        "pros": "The Good",
+        "cons": "The Bad",
+        "full_review": "Our Review",
+        "target_audience": "Perfect For",
+        "similar_games": "If You Liked This, Try...",
+        "expanded_pros": "What We Loved",
+        "expanded_cons": "Room For Improvement",
+        "verdict": "The Verdict"
+    }
+}

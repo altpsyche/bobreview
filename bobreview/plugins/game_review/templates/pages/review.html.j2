@@ -1,0 +1,521 @@
+{% extends "base.html.j2" %}
+
+{% block title %}{{ game.name }} - Review{% endblock %}
+
+{% block head_styles %}
+<style>
+    /* Hero Section */
+    .hero {
+        position: relative;
+        height: 50vh;
+        min-height: 400px;
+        overflow: hidden;
+        margin: -2rem -2rem 0 -2rem;
+    }
+    
+    .hero-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.4);
+    }
+    
+    .hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60%;
+        background: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
+    }
+    
+    .hero-content {
+        position: absolute;
+        bottom: 3rem;
+        left: 0;
+        right: 0;
+        padding: 0 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .game-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .meta-tag {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.35rem 0.75rem;
+        border-radius: 2rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        backdrop-filter: blur(10px);
+    }
+    
+    .game-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    .game-tagline {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    
+    /* Score Card */
+    .score-card {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        text-align: center;
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+        max-width: 200px;
+    }
+    
+    .score-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--accent);
+    }
+    
+    .score-number {
+        font-size: 4rem;
+        font-weight: 800;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .score-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.5rem;
+    }
+    
+    .score-verdict {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-top: 1rem;
+    }
+    
+    /* Main Layout */
+    .review-layout {
+        display: grid;
+        grid-template-columns: 1fr 200px;
+        gap: 2rem;
+        margin: 2rem 0;
+        align-items: start;
+    }
+    
+    .review-content {
+        min-width: 0;
+    }
+    
+    /* Section Styles */
+    .section {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border);
+    }
+    
+    .section h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .section-icon {
+        width: 28px;
+        height: 28px;
+        color: var(--accent);
+    }
+    
+    .review-text {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        line-height: 1.8;
+    }
+    
+    .review-text p {
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Pros & Cons Grid */
+    .pros-cons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .pros-section, .cons-section {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        border: 1px solid var(--border);
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .section-title.good { color: var(--success); }
+    .section-title.bad { color: var(--danger); }
+    
+    .section-title svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Target Audience */
+    .audience-section {
+        background: linear-gradient(135deg, var(--bg-elevated), var(--bg-soft));
+        border: 2px solid var(--accent);
+    }
+    
+    .audience-section h2 {
+        color: var(--accent);
+    }
+    
+    .audience-list {
+        list-style: none;
+    }
+    
+    .audience-list li {
+        padding: 1rem 0;
+        padding-left: 2rem;
+        position: relative;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .audience-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .audience-list li::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: bold;
+    }
+    
+    /* Similar Games Recommendations */
+    .rec-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .rec-card {
+        background: var(--bg-soft);
+        padding: 1.25rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .rec-card strong {
+        color: var(--text-primary);
+        font-size: 1.1rem;
+    }
+    
+    .rec-card span {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    /* Verdict Box */
+    .verdict-box {
+        background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-soft) 100%);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        text-align: center;
+        border: 2px solid var(--accent);
+        margin-bottom: 2rem;
+    }
+    
+    .verdict-box h3 {
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .verdict-text {
+        font-size: 1.35rem;
+        line-height: 1.6;
+        color: var(--text-primary);
+    }
+    
+    /* Screenshots */
+    .screenshot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .screenshot-grid img {
+        width: 100%;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .screenshot-grid img:hover {
+        transform: scale(1.02);
+    }
+    
+    /* User's Original Notes */
+    .user-notes {
+        background: var(--bg-soft);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border-left: 4px solid var(--accent);
+    }
+    
+    .user-notes h4 {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+    
+    .user-notes p {
+        color: var(--text-primary);
+        font-style: italic;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero { height: 40vh; min-height: 300px; }
+        .game-title { font-size: 2.5rem; }
+        .review-layout { grid-template-columns: 1fr; }
+        .score-card { max-width: 100%; margin-bottom: 2rem; }
+        .pros-cons { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- Hero -->
+<section class="hero">
+    {% if game.cover_image %}
+    <img src="{{ game.cover_image }}" alt="{{ game.name }}" class="hero-bg">
+    {% else %}
+    <div class="hero-bg" style="background: linear-gradient(135deg, var(--accent), var(--accent-strong));"></div>
+    {% endif %}
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <div class="game-meta">
+            {% if game.genre %}<span class="meta-tag">{{ game.genre }}</span>{% endif %}
+        </div>
+        <h1 class="game-title">{{ game.name }}</h1>
+        {% if game.my_review %}
+        <p class="game-tagline">"{{ game.my_review }}"</p>
+        {% endif %}
+    </div>
+</section>
+
+<div class="container">
+    <div class="review-layout">
+        <div class="review-content">
+            
+            <!-- Full Review -->
+            {% if llm_content and llm_content.full_review %}
+            <section class="section">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    Our Review
+                </h2>
+                <div class="review-text">
+                    {{ llm_content.full_review|sanitize }}
+                </div>
+            </section>
+            {% endif %}
+            
+            <!-- Pros & Cons -->
+            <section class="pros-cons">
+                <div class="pros-section">
+                    <h3 class="section-title good">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                        What We Loved
+                    </h3>
+                    {% if llm_content and llm_content.expanded_pros %}
+                    <div class="review-text">{{ llm_content.expanded_pros|sanitize }}</div>
+                    {% else %}
+                    <ul class="list">
+                        {% for item in game.what_i_liked %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="cons-section">
+                    <h3 class="section-title bad">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                        Room For Improvement
+                    </h3>
+                    {% if llm_content and llm_content.expanded_cons %}
+                    <div class="review-text">{{ llm_content.expanded_cons|sanitize }}</div>
+                    {% elif game.needs_improvement %}
+                    <ul class="list">
+                        {% for item in game.needs_improvement %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="review-text">No significant issues noted.</p>
+                    {% endif %}
+                </div>
+            </section>
+            
+            <!-- Target Audience -->
+            {% if llm_content and llm_content.target_audience %}
+            <section class="section audience-section">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Perfect For
+                </h2>
+                <div class="review-text">{{ llm_content.target_audience|sanitize }}</div>
+            </section>
+            {% endif %}
+            
+            <!-- Similar Games -->
+            {% if llm_content and llm_content.similar_games %}
+            <section class="section">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6h-7.59l3.29-3.29L16 2l-4 4-4-4-.71.71L10.59 6H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 14H3V8h18v12zM9 10v8l7-4z"/></svg>
+                    If You Liked This, Try...
+                </h2>
+                <div class="review-text">{{ llm_content.similar_games|sanitize }}</div>
+            </section>
+            {% endif %}
+            
+            <!-- Screenshots -->
+            {% if game.screenshots and game.screenshots|length > 0 %}
+            <section class="section">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    Screenshots
+                </h2>
+                <div class="screenshot-grid">
+                    {% for screenshot in game.screenshots %}
+                    <img src="{{ screenshot }}" alt="{{ game.name }} Screenshot">
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+            
+            <!-- Verdict -->
+            {% if llm_content and llm_content.verdict %}
+            <section class="verdict-box">
+                <h3>The Verdict</h3>
+                <p class="verdict-text">{{ llm_content.verdict }}</p>
+            </section>
+            {% endif %}
+            
+            <!-- Original User Notes -->
+            {% if game.my_review %}
+            <div class="user-notes">
+                <h4>Reviewer's Quick Take</h4>
+                <p>{{ game.my_review }}</p>
+            </div>
+            {% endif %}
+            
+        </div>
+        
+        <!-- Sidebar - Scores -->
+        <aside>
+            <div class="score-card">
+                {% set score = game.my_score|default(7) %}
+                <div class="score-number">{{ score }}</div>
+                <div class="score-label">Overall</div>
+                {% if score >= 9 %}
+                <div class="score-verdict">Masterpiece</div>
+                {% elif score >= 8 %}
+                <div class="score-verdict">Excellent</div>
+                {% elif score >= 7 %}
+                <div class="score-verdict">Great</div>
+                {% elif score >= 6 %}
+                <div class="score-verdict">Good</div>
+                {% elif score >= 5 %}
+                <div class="score-verdict">Average</div>
+                {% else %}
+                <div class="score-verdict">Below Average</div>
+                {% endif %}
+            </div>
+            
+            {% if game.scores %}
+            <div class="category-scores" style="margin-top: 1.5rem;">
+                {% set categories = [
+                    ('Gameplay', game.scores.gameplay|default(0)),
+                    ('Graphics', game.scores.graphics|default(0)),
+                    ('Story', game.scores.story|default(0)),
+                    ('Sound', game.scores.sound|default(0)),
+                    ('Value', game.scores.value|default(0))
+                ] %}
+                {% for name, cat_score in categories %}
+                {% if cat_score > 0 %}
+                <div class="category" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <span style="width: 70px; font-size: 0.75rem; color: var(--text-secondary);">{{ name }}</span>
+                    <div style="flex: 1; height: 8px; background: var(--bg-soft); border-radius: 4px; overflow: hidden;">
+                        {% if cat_score >= 9 %}{% set bar_color = 'var(--success)' %}
+                        {% elif cat_score >= 7 %}{% set bar_color = '#7dd87d' %}
+                        {% elif cat_score >= 5 %}{% set bar_color = 'var(--warning)' %}
+                        {% else %}{% set bar_color = 'var(--danger)' %}{% endif %}
+                        <div style="width: {{ cat_score * 10 }}%; height: 100%; background: {{ bar_color }}; border-radius: 4px;"></div>
+                    </div>
+                    <span style="width: 20px; font-size: 0.8rem; font-weight: 600;">{{ cat_score }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+    
+    <footer style="text-align: center; padding: 2rem 0; color: var(--text-secondary); font-size: 0.875rem; border-top: 1px solid var(--border); margin-top: 2rem;">
+        <p>Review generated by BobReview • {{ game.name }} • Score: {{ game.my_score|default(7) }}/10</p>
+    </footer>
+</div>
+{% endblock %}

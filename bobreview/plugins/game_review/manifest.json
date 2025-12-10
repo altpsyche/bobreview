@@ -1,5 +1,5 @@
 {
-    "name": "game-review",
+    "name": "game_review",
     "version": "1.0.0",
     "author": "BobReview Team",
     "description": "Video Game Review: LLM-powered game reviews from JSON config",

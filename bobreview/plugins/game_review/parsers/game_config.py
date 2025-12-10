@@ -89,20 +89,35 @@ class GameConfigParser(DataParserInterface):
     
     def _validate_and_normalize(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and normalize game data."""
-        # Ensure required fields
+        # Support both old 'title' and new 'name' field
+        name = data.get('name') or data.get('title', 'Unknown Game')
+        
+        # Support new simplified input fields
         game = {
-            'title': data.get('title', 'Unknown Game'),
-            'developer': data.get('developer', 'Unknown'),
+            # Core fields (new API)
+            'name': name,
+            'my_review': data.get('my_review', ''),
+            'what_i_liked': data.get('what_i_liked', []),
+            'needs_improvement': data.get('needs_improvement', []),
+            'my_score': data.get('my_score', 7),
+            
+            # Optional metadata
+            'genre': data.get('genre', ''),
+            'cover_image': data.get('cover_image', ''),
+            'screenshots': data.get('screenshots', []),
+            
+            # Category scores (optional)
+            'scores': self._normalize_scores(data.get('scores', {})),
+            
+            # Legacy fields for backward compat (mapped to new)
+            'title': name,  # alias
+            'developer': data.get('developer', ''),
             'publisher': data.get('publisher', ''),
             'release_date': data.get('release_date', ''),
             'platforms': data.get('platforms', []),
-            'genre': data.get('genre', 'Unknown'),
-            'cover_image': data.get('cover_image', ''),
-            'screenshots': data.get('screenshots', []),
-            'scores': self._normalize_scores(data.get('scores', {})),
-            'pros': data.get('pros', []),
-            'cons': data.get('cons', []),
-            'summary': data.get('summary', ''),
+            'pros': data.get('what_i_liked', data.get('pros', [])),  # new -> old
+            'cons': data.get('needs_improvement', data.get('cons', [])),  # new -> old
+            'summary': data.get('my_review', data.get('summary', '')),  # new -> old
             'verdict': data.get('verdict', ''),
         }
         

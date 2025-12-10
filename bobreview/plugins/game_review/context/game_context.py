@@ -1,5 +1,5 @@
 """
-Game review context builder for game-review plugin.
+Game review context builder for game_review plugin.
 
 Adds game-specific template context: game data alias.
 

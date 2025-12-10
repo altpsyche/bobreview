@@ -27,7 +27,7 @@ class GameReviewPlugin(BasePlugin):
     review generation based on game.json configuration.
     """
     
-    name = "game-review"
+    name = "game_review"
     version = "1.0.0"
     author = "BobReview Team"
     description = "Video Game Review: LLM-powered game reviews from JSON config"
@@ -64,10 +64,22 @@ class GameReviewPlugin(BasePlugin):
     
     def _register_generators(self, registry) -> None:
         """Register game review LLM generators."""
-        from .generators.adapters import ReviewTextGenerator
+        from .generators.adapters import (
+            FullReviewGenerator,
+            TargetAudienceGenerator,
+            SimilarGamesGenerator,
+            ExpandedProsGenerator,
+            ExpandedConsGenerator,
+            VerdictGenerator
+        )
         
         generators = [
-            ('review_text', ReviewTextGenerator),
+            ('full_review', FullReviewGenerator),
+            ('target_audience', TargetAudienceGenerator),
+            ('similar_games', SimilarGamesGenerator),
+            ('expanded_pros', ExpandedProsGenerator),
+            ('expanded_cons', ExpandedConsGenerator),
+            ('verdict', VerdictGenerator),
         ]
         
         for gen_id, gen_class in generators:

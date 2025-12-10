@@ -244,7 +244,7 @@ Examples:
         help='Directory containing PNG files (default: current directory)'
     )
     parser.add_argument(
-        '--output', type=str, default='performance_report.html',
+        '--output', type=str, default='report.html',
         help='Output directory/file path (creates index.html and additional pages)'
     )
     parser.add_argument(

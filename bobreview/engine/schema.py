@@ -553,7 +553,7 @@ def parse_theme_config(data: Dict[str, Any]) -> ThemeConfig:
 def parse_output_config(data: Dict[str, Any]) -> OutputConfig:
     """Parse output configuration from JSON."""
     return OutputConfig(
-        default_filename=data.get('default_filename', 'performance_report.html'),
+        default_filename=data.get('default_filename', 'report.html'),
         embed_images=data.get('embed_images', True),
         linked_css=data.get('linked_css', False)
     )
