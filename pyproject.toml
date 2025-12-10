@@ -57,9 +57,6 @@ bobreview = "bobreview.cli:main"
 bobreview = [
     "py.typed",
     "core/static/styles.css",
-    "engine/builtin/*.json",
-    "engine/builtin/*.md",
-    "templates/**/*.j2",
 ]
 
 [tool.black]

@@ -155,7 +155,7 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
     2. If plugin_name is specified, look in that plugin's report_systems/ directory first
     3. Look in plugin directories (without loading plugins)
     4. Look in user directory (~/.bobreview/report_systems/)
-    5. Look in built-in directory (bobreview/report_systems/builtin/)
+    5. Look in built-in directory (bobreview/engine/builtin/)
     
     Parameters:
         id_or_path: Report system ID (e.g., 'png_data_points') or full path to JSON file
@@ -317,7 +317,7 @@ def load_report_system(
     1. If plugin_name is specified, search in that plugin first
     2. Plugin registry (systems registered by plugins)
     3. User directory (~/.bobreview/report_systems/)
-    4. Built-in directory (bobreview/report_systems/builtin/)
+    4. Built-in directory (bobreview/engine/builtin/)
     5. Direct file path
     
     Automatically loads required plugins if the report system is provided by a plugin.
