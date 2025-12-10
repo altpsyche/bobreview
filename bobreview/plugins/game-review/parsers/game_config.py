@@ -128,30 +128,6 @@ class GameConfigParser(DataParserInterface):
         
         return default_scores
     
-    def _get_default_game(self) -> Dict[str, Any]:
-        """Return default game data structure."""
-        return {
-            'title': 'Unknown Game',
-            'developer': 'Unknown',
-            'publisher': '',
-            'release_date': '',
-            'platforms': [],
-            'genre': 'Unknown',
-            'cover_image': '',
-            'screenshots': [],
-            'scores': {
-                'gameplay': 5.0,
-                'graphics': 5.0,
-                'story': 5.0,
-                'sound': 5.0,
-                'value': 5.0,
-            },
-            'pros': [],
-            'cons': [],
-            'summary': '',
-            'verdict': '',
-        }
-    
     def get_sample_count(self) -> int:
         """Return number of items (1 for a single game review)."""
         return 1

@@ -33,11 +33,16 @@ class ConfigMerger:
         
         # Merge LLM config
         llm_cfg = system_def.llm_config
+        config.llm.provider = llm_cfg.provider
         config.llm.model = llm_cfg.model
         config.llm.temperature = llm_cfg.temperature
         config.llm.max_tokens = llm_cfg.max_tokens
         config.llm.chunk_size = llm_cfg.chunk_size
         config.llm.enable_cache = llm_cfg.enable_cache
+        if llm_cfg.api_base is not None:
+            config.llm.api_base = llm_cfg.api_base
+        if llm_cfg.api_key is not None:
+            config.llm.api_key = llm_cfg.api_key
         
         # Merge output config
         output_cfg = system_def.output

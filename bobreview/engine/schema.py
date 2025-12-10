@@ -92,6 +92,7 @@ class LLMConfig:
     chunk_size: int = 10
     enable_cache: bool = True
     api_base: Optional[str] = None  # Custom API endpoint
+    api_key: Optional[str] = None  # API key for the selected provider
     api_key_env: Optional[str] = None  # Environment variable for API key
 
 
@@ -493,6 +494,7 @@ def parse_llm_config(data: Dict[str, Any]) -> LLMConfig:
             - chunk_size: chunk size for batching (default 10)
             - enable_cache: whether to enable caching (default True)
             - api_base: optional custom API base URL
+            - api_key: optional API key for the selected provider
             - api_key_env: optional environment variable name holding the API key
     
     Returns:
@@ -506,6 +508,7 @@ def parse_llm_config(data: Dict[str, Any]) -> LLMConfig:
         chunk_size=data.get('chunk_size', 10),
         enable_cache=data.get('enable_cache', True),
         api_base=data.get('api_base'),
+        api_key=data.get('api_key'),
         api_key_env=data.get('api_key_env')
     )
 

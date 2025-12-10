@@ -34,17 +34,16 @@ class DataService(BaseService):
         )
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None, registry=None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize data service.
         
         Parameters:
             config: Optional service configuration
-            registry: PluginRegistry instance (uses global if None)
         """
         super().__init__(config)
         from ..engine.parser_factory import ParserFactory
-        self.factory = ParserFactory(registry)
+        self.factory = ParserFactory()  # Uses global extension point
     
     def parse(
         self,

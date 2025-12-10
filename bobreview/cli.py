@@ -76,10 +76,8 @@ def _load_plugins(extra_dirs, config):
 
 def handle_plugin_command(args):
     """Handle plugin subcommands."""
-    from .core.plugin_system import init_loader, PluginDiscovery
-    
-    # Initialize loader with discovered directories
-    dirs = PluginDiscovery.get_plugin_dirs()
+    # Initialize loader with discovered directories (respecting --plugin-dirs)
+    dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=getattr(args, 'plugin_dirs', []))
     loader = init_loader(dirs)
     loader.discover()
     
@@ -436,7 +434,7 @@ Examples:
     
     # Handle --list-plugins
     if args.list_plugins:
-        dirs = PluginDiscovery.get_plugin_dirs()
+        dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=getattr(args, 'plugin_dirs', []))
         loader = init_loader(dirs)
         loader.discover()
         plugins = loader.get_discovered_plugins()
@@ -601,11 +599,6 @@ Examples:
                     break
                 # Normalized match (case-insensitive, dash/underscore agnostic)
                 elif manifest_name_normalized == plugin_name_normalized:
-                    plugin_path = Path(manifest.path) if manifest.path else None
-                    matched_manifest = manifest
-                    break
-                # Substring match (e.g., partial plugin name matches full plugin name)
-                elif plugin_name_normalized in manifest_name_normalized or manifest_name_normalized in plugin_name_normalized:
                     plugin_path = Path(manifest.path) if manifest.path else None
                     matched_manifest = manifest
                     break

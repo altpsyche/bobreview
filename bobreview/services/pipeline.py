@@ -184,7 +184,7 @@ class ReportPipeline:
         config: Any
     ) -> Dict[str, str]:
         """Generate LLM content using LLMService."""
-        if not system_def.llm_config.enabled or config.execution.dry_run:
+        if config.execution.dry_run:
             return {}
         
         if self.container.has('llm'):
