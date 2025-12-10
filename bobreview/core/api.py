@@ -310,63 +310,6 @@ class ChartGeneratorInterface(ABC):
         """
         pass
 
-
-class PageGeneratorInterface(ABC):
-    """
-    Core API: Interface for page generators.
-    
-    Plugins implement this to provide custom page rendering.
-    Pages are HTML documents that combine templates, data, and content.
-    
-    Example:
-        class MyPageGenerator(PageGeneratorInterface):
-            def render(self, stats, llm_content, config, context):
-                # Load template
-                template = self._load_template('my_page.html.j2')
-                # Render with data
-                return template.render(
-                    stats=stats,
-                    content=llm_content,
-                    config=config,
-                    **context
-                )
-    """
-    
-    @abstractmethod
-    def render(
-        self,
-        stats: Dict[str, Any],
-        llm_content: Dict[str, Any],
-        config: 'ReportConfig',
-        context: Dict[str, Any]
-    ) -> str:
-        """
-        Render HTML page from data and content.
-        
-        Parameters:
-            stats: Statistical analysis results
-            llm_content: Generated LLM content (dict of generator_id -> content)
-            config: ReportConfig with settings
-            context: Additional context (data_points, images, charts, etc.)
-        
-        Returns:
-            Complete HTML string for the page
-        
-        Example:
-            # Simple template rendering
-            return f'''
-            <html>
-                <head><title>{config.title}</title></head>
-                <body>
-                    <h1>{stats['summary']}</h1>
-                    <p>{llm_content.get('summary', '')}</p>
-                </body>
-            </html>
-            '''
-        """
-        pass
-
-
 class ContextBuilderInterface(ABC):
     """
     Core API: Interface for context builders.

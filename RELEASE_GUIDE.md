@@ -6,28 +6,33 @@ Version 1.0.7 - Plugin System
 
 ### What's New in v1.0.7
 
+- **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
+  - Simplified registration API: `add_data_parser()`, `add_theme()`, `add_templates()`
+  - One-call setup: `setup_complete_report_system()`
+
+- **Plugin Scaffolding CLI**:
+  - `bobreview plugins create my-plugin` - Generate complete plugin skeleton
+  - `--template minimal|full` - Choose template complexity
+  - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+
+- **PageRenderer Class** (`engine/page_renderer.py`):
+  - ~300 lines extracted from executor.py for better modularity
+
+- **Preset Factory Functions** (`engine/presets.py`):
+  - `create_simple_report_system()`, `create_csv_report_system()`
+
+- **Hello World Plugin** (`plugins/hello_world/`):
+  - Feature-complete reference plugin demonstrating all extension points
+
+- **Critical Fixes**:
+  - Fixed bare `except:` clauses in `engine/loader.py`
+  - Removed dead code (`PageGeneratorInterface`, `PageGeneratorTemplate`)
+
 - **Plugin System**: Fully modular plugin architecture with SOLID and DRY principles
-  - **Focused Registries**: PluginRegistry split into 11 focused registries (themes, generators, parsers, etc.)
-  - **Focused Config Classes**: ReportConfig split into 5 focused config classes (thresholds, LLM, execution, output, cache)
-  - **Dependency Injection**: No global singletons - dependencies passed explicitly
-  - **Single Responsibility**: Executor split into focused classes (ConfigMerger, ServiceValidator, PluginLifecycleManager)
-  - **DRY Utilities**: Common patterns extracted (safe_plugin_call, merge_config)
-
-- **Cleaner API**: Removed backward compatibility for more predictable system
-  - Use `registry.themes.register()` instead of `registry.register_theme()`
-  - Use `config.thresholds.draw_soft_cap` instead of `config.draw_soft_cap`
-  - Use `config.llm.provider` instead of `config.llm_provider`
-
-- **Better Code Quality**: 
-  - Follows industry-standard SOLID principles
-  - Easier to test (dependency injection)
-  - Better IDE support (type inference)
-  - Clearer intent (focused interfaces)
-
-- **Plugin System Improvements**:
-  - Plugin infrastructure moved to `bobreview.core.plugin_system`
-  - All plugins use focused registry interfaces
-  - Cleaner, more predictable plugin API
+  - **Focused Registries**: PluginRegistry split into 11 focused registries
+  - **Focused Config Classes**: ReportConfig split into 5 focused config classes
+  - **Dependency Injection**: No global singletons
+  - **Single Responsibility**: Executor split into focused classes
 
 - All v1.0.6 features preserved
 

@@ -39,7 +39,10 @@ BobReview is a plugin-based report generation framework. Plugins define:
 ## Features
 
 - **Plugin System** - All domain-specific logic provided by plugins
+- **Plugin Scaffolding** - Generate new plugins with `bobreview plugins create`
+- **PluginHelper Facade** - Simplified registration API for plugin development
 - **JSON-Based Report Systems** - Define custom analysis pipelines with JSON
+- **Preset Factories** - Create report systems programmatically with sensible defaults
 - **Multi-Provider LLM Support** - OpenAI, Anthropic Claude, or local Ollama
 - **Extensible Data Parsing** - Plugins define how to extract data
 - **Statistical Analysis** - Generic utilities for stats, outliers, trends
@@ -49,6 +52,7 @@ BobReview is a plugin-based report generation framework. Plugins define:
 - **Intelligent Caching** - Cache LLM responses to reduce costs
 - **Modular Architecture** - Clean packages with max 200 lines per file
 - **Global CLI Command** - Run from any directory after installation
+
 
 ---
 

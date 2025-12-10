@@ -62,9 +62,13 @@ class PluginLoader:
         
         Parameters:
             plugin_dirs: List of directories to search for plugins
+                         (defaults to PluginDiscovery.get_plugin_dirs())
             registry: Plugin registry to use (defaults to global registry)
         """
-        self.plugin_dirs = plugin_dirs or []
+        # Import here to avoid circular imports
+        from .discovery import PluginDiscovery
+        
+        self.plugin_dirs = plugin_dirs if plugin_dirs is not None else PluginDiscovery.get_plugin_dirs()
         self.registry = registry or get_registry()
         
         # Loaded plugins: name -> plugin instance
@@ -256,8 +260,18 @@ class PluginLoader:
         module_name, class_name = manifest.get_module_and_class()
         
         # Check if this is a built-in plugin (in bobreview.plugins package)
-        plugin_path_str = str(manifest.plugin_path)
-        is_builtin = 'bobreview' in plugin_path_str and 'plugins' in plugin_path_str
+        # by comparing resolved paths
+        from .discovery import PluginDiscovery
+        bundled_dir = PluginDiscovery.get_bundled_plugins_dir()
+        is_builtin = False
+        if bundled_dir:
+            try:
+                # Check if plugin path is under bundled plugins directory
+                manifest_resolved = manifest.plugin_path.resolve()
+                bundled_resolved = bundled_dir.resolve()
+                is_builtin = bundled_resolved in manifest_resolved.parents or manifest_resolved.parent == bundled_resolved
+            except Exception:
+                pass
         
         try:
             if is_builtin:
@@ -327,25 +341,72 @@ class PluginLoader:
                     module = importlib.import_module(package_module)
             else:
                 # External plugins: load from file system
-                # Add plugin directory to path if needed
-                plugin_dir = str(manifest.plugin_path)
-                if plugin_dir not in sys.path:
-                    sys.path.insert(0, plugin_dir)
+                # Need to set up package structure for relative imports
+                plugin_dir = manifest.plugin_path
+                safe_name = manifest.name.replace('-', '_')
                 
-                # Import the module
-                module_path = manifest.plugin_path / f"{module_name}.py"
+                # Add parent directory to path if needed
+                parent_dir = str(plugin_dir.parent)
+                if parent_dir not in sys.path:
+                    sys.path.insert(0, parent_dir)
+                
+                # Register the plugin as a package in sys.modules
+                package_name = safe_name
+                if package_name not in sys.modules:
+                    init_path = plugin_dir / "__init__.py"
+                    if init_path.exists():
+                        pkg_spec = importlib.util.spec_from_file_location(
+                            package_name,
+                            init_path,
+                            submodule_search_locations=[str(plugin_dir)]
+                        )
+                        if pkg_spec and pkg_spec.loader:
+                            pkg_module = importlib.util.module_from_spec(pkg_spec)
+                            pkg_module.__path__ = [str(plugin_dir)]
+                            pkg_module.__package__ = package_name
+                            sys.modules[package_name] = pkg_module
+                            pkg_spec.loader.exec_module(pkg_module)
+                    else:
+                        # Create a dummy package module
+                        import types
+                        pkg_module = types.ModuleType(package_name)
+                        pkg_module.__path__ = [str(plugin_dir)]
+                        pkg_module.__package__ = package_name
+                        sys.modules[package_name] = pkg_module
+                
+                # Register subpackages (e.g., parsers/)
+                for subdir in plugin_dir.iterdir():
+                    if subdir.is_dir() and (subdir / "__init__.py").exists():
+                        sub_pkg_name = f"{package_name}.{subdir.name}"
+                        if sub_pkg_name not in sys.modules:
+                            sub_init = subdir / "__init__.py"
+                            sub_spec = importlib.util.spec_from_file_location(
+                                sub_pkg_name,
+                                sub_init,
+                                submodule_search_locations=[str(subdir)]
+                            )
+                            if sub_spec and sub_spec.loader:
+                                sub_module = importlib.util.module_from_spec(sub_spec)
+                                sub_module.__path__ = [str(subdir)]
+                                sub_module.__package__ = sub_pkg_name
+                                sys.modules[sub_pkg_name] = sub_module
+                                sub_spec.loader.exec_module(sub_module)
+                
+                # Now load the plugin module
+                module_path = plugin_dir / f"{module_name}.py"
                 
                 if module_path.exists():
-                    # Load from file
+                    full_module_name = f"{package_name}.{module_name}"
                     spec = importlib.util.spec_from_file_location(
-                        f"bobreview_plugins.{manifest.name}.{module_name}",
+                        full_module_name,
                         module_path
                     )
                     if spec is None or spec.loader is None:
                         raise PluginLoadError(f"Cannot load module: {module_path}")
                     
                     module = importlib.util.module_from_spec(spec)
-                    sys.modules[spec.name] = module
+                    module.__package__ = package_name
+                    sys.modules[full_module_name] = module
                     spec.loader.exec_module(module)
                 else:
                     # Try as a package

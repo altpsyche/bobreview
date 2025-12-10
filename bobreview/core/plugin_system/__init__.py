@@ -52,6 +52,7 @@ from .interface import (
     reset_plugin_manager,
 )
 from .discovery import PluginDiscovery
+from .plugin_helper import PluginHelper
 
 __all__ = [
     # Abstract interfaces (preferred for core code)
@@ -69,6 +70,9 @@ __all__ = [
     # Base classes
     'BasePlugin',
     'PluginInfo',
+    
+    # Plugin Helper (simplified registration)
+    'PluginHelper',
     
     # Manifest
     'PluginManifest',
@@ -89,3 +93,4 @@ __all__ = [
     # Discovery
     'PluginDiscovery',
 ]
+

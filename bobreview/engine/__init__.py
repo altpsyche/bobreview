@@ -55,9 +55,6 @@ from .llm_generator_base import (
     LLMGeneratorTemplate
 )
 
-from .page_generator_base import (
-    PageGeneratorTemplate
-)
 
 from .executor import (
     ReportSystemExecutor
@@ -66,6 +63,7 @@ from .executor import (
 from .config_merger import ConfigMerger
 from .service_validator import ServiceValidator
 from .plugin_lifecycle import PluginLifecycleManager
+from .page_renderer import PageRenderer
 
 __all__ = [
     # Schema classes
@@ -94,10 +92,10 @@ __all__ = [
     'FilenamePatternParser',
     'ParserFactory',
     'LLMGeneratorTemplate',
-    'PageGeneratorTemplate',
     
-    # Executor
+    # Executor and Renderer
     'ReportSystemExecutor',
+    'PageRenderer',
     
     # Responsibility classes
     'ConfigMerger',

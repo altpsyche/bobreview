@@ -191,8 +191,42 @@ def handle_plugin_command(args):
                 print(f"    {ext_type}: {', '.join(items)}")
         return 0
     
+    elif args.plugin_command == 'create':
+        from .core.plugin_system.scaffolder import create_plugin
+        
+        # Determine output directory
+        if args.output_dir:
+            output_dir = Path(args.output_dir).expanduser().resolve()
+        else:
+            output_dir = Path.home() / ".bobreview" / "plugins"
+        
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check if plugin already exists
+        plugin_dir = output_dir / args.name.replace('-', '_')
+        if plugin_dir.exists():
+            print(f"Error: Plugin directory already exists: {plugin_dir}")
+            return 1
+        
+        # Create the plugin
+        try:
+            created_path = create_plugin(args.name, output_dir, args.template)
+            print(f"✓ Created plugin: {args.name}")
+            print(f"  Location: {created_path}")
+            print(f"  Template: {args.template}")
+            print()
+            print("Next steps:")
+            print(f"  1. Edit {created_path}/manifest.json to update author and description")
+            print(f"  2. Modify parsers/csv_parser.py for your data format")
+            print(f"  3. Update templates/ for your report layout")
+            print(f"  4. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
+            return 0
+        except Exception as e:
+            print(f"Error creating plugin: {e}")
+            return 1
+    
     else:
-        print("Usage: bob plugins <list|install|uninstall|info>")
+        print("Usage: bob plugins <list|install|uninstall|info|create>")
         return 1
 
 
@@ -231,6 +265,10 @@ Examples:
   bobreview plugins list
   bobreview --list-plugins
   bobreview --list-report-systems
+
+  # Create a new plugin from template
+  bobreview plugins create my-plugin
+  bobreview plugins create my-plugin --template minimal
 
   # List available LLM providers
   bobreview --list-providers
@@ -400,6 +438,15 @@ Examples:
     
     plugins_info = plugins_subparsers.add_parser('info', help='Show plugin details')
     plugins_info.add_argument('name', help='Plugin name')
+    
+    plugins_create = plugins_subparsers.add_parser('create', help='Create a new plugin from template')
+    plugins_create.add_argument('name', help='Plugin name (e.g., my-plugin)')
+    plugins_create.add_argument('--output-dir', '-o', type=str, default=None,
+                                help='Output directory (default: ~/.bobreview/plugins/<name>)')
+    plugins_create.add_argument('--template', type=str, default='full',
+                                choices=['minimal', 'full'],
+                                help='Template type: minimal (basic) or full (all features)')
+    
     
     # Parse args
     args = parser.parse_args()

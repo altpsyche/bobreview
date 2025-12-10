@@ -347,6 +347,33 @@ bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
 
 ---
 
+## Creating Your Own Plugin
+
+Use the scaffolding command to generate a new plugin:
+
+```bash
+# Create a full-featured plugin
+bobreview plugins create my-plugin
+
+# Create a minimal plugin
+bobreview plugins create my-plugin --template minimal
+
+# Specify output directory
+bobreview plugins create my-plugin --output-dir ./my-plugins
+```
+
+This generates a complete plugin with:
+- `manifest.json` - Plugin metadata
+- `plugin.py` - Main plugin class using PluginHelper
+- `parsers/csv_parser.py` - Data parser
+- `context_builder.py` - Template context enrichment
+- `chart_generator.py` - Chart.js configuration
+- `report_systems/` - Report system JSON
+- `templates/` - Jinja2 templates
+- `sample_data/` - Example data for testing
+
+---
+
 ## Next Steps
 
 - Read [README.md](README.md) for complete documentation
@@ -359,3 +386,4 @@ bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
 
 **BobReview v1.0.7** - Plugin System  
 Extensible report generation framework.
+

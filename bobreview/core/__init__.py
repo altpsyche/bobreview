@@ -19,7 +19,6 @@ from .api import (
     DataParserInterface,
     LLMGeneratorInterface,
     ChartGeneratorInterface,
-    PageGeneratorInterface,
     ContextBuilderInterface
 )
 from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
@@ -66,7 +65,6 @@ __all__ = [
     'DataParserInterface',
     'LLMGeneratorInterface',
     'ChartGeneratorInterface',
-    'PageGeneratorInterface',
     'ContextBuilderInterface',
     
     # HTML Utilities

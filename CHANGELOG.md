@@ -7,11 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.7] - 2024-12-XX
+## [1.0.7] - 2024-12-11
 
-### Plugin System
+### Plugin Developer Experience
 
-BobReview v1.0.7 introduces a fully modular plugin system with focused architecture following SOLID and DRY principles.
+BobReview v1.0.7 introduces significant improvements to the plugin development experience with new helper classes, CLI scaffolding, and modular architecture refinements.
+
+### Added
+
+- **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
+  - Simplified registration API for plugins
+  - Methods: `add_data_parser()`, `add_theme()`, `add_templates()`, `add_report_system()`
+  - Convenience methods: `add_context_builder()`, `add_chart_generator()`, `add_llm_generator()`
+  - `setup_complete_report_system()` for one-call registration
+
+- **Plugin Scaffolding CLI** (P1 - Plugin Developer Experience):
+  - `bobreview plugins create <name>` - Generate complete plugin skeleton
+  - `--template minimal|full` - Choose template complexity
+  - `--output-dir` - Custom output directory
+  - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+
+- **PageRenderer Class** (`engine/page_renderer.py`):
+  - Extracted ~300 lines from executor.py for better modularity
+  - Methods: `render_all_pages()`, `_render_page()`, `_generate_charts()`
+  - Handles context building, image encoding, template rendering
+
+- **Preset Factory Functions** (`engine/presets.py`):
+  - `create_simple_report_system()` - Single-page reports with defaults
+  - `create_csv_report_system()` - CSV-based reports
+  - `create_multi_page_report_system()` - Multi-page reports
+
+- **Hello World Plugin** (`plugins/hello_world/`):
+  - Feature-complete reference plugin demonstrating all extension points
+  - CSV data parser, context builder, chart generator
+  - Custom theme, Jinja2 templates (home, rankings pages)
+  - Report system JSON definition
+
+### Fixed
+
+- **Bare `except:` Clauses** (P0 Critical Fix):
+  - Replaced bare `except:` with `except Exception as e:` in `engine/loader.py` lines 95, 198
+  - Errors now logged with `logger.debug()` for debuggability
+
+### Removed
+
+- **Dead Code** (P0 Critical Fix):
+  - Deleted `engine/page_generator_base.py` (unused `PageGeneratorTemplate`)
+  - Removed `PageGeneratorInterface` from `core/api.py` (replaced by template-based rendering)
 
 ### Engine & Core Purification
 

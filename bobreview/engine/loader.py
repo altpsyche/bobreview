@@ -92,8 +92,8 @@ def discover_report_systems() -> List[Dict[str, Any]]:
         try:
             plugin_manager.discover()
             manifests = plugin_manager.get_discovered_plugins()
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"Plugin discovery failed: {e}")
     
     # Check each plugin's directory for report_systems/ subdirectory
     for plugin_info in manifests:
@@ -195,8 +195,8 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
         try:
             plugin_manager.discover()
             manifests = plugin_manager.get_discovered_plugins()
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"Plugin discovery failed during path search: {e}")
     
     # Check each plugin's report_systems/ directory
     for plugin_info in manifests:

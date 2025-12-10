@@ -1,0 +1,25 @@
+{
+    "name": "hello-world",
+    "version": "1.0.0",
+    "author": "BobReview Team",
+    "description": "A complete example plugin demonstrating all BobReview core extension points. Analyzes CSV data with name, score, and timestamp fields.",
+    "entry_point": "plugin:HelloWorldPlugin",
+    "dependencies": [],
+    "provides": {
+        "report_systems": [
+            "hello_world"
+        ],
+        "data_parsers": [
+            "hello_csv"
+        ],
+        "themes": [
+            "hello_bright"
+        ],
+        "context_builders": [
+            "hello_world"
+        ],
+        "chart_generators": [
+            "hello_world"
+        ]
+    }
+}
