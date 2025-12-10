@@ -175,7 +175,7 @@ $env:OPENAI_API_KEY="sk-your-api-key-here"
 set OPENAI_API_KEY=sk-your-api-key-here
 
 # Run from any directory
-cd /path/to/screenshots
+cd /path/to/data
 bobreview --plugin <plugin-name> --dir .
 ```
 
@@ -214,7 +214,7 @@ Run without installing the package:
 pip install -r requirements.txt
 
 # Run from source directory
-python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/data
 ```
 
 **Important:** When using `bobreview.py` directly:
@@ -228,7 +228,7 @@ python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
 cd /path/to/bobreview-source
 
 # Analyze any folder
-python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/data
 
 # Won't work from other directories
 cd /some/other/directory
@@ -260,7 +260,7 @@ set OPENAI_API_KEY=sk-your-api-key-here
 
 ### 3. Run
 ```bash
-cd /path/to/screenshots
+cd /path/to/data
 bobreview --plugin <plugin-name> --dir .
 ```
 
@@ -279,13 +279,13 @@ See [QUICKSTART.md](QUICKSTART.md) for a complete guide.
 
 ```bash
 # Plugin is required
-bobreview --plugin <plugin-name> --dir /path/to/screenshots
+bobreview --plugin <plugin-name> --dir /path/to/data
 
 # With custom output
-bobreview --plugin <plugin-name> --dir ./screenshots --output report.html
+bobreview --plugin <plugin-name> --dir ./data --output report.html
 
 # Custom title and location
-bobreview --plugin <plugin-name> --dir ./screenshots \
+bobreview --plugin <plugin-name> --dir ./data \
   --title "Forest Level Performance" \
   --location "Dark Forest Area"
 ```
@@ -294,13 +294,13 @@ bobreview --plugin <plugin-name> --dir ./screenshots \
 
 ```bash
 # Test without LLM API calls
-bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
+bobreview --plugin <plugin-name> --dir ./data --dry-run
 
 # Process subset of data
-bobreview --plugin <plugin-name> --dir ./screenshots --sample 20
+bobreview --plugin <plugin-name> --dir ./data --sample 20
 
 # Verbose output
-bobreview --plugin <plugin-name> --dir ./screenshots --verbose
+bobreview --plugin <plugin-name> --dir ./data --verbose
 
 # List available plugins
 bobreview plugins list
@@ -315,16 +315,16 @@ Caching is enabled by default to reduce costs:
 
 ```bash
 # First run - calls LLM and caches
-bobreview --plugin <plugin-name> --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./data
 
 # Second run - uses cache (instant)
-bobreview --plugin <plugin-name> --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./data
 
 # Clear cache and regenerate
-bobreview --plugin <plugin-name> --dir ./screenshots --clear-cache
+bobreview --plugin <plugin-name> --dir ./data --clear-cache
 
 # Disable caching
-bobreview --plugin <plugin-name> --dir ./screenshots --no-cache
+bobreview --plugin <plugin-name> --dir ./data --no-cache
 ```
 
 ### Standalone HTML Reports
@@ -333,7 +333,7 @@ BobReview creates self-contained HTML files with embedded images:
 
 ```bash
 # Generate standalone HTML
-bobreview --plugin <plugin-name> --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./data
 
 # Result: Single HTML file you can share without image folder
 # Perfect for email attachments or sharing via messaging apps
@@ -343,7 +343,7 @@ To use external image files instead (reduces HTML file size):
 
 ```bash
 # Use the --no-embed-images flag
-bobreview --plugin <plugin-name> --dir ./screenshots --no-embed-images
+bobreview --plugin <plugin-name> --dir ./data --no-embed-images
 ```
 
 **Note:** Embedded images increase HTML file size but eliminate external dependencies, making sharing much easier.
@@ -354,20 +354,15 @@ bobreview --plugin <plugin-name> --dir ./screenshots --no-embed-images
 
 ```python
 from bobreview import ReportConfig
-from bobreview.report_systems import load_report_system, ReportSystemExecutor
+from bobreview.engine import load_report_system, ReportSystemExecutor
 from pathlib import Path
 
-# Create configuration with focused config classes
-config = ReportConfig(
-    title="Performance Analysis",
-    location="Test Level",
-)
+# Create configuration
+config = ReportConfig(title="My Analysis Report")
 
-# Configure thresholds
-config.thresholds.draw_soft_cap = 550
-config.thresholds.draw_hard_cap = 600
-config.thresholds.tri_soft_cap = 100000
-config.thresholds.tri_hard_cap = 120000
+# Configure thresholds (plugins define their own threshold names)
+# Example: config.thresholds['metric_soft_cap'] = 100
+# Example: config.thresholds['metric_hard_cap'] = 150
 
 # Configure LLM settings
 config.llm.provider = "openai"
@@ -387,7 +382,7 @@ config.output.embed_images = True
 # Load report system and execute
 system_def = load_report_system("png_data_points")
 executor = ReportSystemExecutor(system_def, config)
-executor.execute(Path("./screenshots"), Path("report.html"))
+executor.execute(Path("./data"), Path("report.html"))
 ```
 
 #### Plugin API
@@ -486,8 +481,9 @@ from bobreview import ReportConfig
 config = ReportConfig()
 
 # Access focused config classes
-config.thresholds.draw_soft_cap = 600
-config.thresholds.tri_hard_cap = 120000
+# Thresholds are plugin-defined (use dict syntax)
+config.thresholds['outlier_sigma'] = 2.0
+config.thresholds['my_metric_soft_cap'] = 100
 
 config.llm.provider = "openai"
 config.llm.model = "gpt-4o"
@@ -526,10 +522,10 @@ Plugins provide report systems, templates, and generators. A plugin can provide 
 
 ```bash
 # Use plugin (uses default report system - first one alphabetically)
-bobreview --plugin <plugin-name> --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./data
 
 # Explicitly specify which report system from plugin (useful when plugin has multiple)
-bobreview --plugin <plugin-name> --report-system <system-id> --dir ./screenshots
+bobreview --plugin <plugin-name> --report-system <system-id> --dir ./data
 
 # If plugin has multiple systems, select a different one
 bobreview --plugin <plugin-name> --report-system <system-id> --dir ./data
@@ -609,22 +605,9 @@ bobreview --plugin my_plugin --report-system my_system --dir ./data
 bobreview --plugin <plugin-name> --report-system /path/to/my_system.json --dir ./data
 ```
 
-### Built-in Report Systems
+### Plugin-Provided Report Systems
 
-#### png_data_points (Default)
-
-Analyzes game performance from PNG filename metadata.
-
-**Pattern:** `{testcase}_{tris}_{draws}_{timestamp}.png`  
-**Example:** `Level1_85000_520_1234567890.png`
-
-**Features:**
-- Triangle count and draw call analysis
-- Performance zone identification
-- Trend detection
-- Outlier analysis (3 methods)
-- Interactive Chart.js visualizations
-- 6 HTML pages with AI-generated insights
+Plugins provide their own report systems tailored to specific domains. See your plugin's documentation for available report systems and their capabilities.
 
 ### Report System Capabilities
 
@@ -645,70 +628,20 @@ See **[REPORT_SYSTEMS_GUIDE.md](REPORT_SYSTEMS_GUIDE.md)** for:
 
 ---
 
-## File Format
-
-BobReview expects PNG files with performance data encoded in the filename:
-
-### Format
-
-```text
-TestCase_tricount_drawcalls_timestamp.png
-```
-
-### Example
-
-```text
-Level1_85000_520_1234567890.png
-```
-
-**Components:**
-- `Level1` - Test case or level name
-- `85000` - Triangle count (integer)
-- `520` - Draw call count (integer)
-- `1234567890` - Unix timestamp (integer)
-
-### Valid Examples
-
-```text
-ForestArea_95000_580_1701234567.png
-City_120000_650_1701234568.png
-Boss_85000_520_1701234569.png
-```
-
-### Invalid Examples
-
-```text
-screenshot.png                    # Missing data
-Level1_85000_520.png             # Missing timestamp
-Level1_abc_520_1234567890.png   # Non-numeric values
-```
-
----
-
 ## Configuration
 
 ### Command-Line Options
 
 **Essential:**
 ```bash
---dir PATH              # Directory with PNG files
+--dir PATH              # Directory with input files
 --output FILE           # Output HTML filename
 --title TEXT            # Report title
---location TEXT         # Level/scene name
 ```
 
-**Performance Thresholds:**
-```bash
---draw-soft-cap N       # Soft limit for draw calls (default: 550)
---draw-hard-cap N       # Hard limit for draw calls (default: 600)
---tri-soft-cap N        # Soft limit for triangles (default: 100000)
---tri-hard-cap N        # Hard limit for triangles (default: 120000)
---high-load-draws N     # High-load threshold for draws
---high-load-tris N      # High-load threshold for triangles
---low-load-draws N      # Low-load threshold for draws (default: 400)
---low-load-tris N       # Low-load threshold for triangles (default: 50000)
---outlier-sigma N       # Outlier detection sigma (default: 2.0)
-```
+**Plugin-Specific Options:**
+
+Plugins may define additional CLI options for their domain-specific thresholds and settings. Run `bobreview --help` with your plugin loaded to see all available options.
 
 **LLM Provider Configuration (v1.0.5):**
 ```bash
@@ -748,47 +681,15 @@ Level1_abc_520_1234567890.png   # Non-numeric values
 
 ## Report Structure
 
-Generated HTML reports include:
+Report structure is defined by plugins through their report system JSON configurations. A typical report includes:
 
-### 1. Executive Summary
-- Overall performance assessment
-- Key metrics overview
-- Peak hotspot identification
-- Variance analysis
+- **Pages**: Plugins define what pages are generated (e.g., summary, details, charts)
+- **LLM Content**: AI-generated analysis sections configured per page
+- **Charts**: Interactive visualizations (Chart.js) defined in the report system
+- **Data Tables**: Sortable tables showing parsed data points
+- **Themes**: Consistent styling via plugin-provided themes
 
-### 2. Metric Deep Dive
-- Draw calls analysis (min, max, mean, median, quartiles, std dev)
-- Triangle count analysis
-- Temporal behavior analysis
-- Correlation analysis
-
-### 3. Performance Zones and Hotspots
-- High-load frame identification
-- Low-load baseline frames
-- Pattern analysis
-- Common characteristics
-
-### 4. Optimization Checklist
-- Critical hotspot analysis
-- High-geometry optimization recommendations
-- High-draw call optimization strategies
-- Actionable next steps
-
-### 5. System-Level Recommendations (Optional)
-- LOD system improvements
-- Occlusion and visibility optimizations
-- Lighting and shadow strategies
-- Material and texture recommendations
-
-### 6. Statistical Summary
-- Complete statistical breakdown
-- Distribution analysis
-- Outlier identification
-
-### 7. Full Sample Table
-- All captures with thumbnails
-- Sortable data table
-- Complete traceability
+See your plugin's documentation for specific page layouts and content.
 
 ---
 
@@ -814,16 +715,16 @@ Generated HTML reports include:
 
 ```bash
 # Use cache (default behavior)
-bobreview --plugin <plugin-name> --dir ./screenshots
+bobreview --plugin <plugin-name> --dir ./data
 
 # Test with dry-run
-bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
+bobreview --plugin <plugin-name> --dir ./data --dry-run
 
 # Use sampling for quick tests
-bobreview --plugin <plugin-name> --dir ./screenshots --sample 20
+bobreview --plugin <plugin-name> --dir ./data --sample 20
 
 # Adjust chunk size if needed
-bobreview --plugin <plugin-name> --dir ./screenshots --llm-chunk-size 5
+bobreview --plugin <plugin-name> --dir ./data --llm-chunk-size 5
 ```
 
 ---
@@ -840,11 +741,11 @@ bobreview --plugin <plugin-name> --dir ./screenshots --llm-chunk-size 5
 pip install .
 
 # Or use Python module syntax
-python -m bobreview.cli --plugin <plugin-name> --dir ./screenshots
+python -m bobreview.cli --plugin <plugin-name> --dir ./data
 
 # Or use script directly
 cd /path/to/bobreview-source
-python bobreview.py --plugin <plugin-name> --dir /path/to/screenshots
+python bobreview.py --plugin <plugin-name> --dir /path/to/data
 ```
 
 ### API Key Not Found
@@ -863,40 +764,29 @@ $env:OPENAI_API_KEY="sk-your-api-key-here"
 set OPENAI_API_KEY=sk-your-api-key-here
 
 # Or use command-line argument (all platforms)
-bobreview --plugin <plugin-name> --dir ./screenshots --llm-api-key sk-your-api-key-here
+bobreview --plugin <plugin-name> --dir ./data --llm-api-key sk-your-api-key-here
 
 # Add to shell profile for persistence (Linux/macOS)
 echo 'export OPENAI_API_KEY=sk-your-key' >> ~/.bashrc
 ```
 
-### No PNG Files Found
+### No Input Files Found
 
-**Error:** `No PNG files found`
+**Error:** `No data files found`
 
 **Solutions:**
-- Verify PNG files exist in directory
-- Check filename format: `TestCase_tricount_drawcalls_timestamp.png`
+- Verify input files exist in directory
+- Check that files match your plugin's expected format
 - Ensure correct directory path
-
-### Invalid Filename Format
-
-**Error:** `Invalid filename format`
-
-**Solutions:**
-- Use correct format: `TestCase_tricount_drawcalls_timestamp.png`
-- All numeric fields must be integers
-- All values must be non-negative
-- File must have `.png` extension
 
 ### Configuration Validation Failed
 
 **Error:** `Configuration validation failed`
 
 **Solutions:**
-- Ensure `draw_soft_cap <= draw_hard_cap`
-- Ensure `tri_soft_cap <= tri_hard_cap`
-- Ensure `outlier_sigma > 0`
-- Ensure `llm_temperature` between 0 and 2
+- Ensure threshold soft_caps are <= hard_caps
+- Ensure numeric thresholds are positive
+- Ensure `llm_temperature` is between 0 and 2
 
 ### Slow Performance
 
@@ -960,7 +850,7 @@ $env:OPENAI_API_KEY="sk-your-key"              # Windows PowerShell
 set OPENAI_API_KEY=sk-your-key                 # Windows Command Prompt
 
 # Run analysis
-cd /path/to/screenshots
+cd /path/to/data
 bobreview --plugin <plugin-name> --dir .
 
 # Open report
