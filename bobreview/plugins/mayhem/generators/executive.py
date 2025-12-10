@@ -47,11 +47,18 @@ def generate_executive_summary(
         if critical_valid else "Data not available"
     )
     
-    # Get location from context (from JSON config) or extract from data (MayhemAutomation-specific)
-    # Priority: 1) JSON config, 2) Extract from testcase field
+    # Get location from extensions.mayhem (plugin-specific) or extract from data
+    # Priority: 1) JSON config (extensions.mayhem.location), 2) Extract from testcase field
     location = None
     if isinstance(context, dict):
+        extensions = context.get('extensions', {})
+        # First try direct location (from context builder)
         location = context.get('location')
+        # Fallback: try extensions.mayhem.location
+        if not location:
+            mayhem_ext = extensions.get('mayhem', {})
+            if mayhem_ext and 'location' in mayhem_ext:
+                location = mayhem_ext['location']
     
     # Fall back to extracting from testcase field if not in JSON
     if not location and data_points and 'testcase' in data_points[0]:

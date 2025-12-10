@@ -242,7 +242,7 @@ class ReportSystemDefinition:
     tags: List[str] = field(default_factory=list)
     documentation_url: Optional[str] = None
     examples: List[str] = field(default_factory=list)
-    location: Optional[str] = None  # Optional metadata
+    title: Optional[str] = None  # Custom report title (CLI takes priority over JSON, defaults to "Report")
 
 
 def validate_report_system(data: Dict[str, Any]) -> List[str]:
@@ -610,7 +610,6 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         description=data['description'],
         author=data['author'],
         data_source=parse_data_source_config(data['data_source']),
-        # Plugin-specific extensions (metrics, analytics, etc.) - parsed by plugins
         extensions=data.get('extensions', {}),
         thresholds=data.get('thresholds', {}),
         llm_config=parse_llm_config(data['llm_config']),
@@ -623,5 +622,5 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         tags=data.get('tags', []),
         documentation_url=data.get('documentation_url'),
         examples=data.get('examples', []),
-        location=data.get('location')
+        title=data.get('title')
     )

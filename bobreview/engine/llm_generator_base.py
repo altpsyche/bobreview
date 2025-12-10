@@ -12,9 +12,6 @@ Plugins should implement LLMGeneratorInterface from core.api directly.
 from typing import Dict, List, Any, TYPE_CHECKING
 from .schema import LLMGeneratorConfig, PromptCategoryConfig
 
-# Import core API interface for adapter
-from ..core.api import LLMGeneratorInterface
-
 if TYPE_CHECKING:
     from ..core.config import ReportConfig
 
@@ -230,54 +227,3 @@ class LLMGeneratorTemplate:
             rows.append(" | ".join(row_values))
         
         return f"{header}\n{separator}\n" + "\n".join(rows)
-
-
-class LLMGeneratorAdapter(LLMGeneratorInterface):
-    """
-    Adapter for using Python-based LLM generators with JSON configuration.
-    
-    This allows existing Python generator functions to work with the new
-    JSON-based system. Wraps old-style generator functions to implement
-    LLMGeneratorInterface from core.api.
-    
-    Note: This is a compatibility adapter. New plugins should implement
-    LLMGeneratorInterface directly.
-    """
-    
-    def __init__(self, generator_func, config: LLMGeneratorConfig):
-        """
-        Initialize adapter with Python generator function.
-        
-        Parameters:
-            generator_func: Python function that generates LLM content
-            config: LLM generator configuration
-        """
-        self.generator_func = generator_func
-        self.config = config
-    
-    def generate(
-        self,
-        data_points: List[Dict[str, Any]],
-        stats: Dict[str, Any],
-        config: 'ReportConfig',
-        context: Dict[str, Any]
-    ) -> Any:
-        """
-        Call the Python generator function.
-        
-        Implements LLMGeneratorInterface.generate() by adapting old-style
-        function signatures to the core API interface.
-        
-        Parameters:
-            data_points: List of data points
-            stats: Statistical analysis results
-            config: ReportConfig instance
-            context: Additional context (may contain 'images_dir_rel' for compatibility)
-        
-        Returns:
-            Generated content (string or dict)
-        """
-        # Extract images_dir from context for backward compatibility with old-style functions
-        images_dir = context.get('images_dir_rel', '')
-        return self.generator_func(data_points, stats, config, images_dir)
-

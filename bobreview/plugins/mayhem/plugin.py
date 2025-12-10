@@ -108,9 +108,10 @@ class MayhemAutomationPlugin(BasePlugin):
             generator_name = name
             _instance = generator_instance  # Store instance as class attribute
             
+            # Explicit signature required for LLM service to pass full context
             @staticmethod
-            def generate(*args, **kwargs):
-                return GeneratorWrapper._instance.generate(*args, **kwargs)
+            def generate(data_points, stats, config, context):
+                return GeneratorWrapper._instance.generate(data_points, stats, config, context)
         
         return GeneratorWrapper
     

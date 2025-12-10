@@ -211,17 +211,15 @@ class ReportSystemExecutor:
             stats = self.analyze_data(data_points)
             log_info("Statistical analysis complete", self.config)
             
-            # Extract title from parsed data if not already set
-            # Check if stats contains a title field
-            if self.config.title is None and isinstance(stats, dict):
-                if 'title' in stats:
-                    self.config.title = stats['title']
-                    log_verbose(f"Extracted title from parsed data: {self.config.title}", self.config)
-            
-            # Set default title if still None
+            # Set report title
+            # Priority: 1) CLI (config.title), 2) JSON (system_def.title), 3) default "Report"
             if self.config.title is None:
-                self.config.title = "Report"
-                log_verbose("Using default title: Report", self.config)
+                if hasattr(self.system_def, 'title') and self.system_def.title:
+                    self.config.title = self.system_def.title
+                    log_verbose(f"Using title from JSON config: {self.config.title}", self.config)
+                else:
+                    self.config.title = "Report"
+                    log_verbose("Using default title: Report", self.config)
             
             # 3. Generate LLM content
             llm_results = self.generate_llm_content(data_points, stats)
@@ -358,9 +356,9 @@ class ReportSystemExecutor:
         if getattr(self.system_def, "thresholds", None):
             context.update(self.system_def.thresholds)
         
-        # Add location from system_def if present (optional metadata)
-        if hasattr(self.system_def, 'location') and self.system_def.location:
-            context['location'] = self.system_def.location
+        # Pass extensions to context so plugins can read plugin-specific values
+        if hasattr(self.system_def, 'extensions') and self.system_def.extensions:
+            context['extensions'] = self.system_def.extensions
         
         log_info(f"Generating LLM content for {len([g for g in self.system_def.llm_generators if g.enabled])} sections...", self.config)
         

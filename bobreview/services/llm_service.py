@@ -101,28 +101,11 @@ class LLMService(BaseService):
             gen_func = getattr(gen_wrapper, 'generate', gen_wrapper)
             if callable(gen_func):
                 try:
-                    # Check if it's an interface-based generator (takes context parameter)
-                    import inspect
-                    sig = inspect.signature(gen_func)
-                    params = list(sig.parameters.keys())
-                    
-                    # If it has 4 parameters (data_points, stats, config, context), it's interface-based
-                    if len(params) == 4:
-                        # Ensure context is a dict
-                        if not isinstance(context, dict):
-                            # If context is a string or other type, convert to dict
-                            context = {'images_dir_rel': str(context)} if context else {}
-                        return gen_func(data_points, stats, report_config, context)
-                    else:
-                        # Old-style function (data_points, stats, config, images_dir_rel)
-                        from ..engine.llm_generator_base import LLMGeneratorAdapter
-                        adapter = LLMGeneratorAdapter(gen_func, generator_config)
-                        # Extract images_dir from context
-                        if isinstance(context, dict):
-                            images_dir = context.get('images_dir_rel', '')
-                        else:
-                            images_dir = str(context) if context else ''
-                        return adapter.generate(data_points, stats, report_config, context if isinstance(context, dict) else {'images_dir_rel': images_dir})
+                    # Ensure context is a dict
+                    if not isinstance(context, dict):
+                        context = {}
+                    # All generators must implement interface: generate(data_points, stats, config, context)
+                    return gen_func(data_points, stats, report_config, context)
                 except Exception as e:
                     logger.warning(f"Python generator failed, falling back to template: {e}")
         

@@ -124,11 +124,13 @@ class PerformanceContextBuilder(ContextBuilderInterface):
         metrics_ext = system_def.extensions.get('metrics', {})
         context['metric_labels'] = metrics_ext.get('metric_labels', {}) if metrics_ext else {}
         
-        # Get location from system_def (JSON config) or extract from data (MayhemAutomation-specific)
-        # Priority: 1) JSON config, 2) Extract from testcase field
+        # Get location from extensions.mayhem (JSON config) or extract from data
+        # Priority: 1) JSON config (extensions.mayhem.location), 2) Extract from testcase field
         location = None
-        if system_def and hasattr(system_def, 'location') and system_def.location:
-            location = system_def.location
+        if system_def:
+            mayhem_ext = system_def.extensions.get('mayhem', {})
+            if mayhem_ext and 'location' in mayhem_ext:
+                location = mayhem_ext['location']
         
         # Fall back to extracting from testcase field if not in JSON
         if not location and data_points and 'testcase' in data_points[0]:

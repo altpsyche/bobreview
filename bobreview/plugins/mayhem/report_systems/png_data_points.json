@@ -96,6 +96,9 @@
           "outliers"
         ]
       }
+    },
+    "mayhem": {
+      "location": "Commercial District"
     }
   },
   "thresholds": {
@@ -110,7 +113,7 @@
     "outlier_sigma": 2.0,
     "mad_threshold": 3.5
   },
-  "location": "Commercial District",
+  "title": "Commercial District Performance Report",
   "labels": {
     "_comment": "Game dev friendly labels - replace statistical terms with performance terminology",
     "draw_calls": "Draw Calls",
