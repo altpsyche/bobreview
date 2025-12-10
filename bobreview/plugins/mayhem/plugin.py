@@ -80,7 +80,8 @@ class MayhemAutomationPlugin(BasePlugin):
             OptimizationChecklistGenerator,
             SystemRecommendationsGenerator,
             VisualAnalysisGenerator,
-            StatisticalInterpretationGenerator
+            StatisticalInterpretationGenerator,
+            ChartExplanationsGenerator
         )
         
         generators = [
@@ -91,6 +92,7 @@ class MayhemAutomationPlugin(BasePlugin):
             ('system_recommendations', SystemRecommendationsGenerator),
             ('visual_analysis', VisualAnalysisGenerator),
             ('statistical_interpretation', StatisticalInterpretationGenerator),
+            ('chart_explanations', ChartExplanationsGenerator),
         ]
         
         for gen_id, gen_class in generators:

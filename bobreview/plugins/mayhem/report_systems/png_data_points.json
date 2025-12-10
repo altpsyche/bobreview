@@ -351,6 +351,15 @@
       "enabled": true
     },
     {
+      "id": "chart_explanations",
+      "name": "Chart Explanations",
+      "description": "Auto-generated explanations for each chart type",
+      "prompt_template": "",
+      "categories": [],
+      "returns": "string",
+      "enabled": true
+    },
+    {
       "id": "optimization_checklist",
       "name": "Optimization Checklist",
       "description": "Actionable optimization recommendations",
@@ -463,10 +472,12 @@
         "name": "pages/metrics.html.j2"
       },
       "llm_mappings": {
-        "metrics_analysis": "metric_deep_dive"
+        "metrics_analysis": "metric_deep_dive",
+        "chart_explanations": "chart_explanations"
       },
       "llm_content": [
-        "metric_deep_dive"
+        "metric_deep_dive",
+        "chart_explanations"
       ],
       "data_requirements": {
         "data_points": true,
@@ -525,10 +536,12 @@
         "name": "pages/visuals.html.j2"
       },
       "llm_mappings": {
-        "visual_analysis": "visual_analysis"
+        "visual_analysis": "visual_analysis",
+        "chart_explanations": "chart_explanations"
       },
       "llm_content": [
-        "visual_analysis"
+        "visual_analysis",
+        "chart_explanations"
       ],
       "data_requirements": {
         "data_points": true,

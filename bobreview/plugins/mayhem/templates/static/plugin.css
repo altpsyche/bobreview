@@ -88,6 +88,18 @@
     transform: scaleY(-1);
 }
 
+/* Chart Explanations - LLM-generated insights below charts */
+.chart-explanation {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-soft);
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--bg-elevated);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+}
+
 /* ============================================
    METRICS
    ============================================ */

@@ -1,4 +1,5 @@
 {% extends "base.html.j2" %}
+{% from "components/macros.html.j2" import chart_explanation %}
 {% from "components/macros.html.j2" import stat_card, stats_item %}
 
 {% block title %}{{ config.title }} - {{ labels.get('visual_analysis', 'Visual Analysis') }}{% endblock %}
@@ -67,6 +68,9 @@
       <span style="color: var(--danger);">{{ labels.get('p95', 'Very Heavy') }}</span> at {{ stats.draws.p95|format_number(0) }}.
     </div>
     <canvas id="draws_timeline"></canvas>
+    {% if llm_content and llm_content.get('chart_explanations') %}
+    {{ chart_explanation(llm_content.get('chart_explanations'), 'draws_timeline') }}
+    {% endif %}
   </div>
   
   <div class="stats-grid" style="margin-top: 16px;">
@@ -102,6 +106,9 @@
       <span style="color: var(--danger);">{{ labels.get('p95', 'Very Heavy') }}</span> at {{ stats.tris.p95|format_number(0) }}.
     </div>
     <canvas id="tris_timeline"></canvas>
+    {% if llm_content and llm_content.get('chart_explanations') %}
+    {{ chart_explanation(llm_content.get('chart_explanations'), 'tris_timeline') }}
+    {% endif %}
   </div>
   
   <div class="stats-grid" style="margin-top: 16px;">
@@ -130,6 +137,9 @@
   
   <div class="chart-container">
     <canvas id="scatter"></canvas>
+    {% if llm_content and llm_content.get('chart_explanations') %}
+    {{ chart_explanation(llm_content.get('chart_explanations'), 'scatter') }}
+    {% endif %}
   </div>
 </section>
 {% endblock %}

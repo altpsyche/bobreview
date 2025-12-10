@@ -1,5 +1,5 @@
 {% extends "base.html.j2" %}
-{% from "components/macros.html.j2" import stat_card, metric_table %}
+{% from "components/macros.html.j2" import stat_card, metric_table, chart_explanation %}
 
 {% block title %}{{ config.title }} - {{ labels.metric_deep_dive }}{% endblock %}
 
@@ -43,11 +43,17 @@
   {% if charts.draws_histogram %}
   <div class="chart-container">
     <canvas id="draws_histogram"></canvas>
+    {% if llm_content and llm_content.get('chart_explanations') %}
+    {{ chart_explanation(llm_content.get('chart_explanations'), 'draws_histogram') }}
+    {% endif %}
   </div>
   {% endif %}
   {% if charts.tris_histogram %}
   <div class="chart-container" style="margin-top: 20px;">
     <canvas id="tris_histogram"></canvas>
+    {% if llm_content and llm_content.get('chart_explanations') %}
+    {{ chart_explanation(llm_content.get('chart_explanations'), 'tris_histogram') }}
+    {% endif %}
   </div>
   {% endif %}
 </section>

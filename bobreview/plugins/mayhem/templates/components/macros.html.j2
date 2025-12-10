@@ -218,3 +218,26 @@
   </div>
 </div>
 {% endmacro %}
+
+
+{#- Chart Explanation Component
+    Extracts and displays explanation for a specific chart from chart_explanations string
+    
+    Parameters:
+        explanations: HTML string containing all chart explanations
+        chart_id: Chart ID to extract (e.g., 'draws_timeline')
+-#}
+{% macro chart_explanation(explanations, chart_id) %}
+{% if explanations %}
+  {% set start_marker = '<div data-chart="' ~ chart_id ~ '">' %}
+  {% set end_marker = '</div>' %}
+  {% set start_pos = explanations.find(start_marker) %}
+  {% if start_pos >= 0 %}
+    {% set content_start = start_pos + start_marker|length %}
+    {% set content_end = explanations.find(end_marker, content_start) %}
+    {% if content_end >= 0 %}
+      <div class="chart-explanation">{{ explanations[content_start:content_end]|safe }}</div>
+    {% endif %}
+  {% endif %}
+{% endif %}
+{% endmacro %}

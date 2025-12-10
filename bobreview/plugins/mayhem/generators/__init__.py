@@ -12,6 +12,7 @@ from .optimization import generate_optimization_checklist
 from .recommendations import generate_system_recommendations
 from .visuals import generate_visual_analysis
 from .stats import generate_statistical_interpretation
+from .chart_explanations import generate_chart_explanations
 
 __all__ = [
     'generate_executive_summary',
@@ -21,4 +22,5 @@ __all__ = [
     'generate_system_recommendations',
     'generate_visual_analysis',
     'generate_statistical_interpretation',
+    'generate_chart_explanations',
 ]
