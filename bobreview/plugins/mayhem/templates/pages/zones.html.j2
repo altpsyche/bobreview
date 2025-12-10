@@ -1,7 +1,7 @@
 {% extends "base.html.j2" %}
 {% from "components/macros.html.j2" import stat_card %}
 
-{% block title %}{{ config.title }} - {{ labels.get('performance_zones', 'Performance Zones & Hotspots') }}{% endblock %}
+{% block title %}{{ config.title }} - {{ labels.get('performance_zones', 'Performance Hotspots') }}{% endblock %}
 
 {% block content %}
 {# Calculate zone counts and build context for interpolation #}
@@ -23,7 +23,7 @@
 } %}
 
 <section class="panel">
-  <h2>{{ labels.get('zones_overview', 'Performance Zones Overview') }}</h2>
+  <h2>{{ labels.get('zones_overview', 'Performance Hotspots') }}</h2>
   <p class="body-text">
     {{ content.zones_overview_intro|default('Performance zones categorize captures based on their resource usage. This helps identify problematic areas requiring optimization and establish baseline performance expectations.') }}
   </p>
@@ -40,18 +40,18 @@
     {% endfor %}
     {% else %}
     {# Fallback #}
-    {{ stat_card('High-Load Frames', stats.high_load|length, (high_pct|format_number(1)) ~ '% of captures', 'danger') }}
-    {{ stat_card('Medium-Load Frames', medium_count, 'Between thresholds', 'warn') }}
-    {{ stat_card('Low-Load Frames', stats.low_load|length, (low_pct|format_number(1)) ~ '% of captures', 'ok') }}
+    {{ stat_card('Hotspots', stats.high_load|length, (high_pct|format_number(1)) ~ '% of captures', 'danger') }}
+    {{ stat_card('Normal', medium_count, 'Within budget', 'warn') }}
+    {{ stat_card('Optimized', stats.low_load|length, (low_pct|format_number(1)) ~ '% of captures', 'ok') }}
     {% endif %}
   </div>
 </section>
 
 <!-- High-Load Frames -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('high_load_frames', 'High-Load Frames') }}</h2>
+  <h2>{{ labels.get('high_load_frames', 'Performance Hotspots') }}</h2>
   <p class="body-text">
-    {{ content.high_load_description|interpolate(ctx)|default('High-load frames require immediate attention and optimization.')|safe }}
+    {{ content.high_load_description|interpolate(ctx)|default('These scenes exceed your performance budget and require optimization attention.')|safe }}
   </p>
   
   {{ llm.zones_analysis|sanitize }}
@@ -84,7 +84,7 @@
         {% endfor %}
       {% else %}
         <tr>
-          <td colspan="4" style="text-align: center; font-style: italic;">{{ labels.get('no_high_load_frames', 'No high-load frames detected') }}</td>
+          <td colspan="4" style="text-align: center; font-style: italic;">{{ labels.get('no_high_load_frames', 'No hotspots detected - great job!') }}</td>
         </tr>
       {% endif %}
     </tbody>
@@ -93,9 +93,9 @@
 
 <!-- Low-Load Baselines -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('low_load_baselines', 'Low-Load Baselines') }}</h2>
+  <h2>{{ labels.get('low_load_baselines', 'Optimized Scenes') }}</h2>
   <p class="body-text">
-    {{ content.low_load_description|interpolate(ctx)|default('Low-load frames represent baseline performance and are useful design references.')|safe }}
+    {{ content.low_load_description|interpolate(ctx)|default('These scenes perform well under budget - use them as reference for optimization targets.')|safe }}
   </p>
   
   <table>
@@ -126,7 +126,7 @@
         {% endfor %}
       {% else %}
         <tr>
-          <td colspan="4" style="text-align: center; font-style: italic;">{{ labels.get('no_low_load_frames', 'No low-load frames detected') }}</td>
+          <td colspan="4" style="text-align: center; font-style: italic;">{{ labels.get('no_low_load_frames', 'No optimized scenes found') }}</td>
         </tr>
       {% endif %}
     </tbody>

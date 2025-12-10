@@ -1,7 +1,7 @@
 {% extends "base.html.j2" %}
-{% from "components/macros.html.j2" import stat_card, stats_item, trend_indicator, pill, percentile_badge, feature_card %}
+{% from "components/macros.html.j2" import stat_card, stats_item, trend_indicator, pill, percentile_badge, feature_card, performance_grade, budget_bar, hotspot_counter %}
 
-{% block title %}{{ config.title }} - {{ labels.get('home', 'Home') }}{% endblock %}
+{% block title %}{{ config.title }} - {{ labels.get('home', 'Overview') }}{% endblock %}
 
 {% block head_scripts %}{% endblock %}
 
@@ -10,6 +10,8 @@
 {% set high_load_count = stats.high_load|length %}
 {% set low_load_count = stats.low_load|length %}
 {% set medium_count = stats.count - high_load_count - low_load_count %}
+{% set draw_budget = config.thresholds.draw_soft_cap %}
+{% set tri_budget = config.thresholds.tri_soft_cap %}
 {% set ctx = {
   'stats': stats,
   'critical': critical,
@@ -22,53 +24,45 @@
   'low_load_tri_threshold': config.thresholds.low_load_tri_threshold|format_number(0)
 } %}
 
-<!-- Executive Summary Section -->
+<!-- Performance Overview Section -->
 <section class="panel">
-  <h2>{{ labels.get('executive_summary', 'Executive Summary') }}</h2>
+  <h2>{{ labels.get('executive_summary', 'Performance Overview') }}</h2>
   
-  <div class="summary-grid">
-    {# Data-driven summary cards from JSON #}
-    {% if content.summary_cards %}
-    {% for card in content.summary_cards %}
-    <div class="stat-card {{ card.variant|default('ok') }}">
-      <div class="stat-label">{{ card.label }}</div>
-      <div class="stat-value">{{ card.value|interpolate(ctx) }}</div>
-      <div class="stat-sub">{{ card.sub|interpolate(ctx) }}</div>
+  <div class="performance-header">
+    <!-- Performance Grade Card -->
+    <div class="grade-card-wrapper">
+      {{ performance_grade(stats.draws.mean, draw_budget, 'Draw Calls') }}
     </div>
-    {% endfor %}
-    {% else %}
-    {# Fallback for backward compatibility #}
-    {{ stat_card('Average', stats.draws.mean|format_number(0) ~ ' Draw Calls', stats.tris.mean|format_number(0) ~ ' Triangles', 'ok') }}
-    {{ stat_card('Peak Hotspot', critical.draws ~ ' Draw Calls', critical.tris|format_number ~ ' Triangles', 'danger') }}
-    {{ stat_card('High-Load Frames', stats.high_load|length, 'Frames exceeding thresholds', 'warn') }}
-    {% endif %}
+    
+    <!-- Budget Utilization -->
+    <div class="budget-section">
+      <h4>Budget Utilization</h4>
+      {{ budget_bar('Draw Calls', stats.draws.mean, draw_budget) }}
+      {{ budget_bar('Triangles', stats.tris.mean, tri_budget) }}
+    </div>
+    
+    <!-- Hotspot Summary -->
+    <div class="hotspot-section">
+      {{ hotspot_counter(high_load_count, low_load_count, stats.count) }}
+    </div>
   </div>
   
-  <div style="margin-top: 12px;">
-    {{ percentile_badge(labels.get('p90', 'P90') ~ ' Draws', stats.draws.p90|format_number(0)) }}
-    {{ percentile_badge(labels.get('p95', 'P95') ~ ' Draws', stats.draws.p95|format_number(0)) }}
-    {{ percentile_badge(labels.get('p99', 'P99') ~ ' Draws', stats.draws.p99|format_number(0)) }}
-    {{ percentile_badge(labels.get('p90', 'P90') ~ ' Tris', stats.tris.p90|format_number(0)) }}
-    {{ percentile_badge(labels.get('p95', 'P95') ~ ' Tris', stats.tris.p95|format_number(0)) }}
-  </div>
-  
-  <div style="margin-top: 8px;">
+  <div style="margin-top: 16px;">
     {% if stats.trends is defined and stats.trends.draws is defined %}
     <span style="font-size: 12px; color: var(--text-soft);">{{ labels.get('trend', 'Trend') }}: </span>
-    {{ trend_indicator(stats.trends.draws.direction|default('stable'), (stats.trends.draws.direction|default('stable')|title) ~ ' Draws') }}
-    {{ trend_indicator(stats.trends.tris.direction|default('stable'), (stats.trends.tris.direction|default('stable')|title) ~ ' Tris') }}
+    {{ trend_indicator(stats.trends.draws.direction|default('stable'), (stats.trends.draws.direction|default('stable')|title) ~ ' Draw Calls') }}
+    {{ trend_indicator(stats.trends.tris.direction|default('stable'), (stats.trends.tris.direction|default('stable')|title) ~ ' Triangles') }}
     {% endif %}
-    <span style="font-size: 12px; color: var(--text-soft); margin-left: 8px;">CV: {{ stats.draws.cv|format_number(1) }}% Draws / {{ stats.tris.cv|format_number(1) }}% Tris</span>
   </div>
   
   {{ llm.exec_summary|sanitize }}
   
   <div class="pill-row">
-    {{ pill('Average: ' ~ (stats.draws.mean|format_number(0)) ~ ' Draws / ' ~ (stats.tris.mean|format_number(0)) ~ ' Tris', 'ok') }}
+    {{ pill('Typical: ' ~ (stats.draws.mean|format_number(0)) ~ ' Draws / ' ~ (stats.tris.mean|format_number(0)) ~ ' Tris', 'ok') }}
     {% if stats.draws.cv > 30 or stats.tris.cv > 30 %}
-    {{ pill(labels.get('high_variance_detected', 'High variance detected'), 'warn') }}
+    {{ pill(labels.get('high_variance_detected', 'Inconsistent Performance'), 'warn') }}
     {% endif %}
-    {{ pill('Peak: ' ~ critical.draws ~ ' Draws / ' ~ (critical.tris|format_number) ~ ' Tris', 'danger') }}
+    {{ pill('Worst: ' ~ critical.draws ~ ' Draws / ' ~ (critical.tris|format_number) ~ ' Tris', 'danger') }}
   </div>
 </section>
 

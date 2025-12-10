@@ -123,3 +123,98 @@
 </table>
 {% endmacro %}
 
+
+{#- Performance Grade Component
+    Shows a letter grade (A/B/C/D/F) based on budget utilization
+    
+    Parameters:
+        value: Current value (e.g., draw calls)
+        budget: Budget threshold (soft cap)
+        label: Optional label for the grade
+-#}
+{% macro performance_grade(value, budget, label='') %}
+{% set utilization = (value / budget * 100)|round(0)|int if budget > 0 else 100 %}
+{% if utilization <= 50 %}
+  {% set grade = 'A' %}
+  {% set grade_class = 'grade-a' %}
+{% elif utilization <= 75 %}
+  {% set grade = 'B' %}
+  {% set grade_class = 'grade-b' %}
+{% elif utilization <= 90 %}
+  {% set grade = 'C' %}
+  {% set grade_class = 'grade-c' %}
+{% elif utilization <= 100 %}
+  {% set grade = 'D' %}
+  {% set grade_class = 'grade-d' %}
+{% else %}
+  {% set grade = 'F' %}
+  {% set grade_class = 'grade-f' %}
+{% endif %}
+<div class="performance-grade {{ grade_class }}">
+  <div class="grade-letter">{{ grade }}</div>
+  {% if label %}<div class="grade-label">{{ label }}</div>{% endif %}
+  <div class="grade-detail">{{ utilization }}% of budget</div>
+</div>
+{% endmacro %}
+
+
+{#- Budget Bar Component
+    Shows a progress bar with color coding based on budget utilization
+    
+    Parameters:
+        label: Metric name
+        value: Current value
+        budget: Budget threshold
+        show_numbers: Whether to show numeric values
+-#}
+{% macro budget_bar(label, value, budget, show_numbers=true) %}
+{% set utilization = (value / budget * 100)|round(0)|int if budget > 0 else 100 %}
+{% set capped_width = [utilization, 100]|min %}
+{% if utilization <= 75 %}
+  {% set bar_class = 'budget-ok' %}
+{% elif utilization <= 90 %}
+  {% set bar_class = 'budget-warn' %}
+{% elif utilization <= 100 %}
+  {% set bar_class = 'budget-caution' %}
+{% else %}
+  {% set bar_class = 'budget-over' %}
+{% endif %}
+<div class="budget-row">
+  <div class="budget-label">{{ label }}</div>
+  <div class="budget-bar-container">
+    <div class="budget-bar {{ bar_class }}" style="width: {{ capped_width }}%"></div>
+    {% if utilization > 100 %}
+    <div class="budget-over-indicator">+{{ utilization - 100 }}%</div>
+    {% endif %}
+  </div>
+  {% if show_numbers %}
+  <div class="budget-value">{{ value|format_number(0) }} / {{ budget|format_number(0) }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{#- Hotspot Counter Component
+    Shows count of performance issues with severity
+    
+    Parameters:
+        hotspots: Number of hotspots
+        optimized: Number of optimized frames
+        total: Total frame count
+-#}
+{% macro hotspot_counter(hotspots, optimized, total) %}
+<div class="hotspot-counter">
+  <div class="hotspot-item danger">
+    <span class="hotspot-count">{{ hotspots }}</span>
+    <span class="hotspot-label">Hotspots</span>
+  </div>
+  <div class="hotspot-item ok">
+    <span class="hotspot-count">{{ optimized }}</span>
+    <span class="hotspot-label">Optimized</span>
+  </div>
+  <div class="hotspot-item neutral">
+    <span class="hotspot-count">{{ total - hotspots - optimized }}</span>
+    <span class="hotspot-label">Normal</span>
+  </div>
+</div>
+{% endmacro %}

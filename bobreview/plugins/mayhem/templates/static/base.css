@@ -1,0 +1,311 @@
+/*
+ * Mayhem Plugin - Base Layout Styles
+ * Common layout components used across all pages
+ */
+
+/* ============================================
+   PAGE LAYOUT
+   ============================================ */
+
+.page {
+    max-width: 1200px;
+    margin: 24px auto 48px;
+    padding: 0 20px 32px;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 24px 18px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--accent-soft), var(--bg-elevated));
+    border: 1px solid var(--accent-soft);
+    box-shadow: var(--shadow-soft);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 0.03em;
+}
+
+header .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-soft);
+}
+
+header .meta span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+
+.nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg));
+    border: 1px solid var(--border-subtle);
+}
+
+.nav-links a {
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-soft);
+    transition: all 0.2s;
+}
+
+.nav-links a:hover {
+    background: var(--accent-soft);
+    text-decoration: none;
+    transform: translateY(-1px);
+    opacity: 0.8;
+}
+
+.nav-links a.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+}
+
+/* ============================================
+   GRID LAYOUTS
+   ============================================ */
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ============================================
+   PANELS
+   ============================================ */
+
+.panel {
+    background: linear-gradient(145deg, var(--bg-elevated), var(--bg));
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    padding: 18px 20px 20px;
+    box-shadow: var(--shadow-soft);
+}
+
+.panel+.panel {
+    margin-top: 16px;
+}
+
+.panel h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    border-left: 3px solid var(--accent);
+    padding-left: 8px;
+}
+
+.panel h3 {
+    margin: 18px 0 6px;
+    font-size: 15px;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+.body-text {
+    font-size: 14px;
+    color: var(--text-soft);
+    line-height: 1.6;
+    margin: 4px 0 0;
+}
+
+.body-text strong {
+    color: var(--text-main);
+}
+
+ul.body-text {
+    margin-left: 20px;
+}
+
+ul.body-text li {
+    margin: 6px 0;
+}
+
+/* ============================================
+   PILLS / BADGES
+   ============================================ */
+
+.pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.pill {
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-soft);
+    color: var(--text-soft);
+}
+
+.pill.ok {
+    border-color: var(--ok);
+    color: var(--ok);
+}
+
+.pill.warn {
+    border-color: var(--warn);
+    color: var(--warn);
+}
+
+.pill.danger {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+thead {
+    background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+}
+
+thead th {
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-soft);
+    border-bottom: 1px solid var(--border-subtle);
+    white-space: nowrap;
+}
+
+tbody tr:nth-child(even) {
+    background: var(--bg-elevated);
+}
+
+tbody tr:nth-child(odd) {
+    background: var(--bg);
+}
+
+tbody tr:hover {
+    background: var(--accent-soft);
+}
+
+tbody td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    white-space: nowrap;
+    color: var(--text-soft);
+}
+
+tbody td.notes {
+    white-space: normal;
+}
+
+/* ============================================
+   CODE BLOCKS
+   ============================================ */
+
+.code-block {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--text-soft);
+}
+
+/* ============================================
+   CALLOUTS
+   ============================================ */
+
+.callout {
+    margin-top: 10px;
+    padding: 10px 11px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: linear-gradient(135deg, var(--bg-soft), var(--bg-elevated));
+    font-size: 13px;
+    color: var(--text-soft);
+}
+
+.callout-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+
+.callout.critical {
+    border-color: var(--danger);
+}
+
+.callout.warn {
+    border-color: var(--warn);
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12px;
+    color: var(--text-soft);
+    text-align: center;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.section-anchor {
+    scroll-margin-top: 20px;
+}
