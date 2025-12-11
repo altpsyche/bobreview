@@ -1,4 +1,5 @@
 {
+    "schema_version": "1.0",
     "id": "hello_world",
     "name": "Hello World Report",
     "version": "1.0.0",
@@ -55,7 +56,7 @@
         }
     ],
     "theme": {
-        "default": "hello_bright"
+        "preset": "hello_cyberpunk"
     },
     "pages": [
         {

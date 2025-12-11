@@ -1,245 +1,29 @@
 # BobReview
 
-**Extensible Report Generation Framework**
+**Extensible Report Generation Framework** — Generate professional HTML reports from any data using LLM-powered analysis.
 
-Generate comprehensive HTML reports from data using LLM-powered analysis. Plugins provide domain-specific parsing, analysis, and templates.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Usage](#usage)
-- [Report Systems](#report-systems)
-- [File Format](#file-format)
-- [Configuration](#configuration)
-- [Report Structure](#report-structure)
-- [Performance Optimization](#performance-optimization)
-- [Troubleshooting](#troubleshooting)
-- [Documentation](#documentation)
+![Version](https://img.shields.io/badge/version-1.0.7-blue)
+![Python](https://img.shields.io/badge/python-3.9+-green)
+![License](https://img.shields.io/badge/license-MIT-orange)
 
 ---
 
-## Overview
+## What is BobReview?
 
-BobReview is a plugin-based report generation framework. Plugins define:
-- How to parse input data
-- What metrics to analyze
-- What analysis to perform
-- What templates to use for HTML output
+BobReview is a **plugin-based framework** for generating data-driven reports with AI insights. Instead of hardcoding analysis logic, everything is provided by plugins:
 
-**Key Feature:** Sends structured data tables to the LLM instead of images, significantly reducing token usage and costs by approximately 90%.
+- **Data Parsers** — Parse CSV, JSON, images, or any custom format
+- **Report Systems** — Define analysis pipelines in JSON
+- **LLM Analysis** — AI-powered insights using OpenAI, Anthropic, or Ollama
+- **Templates & Themes** — Beautiful, customizable HTML reports
 
----
-
-## Features
-
-- **Plugin System** - All domain-specific logic provided by plugins
-- **Plugin Scaffolding** - Generate new plugins with `bobreview plugins create`
-- **PluginHelper Facade** - Simplified registration API for plugin development
-- **JSON-Based Report Systems** - Define custom analysis pipelines with JSON
-- **Preset Factories** - Create report systems programmatically with sensible defaults
-- **Multi-Provider LLM Support** - OpenAI, Anthropic Claude, or local Ollama
-- **Extensible Data Parsing** - Plugins define how to extract data
-- **Statistical Analysis** - Generic utilities for stats, outliers, trends
-- **LLM-Powered Insights** - Generate contextual analysis using AI models
-- **Professional Reports** - Generate presentation-ready HTML reports
-- **Standalone HTML** - Images embedded as base64 for easy sharing
-- **Intelligent Caching** - Cache LLM responses to reduce costs
-- **Modular Architecture** - Clean packages with max 200 lines per file
-- **Global CLI Command** - Run from any directory after installation
-
-
----
-
-## Architecture
-
-BobReview v1.0.7 uses a **fully modular plugin system** with focused architecture following SOLID and DRY principles:
-
-```text
-bobreview/
-├── __init__.py        # Package entry
-├── cli.py             # Command-line interface
-│
-├── core/              # Foundational utilities
-│   ├── config.py      # ReportConfig (composes focused configs)
-│   ├── config_classes.py  # Focused config classes (ThresholdConfig, LLMConfig, etc.)
-│   ├── cache.py       # LLM response caching
-│   ├── utils.py       # Logging, formatting
-│   ├── analysis.py    # Statistics calculation
-│   ├── template_engine.py  # Jinja2 template loading
-│   ├── plugin_utils.py     # Plugin utility functions
-│   ├── config_utils.py     # Config utility functions
-│   └── plugin_system/      # Plugin infrastructure (v1.0.8)
-│       ├── registry.py     # PluginRegistry (composes focused registries)
-│       ├── base.py         # BasePlugin abstract class
-│       ├── loader.py       # PluginLoader for discovery and loading
-│       └── registries/     # Focused registries (11 files)
-│
-├── plugins/           # Actual plugin implementations
-│   ├── my-plugin/     # Example plugin
-│   │   ├── plugin.py  # Plugin class
-│   │   ├── report_systems/
-│   │   └── templates/
-│   └── another-plugin/
-│       ├── plugin.py
-│       └── ...
-│
-├── services/          # Pluggable services
-│   ├── container.py   # ServiceContainer
-│   ├── data_service.py
-│   ├── analytics_service.py
-│   ├── chart_service.py
-│   └── llm_service.py
-│
-├── report_systems/    # Report execution
-│   ├── schema.py, loader.py, executor.py
-│   ├── config_merger.py      # Config merging responsibility
-│   ├── service_validator.py  # Service validation responsibility
-│   └── plugin_lifecycle.py   # Plugin lifecycle responsibility
-│
-└── llm/               # LLM abstraction layer
-    ├── client.py      # call_llm, call_llm_chunked
-    ├── providers/     # Pluggable LLM providers
-    └── generators/    # Content generators
-```
-
-**Design Principles:**
-- **SOLID Principles** - Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
-- **DRY Principle** - Don't Repeat Yourself (extracted utilities, no code duplication)
-- **Focused Interfaces** - Each registry/config handles one concern
-- **Dependency Injection** - Dependencies passed explicitly (no global singletons)
-- **Plugin-First** - All functionality provided by plugins
-- **Registry Pattern** - Self-registration for all extension points
-
-**CSS Architecture:**
-- **Self-Contained Plugins** - Each plugin defines its own styles (no core CSS dependency)
-- **Aligned Theme Tokens** - All plugins use consistent CSS variable naming
-- **Dynamic Themes** - Templates inject theme values via Jinja templating
-- **Plugin Files**:
-  - `templates/base.html.j2` - Base template with `:root` theme variables
-  - `templates/static/base.css` - Layout styles (header, nav, panels)
-  - `templates/static/plugin.css` - Plugin-specific components
-
-### Package Overview
-
-| Package | Purpose |
-|---------|---------|
-| `core/plugin_system/` | Plugin infrastructure with 11 focused registries (themes, generators, parsers, etc.) |
-| `core/plugin_system/registries/` | Focused registries following Interface Segregation Principle |
-| `core/` | Configuration (focused config classes), caching, logging, analysis, utilities |
-| `plugins/` | Actual plugin implementations (user-provided) |
-| `services/` | Pluggable service container with data, analytics, charts, LLM |
-| `report_systems/` | JSON-based pipeline configuration with focused responsibility classes |
-| `llm/` | LLM providers (OpenAI/Anthropic/Ollama), generators |
-
-### Focused Architecture Benefits
-
-**Interface Segregation:**
-- Clients only depend on registries/configs they need
-- `registry.themes` for themes, `registry.llm_generators` for generators
-- `config.thresholds` for thresholds, `config.llm` for LLM settings
-
-**Dependency Injection:**
-- No global singletons (better testability)
-- Dependencies passed explicitly
-- Easier to mock in tests
-
-**Single Responsibility:**
-- Each class has one clear purpose
-- ConfigMerger merges config, ServiceValidator validates services
-- Executor orchestrates, doesn't merge or validate
-
----
-
-## Installation
-
-### Quick Install (Recommended)
-
-Install BobReview as a global CLI command:
+**Create your own plugin in 30 seconds:**
 
 ```bash
-# Clone the repository
-git clone https://github.com/DiggingNebula8/bobreview.git
-cd bobreview
-
-# Install BobReview
 pip install .
-
-# Set up your OpenAI API key
-# Linux/macOS:
-export OPENAI_API_KEY=sk-your-api-key-here
-# Windows PowerShell:
-$env:OPENAI_API_KEY="sk-your-api-key-here"
-# Windows Command Prompt:
-set OPENAI_API_KEY=sk-your-api-key-here
-
-# Run from any directory
-cd /path/to/data
-bobreview --plugin <plugin-name> --dir .
+bobreview plugins create my-plugin
+bobreview --plugin my-plugin --dir ~/.bobreview/plugins/my_plugin/sample_data
 ```
-
-**Alternative LLM Providers (v1.0.5):**
-```bash
-# Use Anthropic Claude
-export ANTHROPIC_API_KEY=your-key
-bobreview --plugin <plugin-name> --dir . --llm-provider anthropic
-
-# Use local Ollama (no API key needed)
-bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama2
-```
-
-After installation, the `bobreview` command is available globally.
-
-### Development Install
-
-For developers modifying BobReview:
-
-```bash
-# Install in editable mode
-pip install -e .
-
-# Or with development dependencies
-pip install -e ".[dev]"
-```
-
-Changes to source code take effect immediately without reinstalling.
-
-### Manual Install
-
-Run without installing the package:
-
-```bash
-# Install dependencies only
-pip install -r requirements.txt
-
-# Run from source directory
-python bobreview.py --plugin <plugin-name> --dir /path/to/data
-```
-
-**Important:** When using `bobreview.py` directly:
-- All features work normally
-- Must run from the BobReview source directory
-- The `bobreview` command is not available globally
-
-**Example:**
-```bash
-# Must be in BobReview source directory
-cd /path/to/bobreview-source
-
-# Analyze any folder
-python bobreview.py --plugin <plugin-name> --dir /path/to/data
-
-# Won't work from other directories
-cd /some/other/directory
-python bobreview.py --plugin <plugin-name> --dir .  # Error: file not found
-```
-
-See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 
 ---
 
@@ -247,878 +31,423 @@ See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 
 ### 1. Install
 ```bash
+git clone https://github.com/DiggingNebula8/bobreview.git
+cd bobreview
 pip install .
 ```
 
 ### 2. Set API Key
 ```bash
-# Linux/macOS
-export OPENAI_API_KEY=sk-your-api-key-here
+# OpenAI (default)
+export OPENAI_API_KEY=sk-your-key
 
-# Windows PowerShell
-$env:OPENAI_API_KEY="sk-your-api-key-here"
+# Or use Anthropic Claude
+export ANTHROPIC_API_KEY=your-key
 
-# Windows Command Prompt
-set OPENAI_API_KEY=sk-your-api-key-here
+# Or use local Ollama (no key needed)
+ollama serve
 ```
 
-### 3. Run
+### 3. Create Your First Plugin
 ```bash
-cd /path/to/data
-bobreview --plugin <plugin-name> --dir .
+bobreview plugins create my-analytics
 ```
 
-### 4. View Report
+This creates a complete plugin in `~/.bobreview/plugins/my_analytics/` with:
+- CSV data parser
+- Report system JSON
+- Jinja2 templates with LLM sections
+- Sample data to test with
+
+### 4. Generate a Report
 ```bash
-open performance_report.html
+bobreview --plugin my-analytics --dir ~/.bobreview/plugins/my_analytics/sample_data
+
+# Test without LLM calls
+bobreview --plugin my-analytics --dir ~/.bobreview/plugins/my_analytics/sample_data --dry-run
 ```
 
-See [QUICKSTART.md](QUICKSTART.md) for a complete guide.
+### 5. Open the Report
+```bash
+start report.html   # Windows
+open report.html    # macOS
+xdg-open report.html # Linux
+```
 
 ---
 
-## Usage
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Plugin Scaffolding** | `bobreview plugins create` generates a complete plugin structure |
+| **PluginHelper API** | Simple facade for registering parsers, themes, templates |
+| **Custom CSS Themes** | Separate `theme.css` and `plugin.css` for easy customization |
+| **Multi-LLM Support** | OpenAI, Anthropic Claude, local Ollama |
+| **JSON Report Systems** | Define analysis pipelines declaratively |
+| **Markdown → HTML** | LLM responses rendered with beautiful styling |
+| **Intelligent Caching** | Cache LLM responses to save costs |
+| **Standalone HTML** | Images embedded as base64 for easy sharing |
+| **Extensible Registry** | 13 registries for themes, parsers, generators, etc. |
+
+---
+
+## Creating Plugins
+
+### Scaffold a New Plugin
+
+```bash
+# Full plugin with default theme
+bobreview plugins create my-plugin
+
+# Choose a color theme
+bobreview plugins create my-plugin --theme ocean      # Teal/cyan
+bobreview plugins create my-plugin --theme purple     # Purple/violet
+bobreview plugins create my-plugin --theme terminal   # Green/black
+bobreview plugins create my-plugin --theme sunset     # Orange/warm
+
+# Minimal plugin (parser + templates only)
+bobreview plugins create my-plugin --template minimal
+```
+
+### Plugin Structure
+
+```
+my_plugin/
+├── manifest.json           # Plugin metadata
+├── plugin.py               # Main plugin class (on_load registration)
+├── parsers/
+│   └── csv_parser.py       # Data parser implementation
+├── context_builder.py      # Custom template context
+├── chart_generator.py      # Chart.js configuration
+├── report_systems/
+│   └── my_plugin.json      # Report system definition
+├── templates/
+│   └── my_plugin/
+│       ├── pages/
+│       │   ├── base.html.j2    # Base template
+│       │   └── home.html.j2    # Homepage with LLM content
+│       └── static/
+│           ├── theme.css       # Color scheme (customize me!)
+│           └── plugin.css      # Layout and components
+└── sample_data/
+    └── sample.csv          # Example data
+```
+
+### Plugin Code (plugin.py)
+
+```python
+from pathlib import Path
+from bobreview.core.plugin_system import BasePlugin, PluginHelper
+
+class MyPlugin(BasePlugin):
+    name = "my-plugin"
+    version = "1.0.0"
+    
+    def on_load(self, registry) -> None:
+        helper = PluginHelper(registry, self.name)
+        
+        # Register data parser
+        from .parsers.csv_parser import MyCsvParser
+        helper.add_data_parser("my_csv", MyCsvParser)
+        
+        # Register templates
+        helper.add_templates(Path(__file__).parent / "templates")
+        
+        # Register report systems
+        helper.add_report_systems_from_dir(Path(__file__).parent / "report_systems")
+        
+        # Register default services (analytics, charts, data)
+        helper.register_default_services()
+```
+
+---
+
+## CLI Reference
 
 ### Basic Usage
 
 ```bash
-# Plugin is required
-bobreview --plugin <plugin-name> --dir /path/to/data
-
-# With custom output
-bobreview --plugin <plugin-name> --dir ./data --output report.html
-
-# Custom title and location
-bobreview --plugin <plugin-name> --dir ./data \
-  --title "Forest Level Performance" \
-  --location "Dark Forest Area"
+bobreview --plugin <name> --dir <data-path>
+bobreview --plugin <name> --dir ./data --output report.html
+bobreview --plugin <name> --dir ./data --title "Q4 Analysis"
 ```
 
-### Common Operations
+### Plugin Management
 
 ```bash
-# Test without LLM API calls
-bobreview --plugin <plugin-name> --dir ./data --dry-run
-
-# Process subset of data
-bobreview --plugin <plugin-name> --dir ./data --sample 20
-
-# Verbose output
-bobreview --plugin <plugin-name> --dir ./data --verbose
-
-# List available plugins
-bobreview plugins list
-
-# List available report systems
-bobreview --list-report-systems
+bobreview plugins list                    # List installed plugins
+bobreview plugins create my-plugin        # Create new plugin
+bobreview plugins create my-plugin --template minimal
 ```
 
-### Caching
-
-Caching is enabled by default to reduce costs:
+### LLM Configuration
 
 ```bash
-# First run - calls LLM and caches
-bobreview --plugin <plugin-name> --dir ./data
-
-# Second run - uses cache (instant)
-bobreview --plugin <plugin-name> --dir ./data
-
-# Clear cache and regenerate
-bobreview --plugin <plugin-name> --dir ./data --clear-cache
-
-# Disable caching
-bobreview --plugin <plugin-name> --dir ./data --no-cache
+--llm-provider openai|anthropic|ollama   # LLM provider
+--llm-model gpt-4o                       # Model name
+--llm-api-key sk-...                     # API key
+--llm-temperature 0.7                    # Creativity (0-2)
 ```
 
-### Standalone HTML Reports
-
-BobReview creates self-contained HTML files with embedded images:
+### Execution Options
 
 ```bash
-# Generate standalone HTML
-bobreview --plugin <plugin-name> --dir ./data
-
-# Result: Single HTML file you can share without image folder
-# Perfect for email attachments or sharing via messaging apps
+--dry-run              # Skip LLM calls (for testing)
+--sample 20            # Process N random samples
+--verbose              # Detailed output
+--no-cache             # Disable caching
+--clear-cache          # Clear cache before run
 ```
 
-To use external image files instead (reduces HTML file size):
+---
 
-```bash
-# Use the --no-embed-images flag
-bobreview --plugin <plugin-name> --dir ./data --no-embed-images
+## Customizing Themes
+
+BobReview includes 7 built-in themes using the `ReportTheme` dataclass:
+
+### Built-in Themes
+
+| Theme ID | Name | Style |
+|----------|------|-------|
+| `dark` | Dark (Default) | Blue accent, deep black |
+| `light` | Light | Blue accent, white bg |
+| `high_contrast` | High Contrast | Cyan/yellow, accessibility |
+| `ocean` | Ocean Dark | Teal/cyan, Inter font |
+| `purple` | Purple Night | Violet, Dracula-style |
+| `terminal` | Terminal Green | Green, JetBrains Mono |
+| `sunset` | Sunset Warm | Orange, Outfit font |
+
+### Switching Themes via JSON
+
+Edit your `report_systems/<plugin>.json`:
+
+```json
+{
+  "theme": {
+    "preset": "ocean"
+  }
+}
 ```
 
-**Note:** Embedded images increase HTML file size but eliminate external dependencies, making sharing much easier.
+### Creating Custom Plugin Themes
 
-### Python API
-
-#### Basic Usage
+Plugins can define their own themes using `ReportTheme`:
 
 ```python
-from bobreview import ReportConfig
-from bobreview.engine import load_report_system, ReportSystemExecutor
-from pathlib import Path
-
-# Create configuration
-config = ReportConfig(title="My Analysis Report")
-
-# Configure thresholds (plugins define their own threshold names)
-# Example: config.thresholds['metric_soft_cap'] = 100
-# Example: config.thresholds['metric_hard_cap'] = 150
-
-# Configure LLM settings
-config.llm.provider = "openai"
-config.llm.api_key = "sk-..."
-config.llm.model = "gpt-4o"
-config.llm.temperature = 0.7
-
-# Configure execution
-config.execution.dry_run = False
-config.execution.verbose = True
-config.execution.sample_size = None
-
-# Configure output
-config.output.theme_id = "dark"
-config.output.embed_images = True
-
-# Load report system and execute
-system_def = load_report_system("png_data_points")
-executor = ReportSystemExecutor(system_def, config)
-executor.execute(Path("./data"), Path("report.html"))
-```
-
-#### Plugin API
-
-Create a custom plugin:
-
-```python
-from bobreview.core.plugin_system import BasePlugin
 from bobreview.core.themes import ReportTheme
+from bobreview.core.plugin_system import BasePlugin, PluginHelper
 
-class MyCustomPlugin(BasePlugin):
-    name = "my-plugin"
-    version = "1.0.0"
-    author = "Your Name"
-    description = "Custom plugin with themes and generators"
-    dependencies = []
+class MyPlugin(BasePlugin):
+    MY_THEME = ReportTheme(
+        id="my_custom",
+        name="My Custom Theme",
+        bg="#0a0a0f",
+        bg_elevated="#13131a",
+        accent="#ff2d95",           # Neon pink
+        accent_soft="rgba(255, 45, 149, 0.15)",
+        accent_strong="#00f0ff",    # Cyan
+        text_main="#e4e4f0",
+        text_soft="#8888a0",
+        ok="#00ff88",
+        warn="#ffcc00",
+        danger="#ff3366",
+        border_subtle="#2a2a3a",
+    )
     
-    def on_load(self, registry) -> None:
-        """Register plugin components using focused registries."""
-        
-        # Register a theme
-        custom_theme = ReportTheme(
-            id="custom",
-            name="Custom Theme",
-            primary_color="#FF5733",
-            secondary_color="#33FF57",
-            # ... other theme properties
-        )
-        registry.themes.register(custom_theme, plugin_name=self.name)
-        
-        # Register an LLM generator
-        def generate_custom_content(llm_provider, data_points, stats, context, dry_run, report_config):
-            # Your generator logic here
-            return "Custom content"
-        
-        class CustomGenerator:
-            @staticmethod
-            def generate(llm_provider, data_points, stats, context, dry_run, report_config):
-                return generate_custom_content(llm_provider, data_points, stats, context, dry_run, report_config)
-        
-        registry.llm_generators.register(CustomGenerator, plugin_name=self.name)
-        
-        # Register a data parser
-        def parse_custom_format(file_path):
-            # Your parser logic here
-            return {"data": "parsed"}
-        
-        registry.data_parsers.register("custom_format", parse_custom_format, plugin_name=self.name)
-        
-        # Register a report system
-        system_def = {
-            "id": "my_system",
-            "name": "My Custom System",
-            "version": "1.0.0",
-            # ... system definition
-        }
-        registry.report_systems.register("my_system", system_def, plugin_name=self.name)
-        
-        # Register template paths
-        template_path = Path(__file__).parent / "templates"
-        registry.template_paths.register(template_path, plugin_name=self.name, priority=50)
+    def on_load(self, registry):
+        helper = PluginHelper(registry, self.name)
+        helper.add_theme(self.MY_THEME)
 ```
 
-#### Accessing Registry Components
+Then use in JSON: `"theme": { "preset": "my_custom" }`
 
-```python
-from bobreview.core.plugin_system import get_registry
+### Available Theme Properties
 
-registry = get_registry()
+| Property | Purpose |
+|----------|---------|
+| `bg` | Main background |
+| `bg_elevated` | Cards, panels |
+| `bg_soft` | Subtle backgrounds |
+| `accent` | Primary brand color |
+| `accent_soft` | Accent with transparency |
+| `accent_strong` | Emphasized accent |
+| `text_main` | Primary text |
+| `text_soft` | Secondary text |
+| `ok` / `warn` / `danger` | Status colors |
+| `border_subtle` | Border colors |
+| `shadow_soft` | Box shadow |
+| `radius_lg` / `radius_md` | Border radius |
+| `font_sans` / `font_mono` | Typography |
 
-# Get themes
-theme = registry.themes.get("dark")
-all_themes = registry.themes.get_all()
+### Available CSS Variables
 
-# Get LLM generators
-generator = registry.llm_generators.get("summary")
-all_generators = registry.llm_generators.get_all()
+| Variable | Purpose |
+|----------|---------|
+| `--bg` | Main page background |
+| `--bg-elevated` | Cards, panels |
+| `--bg-soft` | Subtle background areas |
+| `--bg-hover` | Hover states with alpha |
+| `--accent` | Primary brand color |
+| `--accent-soft` | Accent with transparency (badges, code) |
+| `--accent-strong` | Emphasized accent (gradients) |
+| `--text-main` | Primary text color |
+| `--text-soft` | Secondary/muted text |
+| `--ok` / `--warn` / `--danger` | Status colors |
+| `--border` | Border colors |
+| `--radius-sm/md/lg/xl` | Border radius sizes |
+| `--font-family` | Body text font |
+| `--font-mono` | Code font |
 
-# Get data parsers
-parser = registry.data_parsers.get("png_filename")
-all_parsers = registry.data_parsers.get_all()
+### plugin.css — Layout & Components
 
-# Get report systems
-system = registry.report_systems.get("png_data_points")
-all_systems = registry.report_systems.get_all()
+Customize layout, cards, tables, and LLM content styling:
 
-# Get template paths
-paths = registry.template_paths.get_paths()
-```
+```css
+/* Larger cards */
+.card { border-radius: 20px; padding: 2rem 3rem; }
 
-#### Config API
+/* Status badges */
+.badge-ok { background: var(--ok-soft); color: var(--ok); }
 
-```python
-from bobreview import ReportConfig
+/* LLM bold text */
+.llm-content strong { color: var(--accent); }
 
-config = ReportConfig()
-
-# Access focused config classes
-# Thresholds are plugin-defined (use dict syntax)
-config.thresholds['outlier_sigma'] = 2.0
-config.thresholds['my_metric_soft_cap'] = 100
-
-config.llm.provider = "openai"
-config.llm.model = "gpt-4o"
-config.llm.temperature = 0.7
-
-config.execution.dry_run = False
-config.execution.verbose = True
-config.execution.sample_size = 100
-
-config.output.theme_id = "dark"
-config.output.embed_images = True
-config.output.disabled_pages = ["stats"]
-
-config.cache.cache_dir = Path(".cache")
-config.cache.clear_cache = False
+/* Custom header */
+header h1 { font-size: 3rem; text-transform: uppercase; }
 ```
 
 ---
 
 ## Report Systems
 
-**NEW in v1.0.4:** BobReview now supports JSON-based report system definitions, allowing you to create custom analysis pipelines without modifying code.
-
-### What are Report Systems?
-
-Report systems are JSON files that define:
-- How to parse input data
-- What metrics to analyze
-- What LLM-generated insights to include
-- What pages to generate
-- How to theme and configure the output
-
-### Using Plugins (Recommended)
-
-Plugins provide report systems, templates, and generators. A plugin can provide **multiple report systems**. Use `--plugin` to select a plugin:
-
-```bash
-# Use plugin (uses default report system - first one alphabetically)
-bobreview --plugin <plugin-name> --dir ./data
-
-# Explicitly specify which report system from plugin (useful when plugin has multiple)
-bobreview --plugin <plugin-name> --report-system <system-id> --dir ./data
-
-# If plugin has multiple systems, select a different one
-bobreview --plugin <plugin-name> --report-system <system-id> --dir ./data
-
-# Example with different plugin
-bobreview --plugin <plugin-name> --dir ./game_data
-```
-
-**Note:** 
-- If a plugin has **only one** report system, it's automatically selected when using `--plugin`.
-- If a plugin has **multiple** report systems, you **must** specify `--report-system` to choose which one to use.
-
-#### List Available Systems
-```bash
-# List available plugins
-bobreview plugins list
-
-# List available report systems
-bobreview --list-report-systems
-```
-
-Output:
-```
-Available report systems:
-
-  system_1 (plugin:my-plugin) - v1.0.0
-    Description of what this system does
-    Path: plugin:my-plugin
-
-  system_2 (plugin:my-plugin) - v1.0.0
-    Another report system description
-    Path: plugin:my-plugin
-```
-
-#### Custom Report Systems
-```bash
-# Custom report systems can be placed in ~/.bobreview/report_systems/
-# They can be accessed via a plugin or directly by specifying the JSON file path
-
-# Use a custom JSON file directly
-bobreview --plugin <plugin-name> --report-system /path/to/custom_system.json --dir ./data
-```
-
-### Creating Custom Report Systems
-
-1. **Create a JSON file** in `~/.bobreview/report_systems/`:
+Report systems are JSON files that define your analysis pipeline:
 
 ```json
 {
   "schema_version": "1.0",
-  "id": "my_system",
-  "name": "My Custom Analysis",
-  "version": "1.0.0",
-  "description": "Custom performance analysis",
-  "author": "Your Name",
+  "id": "my_report",
+  "name": "My Analysis Report",
   
   "data_source": {
-    "type": "filename_pattern",
-    "input_format": "csv",
-    "pattern": "{timestamp}_{metric}_{value}.csv",
-    "fields": {...}
+    "type": "my_csv",
+    "input_format": "csv"
   },
   
-  "metrics": {...},
-  "thresholds": {...},
-  "llm_generators": [...],
-  "pages": [...]
+  "llm_config": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  
+  "llm_generators": [
+    {
+      "id": "summary",
+      "name": "Executive Summary",
+      "prompt_template": "Analyze this data and provide insights.",
+      "data_table": {
+        "columns": ["name", "score"],
+        "max_rows": 50
+      }
+    }
+  ],
+  
+  "pages": [
+    {
+      "id": "home",
+      "filename": "index.html",
+      "template": { "type": "jinja2", "name": "my_plugin/pages/home.html.j2" },
+      "llm_content": ["summary"]
+    }
+  ]
 }
 ```
 
-2. **Use it:**
-```bash
-# Plugin is required
-bobreview --plugin my_plugin --report-system my_system --dir ./data
-
-# Or if it's a standalone JSON file
-bobreview --plugin <plugin-name> --report-system /path/to/my_system.json --dir ./data
-```
-
-### Plugin-Provided Report Systems
-
-Plugins provide their own report systems tailored to specific domains. See your plugin's documentation for available report systems and their capabilities.
-
-### Report System Capabilities
-
-- **Flexible Data Sources:** Parse any file format with custom patterns
-- **Custom Metrics:** Define primary and derived metrics
-- **Configurable LLM:** Custom prompts, categories, and sampling strategies
-- **Dynamic Pages:** Define custom page layouts and navigation
-- **Theme Support:** Use built-in themes or create custom ones
-- **Reusable:** Share report systems across teams
-
-### Documentation
-
-See **[REPORT_SYSTEMS_GUIDE.md](REPORT_SYSTEMS_GUIDE.md)** for:
-- Complete JSON schema reference
-- Creating custom report systems
-- Template variable reference
-- Examples and best practices
-
 ---
 
-## Configuration
+## Architecture
 
-### Command-Line Options
-
-**Essential:**
-```bash
---dir PATH              # Directory with input files
---output FILE           # Output HTML filename
---title TEXT            # Report title
+```
+bobreview/
+├── cli.py                    # Command-line interface
+├── core/
+│   ├── plugin_system/        # Plugin infrastructure
+│   │   ├── loader.py         # Plugin discovery & loading
+│   │   ├── registry.py       # Component registration
+│   │   ├── plugin_helper.py  # PluginHelper facade
+│   │   ├── scaffolder.py     # Plugin scaffolding
+│   │   └── registries/       # 13 focused registries
+│   ├── template_engine.py    # Jinja2 with custom filters
+│   ├── html_utils.py         # Markdown→HTML, sanitization
+│   └── config.py             # ReportConfig
+├── engine/
+│   ├── executor.py           # Report generation orchestration
+│   ├── page_renderer.py      # Template rendering
+│   └── schema.py             # Report system dataclasses
+├── services/
+│   ├── llm_service.py        # LLM content generation
+│   ├── analytics_service.py  # Statistical analysis
+│   └── chart_service.py      # Chart.js generation
+└── plugins/
+    └── hello_world/          # Example plugin
 ```
 
-**Plugin-Specific Options:**
-
-Plugins may define additional CLI options for their domain-specific thresholds and settings. Run `bobreview --help` with your plugin loaded to see all available options.
-
-**LLM Provider Configuration (v1.0.5):**
-```bash
---llm-provider PROVIDER # Provider: openai, anthropic, ollama (default: openai)
---llm-api-key KEY       # API key for the selected provider
---llm-api-base URL      # Custom API endpoint (e.g., for Ollama)
---llm-model MODEL       # Model name (default depends on provider)
---llm-temperature N     # Temperature 0-2 (default: 0.7)
---llm-max-tokens N      # Maximum tokens for LLM responses (default: 2000)
---llm-chunk-size N      # Samples per LLM call (default: 10)
---list-providers        # List available LLM providers
---no-recommendations    # Disable system recommendations
-```
-
-**Caching:**
-```bash
---cache-dir PATH        # Cache directory (default: .bobreview_cache)
---use-cache            # Use cached responses (default: enabled)
---no-cache             # Disable caching
---clear-cache          # Clear cache before run
-```
-
-**Execution:**
-```bash
---dry-run              # Skip LLM calls
---sample N             # Process N random samples
---verbose, -v          # Detailed output
---quiet, -q            # Errors only
---no-embed-images      # Use external image files
---linked-css           # Use external CSS file (styles.css)
---disable-page ID      # Disable a page (home, metrics, zones, visuals, optimization, stats)
---version              # Show version
---help                 # Show help
-```
-
----
-
-## Report Structure
-
-Report structure is defined by plugins through their report system JSON configurations. A typical report includes:
-
-- **Pages**: Plugins define what pages are generated (e.g., summary, details, charts)
-- **LLM Content**: AI-generated analysis sections configured per page
-- **Charts**: Interactive visualizations (Chart.js) defined in the report system
-- **Data Tables**: Sortable tables showing parsed data points
-- **Themes**: Consistent styling via plugin-provided themes
-
-See your plugin's documentation for specific page layouts and content.
-
----
-
-## Performance Optimization
-
-### Token Efficiency
-- Sends structured data tables instead of images
-- Reduces token usage by approximately 90% vs image analysis
-- Lower costs per analysis
-
-### Caching Strategy
-- Enabled by default (directory: `.bobreview_cache/`)
-- Subsequent runs with same data are instant
-- Cache invalidated automatically on data/config changes
-- Significant cost savings on repeated analyses
-
-### Chunked Processing
-- Large datasets processed in chunks (default: 10 samples)
-- Prevents API rate limits
-- Better token management
-
-### Cost Optimization
-
-```bash
-# Use cache (default behavior)
-bobreview --plugin <plugin-name> --dir ./data
-
-# Test with dry-run
-bobreview --plugin <plugin-name> --dir ./data --dry-run
-
-# Use sampling for quick tests
-bobreview --plugin <plugin-name> --dir ./data --sample 20
-
-# Adjust chunk size if needed
-bobreview --plugin <plugin-name> --dir ./data --llm-chunk-size 5
-```
-
----
-
-## Troubleshooting
-
-### Command Not Found
-
-**Error:** `bobreview: command not found`
-
-**Solutions:**
-```bash
-# Reinstall
-pip install .
-
-# Or use Python module syntax
-python -m bobreview.cli --plugin <plugin-name> --dir ./data
-
-# Or use script directly
-cd /path/to/bobreview-source
-python bobreview.py --plugin <plugin-name> --dir /path/to/data
-```
-
-### API Key Not Found
-
-**Error:** `OpenAI API key not found`
-
-**Solutions:**
-```bash
-# Set environment variable (Linux/macOS)
-export OPENAI_API_KEY=sk-your-api-key-here
-
-# Set environment variable (Windows PowerShell)
-$env:OPENAI_API_KEY="sk-your-api-key-here"
-
-# Set environment variable (Windows Command Prompt)
-set OPENAI_API_KEY=sk-your-api-key-here
-
-# Or use command-line argument (all platforms)
-bobreview --plugin <plugin-name> --dir ./data --llm-api-key sk-your-api-key-here
-
-# Add to shell profile for persistence (Linux/macOS)
-echo 'export OPENAI_API_KEY=sk-your-key' >> ~/.bashrc
-```
-
-### No Input Files Found
-
-**Error:** `No data files found`
-
-**Solutions:**
-- Verify input files exist in directory
-- Check that files match your plugin's expected format
-- Ensure correct directory path
-
-### Configuration Validation Failed
-
-**Error:** `Configuration validation failed`
-
-**Solutions:**
-- Ensure threshold soft_caps are <= hard_caps
-- Ensure numeric thresholds are positive
-- Ensure `llm_temperature` is between 0 and 2
-
-### Slow Performance
-
-First run with LLM API calls takes time. This is normal.
-
-**Solutions:**
-- Subsequent runs use cache and are instant
-- Use `--sample N` for quick testing
-- Use `--dry-run` to test configuration
-
-### High API Costs
-
-**Prevention:**
-- Cache is enabled by default
-- Test with `--dry-run` first
-- Use `--sample` for testing
-- Only use `--clear-cache` when necessary
-
----
-
-## Requirements
-
-### Python
-- Python 3.7 or higher
-- Tested on Python 3.8, 3.9, 3.10, 3.11, 3.12
-
-### Dependencies
-**Required:**
-- `openai>=1.0.0,<2.0.0` - OpenAI API client
-
-**Optional (Recommended):**
-- `tqdm>=4.65.0,<5.0.0` - Progress bars
-- `colorama>=0.4.6,<1.0.0` - Colored terminal output
-
-### System
-- Internet connection for LLM API calls
-- OpenAI API key
-- Approximately 50MB disk space
+**Design Principles:**
+- **Plugin-First** — All functionality provided by plugins
+- **SOLID** — Single responsibility, interface segregation
+- **Registry Pattern** — Self-registration for all extension points
+- **Dependency Injection** — Testable, modular components
 
 ---
 
 ## Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide
-- **[INSTALL.md](INSTALL.md)** - Detailed installation instructions
-- **[ROADMAP.md](ROADMAP.md)** - Future plans and features
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
+| Document | Description |
+|----------|-------------|
+| [QUICKSTART.md](QUICKSTART.md) | Getting started tutorial |
+| [CORE_API.md](CORE_API.md) | Complete API reference |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
 
-## Examples
+## Troubleshooting
 
-### Basic Workflow
+### Plugin Not Found
 ```bash
-# Install
-pip install .
+# Check plugin is in a discoverable location
+bobreview plugins list
 
-# Set API key (choose based on your platform)
-export OPENAI_API_KEY=sk-your-key              # Linux/macOS
-$env:OPENAI_API_KEY="sk-your-key"              # Windows PowerShell
-set OPENAI_API_KEY=sk-your-key                 # Windows Command Prompt
-
-# Run analysis
-cd /path/to/data
-bobreview --plugin <plugin-name> --dir .
-
-# Open report
-open performance_report.html                   # macOS
-start performance_report.html                  # Windows
-xdg-open performance_report.html               # Linux
+# Plugin locations (in priority order):
+# 1. --plugin-dir <path>
+# 2. $BOBREVIEW_PLUGIN_DIRS
+# 3. ~/.bobreview/plugins/
+# 4. ./plugins/
+# 5. Bundled plugins
 ```
 
-### CI/CD Integration
-```yaml
-# .github/workflows/performance.yml
-name: Performance Analysis
-on: [push]
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install BobReview
-        run: pip install .
-      - name: Analyze Performance
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: bobreview --plugin <plugin-name> --dir ./captures --output report.html
-```
-      - name: Upload Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: performance-report
-          path: report.html
-```
-
----
-
-## Contributing
-
-Contributions are welcome. To contribute:
-
-1. Check [ROADMAP.md](ROADMAP.md) for planned features
-2. Create a branch: `git checkout -b feature-name`
-3. Make changes in appropriate module
-4. Test thoroughly
-5. Submit pull request
-
-### Development Setup
-
+### API Key Not Found
 ```bash
-git clone https://github.com/DiggingNebula8/bobreview.git
-cd bobreview
-pip install -e ".[dev]"
+# Set environment variable
+export OPENAI_API_KEY=sk-your-key
+
+# Or pass via CLI
+bobreview --plugin my-plugin --dir ./data --llm-api-key sk-your-key
+
+# Or use local Ollama (no key needed)
+bobreview --plugin my-plugin --dir ./data --llm-provider ollama --llm-model llama2
 ```
 
-### Adding New Report Pages
-
-BobReview uses a modular page registry system. To add a new page:
-
-**1. Create a new page module** in `bobreview/report_generator/`:
-
-```python
-# bobreview/report_generator/custom_page.py
-"""Custom analysis page."""
-
-from typing import Dict, List, Any
-from .base import get_html_template, get_page_header, sanitize_llm_html
-from .registry import register_page, PageDefinition, get_nav_items
-
-
-def generate_custom_page(
-    stats: Dict[str, Any],
-    config,
-    custom_content: str
-) -> str:
-    """Generate the custom analysis page."""
-    nav_items = get_nav_items('custom.html')
-    header = get_page_header("Custom Analysis", f"{stats['count']} captures", nav_items)
-    
-    body_content = f"""{header}
-    <section class="panel">
-      <h2>Custom Analysis</h2>
-      {sanitize_llm_html(custom_content)}
-    </section>
-"""
-    return get_html_template(f"{config.title} - Custom", body_content, linked_css=config.output.linked_css)
-
-
-# Register the page
-register_page(PageDefinition(
-    id='custom',
-    filename='custom.html',
-    nav_label='Custom',
-    nav_order=70,  # After stats (60)
-    llm_section='Custom Analysis',
-    page_generator=generate_custom_page,
-    requires_images=False,
-    requires_data_points=False
-))
+### LLM Markdown Not Rendering
+Ensure templates use the `| sanitize` filter:
+```jinja
+{{ llm.summary | sanitize }}
 ```
-
-**2. Import the module** in `bobreview/report_generator/__init__.py`:
-
-```python
-# Add with other imports
-from . import custom_page
-```
-
-**3. Add LLM generator** (optional) in `bobreview/llm_provider.py` if you need AI-generated content.
-
-**4. Done!** Navigation auto-updates and the page is generated with all reports.
-
-**Page Definition Fields:**
-
-| Field | Description |
-|-------|-------------|
-| `id` | Unique identifier (used with `--disable-page`) |
-| `filename` | Output HTML filename |
-| `nav_label` | Navigation menu label |
-| `nav_order` | Sort order (10=Home, 20=Metrics, etc.) |
-| `llm_section` | LLM content key from `llm_provider.py` |
-| `page_generator` | Function that returns HTML |
-| `requires_images` | Whether page needs image data |
-| `requires_data_points` | Whether page needs raw data |
-| `card_icon` | Font Awesome icon for homepage card |
-| `card_description` | Description for homepage navigation card |
-
-### Adding LLM Generators with Categories
-
-LLM generators use a registry pattern with configurable prompt categories:
-
-```python
-# bobreview/llm_provider.py
-from .llm_registry import register_llm_generator, LLMGeneratorDefinition, PromptCategory
-
-def generate_custom_analysis(data_points, stats, config, images_dir):
-    """Generate custom analysis content."""
-    prompt = f"""Analyze data covering:
-{_build_category_prompt('Custom Analysis')}
-"""
-    return call_llm(prompt, config=config)
-
-# Register with categories
-register_llm_generator(LLMGeneratorDefinition(
-    section_name='Custom Analysis',
-    generator_func=generate_custom_analysis,
-    description='Custom performance analysis',
-    categories=[
-        PromptCategory('overview', 'Performance Overview', 'general assessment', priority=10),
-        PromptCategory('issues', 'Key Issues', 'main problems found', priority=20),
-        PromptCategory('actions', 'Action Items', 'recommended next steps', priority=30),
-    ]
-))
-```
-
-**To modify categories**: Just edit the `categories` list - prompts update automatically.
-
-### Customizing Report Appearance
-
-**Set theme in config (recommended):**
-
-```python
-from bobreview import ReportConfig
-
-# Built-in themes: 'dark' (default), 'light', 'high_contrast'
-config = ReportConfig(theme_id='light')
-```
-
-**Or via CLI:**
-```bash
-bobreview --plugin <plugin-name> --dir . --theme light
-```
-
-**Create a custom theme:**
-
-```python
-from bobreview.core.plugin_system import BasePlugin, get_registry
-from bobreview.core.themes import ReportTheme
-
-# Recommended: Via plugin
-class MyThemePlugin(BasePlugin):
-    name = "my-theme-plugin"
-    version = "1.0.0"
-    
-    def on_load(self, registry):
-        custom_theme = ReportTheme(
-            id='brand',
-            name='Brand Theme',
-            bg='#1a1a2e',
-            accent='#e94560',
-            text_main='#ffffff',
-            text_soft='#aaaaaa',
-            border_subtle='#333333'
-        )
-        registry.themes.register(custom_theme, plugin_name=self.name)
-
-# Or directly (if not using a plugin)
-from bobreview.core.plugin_system import get_registry
-registry = get_registry()
-registry.themes.register(ReportTheme(
-    id='brand',
-    name='Brand Theme',
-    bg='#1a1a2e',
-    accent='#e94560',
-    text_main='#ffffff',
-    text_soft='#aaaaaa',
-    border_subtle='#333333'
-), plugin_name="custom")
-
-# Then use it
-config = ReportConfig(theme_id='brand')
-```
-
-**Available properties**: `bg`, `bg_elevated`, `bg_soft`, `accent`, `accent_soft`, `accent_strong`, `text_main`, `text_soft`, `border_subtle`, `danger`, `warn`, `ok`, `font_mono`, `font_sans`, `radius_lg`, `radius_md`, `shadow_soft`, `chart_grid_opacity`
-
-### Customizing Chart Appearance
-
-Charts use colors directly from `ReportTheme`. To customize chart appearance, create a custom theme with chart-specific properties:
-
-```python
-from bobreview.core.plugin_system import BasePlugin
-from bobreview.core.themes import ReportTheme
-
-class MyChartThemePlugin(BasePlugin):
-    name = "my-chart-theme"
-    version = "1.0.0"
-    
-    def on_load(self, registry):
-        # Custom theme with adjusted chart grid opacity
-        custom_theme = ReportTheme(
-            id='custom',
-            name='Custom Theme',
-            text_soft='#aaaaaa',      # Chart text color
-            border_subtle='#333333',    # Chart grid color
-            chart_grid_opacity=0.3     # Subtle grid lines (0.0-1.0)
-        )
-        registry.themes.register(custom_theme, plugin_name=self.name)
-```
-
-Chart colors are automatically derived from the theme's accent colors and status colors (danger, warn, ok). The `chart_grid_opacity` property controls the opacity of chart grid lines.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-## Version
 
-**Current:** v1.0.7 - Plugin System
-
-**Key Features:**
-- **Plugin System** - Fully modular plugin architecture with SOLID & DRY principles
-- **Focused Registries** - 11 focused registries (themes, generators, parsers, etc.)
-- **Focused Config Classes** - 5 focused config classes (thresholds, LLM, execution, output, cache)
-- **Dependency Injection** - No global singletons, better testability
-- **Single Responsibility** - Focused responsibility classes
-- **DRY Utilities** - Extracted common patterns
-- JSON-based report systems framework
-- Multi-provider LLM support (OpenAI, Anthropic, Ollama)
-- Plugin system with extensible registries
-- Global CLI command
-- Intelligent caching
-- Complete documentation
-
----
-
-BobReview - Performance analysis and review tool for game development.

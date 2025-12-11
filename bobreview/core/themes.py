@@ -150,8 +150,124 @@ HIGH_CONTRAST_THEME = ReportTheme(
     ok_soft='rgba(0, 255, 0, 0.2)'
 )
 
-# All built-in themes (for easy iteration by plugins)
-BUILTIN_THEMES = [DARK_THEME, LIGHT_THEME, HIGH_CONTRAST_THEME]
+# =============================================================================
+# ADDITIONAL BUILT-IN THEMES (Scaffolder Presets)
+# =============================================================================
+
+
+# Ocean Theme - Teal/Cyan, Inter font
+OCEAN_THEME = ReportTheme(
+    id='ocean',
+    name='Ocean Dark',
+    bg='#0a192f',
+    bg_elevated='#112240',
+    bg_soft='#1d3557',
+    accent='#64ffda',
+    accent_soft='rgba(100, 255, 218, 0.15)',
+    accent_strong='#7efff0',
+    text_main='#ccd6f6',
+    text_soft='#8892b0',
+    border_subtle='#233554',
+    ok='#64ffda',
+    ok_soft='rgba(100, 255, 218, 0.15)',
+    warn='#ffd93d',
+    warn_soft='rgba(255, 217, 61, 0.15)',
+    danger='#ff6b6b',
+    danger_soft='rgba(255, 107, 107, 0.15)',
+    font_sans='"Inter", system-ui, -apple-system, sans-serif',
+    font_mono='"Fira Code", "SF Mono", Consolas, monospace',
+)
+
+# Purple Night Theme - Dracula-inspired
+PURPLE_THEME = ReportTheme(
+    id='purple',
+    name='Purple Night',
+    bg='#1a1625',
+    bg_elevated='#2d2640',
+    bg_soft='#3d3455',
+    accent='#bd93f9',
+    accent_soft='rgba(189, 147, 249, 0.15)',
+    accent_strong='#d4b8ff',
+    text_main='#f8f8f2',
+    text_soft='#6272a4',
+    border_subtle='#44475a',
+    ok='#50fa7b',
+    ok_soft='rgba(80, 250, 123, 0.15)',
+    warn='#ffb86c',
+    warn_soft='rgba(255, 184, 108, 0.15)',
+    danger='#ff5555',
+    danger_soft='rgba(255, 85, 85, 0.15)',
+)
+
+# Terminal Theme - GitHub-style green, JetBrains Mono
+TERMINAL_THEME = ReportTheme(
+    id='terminal',
+    name='Terminal Green',
+    bg='#0d1117',
+    bg_elevated='#161b22',
+    bg_soft='#21262d',
+    accent='#39d353',
+    accent_soft='rgba(57, 211, 83, 0.15)',
+    accent_strong='#56d364',
+    text_main='#c9d1d9',
+    text_soft='#8b949e',
+    border_subtle='#30363d',
+    ok='#39d353',
+    ok_soft='rgba(57, 211, 83, 0.15)',
+    warn='#d29922',
+    warn_soft='rgba(210, 153, 34, 0.15)',
+    danger='#f85149',
+    danger_soft='rgba(248, 81, 73, 0.15)',
+    font_sans='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+    font_mono='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+)
+
+# Sunset Theme - Warm orange tones, Outfit font
+SUNSET_THEME = ReportTheme(
+    id='sunset',
+    name='Sunset Warm',
+    bg='#1f1b24',
+    bg_elevated='#2d2733',
+    bg_soft='#3d3544',
+    accent='#ff7b54',
+    accent_soft='rgba(255, 123, 84, 0.15)',
+    accent_strong='#ff9b7a',
+    text_main='#f5f5f5',
+    text_soft='#b0a8b9',
+    border_subtle='#4a4458',
+    ok='#7ed957',
+    ok_soft='rgba(126, 217, 87, 0.15)',
+    warn='#ffb347',
+    warn_soft='rgba(255, 179, 71, 0.15)',
+    danger='#ff6b6b',
+    danger_soft='rgba(255, 107, 107, 0.15)',
+    font_sans='"Outfit", "Poppins", system-ui, sans-serif',
+    font_mono='"Source Code Pro", "Fira Code", monospace',
+)
+
+# All built-in themes
+BUILTIN_THEMES = [
+    DARK_THEME, 
+    LIGHT_THEME, 
+    HIGH_CONTRAST_THEME,
+    OCEAN_THEME,
+    PURPLE_THEME,
+    TERMINAL_THEME,
+    SUNSET_THEME,
+]
+
+# Theme lookup by ID
+THEMES_BY_ID = {theme.id: theme for theme in BUILTIN_THEMES}
+
+
+def get_theme_by_id(theme_id: str) -> Optional[ReportTheme]:
+    """Get a built-in theme by its ID. Returns None if not found."""
+    return THEMES_BY_ID.get(theme_id)
+
+
+def get_available_themes() -> list:
+    """Return list of available theme IDs."""
+    return list(THEMES_BY_ID.keys())
 
 
 def get_theme_css_variables(theme: ReportTheme) -> str:
@@ -191,4 +307,38 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
   --radius-md: {theme.radius_md};
   --shadow-soft: {theme.shadow_soft};
 }}"""
+
+
+def theme_to_dict(theme: ReportTheme) -> dict:
+    """
+    Convert a ReportTheme to a dict for template context.
+    
+    Parameters:
+        theme: ReportTheme instance
+    
+    Returns:
+        Dict with theme values for use in templates
+    """
+    if not theme:
+        return {}
+    
+    return {
+        "id": theme.id,
+        "name": theme.name,
+        "bg": theme.bg,
+        "bg_elevated": theme.bg_elevated,
+        "bg_soft": theme.bg_soft,
+        "accent": theme.accent,
+        "accent_soft": theme.accent_soft,
+        "accent_strong": theme.accent_strong,
+        "text_main": theme.text_main,
+        "text_soft": theme.text_soft,
+        "ok": theme.ok,
+        "ok_soft": theme.ok_soft,
+        "warn": theme.warn,
+        "warn_soft": theme.warn_soft,
+        "danger": theme.danger,
+        "danger_soft": theme.danger_soft,
+        "border": theme.border_subtle,
+    }
 

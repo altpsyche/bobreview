@@ -30,33 +30,34 @@ class HelloWorldPlugin(BasePlugin):
     author = "BobReview Team"
     description = "Complete example plugin demonstrating all core extension points"
     
-    # Custom bright theme for demo reports
+    # Custom Cyberpunk/Neon theme for demo reports
+    # Demonstrates how plugins can create their own themes
     HELLO_THEME = ReportTheme(
-        id="hello_bright",
-        name="Hello Bright",
-        # Light background
-        bg="#ffffff",
-        bg_elevated="#f8f9fa",
-        bg_soft="#e9ecef",
-        # Blue accent
-        accent="#0d6efd",
-        accent_soft="rgba(13, 110, 253, 0.15)",
-        accent_strong="#ffc107",
-        # Dark text
-        text_main="#212529",
-        text_soft="#6c757d",
-        # Status colors
-        danger="#dc3545",
-        danger_soft="rgba(220, 53, 69, 0.15)",
-        warn="#ffc107",
-        warn_soft="rgba(255, 193, 7, 0.15)",
-        ok="#198754",
-        ok_soft="rgba(25, 135, 84, 0.15)",
+        id="hello_cyberpunk",
+        name="Cyberpunk Neon",
+        # Deep dark with pink/cyan glow
+        bg="#0a0a0f",
+        bg_elevated="#13131a",
+        bg_soft="#1a1a25",
+        # Neon pink accent
+        accent="#ff2d95",
+        accent_soft="rgba(255, 45, 149, 0.15)",
+        accent_strong="#00f0ff",  # Cyan highlight
+        # Off-white text
+        text_main="#e4e4f0",
+        text_soft="#8888a0",
+        # Status colors (neon style)
+        danger="#ff3366",
+        danger_soft="rgba(255, 51, 102, 0.15)",
+        warn="#ffcc00",
+        warn_soft="rgba(255, 204, 0, 0.15)",
+        ok="#00ff88",
+        ok_soft="rgba(0, 255, 136, 0.15)",
         # Borders and effects
-        border_subtle="#dee2e6",
-        shadow_soft="0 4px 12px rgba(0, 0, 0, 0.1)",
-        radius_lg="12px",
-        radius_md="8px",
+        border_subtle="#2a2a3a",
+        shadow_soft="0 0 30px rgba(255, 45, 149, 0.2), 0 0 60px rgba(0, 240, 255, 0.1)",
+        radius_lg="8px",
+        radius_md="4px",
     )
     
     def on_load(self, registry) -> None:

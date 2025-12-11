@@ -14,13 +14,22 @@ Generates a complete plugin directory structure with:
 
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Dict, Any
 
+# Import themes from central module
+from ..themes import (
+    THEMES_BY_ID, 
+    get_theme_by_id, 
+    get_available_themes,
+    theme_to_dict,
+    ReportTheme,
+)
 
 def create_plugin(
     name: str,
     output_dir: Path,
-    template: Literal['minimal', 'full'] = 'full'
+    template: Literal['minimal', 'full'] = 'full',
+    color_theme: str = 'dark'
 ) -> Path:
     """
     Create a new plugin directory with all necessary files.
@@ -29,10 +38,18 @@ def create_plugin(
         name: Plugin name (e.g., "my-plugin")
         output_dir: Directory to create the plugin in
         template: 'minimal' for basic plugin, 'full' for all features
+        color_theme: Color scheme: 'dark', 'ocean', 'purple', 'terminal', 'sunset'
     
     Returns:
         Path to the created plugin directory
     """
+    # Validate theme
+    if color_theme not in THEMES_BY_ID:
+        available = ", ".join(THEMES_BY_ID.keys())
+        raise ValueError(f"Unknown theme '{color_theme}'. Available: {available}")
+    
+    theme = get_theme_by_id(color_theme)
+    
     plugin_dir = output_dir / name.replace('-', '_')
     plugin_dir.mkdir(parents=True, exist_ok=True)
     
@@ -108,7 +125,7 @@ __all__ = ['{class_name}CsvParser']
     rs_dir = plugin_dir / "report_systems"
     rs_dir.mkdir(exist_ok=True)
     
-    report_system = _generate_report_system(name, safe_name, template)
+    report_system = _generate_report_system(name, safe_name, template, color_theme)
     (rs_dir / f"{safe_name}.json").write_text(
         json.dumps(report_system, indent=4), encoding='utf-8'
     )
@@ -117,11 +134,23 @@ __all__ = ['{class_name}CsvParser']
     templates_dir = plugin_dir / "templates" / safe_name / "pages"
     templates_dir.mkdir(parents=True, exist_ok=True)
     
-    base_template = _generate_base_template(name, safe_name)
+    base_template = _generate_base_template(name, safe_name, theme)
     (templates_dir / "base.html.j2").write_text(base_template, encoding='utf-8')
     
     home_template = _generate_home_template(name, safe_name)
     (templates_dir / "home.html.j2").write_text(home_template, encoding='utf-8')
+    
+    # Create static CSS directory
+    static_dir = plugin_dir / "templates" / safe_name / "static"
+    static_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate theme CSS (customizable colors)
+    theme_css = _generate_theme_css(name, safe_name, theme, color_theme)
+    (static_dir / "theme.css").write_text(theme_css, encoding='utf-8')
+    
+    # Generate plugin CSS (layout and components)
+    plugin_css = _generate_plugin_css(name, safe_name)
+    (static_dir / "plugin.css").write_text(plugin_css, encoding='utf-8')
     
     # Create sample_data directory
     sample_dir = plugin_dir / "sample_data"
@@ -428,8 +457,8 @@ class {class_name}ChartGenerator(ChartGeneratorInterface):
 '''
 
 
-def _generate_report_system(name: str, safe_name: str, template: str) -> dict:
-    """Generate report system JSON."""
+def _generate_report_system(name: str, safe_name: str, template: str, color_theme: str = 'dark') -> dict:
+    """Generate report system JSON with theme preset support."""
     return {
         "schema_version": "1.0",
         "id": safe_name,
@@ -486,7 +515,7 @@ def _generate_report_system(name: str, safe_name: str, template: str) -> dict:
         ],
         
         "theme": {
-            "default": f"{safe_name}_theme" if template == 'full' else "dark"
+            "preset": color_theme  # dark, ocean, purple, terminal, sunset
         },
         
         "pages": [
@@ -523,8 +552,9 @@ def _generate_report_system(name: str, safe_name: str, template: str) -> dict:
     }
 
 
-def _generate_base_template(name: str, safe_name: str) -> str:
-    """Generate base Jinja2 template."""
+def _generate_base_template(name: str, safe_name: str, theme: ReportTheme) -> str:
+    """Generate base Jinja2 template with linked CSS files."""
+    t = theme  # shorthand for template interpolation (theme is unused in this function)
     return '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -532,41 +562,79 @@ def _generate_base_template(name: str, safe_name: str) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config.title | default("''' + name + ''' Report") }}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    {# Link external CSS files if available, otherwise use embedded styles #}
+    {% if linked_css %}
+    <link rel="stylesheet" href="static/theme.css">
+    <link rel="stylesheet" href="static/plugin.css">
+    {% else %}
     <style>
+        /* ===== THEME VARIABLES (from JSON preset) ===== */
         :root {
-            --bg: #1a1a2e;
-            --bg-elevated: #16213e;
-            --accent: #e94560;
-            --accent-soft: rgba(233, 69, 96, 0.15);
-            --text-main: #eaeaea;
-            --text-soft: #a0a0a0;
-            --ok: #2ed573;
-            --border: #2f3545;
+            --bg: {{ theme.bg | default('#1a1a2e') }};
+            --bg-elevated: {{ theme.bg_elevated | default('#16213e') }};
+            --bg-soft: {{ theme.bg_soft | default('#0f3460') }};
+            --bg-hover: {{ theme.accent_soft | default('rgba(78, 161, 255, 0.08)') }};
+            --accent: {{ theme.accent | default('#4ea1ff') }};
+            --accent-soft: {{ theme.accent_soft | default('rgba(78, 161, 255, 0.15)') }};
+            --accent-strong: {{ theme.accent_strong | default('#ffb347') }};
+            --text-main: {{ theme.text_main | default('#f5f7fb') }};
+            --text-soft: {{ theme.text_soft | default('#a8b3c5') }};
+            --ok: {{ theme.ok | default('#4fd18b') }};
+            --ok-soft: {{ theme.ok_soft | default('rgba(79, 209, 139, 0.15)') }};
+            --warn: {{ theme.warn | default('#e6b35c') }};
+            --warn-soft: {{ theme.warn_soft | default('rgba(230, 179, 92, 0.15)') }};
+            --danger: {{ theme.danger | default('#ff5c5c') }};
+            --danger-soft: {{ theme.danger_soft | default('rgba(255, 92, 92, 0.15)') }};
+            --border: {{ theme.border | default('#2f3545') }};
+            --border-subtle: rgba(255, 255, 255, 0.05);
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'SF Mono', 'Fira Code', Consolas, monospace;
         }
+        
+        /* ===== BASE STYLES ===== */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-family: var(--font-family);
             background: var(--bg);
             color: var(--text-main);
             line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
         }
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         header { text-align: center; padding: 3rem 0; }
-        header h1 { color: var(--accent); font-weight: 700; }
+        header h1 { color: var(--accent); font-weight: 700; font-size: 2.5rem; }
+        header p { color: var(--text-soft); }
+        
+        /* ===== CARDS ===== */
         .card {
             background: var(--bg-elevated);
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             padding: 1.5rem 2rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-subtle);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .card h2 { color: var(--accent); margin-bottom: 1rem; font-size: 1.25rem; }
-        .chart-container { position: relative; height: 300px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--text-soft); font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+        .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-strong); }
+        .card h2 { color: var(--accent); margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600; }
         
-        /* LLM / Markdown content styling */
+        /* ===== TABLES ===== */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-soft); font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+        tr:hover { background: var(--bg-hover); }
+        
+        /* ===== CHARTS ===== */
+        .chart-container { position: relative; height: 300px; padding: 1rem 0; }
+        
+        /* ===== LLM CONTENT ===== */
         .llm-content { line-height: 1.8; }
         .llm-content p { margin-bottom: 1rem; }
         .llm-content strong, .llm-content b { color: var(--accent); font-weight: 600; }
@@ -576,16 +644,17 @@ def _generate_base_template(name: str, safe_name: str) -> str:
         .llm-content li::marker { color: var(--accent); }
         .llm-content h3, .llm-content h4 { color: var(--accent); margin: 1.5rem 0 0.75rem; }
         .llm-content code {
-            background: rgba(233, 69, 96, 0.1);
+            background: var(--accent-soft);
             padding: 0.15rem 0.4rem;
-            border-radius: 4px;
+            border-radius: var(--radius-sm);
             font-size: 0.9em;
+            font-family: var(--font-mono);
             color: var(--accent);
         }
         .llm-content pre {
             background: rgba(0, 0, 0, 0.3);
             padding: 1rem;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             overflow-x: auto;
             margin: 1rem 0;
         }
@@ -599,7 +668,23 @@ def _generate_base_template(name: str, safe_name: str) -> str:
         }
         .llm-content a { color: var(--accent); text-decoration: none; }
         .llm-content a:hover { text-decoration: underline; }
+        
+        /* ===== BADGES ===== */
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: var(--radius-xl); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-ok { background: var(--ok-soft); color: var(--ok); }
+        .badge-warn { background: var(--warn-soft); color: var(--warn); }
+        .badge-danger { background: var(--danger-soft); color: var(--danger); }
+        
+        /* ===== UTILITIES ===== */
+        .text-soft { color: var(--text-soft); }
+        .text-accent { color: var(--accent); }
+        .text-ok { color: var(--ok); }
+        .text-warn { color: var(--warn); }
+        .text-danger { color: var(--danger); }
     </style>
+    {% endif %}
+    
+    {% block head %}{% endblock %}
 </head>
 <body>
     <main class="container">
@@ -668,3 +753,341 @@ new Chart(ctx, {{ charts.score_chart | safe }});
 {% endif %}
 </script>
 {% endblock %}'''
+
+
+def _generate_theme_css(name: str, safe_name: str, theme: ReportTheme, theme_name: str) -> str:
+    """Generate customizable theme CSS file with selected theme."""
+    t = theme  # shorthand
+    
+    # Build the alternatives section showing other available themes
+    other_themes = []
+    for tid, tdata in THEMES_BY_ID.items():
+        if tid != theme_name and tid in ('dark', 'ocean', 'purple', 'terminal', 'sunset'):
+            other_themes.append(f'''/*
+:root {{
+    /* {tdata.name} Theme */
+    --bg: {tdata.bg};
+    --bg-elevated: {tdata.bg_elevated};
+    --accent: {tdata.accent};
+    --accent-soft: {tdata.accent_soft};
+    --text-main: {tdata.text_main};
+    --text-soft: {tdata.text_soft};
+}}
+*/''')
+    alternatives = '\n\n'.join(other_themes)
+    
+    return f'''/*
+ * {name} Theme — {t.name}
+ * 
+ * Customize your plugin's color scheme here.
+ * All CSS variables can be overridden per-theme.
+ * 
+ * Created with: bobreview plugins create {name} --theme {theme_name}
+ */
+
+:root {{
+    /* ===========================================
+       BACKGROUND COLORS
+       =========================================== */
+    --bg: {t.bg};                          /* Main background */
+    --bg-elevated: {t.bg_elevated};                 /* Cards, panels */
+    --bg-soft: {t.bg_soft};                     /* Subtle backgrounds */
+    --bg-hover: {t.accent_soft};    /* Hover states */
+    
+    /* ===========================================
+       ACCENT COLORS (Primary Brand)
+       =========================================== */
+    --accent: {t.accent};                      /* Primary accent */
+    --accent-soft: {t.accent_soft}; /* Accent backgrounds */
+    --accent-strong: {t.accent_strong};               /* Emphasized accent */
+    --accent-gradient: linear-gradient(135deg, {t.accent} 0%, {t.accent_strong} 100%);
+    
+    /* ===========================================
+       TEXT COLORS
+       =========================================== */
+    --text-main: {t.text_main};                   /* Primary text */
+    --text-soft: {t.text_soft};                   /* Secondary text */
+    --text-muted: #6c7a89;                  /* Muted/disabled text */
+    
+    /* ===========================================
+       STATUS COLORS
+       =========================================== */
+    --ok: {t.ok};                          /* Success, good */
+    --ok-soft: {t.ok_soft};
+    --warn: {t.warn};                        /* Warning, caution */
+    --warn-soft: {t.warn_soft};
+    --danger: {t.danger};                      /* Error, critical */
+    --danger-soft: {t.danger_soft};
+    
+    /* ===========================================
+       BORDERS & SHADOWS
+       =========================================== */
+    --border: {t.border_subtle};                      /* Default borders */
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --shadow-soft: {t.shadow_soft};
+    
+    /* ===========================================
+       SIZING & SPACING
+       =========================================== */
+    --radius-sm: 4px;
+    --radius-md: {t.radius_md};
+    --radius-lg: {t.radius_lg};
+    --radius-xl: 16px;
+    
+    /* ===========================================
+       TYPOGRAPHY
+       =========================================== */
+    --font-family: {t.font_sans};
+    --font-mono: {t.font_mono};
+}}
+
+/* ===========================================
+   ALTERNATIVE THEMES
+   
+   Uncomment one of these to use a different scheme,
+   or create your own!
+   =========================================== */
+
+{alternatives}
+'''
+
+
+def _generate_plugin_css(name: str, safe_name: str) -> str:
+    """Generate plugin-specific layout and component CSS."""
+    return '''/*
+ * ''' + name + ''' Plugin Styles
+ * 
+ * Layout and component styles for the plugin.
+ * Customize these to match your plugin's needs.
+ */
+
+/* ===========================================
+   BASE RESET & TYPOGRAPHY
+   =========================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--bg);
+    color: var(--text-main);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ===========================================
+   LAYOUT
+   =========================================== */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    padding: 3rem 0;
+}
+
+header h1 {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+header p {
+    color: var(--text-soft);
+}
+
+/* ===========================================
+   CARDS
+   =========================================== */
+.card {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--border-subtle);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-strong);
+}
+
+.card h2 {
+    color: var(--accent);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+/* ===========================================
+   TABLES
+   =========================================== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    color: var(--text-soft);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+tr:hover {
+    background: var(--bg-hover);
+}
+
+/* ===========================================
+   CHARTS
+   =========================================== */
+.chart-container {
+    position: relative;
+    height: 300px;
+    padding: 1rem 0;
+}
+
+/* ===========================================
+   LLM / MARKDOWN CONTENT
+   =========================================== */
+.llm-content {
+    line-height: 1.8;
+}
+
+.llm-content p {
+    margin-bottom: 1rem;
+}
+
+.llm-content strong,
+.llm-content b {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.llm-content em,
+.llm-content i {
+    color: var(--text-soft);
+}
+
+.llm-content ul,
+.llm-content ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.llm-content li {
+    margin-bottom: 0.5rem;
+}
+
+.llm-content li::marker {
+    color: var(--accent);
+}
+
+.llm-content h3,
+.llm-content h4 {
+    color: var(--accent);
+    margin: 1.5rem 0 0.75rem;
+}
+
+.llm-content code {
+    background: var(--accent-soft);
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9em;
+    font-family: var(--font-mono);
+    color: var(--accent);
+}
+
+.llm-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.llm-content pre code {
+    background: none;
+    padding: 0;
+    color: var(--text-main);
+}
+
+.llm-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--text-soft);
+    font-style: italic;
+}
+
+.llm-content a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.llm-content a:hover {
+    border-bottom-color: var(--accent);
+}
+
+/* ===========================================
+   STATUS BADGES
+   =========================================== */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-xl);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-ok {
+    background: var(--ok-soft);
+    color: var(--ok);
+}
+
+.badge-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.badge-danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+/* ===========================================
+   UTILITIES
+   =========================================== */
+.text-soft { color: var(--text-soft); }
+.text-accent { color: var(--accent); }
+.text-ok { color: var(--ok); }
+.text-warn { color: var(--warn); }
+.text-danger { color: var(--danger); }
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+'''

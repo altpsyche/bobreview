@@ -24,13 +24,22 @@ BobReview v1.0.7 introduces significant improvements to the plugin development e
 - **Plugin Scaffolding CLI** (P1 - Plugin Developer Experience):
   - `bobreview plugins create <name>` - Generate complete plugin skeleton
   - `--template minimal|full` - Choose template complexity
+  - `--theme dark|ocean|purple|terminal|sunset` - Choose color theme
   - `--output-dir` - Custom output directory
   - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+
+- **Consolidated Theme System** (`core/themes.py`):
+  - 7 built-in themes using `ReportTheme` dataclass: dark, light, high_contrast, ocean, purple, terminal, sunset
+  - `get_theme_by_id()` - Lookup theme by ID
+  - `get_available_themes()` - List all theme IDs
+  - `theme_to_dict()` - Convert theme to template context
+  - Plugins can create custom themes and register via `helper.add_theme()`
 
 - **PageRenderer Class** (`engine/page_renderer.py`):
   - Extracted ~300 lines from executor.py for better modularity
   - Methods: `render_all_pages()`, `_render_page()`, `_generate_charts()`
   - Handles context building, image encoding, template rendering
+  - Injects theme colors from JSON config into template context
 
 - **Preset Factory Functions** (`engine/presets.py`):
   - `create_simple_report_system()` - Single-page reports with defaults
@@ -40,7 +49,8 @@ BobReview v1.0.7 introduces significant improvements to the plugin development e
 - **Hello World Plugin** (`plugins/hello_world/`):
   - Feature-complete reference plugin demonstrating all extension points
   - CSV data parser, context builder, chart generator
-  - Custom theme, Jinja2 templates (home, rankings pages)
+  - Custom "Cyberpunk Neon" theme with pink/cyan accents
+  - Jinja2 templates (home, rankings pages)
   - Report system JSON definition
 
 ### Fixed

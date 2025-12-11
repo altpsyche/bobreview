@@ -158,10 +158,32 @@ class PageRenderer:
     ) -> Dict[str, Any]:
         """Build the base context shared by all pages."""
         from datetime import datetime
+        from ..core.themes import get_theme_by_id, theme_to_dict
         
         count = stats.get('count', len(data_points))
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
         meta_text = f"{count} items · Generated {timestamp}"
+        
+        # Theme resolution priority: CLI --theme > JSON preset > fallback dark
+        theme_name = "dark"  # Fallback
+        
+        # Check JSON preset first
+        if self.system_def.theme:
+            if isinstance(self.system_def.theme, str):
+                theme_name = self.system_def.theme
+            elif isinstance(self.system_def.theme, dict):
+                theme_name = self.system_def.theme.get('preset', 'dark')
+        
+        # CLI --theme overrides JSON preset
+        if hasattr(self.config.output, 'theme_id') and self.config.output.theme_id:
+            theme_name = self.config.output.theme_id
+        
+        # Get theme from built-in themes (fallback to dark if not found)
+        theme = get_theme_by_id(theme_name)
+        if not theme:
+            from ..core.themes import DARK_THEME
+            theme = DARK_THEME
+        theme_vars = theme_to_dict(theme)
         
         return {
             # Core data
@@ -170,6 +192,10 @@ class PageRenderer:
             'data': stats,  # Universal alias
             'data_points': data_points,
             'system_def': self.system_def,
+            
+            # Theme (for dynamic styling)
+            'theme': theme_vars,
+            'theme_name': theme_name,
             
             # LLM content (empty initially, populated per-page)
             'llm': {},
@@ -191,6 +217,9 @@ class PageRenderer:
             
             # For context builder
             'input_dir': input_dir,
+            
+            # Output options (for template CSS switching)
+            'linked_css': self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else True,
         }
     
     def _render_page(

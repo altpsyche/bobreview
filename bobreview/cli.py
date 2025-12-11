@@ -210,15 +210,17 @@ def handle_plugin_command(args):
         
         # Create the plugin
         try:
-            created_path = create_plugin(args.name, output_dir, args.template)
+            color_theme = getattr(args, 'theme', 'default')
+            created_path = create_plugin(args.name, output_dir, args.template, color_theme)
             print(f"✓ Created plugin: {args.name}")
             print(f"  Location: {created_path}")
             print(f"  Template: {args.template}")
+            print(f"  Theme: {color_theme}")
             print()
             print("Next steps:")
             print(f"  1. Edit {created_path}/manifest.json to update author and description")
             print(f"  2. Modify parsers/csv_parser.py for your data format")
-            print(f"  3. Update templates/ for your report layout")
+            print(f"  3. Customize templates/{args.name.replace('-', '_')}/static/theme.css")
             print(f"  4. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
             return 0
         except Exception as e:
@@ -381,8 +383,8 @@ Examples:
     )
     parser.add_argument(
         '--theme', type=str, default='dark', dest='theme_id',
-        choices=['dark', 'light', 'high_contrast'],
-        help='Report theme (default: dark)'
+        choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
+        help='Report theme (dark, ocean, purple, terminal, sunset, light, high_contrast)'
     )
     parser.add_argument(
         '--disable-page', action='append', dest='disabled_pages', default=[],
@@ -446,6 +448,9 @@ Examples:
     plugins_create.add_argument('--template', type=str, default='full',
                                 choices=['minimal', 'full'],
                                 help='Template type: minimal (basic) or full (all features)')
+    plugins_create.add_argument('--theme', type=str, default='dark',
+                                choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
+                                help='Color theme (dark, ocean, purple, terminal, sunset, light, high_contrast)')
     
     
     # Parse args
