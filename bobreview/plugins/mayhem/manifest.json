@@ -17,10 +17,10 @@
     "config_schema": {
         "type": "object",
         "properties": {
-            "register_default_theme": {
+            "register_themes": {
                 "type": "boolean",
                 "default": true,
-                "description": "Register the default dark theme"
+                "description": "Register all 7 built-in themes"
             },
             "register_generators": {
                 "type": "boolean",

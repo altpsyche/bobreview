@@ -622,8 +622,7 @@
     }
   ],
   "theme": {
-    "default": "dark",
-    "override_colors": {}
+    "preset": "dark"
   },
   "output": {
     "default_filename": "performance_report.html",

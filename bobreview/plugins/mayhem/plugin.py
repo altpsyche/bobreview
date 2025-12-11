@@ -1,18 +1,19 @@
 """
 MayhemAutomation Plugin.
 
-This plugin provides all the default/built-in functionality:
+This plugin provides:
 - LLM Generators (executive summary, metrics, zones, etc.)
 - Data Parsers (filename pattern parser)
-- Themes (dark, light, high contrast)
-- Default service implementations
+- Themes (registers all 7 built-in themes)
+- Service implementations
 - Report systems and templates
 
 Without this plugin, BobReview is just an empty shell.
 Other plugins can override any of these components.
 """
 
-from ...core.plugin_system import BasePlugin
+from pathlib import Path
+from ...core.plugin_system import BasePlugin, PluginHelper
 from ...services import get_container, DataService, AnalyticsService, ChartService, LLMService
 
 
@@ -34,42 +35,48 @@ class MayhemAutomationPlugin(BasePlugin):
         super().__init__()
     
     def on_load(self, registry) -> None:
-        """Register all built-in components."""
+        """Register all components using PluginHelper."""
         config = self.get_config()
+        helper = PluginHelper(registry, self.name)
         
-        # Register LLM generators
+        # 1. Register LLM generators (custom wrappers needed)
         if config.get('register_generators', True):
             self._register_generators(registry)
         
-        # Register data parsers
-        self._register_parsers(registry)
+        # 2. Register data parser
+        from .parsers import MayhemParser
+        helper.add_data_parser('filename_pattern', MayhemParser)
         
-        # Register themes
-        if config.get('register_default_theme', True):
-            self._register_themes(registry)
+        # 3. Register all 7 built-in themes
+        if config.get('register_themes', True):
+            helper.add_builtin_themes()
         
-        # Register default services
+        # 4. Register services
         if config.get('register_services', True):
-            self._register_services()
+            helper.register_default_services()
         
-        # Register analyzer function
+        # 5. Register analyzer function (specialized)
         self._register_analyzer()
         
-        # Register report systems
+        # 6. Register report systems from JSON files
         if config.get('register_report_systems', True):
-            self._register_report_systems(registry)
+            report_systems_dir = Path(__file__).parent / 'report_systems'
+            helper.add_report_systems_from_dir(report_systems_dir)
         
-        # Register templates
+        # 7. Register templates
         if config.get('register_templates', True):
-            self._register_templates(registry)
+            template_dir = Path(__file__).parent / 'templates'
+            helper.add_templates(template_dir)
         
-        # Register chart generators
+        # 8. Register chart generator
         if config.get('register_chart_generators', True):
-            self._register_chart_generators(registry)
+            from .charts import PerformanceChartGenerator
+            helper.add_chart_generator('png_data_points', PerformanceChartGenerator)
         
-        # Register context builders
+        # 9. Register context builder
         if config.get('register_context_builders', True):
-            self._register_context_builders(registry)
+            from .context import PerformanceContextBuilder
+            helper.add_context_builder('png_data_points', PerformanceContextBuilder)
     
     def _register_generators(self, registry) -> None:
         """Register all built-in LLM generators."""
@@ -117,42 +124,6 @@ class MayhemAutomationPlugin(BasePlugin):
         
         return GeneratorWrapper
     
-    def _register_parsers(self, registry) -> None:
-        """Register MayhemAutomation data parsers."""
-        from .parsers import MayhemParser
-        
-        # Register MayhemParser as the filename_pattern parser for this plugin
-        class MayhemParserWrapper:
-            parser_name = "filename_pattern"
-            parser_class = MayhemParser
-        
-        registry.data_parsers.register(MayhemParserWrapper, plugin_name=self.name)
-    
-    def _register_themes(self, registry) -> None:
-        """Register built-in themes."""
-        from ...core.themes import BUILTIN_THEMES
-        
-        # Register each theme with plugin registry
-        for theme in BUILTIN_THEMES:
-            registry.themes.register(theme, plugin_name=self.name)
-    
-    def _register_services(self) -> None:
-        """Register default service implementations."""
-        container = get_container()
-        
-        # Only register if not already present (allows other plugins to override)
-        if not container.has('data'):
-            container.register('data', DataService())
-        
-        if not container.has('analytics'):
-            container.register('analytics', AnalyticsService())
-        
-        if not container.has('charts'):
-            container.register('charts', ChartService())
-        
-        # LLM service is registered by executor with config
-        # Don't register a default here
-    
     def _register_analyzer(self) -> None:
         """Register the performance analyzer function."""
         from ...core.plugin_system.registries import get_analyzer_registry
@@ -163,68 +134,6 @@ class MayhemAutomationPlugin(BasePlugin):
             'performance', 
             analyze_performance_data, 
             default=True
-        )
-    
-    def _register_report_systems(self, registry) -> None:
-        """Register built-in report systems."""
-        import json
-        from pathlib import Path
-        
-        # Load report systems from plugin's report_systems directory
-        report_systems_dir = Path(__file__).parent / 'report_systems'
-        
-        if report_systems_dir.exists():
-            for json_file in report_systems_dir.glob('*.json'):
-                try:
-                    with open(json_file, 'r', encoding='utf-8') as f:
-                        system_def = json.load(f)
-                    
-                    system_name = json_file.stem  # e.g., 'png_data_points'
-                    registry.report_systems.register(
-                        name=system_name,
-                        system_def=system_def,
-                        plugin_name=self.name
-                    )
-                except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).error(
-                        f"Failed to load report system {json_file}: {e}"
-                    )
-    
-    def _register_templates(self, registry) -> None:
-        """Register built-in templates."""
-        from pathlib import Path
-        
-        template_dir = Path(__file__).parent / 'templates'
-        if template_dir.exists():
-            # Priority 1000 = low priority (user and other plugins can override)
-            registry.template_paths.register(
-                template_dir, 
-                plugin_name=self.name,
-                priority=1000
-            )
-    
-    def _register_chart_generators(self, registry) -> None:
-        """Register chart generators for our report systems."""
-        from .charts import PerformanceChartGenerator
-        
-        # Chart generator needs config and thresholds at generation time,
-        # not at registration time -- we register a factory
-        registry.chart_generators.register(
-            report_system_id='png_data_points',
-            generator=PerformanceChartGenerator,  # Pass class, not instance
-            plugin_name=self.name
-        )
-    
-    def _register_context_builders(self, registry) -> None:
-        """Register context builders for our report systems."""
-        from .context import PerformanceContextBuilder
-        
-        # Context builder adds images/critical/metrics to template context
-        registry.context_builders.register(
-            report_system_id='png_data_points',
-            builder=PerformanceContextBuilder,  # Pass class, not instance
-            plugin_name=self.name
         )
     
     def on_unload(self) -> None:

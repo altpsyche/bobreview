@@ -76,6 +76,16 @@ class PluginHelper:
         """
         self.registry.themes.register(theme, plugin_name=self.plugin_name)
     
+    def add_builtin_themes(self) -> None:
+        """
+        Register all 7 built-in themes.
+        
+        Themes: dark, light, high_contrast, ocean, purple, terminal, sunset
+        """
+        from ..themes import BUILTIN_THEMES
+        for theme in BUILTIN_THEMES:
+            self.registry.themes.register(theme, plugin_name=self.plugin_name)
+    
     # -------------------------------------------------------------------------
     # Templates
     # -------------------------------------------------------------------------
