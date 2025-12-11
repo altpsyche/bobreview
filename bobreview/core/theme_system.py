@@ -216,6 +216,10 @@ class ThemeSystem:
         if not theme_id:
             raise ValueError("Theme ID cannot be empty or whitespace")
         
+        # Validate mode
+        if mode not in ('embedded', 'linked'):
+            raise ValueError(f"mode must be 'embedded' or 'linked', got '{mode}'")
+        
         theme = self.resolve_theme(theme_id)
         if not theme:
             warnings.warn(

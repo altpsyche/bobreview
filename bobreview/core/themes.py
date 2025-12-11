@@ -387,15 +387,23 @@ def resolve_theme(theme: ReportTheme, theme_registry: Optional[Any] = None, visi
     # Pass visited set to detect cycles
     resolved_parent = resolve_theme(parent, theme_registry, visited.copy())
     
-    # Create new theme with parent values, overridden by child
+    # Create new theme with parent values, overridden by child's EXPLICIT overrides
     from dataclasses import asdict
     parent_dict = asdict(resolved_parent)
-    child_dict = asdict(theme)
     
-    # Merge: parent values + child overrides
-    merged = {**parent_dict, **child_dict}
+    # Start with parent values
+    merged = {**parent_dict}
     
-    # Remove extends/overrides from merged dict (they're not theme fields)
+    # Apply only the child's explicit overrides (not all default values)
+    # Child can specify overrides via the 'overrides' dict
+    if theme.overrides:
+        merged.update(theme.overrides)
+    
+    # Also preserve child's id and name
+    merged['id'] = theme.id
+    merged['name'] = theme.name
+    
+    # Remove extends/overrides from merged dict (they're not needed in resolved theme)
     merged.pop('extends', None)
     merged.pop('overrides', None)
     
@@ -602,78 +610,28 @@ def create_theme(
     )
 
 
-def create_dark_theme(
-    id: str,
-    name: str,
-    accent: str,
-    *,
-    accent_soft: Optional[str] = None,
-    **overrides
-) -> ReportTheme:
+def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
     """
-    Quickly create a dark theme with a custom accent color.
+    Convert hex color to rgba string.
+    
+    Utility function for plugin authors to generate soft/transparent versions
+    of accent colors for their custom themes.
     
     Parameters:
-        id: Unique theme ID
-        name: Display name
-        accent: Primary accent color (hex, e.g., '#ff6b35')
-        accent_soft: Soft accent (auto-generated if not provided)
-        **overrides: Additional fields to override
+        hex_color: Hex color like '#ff6b35' or 'ff6b35'
+        alpha: Transparency value from 0.0 to 1.0 (default: 0.15)
+    
+    Returns:
+        RGBA string like 'rgba(255, 107, 53, 0.15)'
     
     Example:
-        ORANGE_THEME = create_dark_theme(
-            id='orange_dark',
-            name='Orange Dark',
-            accent='#ff6b35'
+        theme = create_theme(
+            id='custom',
+            name='Custom',
+            accent='#ff6b35',
+            accent_soft=hex_to_rgba('#ff6b35', 0.15),
         )
     """
-    if accent_soft is None:
-        # Auto-generate soft accent from main accent
-        accent_soft = _hex_to_rgba(accent, 0.15)
-    
-    return create_theme(
-        id=id,
-        name=name,
-        base='dark',
-        accent=accent,
-        accent_soft=accent_soft,
-        **overrides
-    )
-
-
-def create_light_theme(
-    id: str,
-    name: str,
-    accent: str,
-    *,
-    accent_soft: Optional[str] = None,
-    **overrides
-) -> ReportTheme:
-    """
-    Quickly create a light theme with a custom accent color.
-    
-    Parameters:
-        id: Unique theme ID
-        name: Display name
-        accent: Primary accent color (hex, e.g., '#0066cc')
-        accent_soft: Soft accent (auto-generated if not provided)
-        **overrides: Additional fields to override
-    """
-    if accent_soft is None:
-        accent_soft = _hex_to_rgba(accent, 0.10)
-    
-    return create_theme(
-        id=id,
-        name=name,
-        base='light',
-        accent=accent,
-        accent_soft=accent_soft,
-        **overrides
-    )
-
-
-def _hex_to_rgba(hex_color: str, alpha: float = 1.0) -> str:
-    """Convert hex color to rgba string."""
     hex_color = hex_color.lstrip('#')
     if len(hex_color) == 3:
         hex_color = ''.join(c * 2 for c in hex_color)
@@ -681,4 +639,3 @@ def _hex_to_rgba(hex_color: str, alpha: float = 1.0) -> str:
     g = int(hex_color[2:4], 16)
     b = int(hex_color[4:6], 16)
     return f"rgba({r}, {g}, {b}, {alpha})"
-
