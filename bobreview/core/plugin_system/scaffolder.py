@@ -571,22 +571,22 @@ def _generate_base_template(name: str, safe_name: str, theme: ReportTheme) -> st
     <style>
         /* ===== THEME VARIABLES (from JSON preset) ===== */
         :root {
-            --bg: {{ theme.bg | default('#1a1a2e') }};
-            --bg-elevated: {{ theme.bg_elevated | default('#16213e') }};
-            --bg-soft: {{ theme.bg_soft | default('#0f3460') }};
-            --bg-hover: {{ theme.accent_soft | default('rgba(78, 161, 255, 0.08)') }};
-            --accent: {{ theme.accent | default('#4ea1ff') }};
-            --accent-soft: {{ theme.accent_soft | default('rgba(78, 161, 255, 0.15)') }};
-            --accent-strong: {{ theme.accent_strong | default('#ffb347') }};
-            --text-main: {{ theme.text_main | default('#f5f7fb') }};
-            --text-soft: {{ theme.text_soft | default('#a8b3c5') }};
-            --ok: {{ theme.ok | default('#4fd18b') }};
-            --ok-soft: {{ theme.ok_soft | default('rgba(79, 209, 139, 0.15)') }};
-            --warn: {{ theme.warn | default('#e6b35c') }};
-            --warn-soft: {{ theme.warn_soft | default('rgba(230, 179, 92, 0.15)') }};
-            --danger: {{ theme.danger | default('#ff5c5c') }};
-            --danger-soft: {{ theme.danger_soft | default('rgba(255, 92, 92, 0.15)') }};
-            --border: {{ theme.border | default('#2f3545') }};
+            --bg: {{ theme.bg if theme else '#1a1a2e' }};
+            --bg-elevated: {{ theme.bg_elevated if theme else '#16213e' }};
+            --bg-soft: {{ theme.bg_soft if theme else '#0f3460' }};
+            --bg-hover: {{ theme.accent_soft if theme else 'rgba(78, 161, 255, 0.08)' }};
+            --accent: {{ theme.accent if theme else '#4ea1ff' }};
+            --accent-soft: {{ theme.accent_soft if theme else 'rgba(78, 161, 255, 0.15)' }};
+            --accent-strong: {{ theme.accent_strong if theme else '#ffb347' }};
+            --text-main: {{ theme.text_main if theme else '#f5f7fb' }};
+            --text-soft: {{ theme.text_soft if theme else '#a8b3c5' }};
+            --ok: {{ theme.ok if theme else '#4fd18b' }};
+            --ok-soft: {{ theme.ok_soft if theme else 'rgba(79, 209, 139, 0.15)' }};
+            --warn: {{ theme.warn if theme else '#e6b35c' }};
+            --warn-soft: {{ theme.warn_soft if theme else 'rgba(230, 179, 92, 0.15)' }};
+            --danger: {{ theme.danger if theme else '#ff5c5c' }};
+            --danger-soft: {{ theme.danger_soft if theme else 'rgba(255, 92, 92, 0.15)' }};
+            --border: {{ theme.border if theme else '#2f3545' }};
             --border-subtle: rgba(255, 255, 255, 0.05);
             --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
             --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
