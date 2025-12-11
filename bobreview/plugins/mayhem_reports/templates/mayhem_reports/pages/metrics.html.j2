@@ -1,0 +1,77 @@
+{% extends "mayhem_reports/pages/base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, metric_table, chart_explanation %}
+
+{% block title %}{{ config.title }} - {{ labels.get('metric_deep_dive', 'Metrics') }}{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+{# Metric labels and stats #}
+{% set primary_label = labels.get('draw_calls', 'Draw Calls') %}
+{% set secondary_label = labels.get('triangles', 'Triangles') %}
+
+<section class="panel">
+  <h2>{{ labels.get('metric_deep_dive', 'Detailed Metrics') }}</h2>
+  
+  {% if llm.metrics_analysis %}
+  <div class="llm-content">
+    {{ llm.metrics_analysis|sanitize }}
+  </div>
+  {% endif %}
+  
+  <div class="stats-grid" style="margin-top: 24px;">
+    {{ stat_card(primary_label ~ ' Average', stats.draws.mean|format_number(0), 'Range: ' ~ (stats.draws.min|format_number) ~ ' - ' ~ (stats.draws.max|format_number), 'ok') }}
+    {{ stat_card(secondary_label ~ ' Average', stats.tris.mean|format_number(0), 'Range: ' ~ (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number), 'ok') }}
+  </div>
+</section>
+
+<!-- Draw Calls Statistics -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ primary_label }} {{ labels.get('statistics', 'Statistics') }}</h2>
+  {{ metric_table(primary_label, stats.draws, labels) }}
+</section>
+
+<!-- Triangles Statistics -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ secondary_label }} {{ labels.get('statistics', 'Statistics') }}</h2>
+  {{ metric_table(secondary_label, stats.tris, labels) }}
+</section>
+
+<!-- Distribution Charts -->
+{% if charts %}
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('distribution', 'Distribution') }}</h2>
+  
+  {% if charts.draws_histogram %}
+  <h3>{{ primary_label }} {{ labels.get('distribution', 'Distribution') }}</h3>
+  <div class="chart-container">
+    <canvas id="draws_histogram"></canvas>
+    {% if llm.chart_explanations %}
+    {{ chart_explanation(llm.chart_explanations, 'draws_histogram') }}
+    {% endif %}
+  </div>
+  {% endif %}
+  
+  {% if charts.tris_histogram %}
+  <h3 style="margin-top: 24px;">{{ secondary_label }} {{ labels.get('distribution', 'Distribution') }}</h3>
+  <div class="chart-container">
+    <canvas id="tris_histogram"></canvas>
+    {% if llm.chart_explanations %}
+    {{ chart_explanation(llm.chart_explanations, 'tris_histogram') }}
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if charts %}
+<script>
+{% if charts.draws_histogram %}{{ charts.draws_histogram|safe }}{% endif %}
+{% if charts.tris_histogram %}{{ charts.tris_histogram|safe }}{% endif %}
+</script>
+{% endif %}
+{% endblock %}

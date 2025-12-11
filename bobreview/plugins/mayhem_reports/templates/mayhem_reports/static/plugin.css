@@ -643,6 +643,71 @@ tr:hover {
     padding: 1rem 0;
 }
 
+.chart-description {
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    margin-bottom: 8px;
+}
+
+.chart-explanation {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    color: var(--text-soft);
+}
+
+/* ===========================================
+   CALLOUTS
+   =========================================== */
+.callout {
+    padding: 1rem 1.25rem;
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--accent);
+}
+
+.callout-title {
+    font-weight: var(--weight-semibold, 600);
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.callout-content {
+    color: var(--text-soft);
+}
+
+.callout--warn {
+    border-left-color: var(--warn);
+}
+
+.callout--danger {
+    border-left-color: var(--danger);
+    background: var(--danger-soft);
+}
+
+.callout--danger .callout-title {
+    color: var(--danger);
+}
+
+/* ===========================================
+   THUMBNAILS
+   =========================================== */
+.thumb-small {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+}
+
+.thumb-large {
+    max-width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+}
+
 /* ===========================================
    FOOTER
    =========================================== */

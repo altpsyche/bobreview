@@ -166,6 +166,161 @@
                 "summary_stats": true
             },
             "enabled": true
+        },
+        {
+            "id": "metrics",
+            "filename": "metrics.html",
+            "nav_label": "Metrics",
+            "nav_order": 20,
+            "card_icon": "fa-chart-line",
+            "card_description": "Detailed statistical analysis of draw calls and triangle counts with interactive histograms.",
+            "template": {
+                "type": "jinja2",
+                "name": "mayhem_reports/pages/metrics.html.j2"
+            },
+            "llm_mappings": {
+                "metrics_analysis": "executive_summary"
+            },
+            "llm_content": [
+                "executive_summary"
+            ],
+            "data_requirements": {
+                "data_points": true,
+                "images": false
+            },
+            "charts": [
+                {
+                    "id": "draws_histogram",
+                    "type": "histogram",
+                    "title": "Draw Calls Distribution",
+                    "x_field": "index",
+                    "y_field": "draws"
+                },
+                {
+                    "id": "tris_histogram",
+                    "type": "histogram",
+                    "title": "Triangles Distribution",
+                    "x_field": "index",
+                    "y_field": "tris"
+                }
+            ],
+            "enabled": true
+        },
+        {
+            "id": "zones",
+            "filename": "zones.html",
+            "nav_label": "Hotspots",
+            "nav_order": 30,
+            "card_icon": "fa-fire",
+            "card_description": "Identify performance hotspots and optimized scenes. Find which areas exceed your budget.",
+            "template": {
+                "type": "jinja2",
+                "name": "mayhem_reports/pages/zones.html.j2"
+            },
+            "llm_mappings": {
+                "zones_analysis": "executive_summary"
+            },
+            "llm_content": [
+                "executive_summary"
+            ],
+            "data_requirements": {
+                "data_points": true,
+                "images": true
+            },
+            "enabled": true
+        },
+        {
+            "id": "visuals",
+            "filename": "visuals.html",
+            "nav_label": "Visuals",
+            "nav_order": 40,
+            "card_icon": "fa-chart-bar",
+            "card_description": "Distribution timelines and visual breakdowns showing performance patterns across all captures.",
+            "template": {
+                "type": "jinja2",
+                "name": "mayhem_reports/pages/visuals.html.j2"
+            },
+            "llm_mappings": {
+                "visual_analysis": "executive_summary"
+            },
+            "llm_content": [
+                "executive_summary"
+            ],
+            "data_requirements": {
+                "data_points": true,
+                "images": false
+            },
+            "charts": [
+                {
+                    "id": "draws_timeline",
+                    "type": "timeline",
+                    "title": "Draw Calls Timeline",
+                    "x_field": "index",
+                    "y_field": "draws"
+                },
+                {
+                    "id": "tris_timeline",
+                    "type": "timeline",
+                    "title": "Triangles Timeline",
+                    "x_field": "index",
+                    "y_field": "tris"
+                },
+                {
+                    "id": "scatter",
+                    "type": "scatter",
+                    "title": "Draw Calls vs Triangles",
+                    "x_field": "draws",
+                    "y_field": "tris"
+                }
+            ],
+            "enabled": true
+        },
+        {
+            "id": "optimization",
+            "filename": "optimization.html",
+            "nav_label": "Optimization",
+            "nav_order": 50,
+            "card_icon": "fa-tasks",
+            "card_description": "Actionable recommendations for addressing critical hotspots and high-load frames.",
+            "template": {
+                "type": "jinja2",
+                "name": "mayhem_reports/pages/optimization.html.j2"
+            },
+            "llm_mappings": {
+                "optimization": "executive_summary",
+                "recommendations": "executive_summary"
+            },
+            "llm_content": [
+                "executive_summary"
+            ],
+            "data_requirements": {
+                "data_points": true,
+                "images": true
+            },
+            "enabled": true
+        },
+        {
+            "id": "stats",
+            "filename": "stats.html",
+            "nav_label": "Statistics",
+            "nav_order": 60,
+            "card_icon": "fa-calculator",
+            "card_description": "Comprehensive statistical analysis including percentiles and outlier detection.",
+            "template": {
+                "type": "jinja2",
+                "name": "mayhem_reports/pages/stats.html.j2"
+            },
+            "llm_mappings": {
+                "stats_interpretation": "executive_summary"
+            },
+            "llm_content": [
+                "executive_summary"
+            ],
+            "data_requirements": {
+                "data_points": true,
+                "images": true
+            },
+            "enabled": true
         }
     ],
     "theme": {

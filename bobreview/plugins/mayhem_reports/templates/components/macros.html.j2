@@ -1,19 +1,23 @@
 {#
   Jinja2 Macros for mayhem-reports Plugin.
   
-  UI components for performance reports:
-  - stat_card: Large statistics card with label, value, sublabel
-  - stats_item: Simple stat row in a grid
-  - trend_indicator: Up/down/stable indicator
-  - pill: Status pill with variant styling
-  - percentile_badge: Percentile indicator
-  - feature_card: Navigation card with icon
-  - performance_grade: Letter grade with color
-  - budget_bar: Progress bar showing budget usage
-  - hotspot_counter: Shows high/low load counts
+  UI components for performance reports.
+  All macros use theme CSS variables for consistent styling.
 #}
 
-{# Simple stat row #}
+{#- Stat Card Component -#}
+{% macro stat_card(label, value, subtitle='', variant='') %}
+<div class="stat-card{% if variant %} stat-card--{{ variant }}{% endif %}">
+  <div class="stat-card-label">{{ label }}</div>
+  <div class="stat-card-value">{{ value }}</div>
+  {% if subtitle %}
+  <div class="stat-card-sub">{{ subtitle }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{#- Stats Item Component (for stats grid) -#}
 {% macro stats_item(label, value) %}
 <div class="stats-item">
   <div class="stats-item-label">{{ label }}</div>
@@ -21,18 +25,8 @@
 </div>
 {% endmacro %}
 
-{# Large stat card with optional sublabel #}
-{% macro stat_card(label, value, sub='', variant='') %}
-<div class="stat-card{% if variant %} stat-card--{{ variant }}{% endif %}">
-  <div class="stat-card-label">{{ label }}</div>
-  <div class="stat-card-value">{{ value }}</div>
-  {% if sub %}
-  <div class="stat-card-sub">{{ sub }}</div>
-  {% endif %}
-</div>
-{% endmacro %}
 
-{# Trend indicator with direction #}
+{#- Trend Indicator Component -#}
 {% macro trend_indicator(direction, label='') %}
 {% set icon = 'fa-arrow-up' if direction == 'improving' else ('fa-arrow-down' if direction == 'degrading' else 'fa-minus') %}
 {% set color_class = 'trend--improving' if direction == 'improving' else ('trend--degrading' if direction == 'degrading' else 'trend--stable') %}
@@ -42,12 +36,14 @@
 </span>
 {% endmacro %}
 
-{# Status pill with variant #}
+
+{#- Pill Badge Component -#}
 {% macro pill(text, variant='default') %}
 <span class="pill pill--{{ variant }}">{{ text }}</span>
 {% endmacro %}
 
-{# Percentile badge #}
+
+{#- Percentile Badge Component -#}
 {% macro percentile_badge(label, value, threshold=None) %}
 {% set variant = 'danger' if threshold and value > threshold else 'default' %}
 <span class="percentile-badge percentile-badge--{{ variant }}">
@@ -56,7 +52,8 @@
 </span>
 {% endmacro %}
 
-{# Navigation/feature card with icon #}
+
+{#- Feature Card Component (for navigation cards) -#}
 {% macro feature_card(url, icon, title, description, pills=[]) %}
 <a href="{{ url }}" class="feature-card">
   <div class="feature-card-icon">
@@ -79,7 +76,31 @@
 </a>
 {% endmacro %}
 
-{# Performance grade with letter and color #}
+
+{#- Metric Table Component -#}
+{% macro metric_table(metric_name, stats, labels) %}
+<table>
+  <thead>
+    <tr>
+      <th>{{ labels.get('metric', 'Metric') }}</th>
+      <th>{{ labels.get('value', 'Value') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>{{ labels.get('minimum', 'Min') }}</td><td>{{ stats.min|format_number }}</td></tr>
+    <tr><td>{{ labels.get('q1_label', 'Light Load (25%)') }}</td><td>{{ stats.q1|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.get('q2_label', 'Typical Load') }}</td><td>{{ stats.median|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.get('q3_label', 'Heavy Load (75%)') }}</td><td>{{ stats.q3|format_number(0) }}</td></tr>
+    <tr><td>{{ labels.get('maximum', 'Max') }}</td><td>{{ stats.max|format_number }}</td></tr>
+    <tr><td>{{ labels.get('mean', 'Average') }}</td><td>{{ stats.mean|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.get('standard_deviation', 'Typical Spread') }}</td><td>{{ stats.stdev|format_number(1) }}</td></tr>
+    <tr><td>{{ labels.get('cv', 'Stability') }}</td><td>{{ stats.cv|format_number(1) }}%</td></tr>
+  </tbody>
+</table>
+{% endmacro %}
+
+
+{#- Performance Grade Component -#}
 {% macro performance_grade(current_value, budget, label='Performance') %}
 {% set ratio = current_value / budget if budget > 0 else 1 %}
 {% set grade = 'A' if ratio < 0.6 else ('B' if ratio < 0.8 else ('C' if ratio < 1.0 else ('D' if ratio < 1.2 else 'F'))) %}
@@ -91,7 +112,8 @@
 </div>
 {% endmacro %}
 
-{# Budget utilization bar #}
+
+{#- Budget Bar Component -#}
 {% macro budget_bar(label, current, budget) %}
 {% set pct = (current / budget * 100) if budget > 0 else 0 %}
 {% set bar_class = 'ok' if pct < 80 else ('warn' if pct < 100 else 'danger') %}
@@ -106,7 +128,8 @@
 </div>
 {% endmacro %}
 
-{# Hotspot counter showing high/low load #}
+
+{#- Hotspot Counter Component -#}
 {% macro hotspot_counter(high_count, low_count, total) %}
 <div class="hotspot-counter">
   <div class="hotspot-item hotspot-item--danger">
@@ -120,6 +143,34 @@
   <div class="hotspot-item">
     <span class="hotspot-count">{{ total }}</span>
     <span class="hotspot-label">Total</span>
+  </div>
+</div>
+{% endmacro %}
+
+
+{#- Chart Explanation Component -#}
+{% macro chart_explanation(explanations, chart_id) %}
+{% if explanations %}
+  {% set start_marker = '<div data-chart="' ~ chart_id ~ '">' %}
+  {% set end_marker = '</div>' %}
+  {% set start_pos = explanations.find(start_marker) %}
+  {% if start_pos >= 0 %}
+    {% set content_start = start_pos + start_marker|length %}
+    {% set content_end = explanations.find(end_marker, content_start) %}
+    {% if content_end >= 0 %}
+      <div class="chart-explanation">{{ explanations[content_start:content_end]|safe }}</div>
+    {% endif %}
+  {% endif %}
+{% endif %}
+{% endmacro %}
+
+
+{#- Callout Component -#}
+{% macro callout(title, variant='default') %}
+<div class="callout callout--{{ variant }}">
+  <div class="callout-title">{{ title }}</div>
+  <div class="callout-content">
+    {{ caller() }}
   </div>
 </div>
 {% endmacro %}
