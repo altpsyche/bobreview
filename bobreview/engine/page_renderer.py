@@ -219,7 +219,7 @@ class PageRenderer:
             'input_dir': input_dir,
             
             # Output options (for template CSS switching)
-            'linked_css': self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else True,
+            'linked_css': self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else False,
         }
     
     def _render_page(
