@@ -235,35 +235,63 @@ Edit your `report_systems/<plugin>.json`:
 
 ### Creating Custom Plugin Themes
 
-Plugins can define their own themes using `ReportTheme`:
+There are two ways to create custom themes:
+
+#### Quick Start: Extend a Built-in Theme
+
+Use `create_theme` to quickly customize an existing theme:
+
+```python
+from bobreview.core.themes import create_theme, hex_to_rgba
+
+# Extend dark theme with custom colors
+MY_THEME = create_theme(
+    'neon', 'Neon Pink',
+    base='dark',                              # Inherit all dark theme values
+    accent='#ff2d95',                         # Override accent
+    accent_soft=hex_to_rgba('#ff2d95', 0.15), # Soft variant
+)
+```
+
+#### Full Control: Define Every Property
+
+Use `ReportTheme` for complete control over all values:
 
 ```python
 from bobreview.core.themes import ReportTheme
+
+# Complete theme from scratch
+MY_THEME = ReportTheme(
+    id='cyberpunk',
+    name='Cyberpunk',
+    bg='#0a0a0f',
+    bg_elevated='#13131a',
+    bg_soft='#1a1a24',
+    accent='#ff2d95',
+    accent_soft='rgba(255, 45, 149, 0.15)',
+    accent_strong='#00f0ff',
+    text_main='#e4e4f0',
+    text_soft='#8888a0',
+    ok='#00ff88',
+    warn='#ffcc00',
+    danger='#ff3366',
+    border_subtle='#2a2a3a',
+    # ... all 20+ properties available
+)
+```
+
+#### Register Your Theme
+
+```python
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
 
 class MyPlugin(BasePlugin):
-    MY_THEME = ReportTheme(
-        id="my_custom",
-        name="My Custom Theme",
-        bg="#0a0a0f",
-        bg_elevated="#13131a",
-        accent="#ff2d95",           # Neon pink
-        accent_soft="rgba(255, 45, 149, 0.15)",
-        accent_strong="#00f0ff",    # Cyan
-        text_main="#e4e4f0",
-        text_soft="#8888a0",
-        ok="#00ff88",
-        warn="#ffcc00",
-        danger="#ff3366",
-        border_subtle="#2a2a3a",
-    )
-    
     def on_load(self, registry):
         helper = PluginHelper(registry, self.name)
-        helper.add_theme(self.MY_THEME)
+        helper.add_theme(MY_THEME)
 ```
 
-Then use in JSON: `"theme": { "preset": "my_custom" }`
+Then use in JSON: `"theme": { "preset": "neon" }`
 
 ### Available Theme Properties
 

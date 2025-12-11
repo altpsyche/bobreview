@@ -11,7 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Plugin Developer Experience
 
-BobReview v1.0.7 introduces significant improvements to the plugin development experience with new helper classes, CLI scaffolding, and modular architecture refinements.
+BobReview v1.0.7 introduces plugin development experience with new helper classes, CLI scaffolding, modular architecture refinements, and a refined theme system.
+
+### Theme System Improvements
+
+- **Theme Creation API**:
+  - `create_theme(id, name, base='dark', **overrides)` - Quick theme creation with inheritance
+  - `ReportTheme` dataclass - Full control over all 20+ theme properties
+  - `hex_to_rgba(hex_color, alpha)` - Public utility for generating soft color variants
+
+- **Theme Inheritance Fix**: `resolve_theme()` now correctly inherits parent values
+  - Child themes only override explicitly specified properties
+  - Parent theme values are preserved for unspecified properties
+
+- **CLI Theme Fix**: `--theme` argument respects JSON `preset` unless explicitly overridden
+
+- **Test Suite** (`tests/unit/core/`):
+  - `test_themes.py` - 45+ tests for ReportTheme, CSS generation, inheritance
+  - `test_theme_system.py` - 35+ tests for ThemeSystem facade
+  - Behavior-focused tests (not implementation-specific)
 
 ### Added
 
