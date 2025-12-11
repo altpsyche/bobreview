@@ -51,5 +51,5 @@ class ConfigMerger:
         
         # Merge theme config
         theme_cfg = system_def.theme
-        config.output.theme_id = theme_cfg.default
+        config.output.theme_id = theme_cfg.preset
 

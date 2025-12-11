@@ -1,59 +1,40 @@
 /*
- * BobReview - Core Utilities
- * Minimal base styles for potential tool/CLI UIs
+ * BobReview - Core CSS Variables
  * 
- * NOTE: Plugins define their own complete styles.
- * This file is reserved for future core tool UIs.
+ * This file defines the standard CSS custom properties (variables) used across
+ * all BobReview reports. Themes override these values via :root blocks.
+ * 
+ * Plugins should use these variables in their CSS for consistency.
  */
 
 /* ============================================
-   THEME TOKENS (Reference)
+   STANDARD CSS VARIABLES
    ============================================
    
-   Plugins should define these in their own templates:
+   All themes must define these variables. Plugins should use these
+   standard names for consistency.
    
-   --bg, --bg-elevated, --bg-soft
-   --accent, --accent-soft, --accent-strong
-   --text-main, --text-soft
-   --ok, --ok-soft, --warn, --warn-soft, --danger, --danger-soft
-   --border-subtle
-   --radius-lg, --radius-md
-   --shadow-soft
-   --sans, --mono
+   NOTE: Theme variables are NOT defined here - they are provided by
+   the theme system via :root blocks generated from ReportTheme objects.
+   This file only contains base styles that use the variables.
    
 ============================================ */
 
-/* Default theme for standalone use */
-:root {
-  --bg: #070b10;
-  --bg-elevated: #0e141b;
-  --bg-soft: #151c26;
-  --accent: #4ea1ff;
-  --accent-soft: rgba(78, 161, 255, 0.15);
-  --text-main: #f5f7fb;
-  --text-soft: #a8b3c5;
-  --ok: #4fd18b;
-  --warn: #e6b35c;
-  --danger: #ff5c5c;
-  --border-subtle: #1e2835;
-  --radius-lg: 12px;
-  --radius-md: 8px;
-  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
-  --sans: system-ui, -apple-system, sans-serif;
-  --mono: "SF Mono", Menlo, Consolas, monospace;
-}
+/* ============================================
+   BASE RESET & STYLES
+   ============================================ */
 
-/* Reset */
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Base */
 body {
-  margin: 0;
-  font-family: var(--sans);
+  font-family: var(--font-family);
   background: var(--bg);
   color: var(--text-main);
+  line-height: 1.6;
 }
 
 a {
@@ -65,4 +46,71 @@ a:hover {
   text-decoration: underline;
 }
 
-/* End of core styles */
+/* ============================================
+   LAYOUT COMPONENTS
+   ============================================ */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+header {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+header h1 {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  color: var(--text-soft);
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+
+.card {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-subtle);
+}
+
+.card h2 {
+  color: var(--accent);
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+th {
+  color: var(--text-soft);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}

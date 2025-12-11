@@ -11,8 +11,8 @@ from .utils import (
     log_info, log_success, log_warning, log_error, log_verbose,
     format_number, image_to_base64
 )
-from .theme_utils import get_theme, get_theme_css_variables
-from .themes import ReportTheme, BUILTIN_THEMES
+from .themes import ReportTheme, BUILTIN_THEMES, resolve_theme, get_theme_css_variables
+from .theme_system import ThemeSystem, get_theme_system, get_resolved_theme, get_theme_css
 from .config_utils import merge_config, merge_nested_config
 from .plugin_utils import safe_plugin_call, call_plugin_lifecycle_hooks
 from .api import (
@@ -21,7 +21,7 @@ from .api import (
     ChartGeneratorInterface,
     ContextBuilderInterface
 )
-from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon, get_theme_css_block
 
 __all__ = [
     # Config
@@ -47,11 +47,16 @@ __all__ = [
     # Analysis - domain-specific functions moved to plugins
     # Use plugin-provided analysis instead
     
-    # Themes
-    'get_theme',
-    'get_theme_css_variables',
+    # Themes (use ThemeSystem for new code)
     'ReportTheme',
+    'get_theme_css_variables',  # From themes.py
     'BUILTIN_THEMES',
+    'resolve_theme',
+    # Unified Theme System
+    'ThemeSystem',
+    'get_theme_system',
+    'get_resolved_theme',
+    'get_theme_css',
     
     # Config utilities
     'merge_config',
@@ -71,4 +76,5 @@ __all__ = [
     'sanitize_llm_html',
     'get_shared_css',
     'get_trend_icon',
+    'get_theme_css_block',
 ]

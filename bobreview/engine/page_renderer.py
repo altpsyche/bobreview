@@ -110,7 +110,7 @@ class PageRenderer:
         )
         
         # If using linked CSS, generate theme.css at runtime
-        if self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else False:
+        if getattr(self.config.output, 'linked_css', False):
             self._write_theme_css(output_dir, base_context.get('_theme_object'))
         
         # Generate each page
@@ -162,7 +162,7 @@ class PageRenderer:
     ) -> Dict[str, Any]:
         """Build the base context shared by all pages."""
         from datetime import datetime
-        from ..core.themes import get_theme_by_id, theme_to_dict
+        from ..core.theme_system import get_theme_system
         
         count = stats.get('count', len(data_points))
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
@@ -171,23 +171,28 @@ class PageRenderer:
         # Theme resolution priority: CLI --theme > JSON preset > fallback dark
         theme_name = "dark"  # Fallback
         
-        # Check JSON preset first
+        # Check ThemeConfig.preset (which contains preset from JSON or CLI override)
         if self.system_def.theme:
             if isinstance(self.system_def.theme, str):
                 theme_name = self.system_def.theme
+            elif hasattr(self.system_def.theme, 'preset'):
+                # ThemeConfig object - use preset field
+                theme_name = self.system_def.theme.preset
             elif isinstance(self.system_def.theme, dict):
+                # Fallback for dict format (shouldn't happen, but be safe)
                 theme_name = self.system_def.theme.get('preset', 'dark')
         
-        # CLI --theme overrides JSON preset
+        # CLI --theme overrides JSON preset (already merged into theme.preset via config merger)
+        # But check config.output.theme_id as final override (highest priority)
         if hasattr(self.config.output, 'theme_id') and self.config.output.theme_id:
             theme_name = self.config.output.theme_id
         
-        # Get theme from built-in themes (fallback to dark if not found)
-        theme = get_theme_by_id(theme_name)
-        if not theme:
-            from ..core.themes import DARK_THEME
-            theme = DARK_THEME
-        theme_vars = theme_to_dict(theme)
+        # Use unified ThemeSystem to resolve theme (handles inheritance)
+        theme_system = get_theme_system()
+        resolved_theme = theme_system.resolve_theme(theme_name)
+        
+        # Get theme dict for templates
+        theme_vars = theme_system.get_theme_dict(theme_name) if resolved_theme else {}
         
         return {
             # Core data
@@ -200,7 +205,7 @@ class PageRenderer:
             # Theme (for dynamic styling)
             'theme': theme_vars,
             'theme_name': theme_name,
-            '_theme_object': theme,  # For runtime CSS generation
+            '_theme_object': resolved_theme,  # For runtime CSS generation (resolved theme)
             
             # LLM content (empty initially, populated per-page)
             'llm': {},
@@ -229,26 +234,64 @@ class PageRenderer:
     
     def _write_theme_css(self, output_dir: Path, theme) -> None:
         """
-        Write theme.css to output directory for linked CSS mode.
+        Write theme.css and copy plugin.css to output directory for linked CSS mode.
         
         When linked_css=True, templates load external CSS files. This method
-        generates theme.css dynamically based on the selected theme so runtime
-        theme switching works with external CSS too.
+        generates theme.css dynamically based on the selected theme and copies
+        plugin.css from the plugin's template directory.
+        
+        Uses the unified ThemeSystem for consistent CSS generation.
+        
+        Parameters:
+            output_dir: Output directory for the report
+            theme: ReportTheme instance (should already be resolved)
         """
         if not theme:
             return
         
-        from ..core.themes import generate_theme_css
+        from ..core.theme_system import get_theme_system
+        import shutil
         
         # Create static directory if needed
         static_dir = output_dir / 'static'
         static_dir.mkdir(parents=True, exist_ok=True)
         
-        # Write theme.css
-        css_content = generate_theme_css(theme)
+        # Use unified ThemeSystem to generate CSS file
+        theme_system = get_theme_system()
         theme_css_path = static_dir / 'theme.css'
-        with open(theme_css_path, 'w', encoding='utf-8') as f:
-            f.write(css_content)
+        theme_system.generate_theme_css_file(theme.id, theme_css_path)
+        
+        log_verbose(f"Generated theme.css for linked CSS mode (theme: {theme.id})", self.config)
+        
+        # Copy plugin.css from plugin template directory if it exists
+        # Check plugin template paths from extension point
+        if self.extension_point:
+            template_paths = self.extension_point.get_template_paths()
+            for template_path, plugin_name, _priority in template_paths:
+                template_path_obj = Path(template_path)
+                
+                # Look for plugin.css in various possible locations
+                # Pattern 1: templates/{plugin_name}/static/plugin.css
+                plugin_css_src = template_path_obj / 'static' / 'plugin.css'
+                if not plugin_css_src.exists():
+                    # Pattern 2: templates/{plugin_name}/pages/../static/plugin.css
+                    # (if template_path points to pages directory)
+                    if template_path_obj.name == 'pages':
+                        plugin_css_src = template_path_obj.parent / 'static' / 'plugin.css'
+                    else:
+                        # Pattern 3: Check subdirectories
+                        for subdir in template_path_obj.iterdir():
+                            if subdir.is_dir():
+                                potential = subdir / 'static' / 'plugin.css'
+                                if potential.exists():
+                                    plugin_css_src = potential
+                                    break
+                
+                if plugin_css_src.exists():
+                    plugin_css_dst = static_dir / 'plugin.css'
+                    shutil.copy2(plugin_css_src, plugin_css_dst)
+                    log_verbose(f"Copied plugin.css from {plugin_css_src} to output directory", self.config)
+                    break
     
     def _render_page(
         self,

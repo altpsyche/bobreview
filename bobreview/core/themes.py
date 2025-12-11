@@ -5,8 +5,8 @@ This module provides theme dataclasses and built-in theme definitions.
 Themes are registered via the plugin registry, but the definitions live here.
 """
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any
 
 
 @dataclass
@@ -16,9 +16,14 @@ class ReportTheme:
     
     These values map directly to CSS custom properties (variables) in styles.css.
     
+    Supports theme inheritance via the `extends` parameter, allowing themes to
+    inherit from other themes and override specific variables.
+    
     Attributes:
         id: Unique identifier for the theme (e.g., 'dark', 'light')
         name: Human-readable theme name
+        extends: Optional theme ID to inherit from (for modular themes)
+        overrides: Optional dict of variable overrides (alternative to setting fields)
         
         # Background colors
         bg: Main background color
@@ -51,6 +56,10 @@ class ReportTheme:
     """
     id: str
     name: str
+    
+    # Theme inheritance (modular)
+    extends: Optional[str] = None
+    overrides: Dict[str, Any] = field(default_factory=dict)
     
     # Backgrounds
     bg: str = '#070b10'
@@ -86,6 +95,54 @@ class ReportTheme:
     
     # Chart styling
     chart_grid_opacity: float = 0.5
+    
+    def __post_init__(self):
+        """Apply overrides after initialization and validate theme."""
+        if self.overrides:
+            for key, value in self.overrides.items():
+                if hasattr(self, key):
+                    setattr(self, key, value)
+        
+        # Validate required fields
+        self._validate()
+    
+    def _validate(self):
+        """Validate theme has required fields and valid values."""
+        errors = []
+        
+        # Required fields
+        if not self.id or not isinstance(self.id, str) or not self.id.strip():
+            errors.append("Theme 'id' is required and must be a non-empty string")
+        
+        if not self.name or not isinstance(self.name, str) or not self.name.strip():
+            errors.append("Theme 'name' is required and must be a non-empty string")
+        
+        # Validate id format (should be alphanumeric with underscores/hyphens)
+        if self.id and isinstance(self.id, str):
+            if not self.id.replace('_', '').replace('-', '').isalnum():
+                errors.append(f"Theme 'id' '{self.id}' contains invalid characters. Use alphanumeric, underscore, or hyphen only.")
+        
+        # Validate extends reference (if set)
+        if self.extends is not None:
+            if not isinstance(self.extends, str) or not self.extends.strip():
+                errors.append("Theme 'extends' must be a non-empty string if provided")
+            elif self.extends == self.id:
+                errors.append(f"Theme '{self.id}' cannot extend itself")
+        
+        # Validate overrides (if set)
+        if self.overrides is not None:
+            if not isinstance(self.overrides, dict):
+                errors.append("Theme 'overrides' must be a dictionary if provided")
+            else:
+                # Check that override keys are valid theme fields
+                valid_fields = {f.name for f in self.__dataclass_fields__.values()}
+                invalid_overrides = [k for k in self.overrides.keys() if k not in valid_fields]
+                if invalid_overrides:
+                    errors.append(f"Theme 'overrides' contains invalid fields: {', '.join(invalid_overrides)}")
+        
+        if errors:
+            error_msg = f"Theme '{self.id}' validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+            raise ValueError(error_msg)
 
 
 # Built-in theme definitions
@@ -270,11 +327,86 @@ def get_available_themes() -> list:
     return list(THEMES_BY_ID.keys())
 
 
+def resolve_theme(theme: ReportTheme, theme_registry: Optional[Any] = None, visited: Optional[set] = None) -> ReportTheme:
+    """
+    Resolve theme inheritance and return a fully resolved theme.
+    
+    If theme extends another theme, inherits all values from parent and
+    applies overrides. Handles multi-level inheritance.
+    
+    Parameters:
+        theme: ReportTheme instance (may have extends/overrides)
+        theme_registry: Optional registry to look up parent themes
+                       (if None, uses built-in themes)
+        visited: Set of theme IDs already visited (for circular inheritance detection)
+    
+    Returns:
+        Resolved ReportTheme with all inheritance applied
+    
+    Raises:
+        ValueError: If circular inheritance is detected
+    """
+    if not theme.extends:
+        return theme
+    
+    # Initialize visited set if not provided (first call)
+    if visited is None:
+        visited = set()
+    
+    # Check for circular inheritance
+    if theme.id in visited:
+        cycle = ' -> '.join(sorted(visited)) + f' -> {theme.id}'
+        raise ValueError(
+            f"Circular theme inheritance detected: {cycle}. "
+            f"Theme '{theme.id}' extends '{theme.extends}' which creates a cycle."
+        )
+    
+    # Add current theme to visited set
+    visited.add(theme.id)
+    
+    # Get parent theme
+    if theme_registry:
+        parent = theme_registry.get(theme.extends)
+    else:
+        parent = get_theme_by_id(theme.extends)
+    
+    if not parent:
+        # Parent not found, return theme as-is (but warn)
+        import warnings
+        warnings.warn(
+            f"Theme '{theme.id}' extends '{theme.extends}' but parent theme not found. "
+            f"Returning theme without inheritance.",
+            UserWarning
+        )
+        return theme
+    
+    # Resolve parent first (handle multi-level inheritance)
+    # Pass visited set to detect cycles
+    resolved_parent = resolve_theme(parent, theme_registry, visited.copy())
+    
+    # Create new theme with parent values, overridden by child
+    from dataclasses import asdict
+    parent_dict = asdict(resolved_parent)
+    child_dict = asdict(theme)
+    
+    # Merge: parent values + child overrides
+    merged = {**parent_dict, **child_dict}
+    
+    # Remove extends/overrides from merged dict (they're not theme fields)
+    merged.pop('extends', None)
+    merged.pop('overrides', None)
+    
+    # Create resolved theme
+    return ReportTheme(**merged)
+
+
 def get_theme_css_variables(theme: ReportTheme) -> str:
     """
     Generate CSS :root block with theme variables.
     
-    This can be used to override the default styles.css variables.
+    This generates a complete set of CSS custom properties that override
+    the default styles.css variables. Includes all standard variables plus
+    aliases for backward compatibility.
     
     Parameters:
         theme: ReportTheme instance
@@ -285,33 +417,70 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     if not theme:
         return ''
     
+    # Calculate additional radius values if not explicitly set
+    # Defaults based on standard values
+    radius_sm = '4px'
+    radius_xl = '16px'
+    
+    # Try to infer from existing values if possible
+    if hasattr(theme, 'radius_sm'):
+        radius_sm = theme.radius_sm
+    if hasattr(theme, 'radius_xl'):
+        radius_xl = theme.radius_xl
+    
     return f""":root {{
+  /* Backgrounds */
   --bg: {theme.bg};
   --bg-elevated: {theme.bg_elevated};
   --bg-soft: {theme.bg_soft};
+  
+  /* Accents */
   --accent: {theme.accent};
   --accent-soft: {theme.accent_soft};
   --accent-strong: {theme.accent_strong};
+  
+  /* Text */
   --text-main: {theme.text_main};
   --text-soft: {theme.text_soft};
-  --border-subtle: {theme.border_subtle};
-  --danger: {theme.danger};
-  --danger-soft: {theme.danger_soft};
-  --warn: {theme.warn};
-  --warn-soft: {theme.warn_soft};
+  
+  /* Status Colors */
   --ok: {theme.ok};
   --ok-soft: {theme.ok_soft};
-  --mono: {theme.font_mono};
-  --sans: {theme.font_sans};
-  --radius-lg: {theme.radius_lg};
-  --radius-md: {theme.radius_md};
+  --warn: {theme.warn};
+  --warn-soft: {theme.warn_soft};
+  --danger: {theme.danger};
+  --danger-soft: {theme.danger_soft};
+  
+  /* Borders & Effects */
+  --border-subtle: {theme.border_subtle};
   --shadow-soft: {theme.shadow_soft};
+  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
+  
+  /* Border Radius */
+  --radius-sm: {radius_sm};
+  --radius-md: {theme.radius_md};
+  --radius-lg: {theme.radius_lg};
+  --radius-xl: {radius_xl};
+  
+  /* Fonts */
+  --font-family: {theme.font_sans};
+  --font-mono: {theme.font_mono};
+  
+  /* Font Weights */
+  --weight-light: 300;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
 }}"""
 
 
 def theme_to_dict(theme: ReportTheme) -> dict:
     """
     Convert a ReportTheme to a dict for template context.
+    
+    Includes all theme values plus aliases for backward compatibility.
+    Templates can use either the standard names or aliases.
     
     Parameters:
         theme: ReportTheme instance
@@ -323,23 +492,47 @@ def theme_to_dict(theme: ReportTheme) -> dict:
         return {}
     
     return {
+        # Core theme info
         "id": theme.id,
         "name": theme.name,
+        
+        # Backgrounds
         "bg": theme.bg,
         "bg_elevated": theme.bg_elevated,
         "bg_soft": theme.bg_soft,
+        
+        # Accents
         "accent": theme.accent,
         "accent_soft": theme.accent_soft,
         "accent_strong": theme.accent_strong,
+        
+        # Text
         "text_main": theme.text_main,
         "text_soft": theme.text_soft,
+        
+        # Status colors
         "ok": theme.ok,
         "ok_soft": theme.ok_soft,
         "warn": theme.warn,
         "warn_soft": theme.warn_soft,
         "danger": theme.danger,
         "danger_soft": theme.danger_soft,
+        
+        # Borders & Effects
+        "border_subtle": theme.border_subtle,
+        "shadow_soft": theme.shadow_soft,
+        "radius_lg": theme.radius_lg,
+        "radius_md": theme.radius_md,
+        
+        # Fonts
+        "font_sans": theme.font_sans,
+        "font_mono": theme.font_mono,
+        
+        # Aliases for backward compatibility
         "border": theme.border_subtle,
+        "text_secondary": theme.text_soft,
+        "success": theme.ok,
+        "warning": theme.warn,
     }
 
 
@@ -348,39 +541,26 @@ def generate_theme_css(theme: ReportTheme) -> str:
     Generate CSS content with :root variables from a theme.
     
     Used for runtime theme.css generation when linked_css=True.
+    This generates a complete CSS file that can be linked externally.
     
     Parameters:
         theme: ReportTheme instance
         
     Returns:
-        CSS string with :root variables
+        CSS string with :root variables and comments
     """
+    if not theme:
+        return ''
+    
+    # Calculate additional radius values
+    radius_sm = '4px'
+    radius_xl = '16px'
+    
+    # Use same logic as get_theme_css_variables for consistency
+    css_vars = get_theme_css_variables(theme)
+    
     return f"""/* Generated theme: {theme.name} */
-:root {{
-    --bg: {theme.bg};
-    --bg-elevated: {theme.bg_elevated};
-    --bg-soft: {theme.bg_soft};
-    --bg-hover: {theme.accent_soft};
-    --accent: {theme.accent};
-    --accent-soft: {theme.accent_soft};
-    --accent-strong: {theme.accent_strong};
-    --text-main: {theme.text_main};
-    --text-soft: {theme.text_soft};
-    --ok: {theme.ok};
-    --ok-soft: {theme.ok_soft};
-    --warn: {theme.warn};
-    --warn-soft: {theme.warn_soft};
-    --danger: {theme.danger};
-    --danger-soft: {theme.danger_soft};
-    --border: {theme.border_subtle};
-    --border-subtle: rgba(255, 255, 255, 0.05);
-    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
-    --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --font-family: {theme.font_sans};
-    --font-mono: {theme.font_mono};
-}}
+/* This file is auto-generated. Do not edit manually. */
+
+{css_vars}
 """

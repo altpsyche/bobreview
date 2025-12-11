@@ -72,7 +72,6 @@ def create_plugin(
     }
     
     if template == 'full':
-        manifest["provides"]["themes"] = [f"{safe_name}_theme"]
         manifest["provides"]["context_builders"] = [safe_name]
         manifest["provides"]["chart_generators"] = [safe_name]
     
@@ -134,7 +133,7 @@ __all__ = ['{class_name}CsvParser']
     templates_dir = plugin_dir / "templates" / safe_name / "pages"
     templates_dir.mkdir(parents=True, exist_ok=True)
     
-    base_template = _generate_base_template(name, safe_name, theme)
+    base_template = _generate_base_template(name, safe_name, theme, color_theme)
     (templates_dir / "base.html.j2").write_text(base_template, encoding='utf-8')
     
     home_template = _generate_home_template(name, safe_name)
@@ -144,9 +143,9 @@ __all__ = ['{class_name}CsvParser']
     static_dir = plugin_dir / "templates" / safe_name / "static"
     static_dir.mkdir(parents=True, exist_ok=True)
     
-    # Generate theme CSS (customizable colors)
-    theme_css = _generate_theme_css(name, safe_name, theme, color_theme)
-    (static_dir / "theme.css").write_text(theme_css, encoding='utf-8')
+    # Note: theme.css is NOT generated here - it's generated dynamically at runtime
+    # based on the theme specified in the report system JSON or CLI --theme flag.
+    # This ensures theme changes are always reflected without regenerating plugin files.
     
     # Generate plugin CSS (layout and components)
     plugin_css = _generate_plugin_css(name, safe_name)
@@ -173,7 +172,6 @@ from bobreview.core.plugin_system import BasePlugin, PluginHelper"""
     
     if template == 'full':
         imports += """
-from bobreview.core.themes import ReportTheme
 from .parsers.csv_parser import {class_name}CsvParser
 from .context_builder import {class_name}ContextBuilder
 from .chart_generator import {class_name}ChartGenerator""".format(class_name=class_name)
@@ -181,42 +179,14 @@ from .chart_generator import {class_name}ChartGenerator""".format(class_name=cla
         imports += f"""
 from .parsers.csv_parser import {class_name}CsvParser"""
     
+    # No custom theme generation - plugins should use built-in themes via JSON preset
     theme_section = ""
-    if template == 'full':
-        theme_section = f'''
-    # Custom theme
-    CUSTOM_THEME = ReportTheme(
-        id="{safe_name}_theme",
-        name="{name} Theme",
-        bg="#1a1a2e",
-        bg_elevated="#16213e",
-        bg_soft="#0f3460",
-        accent="#e94560",
-        accent_soft="rgba(233, 69, 96, 0.15)",
-        accent_strong="#ff6b6b",
-        text_main="#eaeaea",
-        text_soft="#a0a0a0",
-        danger="#ff4757",
-        danger_soft="rgba(255, 71, 87, 0.15)",
-        warn="#ffa502",
-        warn_soft="rgba(255, 165, 2, 0.15)",
-        ok="#2ed573",
-        ok_soft="rgba(46, 213, 115, 0.15)",
-        border_subtle="#2f3545",
-        shadow_soft="0 4px 12px rgba(0, 0, 0, 0.3)",
-        radius_lg="12px",
-        radius_md="8px",
-    )
-'''
     
     registration = f'''        # Register data parser
         helper.add_data_parser("{safe_name}_csv", {class_name}CsvParser)'''
     
     if template == 'full':
         registration += f'''
-        
-        # Register theme
-        helper.add_theme(self.CUSTOM_THEME)
         
         # Register context builder
         helper.add_context_builder("{safe_name}", {class_name}ContextBuilder)
@@ -552,9 +522,8 @@ def _generate_report_system(name: str, safe_name: str, template: str, color_them
     }
 
 
-def _generate_base_template(name: str, safe_name: str, theme: ReportTheme) -> str:
-    """Generate base Jinja2 template with linked CSS files."""
-    t = theme  # shorthand for template interpolation (theme is unused in this function)
+def _generate_base_template(name: str, safe_name: str, theme: ReportTheme, theme_id: str) -> str:
+    """Generate base Jinja2 template using unified theme system."""
     return '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -563,124 +532,18 @@ def _generate_base_template(name: str, safe_name: str, theme: ReportTheme) -> st
     <title>{{ config.title | default("''' + name + ''' Report") }}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    {# Link external CSS files if available, otherwise use embedded styles #}
+    {# Unified theme system - supports both embedded and linked CSS #}
     {% if linked_css %}
     <link rel="stylesheet" href="static/theme.css">
     <link rel="stylesheet" href="static/plugin.css">
     {% else %}
     <style>
-        /* ===== THEME VARIABLES (from JSON preset) ===== */
-        :root {
-            --bg: {{ theme.bg if theme else '#1a1a2e' }};
-            --bg-elevated: {{ theme.bg_elevated if theme else '#16213e' }};
-            --bg-soft: {{ theme.bg_soft if theme else '#0f3460' }};
-            --bg-hover: {{ theme.accent_soft if theme else 'rgba(78, 161, 255, 0.08)' }};
-            --accent: {{ theme.accent if theme else '#4ea1ff' }};
-            --accent-soft: {{ theme.accent_soft if theme else 'rgba(78, 161, 255, 0.15)' }};
-            --accent-strong: {{ theme.accent_strong if theme else '#ffb347' }};
-            --text-main: {{ theme.text_main if theme else '#f5f7fb' }};
-            --text-soft: {{ theme.text_soft if theme else '#a8b3c5' }};
-            --ok: {{ theme.ok if theme else '#4fd18b' }};
-            --ok-soft: {{ theme.ok_soft if theme else 'rgba(79, 209, 139, 0.15)' }};
-            --warn: {{ theme.warn if theme else '#e6b35c' }};
-            --warn-soft: {{ theme.warn_soft if theme else 'rgba(230, 179, 92, 0.15)' }};
-            --danger: {{ theme.danger if theme else '#ff5c5c' }};
-            --danger-soft: {{ theme.danger_soft if theme else 'rgba(255, 92, 92, 0.15)' }};
-            --border: {{ theme.border if theme else '#2f3545' }};
-            --border-subtle: rgba(255, 255, 255, 0.05);
-            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
-            --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
-            --radius-sm: 4px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --radius-xl: 16px;
-            --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            --font-mono: 'SF Mono', 'Fira Code', Consolas, monospace;
-        }
+        {# Use unified theme system - theme_name comes from context #}
+        {# get_theme_css() includes theme variables AND base styles #}
+        {{ get_theme_css(theme_name) }}
         
-        /* ===== BASE STYLES ===== */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: var(--font-family);
-            background: var(--bg);
-            color: var(--text-main);
-            line-height: 1.7;
-            -webkit-font-smoothing: antialiased;
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        header { text-align: center; padding: 3rem 0; }
-        header h1 { color: var(--accent); font-weight: 700; font-size: 2.5rem; }
-        header p { color: var(--text-soft); }
-        
-        /* ===== CARDS ===== */
-        .card {
-            background: var(--bg-elevated);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem 2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border-subtle);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-strong); }
-        .card h2 { color: var(--accent); margin-bottom: 1rem; font-size: 1.25rem; font-weight: 600; }
-        
-        /* ===== TABLES ===== */
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--text-soft); font-weight: 500; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
-        tr:hover { background: var(--bg-hover); }
-        
-        /* ===== CHARTS ===== */
-        .chart-container { position: relative; height: 300px; padding: 1rem 0; }
-        
-        /* ===== LLM CONTENT ===== */
-        .llm-content { line-height: 1.8; }
-        .llm-content p { margin-bottom: 1rem; }
-        .llm-content strong, .llm-content b { color: var(--accent); font-weight: 600; }
-        .llm-content em, .llm-content i { color: var(--text-soft); }
-        .llm-content ul, .llm-content ol { margin: 1rem 0; padding-left: 1.5rem; }
-        .llm-content li { margin-bottom: 0.5rem; }
-        .llm-content li::marker { color: var(--accent); }
-        .llm-content h3, .llm-content h4 { color: var(--accent); margin: 1.5rem 0 0.75rem; }
-        .llm-content code {
-            background: var(--accent-soft);
-            padding: 0.15rem 0.4rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.9em;
-            font-family: var(--font-mono);
-            color: var(--accent);
-        }
-        .llm-content pre {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 1rem;
-            border-radius: var(--radius-md);
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-        .llm-content pre code { background: none; padding: 0; color: var(--text-main); }
-        .llm-content blockquote {
-            border-left: 3px solid var(--accent);
-            padding-left: 1rem;
-            margin: 1rem 0;
-            color: var(--text-soft);
-            font-style: italic;
-        }
-        .llm-content a { color: var(--accent); text-decoration: none; }
-        .llm-content a:hover { text-decoration: underline; }
-        
-        /* ===== BADGES ===== */
-        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: var(--radius-xl); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .badge-ok { background: var(--ok-soft); color: var(--ok); }
-        .badge-warn { background: var(--warn-soft); color: var(--warn); }
-        .badge-danger { background: var(--danger-soft); color: var(--danger); }
-        
-        /* ===== UTILITIES ===== */
-        .text-soft { color: var(--text-soft); }
-        .text-accent { color: var(--accent); }
-        .text-ok { color: var(--ok); }
-        .text-warn { color: var(--warn); }
-        .text-danger { color: var(--danger); }
+        {# Include plugin-specific styles (layout and components) #}
+        {% include "static/plugin.css" ignore missing %}
     </style>
     {% endif %}
     
@@ -755,101 +618,7 @@ new Chart(ctx, {{ charts.score_chart | safe }});
 {% endblock %}'''
 
 
-def _generate_theme_css(name: str, safe_name: str, theme: ReportTheme, theme_name: str) -> str:
-    """Generate customizable theme CSS file with selected theme."""
-    t = theme  # shorthand
-    
-    # Build the alternatives section showing other available themes
-    other_themes = []
-    for tid, tdata in THEMES_BY_ID.items():
-        if tid != theme_name and tid in ('dark', 'ocean', 'purple', 'terminal', 'sunset'):
-            other_themes.append(f'''/*
---- {tdata.name} Theme ---
-:root {{
-    --bg: {tdata.bg};
-    --bg-elevated: {tdata.bg_elevated};
-    --accent: {tdata.accent};
-    --accent-soft: {tdata.accent_soft};
-    --text-main: {tdata.text_main};
-    --text-soft: {tdata.text_soft};
-}}
-*/''')
-    alternatives = '\n\n'.join(other_themes)
-    
-    return f'''/*
- * {name} Theme — {t.name}
- * 
- * Customize your plugin's color scheme here.
- * All CSS variables can be overridden per-theme.
- * 
- * Created with: bobreview plugins create {name} --theme {theme_name}
- */
-
-:root {{
-    /* ===========================================
-       BACKGROUND COLORS
-       =========================================== */
-    --bg: {t.bg};                          /* Main background */
-    --bg-elevated: {t.bg_elevated};                 /* Cards, panels */
-    --bg-soft: {t.bg_soft};                     /* Subtle backgrounds */
-    --bg-hover: {t.accent_soft};    /* Hover states */
-    
-    /* ===========================================
-       ACCENT COLORS (Primary Brand)
-       =========================================== */
-    --accent: {t.accent};                      /* Primary accent */
-    --accent-soft: {t.accent_soft}; /* Accent backgrounds */
-    --accent-strong: {t.accent_strong};               /* Emphasized accent */
-    --accent-gradient: linear-gradient(135deg, {t.accent} 0%, {t.accent_strong} 100%);
-    
-    /* ===========================================
-       TEXT COLORS
-       =========================================== */
-    --text-main: {t.text_main};                   /* Primary text */
-    --text-soft: {t.text_soft};                   /* Secondary text */
-    --text-muted: #6c7a89;                  /* Muted/disabled text */
-    
-    /* ===========================================
-       STATUS COLORS
-       =========================================== */
-    --ok: {t.ok};                          /* Success, good */
-    --ok-soft: {t.ok_soft};
-    --warn: {t.warn};                        /* Warning, caution */
-    --warn-soft: {t.warn_soft};
-    --danger: {t.danger};                      /* Error, critical */
-    --danger-soft: {t.danger_soft};
-    
-    /* ===========================================
-       BORDERS & SHADOWS
-       =========================================== */
-    --border: {t.border_subtle};                      /* Default borders */
-    --border-subtle: rgba(255, 255, 255, 0.05);
-    --shadow-soft: {t.shadow_soft};
-    
-    /* ===========================================
-       SIZING & SPACING
-       =========================================== */
-    --radius-sm: 4px;
-    --radius-md: {t.radius_md};
-    --radius-lg: {t.radius_lg};
-    --radius-xl: 16px;
-    
-    /* ===========================================
-       TYPOGRAPHY
-       =========================================== */
-    --font-family: {t.font_sans};
-    --font-mono: {t.font_mono};
-}}
-
-/* ===========================================
-   ALTERNATIVE THEMES
-   
-   Uncomment one of these to use a different scheme,
-   or create your own!
-   =========================================== */
-
-{alternatives}
-'''
+# Removed - now using unified ThemeSystem.generate_theme_css_file()
 
 
 def _generate_plugin_css(name: str, safe_name: str) -> str:
@@ -859,21 +628,15 @@ def _generate_plugin_css(name: str, safe_name: str) -> str:
  * 
  * Layout and component styles for the plugin.
  * Customize these to match your plugin's needs.
+ * 
+ * NOTE: Base reset styles are provided by styles.css via get_theme_css().
+ * This file only contains layout and component styles.
  */
 
 /* ===========================================
-   BASE RESET & TYPOGRAPHY
+   TYPOGRAPHY ENHANCEMENTS
    =========================================== */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
 body {
-    font-family: var(--font-family);
-    background: var(--bg);
-    color: var(--text-main);
     line-height: 1.7;
     -webkit-font-smoothing: antialiased;
 }
@@ -939,7 +702,7 @@ table {
 th, td {
     padding: 0.75rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 th {

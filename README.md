@@ -204,7 +204,8 @@ bobreview plugins create my-plugin --template minimal
 
 ## Customizing Themes
 
-BobReview includes 7 built-in themes using the `ReportTheme` dataclass:
+BobReview uses a **unified theme system** with 7 built-in themes. Themes support inheritance and can be customized via JSON or CLI.
+
 
 ### Built-in Themes
 
@@ -218,7 +219,9 @@ BobReview includes 7 built-in themes using the `ReportTheme` dataclass:
 | `terminal` | Terminal Green | Green, JetBrains Mono |
 | `sunset` | Sunset Warm | Orange, Outfit font |
 
-### Switching Themes via JSON
+### Switching Themes
+
+**Via JSON** (in `report_systems/*.json`):
 
 Edit your `report_systems/<plugin>.json`:
 

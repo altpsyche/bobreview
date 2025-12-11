@@ -382,7 +382,7 @@ class ReportSystemExecutor:
         """
         Generate all configured pages using Jinja2 templates.
         
-        Uses CMS-style labels from JSON configuration - no hardcoded strings.
+        Delegates to PageRenderer for the actual rendering logic.
         
         Parameters:
             data_points: List of data points
@@ -391,204 +391,20 @@ class ReportSystemExecutor:
             input_dir: Input directory (for images)
             output_path: Output file path
         """
-        # Pre-encode images if needed
-        image_data_uris = {}
-        if self.config.output.embed_images:
-            log_info("Embedding images as base64...", self.config)
-            unique_images = set(point.get('img', '') for point in data_points if 'img' in point)
-            for img_name in unique_images:
-                if img_name:
-                    img_path = input_dir / img_name
-                    data_uri = image_to_base64(img_path)
-                    if data_uri:
-                        image_data_uris[img_name] = data_uri
+        from .page_renderer import PageRenderer
         
-        # Determine output directory
-        output_dir = output_path.parent
-        output_dir.mkdir(parents=True, exist_ok=True)
+        renderer = PageRenderer(
+            template_engine=self.template_engine,
+            extension_point=self._extension_point,
+            config=self.config,
+            system_def=self.system_def
+        )
         
-        # Calculate relative images directory
-        images_dir_rel = os.path.relpath(input_dir, output_dir)
-        
-        # Use injected template engine
-        engine = self.template_engine
-        
-        # Get labels from system definition
-        labels = self.system_def.labels
-        
-        # Get enabled pages
-        enabled_pages = [p for p in self.system_def.pages if p.enabled]
-        
-        # Build navigation items
-        nav_items = []
-        for page in enabled_pages:
-            nav_items.append({
-                'label': page.nav_label,
-                'url': page.filename,
-                'active': False
-            })
-        
-        # Generate each page
-        log_info(f"Generating {len(enabled_pages)} HTML pages using Jinja2 templates...", self.config)
-        
-        for i, page_config in enumerate(enabled_pages, 1):
-            page_path = output_dir / page_config.filename
-            log_info(f"[{i}/{len(enabled_pages)}] Rendering {page_config.filename}...", self.config)
-            
-            # Update nav to mark current page as active
-            page_nav = []
-            for nav in nav_items:
-                page_nav.append({
-                    **nav,
-                    'active': nav['url'] == page_config.filename
-                })
-            
-            # Build LLM content dict for this page using llm_mappings from config
-            llm_content = {}
-            # Use llm_mappings if available, otherwise fall back to llm_content list
-            if page_config.llm_mappings:
-                for template_key, generator_id in page_config.llm_mappings.items():
-                    llm_content[template_key] = llm_results.get(generator_id, '')
-            elif page_config.llm_content:
-                # Backward compat: use llm_content list as both key and generator ID
-                for generator_id in page_config.llm_content:
-                    llm_content[generator_id] = llm_results.get(generator_id, '')
-            
-            # Build base context for all templates (minimal universal context)
-            context = {
-                # Core data - available to all templates
-                'config': self.config,
-                'stats': stats,
-                'data': stats,   # Universal alias - all templates can use data.*
-                'data_points': data_points,
-                'system_def': self.system_def,  # Add system_def for threshold lookups
-                
-                # LLM generated content
-                'llm': llm_content,
-                'llm_content': llm_content,  # Alias for consistency
-                
-                # Navigation
-                'nav_items': page_nav,
-                'pages': [asdict(p) for p in enabled_pages],
-                
-                # Report system content blocks
-                'content': self.system_def.content_blocks,
-                
-                # Images
-                'image_data_uris': image_data_uris,  # Base64 encoded images if embedding
-                'images_dir_rel': images_dir_rel,  # Relative path to images if not embedding
-                
-                # Meta
-                'meta_text': self._build_meta_text(stats, data_points),
-            }
-            
-            # Add context from registered context builder (images, critical points, aliases, etc.)
-            if self._extension_point:
-                context_builder_cls = self._extension_point.get_context_builder(self.system_def.id)
-            elif self.registry:
-                context_builder_cls = self.registry.context_builders.get(self.system_def.id)
-            else:
-                context_builder_cls = None
-            if context_builder_cls:
-                builder = context_builder_cls()
-                # Use core API interface method: build_context()
-                # Build base_context with all needed values
-                base_context = {
-                    'system_def': self.system_def,
-                    'input_dir': input_dir,
-                    'image_data_uris': image_data_uris,
-                    'images_dir_rel': images_dir_rel,
-                }
-                # Call interface method
-                plugin_context = builder.build_context(
-                    data_points=data_points,
-                    stats=stats,
-                    config=self.config,
-                    base_context=base_context
-                )
-                # Merge plugin context (it should already include base_context)
-                context.update(plugin_context)
-            
-            # Add charts if page has chart configurations - use plugin-provided generator
-            if page_config.charts:
-                if self._extension_point:
-                    chart_generator_cls = self._extension_point.get_chart_generator(self.system_def.id)
-                elif self.registry:
-                    chart_generator_cls = self.registry.chart_generators.get(self.system_def.id)
-                else:
-                    chart_generator_cls = None
-                if chart_generator_cls:
-                    # Instantiate with no args (core API interface)
-                    chart_generator = chart_generator_cls()
-                    labels_dict = labels.data if hasattr(labels, 'data') else {}
-                    
-                    # Generate charts using core API interface method: generate_chart()
-                    # For each chart config, call generate_chart() with proper signature
-                    charts_dict = {}
-                    for chart_config in page_config.charts:
-                        # Build chart_config dict from ChartConfig dataclass
-                        chart_config_dict = {
-                            'id': chart_config.id,
-                            'type': chart_config.type,
-                            'title': chart_config.title,
-                            'x_field': chart_config.x_field,
-                            'y_field': chart_config.y_field,
-                            'options': chart_config.options,  # Plugin-specific options here
-                            'labels': labels_dict,
-                        }
-                        # Call interface method
-                        try:
-                            chart_result = chart_generator.generate_chart(
-                                data_points=data_points,
-                                stats=stats,
-                                config=self.config,
-                                chart_config=chart_config_dict
-                            )
-                            charts_dict[chart_config.id] = chart_result
-                            log_verbose(f"Generated chart: {chart_config.id}", self.config)
-                        except Exception as e:
-                            log_warning(f"Failed to generate chart {chart_config.id}: {e}", self.config)
-                            if self.config.execution.verbose:
-                                import traceback
-                                traceback.print_exc()
-                    
-                    if charts_dict:
-                        context['charts'] = charts_dict
-                        log_verbose(f"Added {len(charts_dict)} charts to context", self.config)
-                    else:
-                        log_warning(f"No charts generated for page {page_config.id}", self.config)
-                else:
-                    log_warning(f"No chart generator found for report system '{self.system_def.id}'", self.config)
-            
-            # Determine template to use - directly from page config
-            template_name = None
-            
-            # Use template from page config (unified approach)
-            if page_config.template.name:
-                template_name = page_config.template.name
-            
-            # Render with Jinja2 template
-            if template_name and engine.template_exists(template_name):
-                log_verbose(f"  Using Jinja2 template: {template_name}", self.config)
-                try:
-                    html = engine.render(template_name, context, labels)
-                except jinja2.TemplateError as e:
-                    log_error(f"Template error for {page_config.id}: {e}")
-                    if self.config.execution.verbose:
-                        import traceback
-                        traceback.print_exc()
-                    html = f"<html><body><h1>Template Error: {page_config.id}</h1><pre>{e}</pre></body></html>"
-                except Exception as e:
-                    log_error(f"Unexpected error rendering {page_config.id}: {e}")
-                    if self.config.execution.verbose:
-                        import traceback
-                        traceback.print_exc()
-                    raise  # Re-raise unexpected errors
-            else:
-                log_warning(f"No template found for page: {page_config.id}", self.config)
-                html = f"<html><body><h1>No template: {page_config.id}</h1></body></html>"
-            
-            # Write HTML file
-            with open(page_path, 'w', encoding='utf-8') as f:
-                f.write(html)
+        renderer.render_all_pages(
+            data_points=data_points,
+            stats=stats,
+            llm_results=llm_results,
+            input_dir=input_dir,
+            output_path=output_path
+        )
 

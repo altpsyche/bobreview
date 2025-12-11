@@ -108,6 +108,52 @@ def get_shared_css() -> str:
     return css_path.read_text(encoding='utf-8')
 
 
+def get_theme_css_block(theme=None) -> str:
+    """
+    Get CSS :root block with theme variables for embedding in templates.
+    
+    This is a convenience function for templates to get theme CSS variables.
+    Uses the unified ThemeSystem for consistent behavior.
+    
+    Parameters:
+        theme: Optional ReportTheme instance, dict with theme values, or theme ID string
+    
+    Returns:
+        CSS string with :root { ... } block, or empty string if no theme
+    """
+    from .themes import get_theme_css_variables, ReportTheme
+    from .theme_system import get_theme_system
+    
+    if not theme:
+        return ''
+    
+    # Handle different input types
+    if isinstance(theme, str):
+        # Theme ID string
+        system = get_theme_system()
+        resolved_theme = system.resolve_theme(theme)
+        if resolved_theme:
+            return get_theme_css_variables(resolved_theme)
+        return ''
+    elif isinstance(theme, ReportTheme):
+        # ReportTheme object - resolve inheritance
+        system = get_theme_system()
+        resolved_theme = system.resolve_theme(theme.id)
+        if resolved_theme:
+            return get_theme_css_variables(resolved_theme)
+        return get_theme_css_variables(theme)
+    elif isinstance(theme, dict):
+        # Dict from template context
+        theme_id = theme.get('id')
+        if theme_id:
+            system = get_theme_system()
+            resolved_theme = system.resolve_theme(theme_id)
+            if resolved_theme:
+                return get_theme_css_variables(resolved_theme)
+    
+    return ''
+
+
 def get_trend_icon(trend: str) -> str:
     """
     Get trend icon HTML/emoji.

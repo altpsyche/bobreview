@@ -21,7 +21,8 @@ if TYPE_CHECKING:
     from ..engine.schema import LabelConfig
 
 from .utils import format_number
-from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon, get_theme_css_block
+from .theme_system import get_theme_css
 from .plugin_system import get_extension_point
 
 
@@ -275,6 +276,8 @@ class TemplateEngine:
     def _register_globals(self):
         """Register global template functions."""
         self.env.globals['get_css'] = get_shared_css
+        self.env.globals['get_theme_css'] = get_theme_css  # Use unified ThemeSystem
+        self.env.globals['get_theme_css_block'] = get_theme_css_block  # Keep for compatibility
         
         def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: Optional[dict] = None) -> str:
             """
