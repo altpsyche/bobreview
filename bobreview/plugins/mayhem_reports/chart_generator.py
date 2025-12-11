@@ -384,7 +384,7 @@ class MayhemReportsChartGenerator(ChartGeneratorInterface):
                         label: function(ctx) {{ 
                             const d = data[ctx.dataIndex];
                             const val = d.y;
-                            let zone = val >= {high_threshold} ? '🔴 High' : (val < {low_threshold} ? '🟢 Low' : '🟡 Medium');
+                            let zone = val >= {high_threshold} ? 'High' : (val < {low_threshold} ? 'Low' : 'Medium');
                             return [d.testcase, {json.dumps(field.title())} + ': ' + val.toLocaleString(), 'Zone: ' + zone];
                         }}
                     }}
@@ -512,9 +512,9 @@ class MayhemReportsChartGenerator(ChartGeneratorInterface):
                         font: {{ size: 12 }},
                         generateLabels: function(chart) {{
                             return [
-                                {{ text: '🟢 Optimized', fillStyle: '{self._hex_to_rgba(theme.ok, 0.8)}', strokeStyle: '{theme.ok}' }},
-                                {{ text: '🟡 Normal', fillStyle: '{self._hex_to_rgba(theme.warn, 0.8)}', strokeStyle: '{theme.warn}' }},
-                                {{ text: '🔴 Hotspot', fillStyle: '{self._hex_to_rgba(theme.danger, 0.8)}', strokeStyle: '{theme.danger}' }}
+                                {{ text: 'Optimized', fillStyle: '{self._hex_to_rgba(theme.ok, 0.8)}', strokeStyle: '{theme.ok}' }},
+                                {{ text: 'Normal', fillStyle: '{self._hex_to_rgba(theme.warn, 0.8)}', strokeStyle: '{theme.warn}' }},
+                                {{ text: 'Hotspot', fillStyle: '{self._hex_to_rgba(theme.danger, 0.8)}', strokeStyle: '{theme.danger}' }}
                             ];
                         }}
                     }}
