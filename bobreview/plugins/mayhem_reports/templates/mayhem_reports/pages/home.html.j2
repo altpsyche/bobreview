@@ -1,0 +1,113 @@
+{% extends "mayhem_reports/pages/base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, stats_item, trend_indicator, pill, percentile_badge, feature_card, performance_grade, budget_bar, hotspot_counter %}
+
+{% block title %}{{ config.title }} - {{ labels.get('home', 'Overview') }}{% endblock %}
+
+{% block head_scripts %}{% endblock %}
+
+{% block content %}
+{# Build combined context for interpolation #}
+{% set high_load_count = stats.high_load|length %}
+{% set low_load_count = stats.low_load|length %}
+{% set medium_count = stats.count - high_load_count - low_load_count %}
+{% set draw_budget = config.thresholds.draw_soft_cap %}
+{% set tri_budget = config.thresholds.tri_soft_cap %}
+{% set ctx = {
+  'stats': stats,
+  'critical': critical,
+  'high_load_count': high_load_count,
+  'low_load_count': low_load_count,
+  'medium_count': medium_count,
+  'high_load_draw_threshold': config.thresholds.high_load_draw_threshold,
+  'high_load_tri_threshold': config.thresholds.high_load_tri_threshold|format_number(0),
+  'low_load_draw_threshold': config.thresholds.low_load_draw_threshold,
+  'low_load_tri_threshold': config.thresholds.low_load_tri_threshold|format_number(0)
+} %}
+
+<!-- Performance Overview Section -->
+<section class="panel">
+  <h2>{{ labels.get('executive_summary', 'Performance Overview') }}</h2>
+  
+  <div class="performance-header">
+    <!-- Performance Grade Card -->
+    <div class="grade-card-wrapper">
+      {{ performance_grade(stats.draws.mean, draw_budget, 'Draw Calls') }}
+    </div>
+    
+    <!-- Budget Utilization -->
+    <div class="budget-section">
+      <h4>Budget Utilization</h4>
+      {{ budget_bar('Draw Calls', stats.draws.mean, draw_budget) }}
+      {{ budget_bar('Triangles', stats.tris.mean, tri_budget) }}
+    </div>
+    
+    <!-- Hotspot Summary -->
+    <div class="hotspot-section">
+      {{ hotspot_counter(high_load_count, low_load_count, stats.count) }}
+    </div>
+  </div>
+  
+  <div style="margin-top: 16px;">
+    {% if stats.trends is defined and stats.trends.draws is defined %}
+    <span style="font-size: 12px; color: var(--text-soft);">{{ labels.get('trend', 'Trend') }}: </span>
+    {{ trend_indicator(stats.trends.draws.direction|default('stable'), (stats.trends.draws.direction|default('stable')|title) ~ ' Draw Calls') }}
+    {{ trend_indicator(stats.trends.tris.direction|default('stable'), (stats.trends.tris.direction|default('stable')|title) ~ ' Triangles') }}
+    {% endif %}
+  </div>
+  
+  {% if llm.exec_summary %}
+  <div class="llm-content" style="margin-top: 16px;">
+    {{ llm.exec_summary|sanitize }}
+  </div>
+  {% endif %}
+  
+  <div class="pill-row">
+    {{ pill('Typical: ' ~ (stats.draws.mean|format_number(0)) ~ ' Draws / ' ~ (stats.tris.mean|format_number(0)) ~ ' Tris', 'ok') }}
+    {% if stats.draws.cv > 30 or stats.tris.cv > 30 %}
+    {{ pill(labels.get('high_variance_detected', 'Inconsistent Performance'), 'warn') }}
+    {% endif %}
+    {{ pill('Worst: ' ~ critical.draws ~ ' Draws / ' ~ (critical.tris|format_number) ~ ' Tris', 'danger') }}
+  </div>
+</section>
+
+<!-- Navigation Cards -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('detailed_analysis', 'Detailed Analysis') }}</h2>
+  <p class="body-text">{{ content.explore_sections|default('Explore different aspects of the performance analysis:') }}</p>
+  
+  <div class="card-grid">
+    {% for page in pages if page.id != 'home' and page.card_description %}
+    {% set page_pills = [] %}
+    {% if page.id == 'zones' %}
+      {% set page_pills = [(stats.high_load|length ~ ' High-Load', 'danger'), (stats.low_load|length ~ ' Low-Load', 'ok')] %}
+    {% endif %}
+    {{ feature_card(page.filename, page.card_icon, page.nav_label, page.card_description, page_pills) }}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Quick Stats Section -->
+<section class="panel" style="margin-top: 20px;">
+  <h2>{{ labels.get('quick_stats', 'Quick Statistics') }}</h2>
+  
+  <div class="stats-grid">
+    {# Data-driven quick stats from JSON #}
+    {% if content.quick_stats %}
+    {% for item in content.quick_stats %}
+    <div class="stats-item">
+      <div class="stats-item-label">{{ item.label }}</div>
+      <div class="stats-item-value">{{ item.value|interpolate(ctx) }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {# Fallback #}
+    {{ stats_item('Total Captures', stats.count) }}
+    {{ stats_item('Draw Calls Range', stats.draws.min ~ ' - ' ~ stats.draws.max) }}
+    {{ stats_item('Triangles Range', (stats.tris.min|format_number) ~ ' - ' ~ (stats.tris.max|format_number)) }}
+    {{ stats_item('Hotspot Frames', stats.high_load|length) }}
+    {{ stats_item('Optimized Frames', stats.low_load|length) }}
+    {{ stats_item('Stability Score', (100 - (stats.draws.cv|round(0)|int)|abs) ~ '%') }}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

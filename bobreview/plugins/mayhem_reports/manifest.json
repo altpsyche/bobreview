@@ -1,0 +1,25 @@
+{
+    "name": "mayhem-reports",
+    "version": "1.0.0",
+    "author": "BobReview Team",
+    "description": "Game performance analysis from PNG filename metadata",
+    "entry_point": "plugin:MayhemReportsPlugin",
+    "dependencies": [],
+    "provides": {
+        "report_systems": [
+            "mayhem_reports"
+        ],
+        "data_parsers": [
+            "mayhem_reports_parser"
+        ],
+        "context_builders": [
+            "mayhem_reports"
+        ],
+        "chart_generators": [
+            "mayhem_reports"
+        ],
+        "analyzers": [
+            "performance"
+        ]
+    }
+}

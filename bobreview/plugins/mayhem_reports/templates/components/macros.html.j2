@@ -1,0 +1,125 @@
+{#
+  Jinja2 Macros for mayhem-reports Plugin.
+  
+  UI components for performance reports:
+  - stat_card: Large statistics card with label, value, sublabel
+  - stats_item: Simple stat row in a grid
+  - trend_indicator: Up/down/stable indicator
+  - pill: Status pill with variant styling
+  - percentile_badge: Percentile indicator
+  - feature_card: Navigation card with icon
+  - performance_grade: Letter grade with color
+  - budget_bar: Progress bar showing budget usage
+  - hotspot_counter: Shows high/low load counts
+#}
+
+{# Simple stat row #}
+{% macro stats_item(label, value) %}
+<div class="stats-item">
+  <div class="stats-item-label">{{ label }}</div>
+  <div class="stats-item-value">{{ value }}</div>
+</div>
+{% endmacro %}
+
+{# Large stat card with optional sublabel #}
+{% macro stat_card(label, value, sub='', variant='') %}
+<div class="stat-card{% if variant %} stat-card--{{ variant }}{% endif %}">
+  <div class="stat-card-label">{{ label }}</div>
+  <div class="stat-card-value">{{ value }}</div>
+  {% if sub %}
+  <div class="stat-card-sub">{{ sub }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# Trend indicator with direction #}
+{% macro trend_indicator(direction, label='') %}
+{% set icon = 'fa-arrow-up' if direction == 'improving' else ('fa-arrow-down' if direction == 'degrading' else 'fa-minus') %}
+{% set color_class = 'trend--improving' if direction == 'improving' else ('trend--degrading' if direction == 'degrading' else 'trend--stable') %}
+<span class="trend-indicator {{ color_class }}" title="{{ label }}">
+  <i class="fas {{ icon }}"></i>
+  {% if label %}<span class="trend-label">{{ label }}</span>{% endif %}
+</span>
+{% endmacro %}
+
+{# Status pill with variant #}
+{% macro pill(text, variant='default') %}
+<span class="pill pill--{{ variant }}">{{ text }}</span>
+{% endmacro %}
+
+{# Percentile badge #}
+{% macro percentile_badge(label, value, threshold=None) %}
+{% set variant = 'danger' if threshold and value > threshold else 'default' %}
+<span class="percentile-badge percentile-badge--{{ variant }}">
+  <span class="percentile-label">{{ label }}</span>
+  <span class="percentile-value">{{ value|int }}</span>
+</span>
+{% endmacro %}
+
+{# Navigation/feature card with icon #}
+{% macro feature_card(url, icon, title, description, pills=[]) %}
+<a href="{{ url }}" class="feature-card">
+  <div class="feature-card-icon">
+    <i class="fas {{ icon }}"></i>
+  </div>
+  <div class="feature-card-content">
+    <h3>{{ title }}</h3>
+    <p>{{ description }}</p>
+    {% if pills %}
+    <div class="feature-card-pills">
+      {% for pill_text, pill_variant in pills %}
+      {{ pill(pill_text, pill_variant) }}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  <div class="feature-card-arrow">
+    <i class="fas fa-chevron-right"></i>
+  </div>
+</a>
+{% endmacro %}
+
+{# Performance grade with letter and color #}
+{% macro performance_grade(current_value, budget, label='Performance') %}
+{% set ratio = current_value / budget if budget > 0 else 1 %}
+{% set grade = 'A' if ratio < 0.6 else ('B' if ratio < 0.8 else ('C' if ratio < 1.0 else ('D' if ratio < 1.2 else 'F'))) %}
+{% set grade_class = 'grade-a' if grade == 'A' else ('grade-b' if grade == 'B' else ('grade-c' if grade == 'C' else ('grade-d' if grade == 'D' else 'grade-f'))) %}
+<div class="grade-card {{ grade_class }}">
+  <div class="grade-letter">{{ grade }}</div>
+  <div class="grade-label">{{ label }}</div>
+  <div class="grade-detail">{{ current_value|int }} / {{ budget|int }}</div>
+</div>
+{% endmacro %}
+
+{# Budget utilization bar #}
+{% macro budget_bar(label, current, budget) %}
+{% set pct = (current / budget * 100) if budget > 0 else 0 %}
+{% set bar_class = 'ok' if pct < 80 else ('warn' if pct < 100 else 'danger') %}
+<div class="budget-bar-container">
+  <div class="budget-bar-header">
+    <span class="budget-bar-label">{{ label }}</span>
+    <span class="budget-bar-values">{{ current|int }} / {{ budget|int }}</span>
+  </div>
+  <div class="budget-bar">
+    <div class="budget-bar-fill budget-bar-fill--{{ bar_class }}" style="width: {{ [pct, 100]|min }}%"></div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Hotspot counter showing high/low load #}
+{% macro hotspot_counter(high_count, low_count, total) %}
+<div class="hotspot-counter">
+  <div class="hotspot-item hotspot-item--danger">
+    <span class="hotspot-count">{{ high_count }}</span>
+    <span class="hotspot-label">Hotspots</span>
+  </div>
+  <div class="hotspot-item hotspot-item--ok">
+    <span class="hotspot-count">{{ low_count }}</span>
+    <span class="hotspot-label">Optimized</span>
+  </div>
+  <div class="hotspot-item">
+    <span class="hotspot-count">{{ total }}</span>
+    <span class="hotspot-label">Total</span>
+  </div>
+</div>
+{% endmacro %}
