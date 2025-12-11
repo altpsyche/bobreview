@@ -16,10 +16,9 @@ import json
 from pathlib import Path
 from typing import Literal, Dict, Any
 
-# Import themes from central module
+# Import via ThemeSystem for centralized theme access
+from ..theme_system import get_theme_system
 from ..themes import (
-    THEMES_BY_ID, 
-    get_theme_by_id, 
     get_available_themes,
     theme_to_dict,
     ReportTheme,
@@ -43,12 +42,13 @@ def create_plugin(
     Returns:
         Path to the created plugin directory
     """
-    # Validate theme
-    if color_theme not in THEMES_BY_ID:
-        available = ", ".join(THEMES_BY_ID.keys())
-        raise ValueError(f"Unknown theme '{color_theme}'. Available: {available}")
+    # Validate and get theme via ThemeSystem
+    theme_system = get_theme_system()
+    theme = theme_system.get_theme(color_theme)
     
-    theme = get_theme_by_id(color_theme)
+    if not theme:
+        available = ", ".join(get_available_themes())
+        raise ValueError(f"Unknown theme '{color_theme}'. Available: {available}")
     
     plugin_dir = output_dir / name.replace('-', '_')
     plugin_dir.mkdir(parents=True, exist_ok=True)

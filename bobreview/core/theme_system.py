@@ -12,7 +12,7 @@ This module unifies theme operations across the codebase.
 from pathlib import Path
 from typing import Optional, Dict, Any, Literal
 import warnings
-from .themes import ReportTheme, resolve_theme, get_theme_by_id, get_theme_css_variables, generate_theme_css, get_available_themes
+from .themes import ReportTheme, resolve_theme, get_theme_by_id, get_theme_css_variables, get_available_themes
 from .html_utils import get_shared_css
 from .plugin_system import get_extension_point
 
@@ -157,6 +157,38 @@ class ThemeSystem:
             # Re-raise ValueError (circular inheritance) with context
             raise ValueError(f"Failed to resolve theme '{theme_id}': {e}") from e
     
+    def resolve_from_config(self, theme_config) -> Optional[ReportTheme]:
+        """
+        Resolve a theme from a ThemeConfig object.
+        
+        This is a convenience method for integrating with the JSON schema.
+        Accepts ThemeConfig, dict with 'preset' key, or string theme ID.
+        
+        Parameters:
+            theme_config: ThemeConfig instance, dict, or string theme ID
+        
+        Returns:
+            Resolved ReportTheme or None if not found
+        
+        Example:
+            # From ReportSystemDefinition
+            theme = theme_system.resolve_from_config(system_def.theme)
+        """
+        if theme_config is None:
+            return self.resolve_theme('dark')
+        
+        # Extract preset from different input types
+        if isinstance(theme_config, str):
+            preset = theme_config
+        elif hasattr(theme_config, 'preset'):
+            preset = theme_config.preset
+        elif isinstance(theme_config, dict):
+            preset = theme_config.get('preset', 'dark')
+        else:
+            preset = 'dark'
+        
+        return self.resolve_theme(preset)
+    
     def get_css(
         self,
         theme_id: str,
@@ -241,13 +273,15 @@ class ThemeSystem:
         if not theme:
             return
         
-        # Generate CSS
-        css_content = generate_theme_css(theme)
+        # Generate CSS with theme variables
+        css_vars = get_theme_css_variables(theme)
         
         # Add base styles
         base_css = get_shared_css()
         
-        full_css = f"""{css_content}
+        full_css = f"""/* Generated theme: {theme.name} */
+
+{css_vars}
 
 /* Base styles */
 {base_css}

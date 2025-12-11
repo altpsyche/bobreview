@@ -168,28 +168,12 @@ class PageRenderer:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
         meta_text = f"{count} items · Generated {timestamp}"
         
-        # Theme resolution priority: CLI --theme > JSON preset > fallback dark
-        theme_name = "dark"  # Fallback
-        
-        # Check ThemeConfig.preset (which contains preset from JSON or CLI override)
-        if self.system_def.theme:
-            if isinstance(self.system_def.theme, str):
-                theme_name = self.system_def.theme
-            elif hasattr(self.system_def.theme, 'preset'):
-                # ThemeConfig object - use preset field
-                theme_name = self.system_def.theme.preset
-            elif isinstance(self.system_def.theme, dict):
-                # Fallback for dict format (shouldn't happen, but be safe)
-                theme_name = self.system_def.theme.get('preset', 'dark')
-        
-        # CLI --theme overrides JSON preset (already merged into theme.preset via config merger)
-        # But check config.output.theme_id as final override (highest priority)
-        if hasattr(self.config.output, 'theme_id') and self.config.output.theme_id:
-            theme_name = self.config.output.theme_id
-        
-        # Use unified ThemeSystem to resolve theme (handles inheritance)
+        # Use unified ThemeSystem to resolve theme from config
         theme_system = get_theme_system()
-        resolved_theme = theme_system.resolve_theme(theme_name)
+        resolved_theme = theme_system.resolve_from_config(self.system_def.theme)
+        
+        # Get theme ID for templates
+        theme_name = resolved_theme.id if resolved_theme else 'dark'
         
         # Get theme dict for templates
         theme_vars = theme_system.get_theme_dict(theme_name) if resolved_theme else {}

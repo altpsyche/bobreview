@@ -112,46 +112,32 @@ def get_theme_css_block(theme=None) -> str:
     """
     Get CSS :root block with theme variables for embedding in templates.
     
-    This is a convenience function for templates to get theme CSS variables.
-    Uses the unified ThemeSystem for consistent behavior.
+    This is a convenience wrapper that delegates to get_theme_css().
+    Kept for backward compatibility.
     
     Parameters:
-        theme: Optional ReportTheme instance, dict with theme values, or theme ID string
+        theme: Theme ID string, ReportTheme instance, or dict with 'id' key
     
     Returns:
         CSS string with :root { ... } block, or empty string if no theme
     """
-    from .themes import get_theme_css_variables, ReportTheme
-    from .theme_system import get_theme_system
+    from .theme_system import get_theme_css
     
     if not theme:
         return ''
     
-    # Handle different input types
+    # Extract theme_id from different input types
     if isinstance(theme, str):
-        # Theme ID string
-        system = get_theme_system()
-        resolved_theme = system.resolve_theme(theme)
-        if resolved_theme:
-            return get_theme_css_variables(resolved_theme)
-        return ''
-    elif isinstance(theme, ReportTheme):
-        # ReportTheme object - resolve inheritance
-        system = get_theme_system()
-        resolved_theme = system.resolve_theme(theme.id)
-        if resolved_theme:
-            return get_theme_css_variables(resolved_theme)
-        return get_theme_css_variables(theme)
+        theme_id = theme
+    elif hasattr(theme, 'id'):
+        theme_id = theme.id
     elif isinstance(theme, dict):
-        # Dict from template context
-        theme_id = theme.get('id')
-        if theme_id:
-            system = get_theme_system()
-            resolved_theme = system.resolve_theme(theme_id)
-            if resolved_theme:
-                return get_theme_css_variables(resolved_theme)
+        theme_id = theme.get('id', 'dark')
+    else:
+        return ''
     
-    return ''
+    # Delegate to unified get_theme_css (without base styles)
+    return get_theme_css(theme_id, mode='embedded', include_base=False)
 
 
 def get_trend_icon(trend: str) -> str:

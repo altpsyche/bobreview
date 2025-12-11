@@ -148,7 +148,6 @@ class PageConfig:
 class ThemeConfig:
     """Configuration for report theme."""
     preset: str = 'dark'  # Theme ID to use (e.g., 'dark', 'ocean', 'purple')
-    override_colors: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -542,13 +541,8 @@ def parse_page_config(data: Dict[str, Any]) -> PageConfig:
 
 def parse_theme_config(data: Dict[str, Any]) -> ThemeConfig:
     """Parse theme configuration from JSON."""
-    # Only support 'preset' key - no backward compatibility for 'default'
     theme_id = data.get('preset', 'dark')
-    
-    return ThemeConfig(
-        preset=theme_id,
-        override_colors=data.get('override_colors', {})
-    )
+    return ThemeConfig(preset=theme_id)
 
 
 def parse_output_config(data: Dict[str, Any]) -> OutputConfig:

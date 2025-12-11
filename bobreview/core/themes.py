@@ -86,8 +86,11 @@ class ReportTheme:
     # Borders and effects
     border_subtle: str = '#1e2835'
     shadow_soft: str = '0 18px 45px rgba(0, 0, 0, 0.55)'
-    radius_lg: str = '12px'
+    shadow_strong: str = '0 8px 32px rgba(0, 0, 0, 0.4)'
+    radius_sm: str = '4px'
     radius_md: str = '8px'
+    radius_lg: str = '12px'
+    radius_xl: str = '16px'
     
     # Fonts
     font_mono: str = '"SF Mono", Menlo, Consolas, monospace'
@@ -417,17 +420,6 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     if not theme:
         return ''
     
-    # Calculate additional radius values if not explicitly set
-    # Defaults based on standard values
-    radius_sm = '4px'
-    radius_xl = '16px'
-    
-    # Try to infer from existing values if possible
-    if hasattr(theme, 'radius_sm'):
-        radius_sm = theme.radius_sm
-    if hasattr(theme, 'radius_xl'):
-        radius_xl = theme.radius_xl
-    
     return f""":root {{
   /* Backgrounds */
   --bg: {theme.bg};
@@ -454,13 +446,13 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
   /* Borders & Effects */
   --border-subtle: {theme.border_subtle};
   --shadow-soft: {theme.shadow_soft};
-  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-strong: {theme.shadow_strong};
   
   /* Border Radius */
-  --radius-sm: {radius_sm};
+  --radius-sm: {theme.radius_sm};
   --radius-md: {theme.radius_md};
   --radius-lg: {theme.radius_lg};
-  --radius-xl: {radius_xl};
+  --radius-xl: {theme.radius_xl};
   
   /* Fonts */
   --font-family: {theme.font_sans};
@@ -521,8 +513,11 @@ def theme_to_dict(theme: ReportTheme) -> dict:
         # Borders & Effects
         "border_subtle": theme.border_subtle,
         "shadow_soft": theme.shadow_soft,
-        "radius_lg": theme.radius_lg,
+        "shadow_strong": theme.shadow_strong,
+        "radius_sm": theme.radius_sm,
         "radius_md": theme.radius_md,
+        "radius_lg": theme.radius_lg,
+        "radius_xl": theme.radius_xl,
         
         # Fonts
         "font_sans": theme.font_sans,
@@ -536,31 +531,154 @@ def theme_to_dict(theme: ReportTheme) -> dict:
     }
 
 
-def generate_theme_css(theme: ReportTheme) -> str:
+
+
+# =============================================================================
+# THEME CREATION HELPERS
+# =============================================================================
+
+
+def create_theme(
+    id: str,
+    name: str,
+    *,
+    base: str = 'dark',
+    accent: Optional[str] = None,
+    bg: Optional[str] = None,
+    text_main: Optional[str] = None,
+    **overrides
+) -> ReportTheme:
     """
-    Generate CSS content with :root variables from a theme.
+    Create a custom theme easily by extending a base theme.
     
-    Used for runtime theme.css generation when linked_css=True.
-    This generates a complete CSS file that can be linked externally.
+    This is the recommended way for plugins to create themes.
+    Only specify the colors you want to change.
     
     Parameters:
-        theme: ReportTheme instance
-        
+        id: Unique theme ID (e.g., 'my_plugin_theme')
+        name: Display name (e.g., 'My Plugin Theme')
+        base: Base theme to extend ('dark', 'light', 'ocean', etc.)
+        accent: Primary accent color (optional)
+        bg: Main background color (optional)
+        text_main: Main text color (optional)
+        **overrides: Any other ReportTheme fields to override
+    
     Returns:
-        CSS string with :root variables and comments
+        ReportTheme instance
+    
+    Example:
+        # Create a red-accent dark theme
+        MY_THEME = create_theme(
+            id='my_red_theme',
+            name='My Red Theme',
+            base='dark',
+            accent='#ff4444',
+            accent_soft='rgba(255, 68, 68, 0.15)',
+        )
+        
+        # In plugin on_load:
+        helper.add_theme(MY_THEME)
     """
-    if not theme:
-        return ''
+    # Get base theme
+    base_theme = get_theme_by_id(base)
+    if not base_theme:
+        base_theme = DARK_THEME
     
-    # Calculate additional radius values
-    radius_sm = '4px'
-    radius_xl = '16px'
+    # Build overrides dict
+    theme_overrides = dict(overrides)
+    if accent is not None:
+        theme_overrides['accent'] = accent
+    if bg is not None:
+        theme_overrides['bg'] = bg
+    if text_main is not None:
+        theme_overrides['text_main'] = text_main
     
-    # Use same logic as get_theme_css_variables for consistency
-    css_vars = get_theme_css_variables(theme)
-    
-    return f"""/* Generated theme: {theme.name} */
-/* This file is auto-generated. Do not edit manually. */
+    # Create theme extending base
+    return ReportTheme(
+        id=id,
+        name=name,
+        extends=base,
+        overrides=theme_overrides,
+    )
 
-{css_vars}
-"""
+
+def create_dark_theme(
+    id: str,
+    name: str,
+    accent: str,
+    *,
+    accent_soft: Optional[str] = None,
+    **overrides
+) -> ReportTheme:
+    """
+    Quickly create a dark theme with a custom accent color.
+    
+    Parameters:
+        id: Unique theme ID
+        name: Display name
+        accent: Primary accent color (hex, e.g., '#ff6b35')
+        accent_soft: Soft accent (auto-generated if not provided)
+        **overrides: Additional fields to override
+    
+    Example:
+        ORANGE_THEME = create_dark_theme(
+            id='orange_dark',
+            name='Orange Dark',
+            accent='#ff6b35'
+        )
+    """
+    if accent_soft is None:
+        # Auto-generate soft accent from main accent
+        accent_soft = _hex_to_rgba(accent, 0.15)
+    
+    return create_theme(
+        id=id,
+        name=name,
+        base='dark',
+        accent=accent,
+        accent_soft=accent_soft,
+        **overrides
+    )
+
+
+def create_light_theme(
+    id: str,
+    name: str,
+    accent: str,
+    *,
+    accent_soft: Optional[str] = None,
+    **overrides
+) -> ReportTheme:
+    """
+    Quickly create a light theme with a custom accent color.
+    
+    Parameters:
+        id: Unique theme ID
+        name: Display name
+        accent: Primary accent color (hex, e.g., '#0066cc')
+        accent_soft: Soft accent (auto-generated if not provided)
+        **overrides: Additional fields to override
+    """
+    if accent_soft is None:
+        accent_soft = _hex_to_rgba(accent, 0.10)
+    
+    return create_theme(
+        id=id,
+        name=name,
+        base='light',
+        accent=accent,
+        accent_soft=accent_soft,
+        **overrides
+    )
+
+
+def _hex_to_rgba(hex_color: str, alpha: float = 1.0) -> str:
+    """Convert hex color to rgba string."""
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 3:
+        hex_color = ''.join(c * 2 for c in hex_color)
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
