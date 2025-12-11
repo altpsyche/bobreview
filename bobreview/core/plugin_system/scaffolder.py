@@ -764,8 +764,8 @@ def _generate_theme_css(name: str, safe_name: str, theme: ReportTheme, theme_nam
     for tid, tdata in THEMES_BY_ID.items():
         if tid != theme_name and tid in ('dark', 'ocean', 'purple', 'terminal', 'sunset'):
             other_themes.append(f'''/*
+--- {tdata.name} Theme ---
 :root {{
-    /* {tdata.name} Theme */
     --bg: {tdata.bg};
     --bg-elevated: {tdata.bg_elevated};
     --accent: {tdata.accent};

@@ -97,10 +97,11 @@ Plugins are now fully self-contained with their own styles:
   - `--border-subtle`, `--radius-lg`, `--radius-md`
   - `--shadow-soft`, `--sans`, `--mono`
   
-- **Dynamic Theme Support**: Base templates use Jinja templating for theme injection:
-  ```jinja2
-  --accent: {{ theme.accent if theme else '#4ea1ff' }};
-  ```
+- **Dynamic Theme Support**: Themes work with both embedded and external CSS:
+  - Embedded CSS: Uses Jinja templating `{{ theme.accent if theme else '#4ea1ff' }}`
+  - External CSS (`--linked-css`): Runtime-generated `static/theme.css` in output directory
+  - `generate_theme_css()` - Creates CSS :root block from ReportTheme
+  - CLI `--theme` overrides JSON `preset` for runtime switching
 
 
 

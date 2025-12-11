@@ -342,3 +342,45 @@ def theme_to_dict(theme: ReportTheme) -> dict:
         "border": theme.border_subtle,
     }
 
+
+def generate_theme_css(theme: ReportTheme) -> str:
+    """
+    Generate CSS content with :root variables from a theme.
+    
+    Used for runtime theme.css generation when linked_css=True.
+    
+    Parameters:
+        theme: ReportTheme instance
+        
+    Returns:
+        CSS string with :root variables
+    """
+    return f"""/* Generated theme: {theme.name} */
+:root {{
+    --bg: {theme.bg};
+    --bg-elevated: {theme.bg_elevated};
+    --bg-soft: {theme.bg_soft};
+    --bg-hover: {theme.accent_soft};
+    --accent: {theme.accent};
+    --accent-soft: {theme.accent_soft};
+    --accent-strong: {theme.accent_strong};
+    --text-main: {theme.text_main};
+    --text-soft: {theme.text_soft};
+    --ok: {theme.ok};
+    --ok-soft: {theme.ok_soft};
+    --warn: {theme.warn};
+    --warn-soft: {theme.warn_soft};
+    --danger: {theme.danger};
+    --danger-soft: {theme.danger_soft};
+    --border: {theme.border_subtle};
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --font-family: {theme.font_sans};
+    --font-mono: {theme.font_mono};
+}}
+"""

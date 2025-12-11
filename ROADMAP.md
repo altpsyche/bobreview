@@ -116,13 +116,14 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
 
 ### Report Theming System
 - **COMPLETE** - Theme registry system (`core/plugin_system/registries/theme_registry.py`)
-- **COMPLETE** - Three built-in themes (dark, light, high_contrast)
+- **COMPLETE** - 7 built-in themes: dark, light, high_contrast, ocean, purple, terminal, sunset
 - **COMPLETE** - `ReportTheme` dataclass with 18+ customizable properties
-- **COMPLETE** - Theme selection via CLI (`--theme`)
-- **COMPLETE** - Theme selection via config (`theme_id` parameter)
+- **COMPLETE** - Theme selection via CLI (`--theme`) overrides JSON preset
+- **COMPLETE** - Theme selection via JSON (`"theme": {"preset": "ocean"}`)
 - **COMPLETE** - CSS variable generation (`get_theme_css_variables()`)
+- **COMPLETE** - Runtime theme.css generation for `--linked-css` mode
 - **COMPLETE** - Chart colors integrated with themes
-- **COMPLETE** - Custom theme registration API
+- **COMPLETE** - Custom theme registration API (`helper.add_theme()`, `helper.add_builtin_themes()`)
 
 ### CSS Architecture (v1.0.7)
 - **COMPLETE** - Core CSS minimized (67 lines - theme tokens only)

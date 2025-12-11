@@ -323,7 +323,7 @@ bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
 --clear-cache            # Force fresh analysis
 --no-embed-images        # Use external image files instead of embedding
 --linked-css             # Use external CSS file (styles.css)
---theme THEME            # Report theme: dark (default), light, high_contrast
+--theme THEME            # 7 themes: dark, light, high_contrast, ocean, purple, terminal, sunset
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 
 # LLM Provider Configuration

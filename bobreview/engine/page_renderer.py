@@ -109,6 +109,10 @@ class PageRenderer:
             input_dir=input_dir
         )
         
+        # If using linked CSS, generate theme.css at runtime
+        if self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else False:
+            self._write_theme_css(output_dir, base_context.get('_theme_object'))
+        
         # Generate each page
         log_info(f"Generating {len(enabled_pages)} HTML pages...", self.config)
         
@@ -196,6 +200,7 @@ class PageRenderer:
             # Theme (for dynamic styling)
             'theme': theme_vars,
             'theme_name': theme_name,
+            '_theme_object': theme,  # For runtime CSS generation
             
             # LLM content (empty initially, populated per-page)
             'llm': {},
@@ -221,6 +226,29 @@ class PageRenderer:
             # Output options (for template CSS switching)
             'linked_css': self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else False,
         }
+    
+    def _write_theme_css(self, output_dir: Path, theme) -> None:
+        """
+        Write theme.css to output directory for linked CSS mode.
+        
+        When linked_css=True, templates load external CSS files. This method
+        generates theme.css dynamically based on the selected theme so runtime
+        theme switching works with external CSS too.
+        """
+        if not theme:
+            return
+        
+        from ..core.themes import generate_theme_css
+        
+        # Create static directory if needed
+        static_dir = output_dir / 'static'
+        static_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Write theme.css
+        css_content = generate_theme_css(theme)
+        theme_css_path = static_dir / 'theme.css'
+        with open(theme_css_path, 'w', encoding='utf-8') as f:
+            f.write(css_content)
     
     def _render_page(
         self,
