@@ -382,9 +382,9 @@ Examples:
         help='Use external CSS file instead of embedding'
     )
     parser.add_argument(
-        '--theme', type=str, default='dark', dest='theme_id',
+        '--theme', type=str, default=None, dest='theme_id',
         choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
-        help='Report theme (dark, ocean, purple, terminal, sunset, light, high_contrast)'
+        help='Report theme (overrides plugin/JSON default: dark, ocean, purple, terminal, sunset, light, high_contrast)'
     )
     parser.add_argument(
         '--disable-page', action='append', dest='disabled_pages', default=[],
@@ -589,7 +589,7 @@ Examples:
         output=OutputConfig(
             embed_images=args.embed_images,
             linked_css=args.linked_css,
-            theme_id=args.theme_id,
+            theme_id=args.theme_id or 'dark',  # Default to 'dark' if not specified
             disabled_pages=args.disabled_pages,
         )
     )
@@ -728,11 +728,15 @@ Examples:
                 'embed_images': config.output.embed_images,
                 'linked_css': config.output.linked_css,
             },
-            'theme': {
-                'preset': config.output.theme_id,  # Use 'preset' to match JSON format
-            },
             'disabled_pages': config.output.disabled_pages
         }
+        
+        # Only override theme if explicitly specified via --theme flag
+        # This allows JSON presets to be the default
+        if args.theme_id is not None:
+            cli_overrides['theme'] = {
+                'preset': args.theme_id
+            }
         
         # Load report system with CLI overrides, passing plugin name for prioritized search
         system_def = load_report_system(report_system_id, cli_overrides=cli_overrides, plugin_name=args.plugin)
