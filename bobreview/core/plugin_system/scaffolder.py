@@ -50,11 +50,10 @@ def create_plugin(
         available = ", ".join(get_available_themes())
         raise ValueError(f"Unknown theme '{color_theme}'. Available: {available}")
     
-    plugin_dir = output_dir / name.replace('-', '_')
-    plugin_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Normalize name for Python usage
+    # Normalize name for directory and Python usage
     safe_name = name.replace('-', '_').replace(' ', '_')
+    plugin_dir = output_dir / safe_name
+    plugin_dir.mkdir(parents=True, exist_ok=True)
     class_name = ''.join(word.capitalize() for word in name.replace('_', '-').split('-'))
     
     # Create manifest.json
@@ -108,23 +107,23 @@ __all__ = ['{class_name}CsvParser']
 '''
     (parsers_dir / "__init__.py").write_text(parser_init, encoding='utf-8')
     
-    parser_content = _generate_csv_parser(name, safe_name, class_name)
+    parser_content = _generate_csv_parser(name, class_name)
     (parsers_dir / "csv_parser.py").write_text(parser_content, encoding='utf-8')
     
     if template == 'full':
         # Create context_builder.py
-        context_content = _generate_context_builder(name, safe_name, class_name)
+        context_content = _generate_context_builder(name, class_name)
         (plugin_dir / "context_builder.py").write_text(context_content, encoding='utf-8')
         
         # Create chart_generator.py
-        chart_content = _generate_chart_generator(name, safe_name, class_name)
+        chart_content = _generate_chart_generator(name, class_name)
         (plugin_dir / "chart_generator.py").write_text(chart_content, encoding='utf-8')
     
     # Create report_systems directory
     rs_dir = plugin_dir / "report_systems"
     rs_dir.mkdir(exist_ok=True)
     
-    report_system = _generate_report_system(name, safe_name, template, color_theme)
+    report_system = _generate_report_system(name, safe_name, color_theme)
     (rs_dir / f"{safe_name}.json").write_text(
         json.dumps(report_system, indent=4), encoding='utf-8'
     )
@@ -133,7 +132,7 @@ __all__ = ['{class_name}CsvParser']
     templates_dir = plugin_dir / "templates" / safe_name / "pages"
     templates_dir.mkdir(parents=True, exist_ok=True)
     
-    base_template = _generate_base_template(name, safe_name, theme, color_theme)
+    base_template = _generate_base_template(name, safe_name)
     (templates_dir / "base.html.j2").write_text(base_template, encoding='utf-8')
     
     home_template = _generate_home_template(name, safe_name)
@@ -148,7 +147,7 @@ __all__ = ['{class_name}CsvParser']
     # This ensures theme changes are always reflected without regenerating plugin files.
     
     # Generate plugin CSS (layout and components)
-    plugin_css = _generate_plugin_css(name, safe_name)
+    plugin_css = _generate_plugin_css(name)
     (static_dir / "plugin.css").write_text(plugin_css, encoding='utf-8')
     
     # Create sample_data directory
@@ -240,7 +239,7 @@ class {class_name}Plugin(BasePlugin):
 '''
 
 
-def _generate_csv_parser(name: str, safe_name: str, class_name: str) -> str:
+def _generate_csv_parser(name: str, class_name: str) -> str:
     """Generate CSV parser file."""
     return f'''"""
 CSV Parser for {name} Plugin.
@@ -328,7 +327,7 @@ class {class_name}CsvParser(DataParserInterface):
 '''
 
 
-def _generate_context_builder(name: str, safe_name: str, class_name: str) -> str:
+def _generate_context_builder(name: str, class_name: str) -> str:
     """Generate context builder file."""
     return f'''"""
 Context Builder for {name} Plugin.
@@ -372,7 +371,7 @@ class {class_name}ContextBuilder(ContextBuilderInterface):
 '''
 
 
-def _generate_chart_generator(name: str, safe_name: str, class_name: str) -> str:
+def _generate_chart_generator(name: str, class_name: str) -> str:
     """Generate chart generator file."""
     return f'''"""
 Chart Generator for {name} Plugin.
@@ -427,7 +426,7 @@ class {class_name}ChartGenerator(ChartGeneratorInterface):
 '''
 
 
-def _generate_report_system(name: str, safe_name: str, template: str, color_theme: str = 'dark') -> dict:
+def _generate_report_system(name: str, safe_name: str, color_theme: str = 'dark') -> dict:
     """Generate report system JSON with theme preset support."""
     return {
         "schema_version": "1.0",
@@ -522,7 +521,7 @@ def _generate_report_system(name: str, safe_name: str, template: str, color_them
     }
 
 
-def _generate_base_template(name: str, safe_name: str, theme: ReportTheme, theme_id: str) -> str:
+def _generate_base_template(name: str, safe_name: str) -> str:
     """Generate base Jinja2 template using unified theme system."""
     return '''<!DOCTYPE html>
 <html lang="en">
@@ -621,7 +620,7 @@ new Chart(ctx, {{ charts.score_chart | safe }});
 # Removed - now using unified ThemeSystem.generate_theme_css_file()
 
 
-def _generate_plugin_css(name: str, safe_name: str) -> str:
+def _generate_plugin_css(name: str) -> str:
     """Generate plugin-specific layout and component CSS."""
     return '''/*
  * ''' + name + ''' Plugin Styles

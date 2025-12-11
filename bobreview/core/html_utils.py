@@ -41,7 +41,7 @@ def sanitize_llm_html(content: str) -> str:
     
     Converts markdown to HTML, then sanitizes the HTML using bleach.
     
-    Allowed tags: p, strong, em, b, i, u, ul, ol, li, br, span, div, h1-h6, a, code, pre
+    Allowed tags: p, strong, em, b, i, u, ul, ol, li, br, span, div, h1-h6, a, code, pre, blockquote
     Allowed attributes: class (on span/div), href (on a)
     
     Parameters:

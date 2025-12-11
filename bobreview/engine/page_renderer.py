@@ -212,6 +212,9 @@ class PageRenderer:
             # For context builder
             'input_dir': input_dir,
             
+            # LLM results for per-page content building
+            '_llm_results': llm_results,
+            
             # Output options (for template CSS switching)
             'linked_css': self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else False,
         }
@@ -251,7 +254,7 @@ class PageRenderer:
         # Check plugin template paths from extension point
         if self.extension_point:
             template_paths = self.extension_point.get_template_paths()
-            for template_path, plugin_name, _priority in template_paths:
+            for template_path, _plugin_name, _priority in template_paths:
                 template_path_obj = Path(template_path)
                 
                 # Look for plugin.css in various possible locations

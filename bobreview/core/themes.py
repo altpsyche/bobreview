@@ -379,7 +379,8 @@ def resolve_theme(theme: ReportTheme, theme_registry: Optional[Any] = None, visi
         warnings.warn(
             f"Theme '{theme.id}' extends '{theme.extends}' but parent theme not found. "
             f"Returning theme without inheritance.",
-            UserWarning
+            UserWarning,
+            stacklevel=2
         )
         return theme
     
