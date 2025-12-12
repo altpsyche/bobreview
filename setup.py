@@ -36,14 +36,47 @@ def read_requirements():
     return requirements
 
 
+def get_packages():
+    """
+    Get packages: explicit core packages + auto-discovered plugins.
+    
+    Returns:
+        List of package names combining explicit core packages with auto-discovered plugins.
+    """
+    # Core packages (explicitly listed)
+    core_packages = [
+        "bobreview",
+        "bobreview.core",
+        "bobreview.core.plugin_system",
+        "bobreview.core.static",
+        "bobreview.core.plugin_system.registries",
+        "bobreview.plugins",
+        "bobreview.services",
+        "bobreview.services.llm",
+        "bobreview.services.llm.providers",
+        "bobreview.engine",
+    ]
+    
+    # Auto-discover plugin packages (plugins are not shipped with core)
+    plugin_packages = find_packages(
+        where=".",
+        include=["bobreview.plugins.*"],
+        exclude=["bobreview.plugins"]
+    )
+    
+    return core_packages + plugin_packages
+
+
 # Read requirements from requirements.txt (single source of truth)
 install_requires = read_requirements()
 
 # Note: Most configuration is in pyproject.toml (modern standard)
 # This setup.py exists to:
 # 1. Read dependencies from requirements.txt
-# 2. Provide backward compatibility with older tools
+# 2. Combine explicit core packages with auto-discovered plugins
+# 3. Provide backward compatibility with older tools
 setup(
     install_requires=install_requires,
+    packages=get_packages(),
 )
 

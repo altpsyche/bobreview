@@ -6,10 +6,10 @@ Future development plans for BobReview.
 
 ## Vision
 
-Evolve BobReview into a comprehensive performance analysis suite with:
-- Multi-format data ingestion
+Evolve BobReview into a comprehensive plugin-based report generation framework with:
+- Multi-format data ingestion via plugins
 - Interactive visualizations
-- Automated regression detection
+- Plugin marketplace
 - Team collaboration features
 - CI/CD integration
 
@@ -52,6 +52,57 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Clean import hierarchy
 - **COMPLETE** - Public API exports
 - **COMPLETE** - Comprehensive documentation
+- **COMPLETE** (v1.0.7) - SOLID principles implementation
+  - Single Responsibility Principle (SRP)
+  - Open/Closed Principle (OCP)
+  - Liskov Substitution Principle (LSP)
+  - Interface Segregation Principle (ISP) - Focused registries and configs
+  - Dependency Inversion Principle (DIP) - Dependency injection
+- **COMPLETE** (v1.0.7) - DRY principle implementation
+  - Extracted common utilities (plugin_utils, config_utils)
+  - No code duplication
+- **COMPLETE** (v1.0.7) - Focused architecture
+  - 12 focused registries (themes, generators, parsers, etc.)
+  - 5 focused config classes (thresholds, LLM, execution, output, cache)
+  - Focused responsibility classes (ConfigMerger, ServiceValidator, PluginLifecycleManager)
+- **COMPLETE** (v1.0.7) - Plugin infrastructure relocation
+  - Moved plugin infrastructure to `bobreview/core/plugin_system/`
+  - Clear separation: infrastructure in `core/plugin_system/`, implementations in `plugins/`
+  - Removed lazy imports - all imports at module top-level
+  - No backward compatibility for old `bobreview.plugins` infrastructure imports
+- **COMPLETE** (v1.0.7) - Extension point abstraction
+  - `IExtensionPoint` interface for accessing plugin implementations
+  - `IPluginManager` interface for plugin lifecycle
+  - Core code depends on abstractions, not concrete registry/loader
+- **COMPLETE** (v1.0.7) - PluginHelper facade class
+  - Simplified registration API for plugins
+  - Methods: add_data_parser, add_theme, add_templates, add_report_system
+  - setup_complete_report_system() for one-call registration
+- **COMPLETE** (v1.0.7) - Plugin scaffolder CLI
+  - `bobreview plugins create <name>` command
+  - --template minimal|full for different complexity
+  - --theme for theme selection
+  - Generates complete plugin structure with all components
+- **COMPLETE** (v1.0.7) - PageRenderer class extraction
+  - ~300 lines extracted from executor.py
+  - Better modularity and testability
+- **COMPLETE** (v1.0.7) - Preset factory functions
+  - create_simple_report_system()
+  - create_csv_report_system()
+  - create_multi_page_report_system()
+- **COMPLETE** (v1.0.7) - Dynamic font loading
+  - font_url property on ReportTheme
+  - All built-in themes include Google Fonts URLs
+  - Jinja2 templates dynamically load fonts
+- **COMPLETE** (v1.0.7) - Theme naming consistency
+  - Renamed font_sans to font_family
+  - Python and CSS naming aligned
+- **COMPLETE** (v1.0.7) - CLI theme override
+  - --theme accepts any theme ID (built-in or plugin)
+- **COMPLETE** (v1.0.7) - P0 Critical fixes
+  - Fixed bare except: clauses in engine/loader.py
+  - Removed dead code (PageGeneratorInterface, PageGeneratorTemplate)
+  - HTML sanitizer now supports markdown tables
 
 ### Visual Charts & Graphs
 - **COMPLETE** - Chart.js library integration
@@ -72,17 +123,27 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Input validation for statistical functions
 
 ### Report Theming System
-- **COMPLETE** - Theme registry system (`theme_registry.py`)
-- **COMPLETE** - Three built-in themes (dark, light, high_contrast)
+- **COMPLETE** - Theme registry system (`core/plugin_system/registries/theme_registry.py`)
+- **COMPLETE** - 7 built-in themes: dark, light, high_contrast, ocean, purple, terminal, sunset
 - **COMPLETE** - `ReportTheme` dataclass with 18+ customizable properties
-- **COMPLETE** - Theme selection via CLI (`--theme`)
-- **COMPLETE** - Theme selection via config (`theme_id` parameter)
+- **COMPLETE** - Theme selection via CLI (`--theme`) overrides JSON preset
+- **COMPLETE** - Theme selection via JSON (`"theme": {"preset": "ocean"}`)
 - **COMPLETE** - CSS variable generation (`get_theme_css_variables()`)
+- **COMPLETE** - Runtime theme.css generation for `--linked-css` mode
 - **COMPLETE** - Chart colors integrated with themes
-- **COMPLETE** - Custom theme registration API
+- **COMPLETE** - Custom theme registration API (`helper.add_theme()`, `helper.add_builtin_themes()`)
+
+### CSS Architecture (v1.0.7)
+- **COMPLETE** - Core CSS minimized (67 lines - theme tokens only)
+- **COMPLETE** - Plugin-specific CSS isolation (`templates/static/plugin.css`)
+- **COMPLETE** - Plugin base layout CSS (`templates/static/base.css`)
+- **COMPLETE** - Jinja2 include for CSS loading
+- **COMPLETE** - Aligned theme variable naming across all plugins
+- **COMPLETE** - Dynamic theme injection via Jinja templating
+- **COMPLETE** - Core free of all plugin-specific styles
 
 ### Chart Configuration System
-- **COMPLETE** - Chart registry system (`chart_registry.py`)
+- **COMPLETE** - Chart registry system (`core/plugin_system/registries/chart_type_registry.py`)
 - **COMPLETE** - `ChartDataset` dataclass for dataset styling
 - **COMPLETE** - `ChartConfig` dataclass for chart configuration
 - **COMPLETE** - Pre-registered standard datasets (draws, tris, histograms)
@@ -92,7 +153,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Custom dataset/chart registration API
 
 ### LLM Generator System
-- **COMPLETE** - LLM generator registry (`llm_registry.py`)
+- **COMPLETE** - LLM generator registry (`core/plugin_system/registries/llm_generator_registry.py`)
 - **COMPLETE** - `LLMGeneratorDefinition` dataclass
 - **COMPLETE** - `PromptCategory` system for structured prompts
 - **COMPLETE** - 7 registered generators with categories
@@ -124,6 +185,7 @@ Evolve BobReview into a comprehensive performance analysis suite with:
 - **COMPLETE** - Data sampling strategies (all, random, sequential, mixed)
 - **COMPLETE** - Built-in png_data_points system (350+ lines)
 - **COMPLETE** - CLI flags (`--report-system`, `--list-report-systems`)
+- **COMPLETE** (v1.0.7) - --theme CLI accepts any registered theme ID
 - **COMPLETE** - Complete CLI override support
 - **COMPLETE** - User custom systems directory (~/.bobreview/report_systems/)
 - **COMPLETE** - Comprehensive documentation (REPORT_SYSTEMS_GUIDE.md)
@@ -383,8 +445,16 @@ Evolve BobReview into a comprehensive performance analysis suite with:
   - Multi-provider support (OpenAI, Anthropic, Ollama)
   - Unified CLI arguments (`--llm-provider`, `--llm-api-key`)
   - Provider factory pattern for extensibility
-- Core refactoring complete
-- Caching implemented
+- v1.0.6 - CMS-style Jinja2 Template System
+  - All UI text configurable via JSON labels
+  - Multi-source template loading
+- v1.0.7 - Plugin System
+  - PluginHelper API for simplified registration
+  - Plugin scaffolder CLI (`bobreview plugins create`)
+  - Dynamic font loading with font_url
+  - CLI --theme accepts any theme (built-in or plugin)
+  - No bundled plugins - create with scaffolder
+- Core architecture complete
 - Modular architecture with registry patterns
 - JSON-based report system definitions
 
@@ -431,6 +501,6 @@ Contributions are welcome. Consider:
 
 ---
 
-Last updated: December 5, 2025
-Current version: 1.0.5
-Next milestone: v1.0.6 - Jinja2 Template System and Plugin Architecture
+Last updated: December 12, 2025
+Current version: 1.0.7
+Next milestone: v2.0 - Enterprise Release

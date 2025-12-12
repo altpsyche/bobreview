@@ -1,0 +1,69 @@
+{#
+ # Reusable UI Macros for {{name}}
+ # Import with: {% from "components/macros.html.j2" import stat_card, feature_card %}
+ #}
+
+{# Stat Card - displays a key metric with optional variant styling #}
+{% macro stat_card(label, value, subtitle='', variant='') %}
+<div class="stat-card{% if variant %} stat-card--{{ variant }}{% endif %}">
+  <div class="stat-card-label">{{ label }}</div>
+  <div class="stat-card-value">{{ value }}</div>
+  {% if subtitle %}<div class="stat-card-sub">{{ subtitle }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{# Feature Card - navigation link with icon #}
+{% macro feature_card(url, icon, title, description) %}
+<a href="{{ url }}" class="feature-card">
+  <i class="fas {{ icon }}"></i>
+  <div class="feature-card-content">
+    <h3>{{ title }}</h3>
+    <p>{{ description }}</p>
+  </div>
+</a>
+{% endmacro %}
+
+{# Metric Table - displays statistics from a stats dict #}
+{% macro metric_table(title, stats, labels={}) %}
+<h3>{{ title }}</h3>
+<table>
+  <thead>
+    <tr>
+      <th>{{ labels.get('metric', 'Metric') }}</th>
+      <th>{{ labels.get('value', 'Value') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Minimum</td><td>{{ stats.min|format_number }}</td></tr>
+    <tr><td>Maximum</td><td>{{ stats.max|format_number }}</td></tr>
+    <tr><td>Mean</td><td>{{ stats.mean|format_number(1) }}</td></tr>
+    <tr><td>Median</td><td>{{ stats.median|format_number(1) }}</td></tr>
+    {% if stats.stdev %}<tr><td>Std Dev</td><td>{{ stats.stdev|format_number(1) }}</td></tr>{% endif %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{# Progress Bar - horizontal bar showing progress toward a max value #}
+{% macro progress_bar(value, max, label='', variant='') %}
+{% set pct = (value / max * 100) if max > 0 else 0 %}
+<div class="progress-bar{% if variant %} progress-bar--{{ variant }}{% endif %}">
+  <div class="progress-bar-label">{{ label }}</div>
+  <div class="progress-bar-track">
+    <div class="progress-bar-fill" style="width: {{ pct|round }}%"></div>
+  </div>
+  <div class="progress-bar-value">{{ value|format_number }} / {{ max|format_number }}</div>
+</div>
+{% endmacro %}
+
+{# Callout/Alert Box - highlights important information #}
+{% macro callout(title, variant='info') %}
+<div class="callout callout--{{ variant }}">
+  <div class="callout-title">{{ title }}</div>
+  <div class="callout-content">{{ caller() }}</div>
+</div>
+{% endmacro %}
+
+{# Badge - small status indicator #}
+{% macro badge(text, variant='') %}
+<span class="badge{% if variant %} badge-{{ variant }}{% endif %}">{{ text }}</span>
+{% endmacro %}

@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
 """
-BobReview - Performance Analysis and Review Tool
+BobReview - Report Generation Framework
 
-A comprehensive tool for analyzing game performance captures and generating
-detailed reports with LLM-powered insights.
+A comprehensive tool for generating detailed reports with LLM-powered insights.
 
-v1.0.6: CMS-Style Jinja2 Template System
+v1.0.7: Plugin System
 """
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 __author__ = "BobReview Contributors"
-__description__ = "Performance analysis and review tool for game development"
+__description__ = "Report generation framework with plugin support"
 
 # Import from new package structure
-from .core import ReportConfig, analyze_data
-from .data_parser import parse_filename, DataPoint
+from .core import ReportConfig
 from .cli import main as cli_main
 
 __all__ = [
     '__author__',
     '__description__',
     '__version__',
-    'DataPoint',
     'ReportConfig',
-    'analyze_data',
     'cli_main',
-    'parse_filename',
 ]
+

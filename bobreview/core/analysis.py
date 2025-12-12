@@ -5,7 +5,7 @@ Statistical analysis utilities for BobReview.
 
 import math
 import statistics
-from typing import Dict, List, Any, Tuple, TYPE_CHECKING
+from typing import Dict, List, Any, Tuple, TYPE_CHECKING, Optional
 from scipy import stats
 
 if TYPE_CHECKING:
@@ -140,59 +140,6 @@ def _detect_outliers_mad(values: List[float], indices: List[int], threshold: flo
     return outliers
 
 
-def _calculate_frame_times(timestamps: List[int]) -> Dict[str, Any]:
-    """
-    Calculate frame time statistics from timestamps.
-    
-    Parameters:
-        timestamps: List of timestamps in temporal order (should be monotonically increasing)
-    
-    Returns:
-        dict: Frame time statistics including min, max, mean, median, and anomalies.
-              Anomalies are tuples of (frame_index, delta_time, timestamp) for frames
-              with unusually long frame times (>3x median).
-    """
-    if len(timestamps) < 2:
-        return {
-            'min': 0,
-            'max': 0,
-            'mean': 0,
-            'median': 0,
-            'anomalies': []
-        }
-    
-    # Calculate deltas between consecutive frames with original indices
-    deltas_with_info = []
-    for i in range(len(timestamps) - 1):
-        delta = timestamps[i+1] - timestamps[i]
-        if delta >= 0:  # Only include valid (non-negative) deltas
-            deltas_with_info.append((i, delta, timestamps[i]))
-    
-    if not deltas_with_info:
-        return {
-            'min': 0,
-            'max': 0,
-            'mean': 0,
-            'median': 0,
-            'anomalies': []
-        }
-    
-    deltas = [d[1] for d in deltas_with_info]
-    mean_delta = statistics.mean(deltas)
-    median_delta = statistics.median(deltas)
-    
-    # Detect anomalies: frame times > 3x median (potential hitches)
-    anomaly_threshold = median_delta * 3 if median_delta > 0 else mean_delta * 3
-    anomalies = [(idx, delta, ts) for idx, delta, ts in deltas_with_info
-                 if delta > anomaly_threshold and anomaly_threshold > 0]
-    
-    return {
-        'min': min(deltas),
-        'max': max(deltas),
-        'mean': mean_delta,
-        'median': median_delta,
-        'anomalies': anomalies
-    }
 
 
 def _classify_trend(slope: float, stdev: float, mean: float) -> str:
@@ -211,7 +158,7 @@ def _classify_trend(slope: float, stdev: float, mean: float) -> str:
         return 'stable'
     
     # Normalize slope relative to data scale
-    # For performance metrics, negative slope = improving (lower is better)
+    # For metrics where lower is better, negative slope = improving
     normalized_slope = slope / (stdev / 10)
     
     if normalized_slope < -0.1:
@@ -222,272 +169,25 @@ def _classify_trend(slope: float, stdev: float, mean: float) -> str:
         return 'stable'
 
 
-def calculate_metric_stats(
-    values: List[float],
-    config: "ReportConfig",
-    all_data_points: List[Dict[str, Any]] = None,
-    metric_name: str = None
-) -> Dict[str, Any]:
-    """
-    Calculate comprehensive statistics for a single metric.
-    
-    Parameters:
-        values: List of numeric values for this metric
-        config: ReportConfig object with thresholds
-        all_data_points: Optional full data points for z-score calculation
-        metric_name: Name of the metric being analyzed
-    
-    Returns:
-        Dictionary with all statistics for this metric
-    """
-    n = len(values)
-    if n == 0:
-        return {
-            'min': 0, 'max': 0, 'mean': 0, 'median': 0,
-            'q1': 0, 'q3': 0, 'p90': 0, 'p95': 0, 'p99': 0,
-            'stdev': 0, 'variance': 0, 'cv': 0,
-            'ci_lower': 0, 'ci_upper': 0,
-            'outliers_high': [], 'outliers_low': []
-        }
-    
-    indices = list(range(n))
-    
-    mean_val = statistics.mean(values)
-    stdev_val = statistics.stdev(values) if n > 1 else 0
-    variance_val = statistics.variance(values) if n > 1 else 0
-    cv_val = (stdev_val / mean_val * 100) if mean_val > 0 else 0
-    
-    # Percentiles
-    if n > 1:
-        percentiles = statistics.quantiles(values, n=100)
-        p90, p95, p99 = percentiles[89], percentiles[94], percentiles[98]
-        quartiles = statistics.quantiles(values, n=4)
-        q1, q3 = quartiles[0], quartiles[2]
-    else:
-        p90 = p95 = p99 = q1 = q3 = values[0]
-    
-    # Confidence interval
-    ci = _calculate_confidence_interval(values)
-    
-    # Outlier detection
-    sigma = config.outlier_sigma
-    outliers_high = []
-    outliers_low = []
-    if all_data_points and metric_name:
-        outliers_high = [(i, p) for i, p in enumerate(all_data_points) 
-                         if metric_name in p and p[metric_name] > mean_val + sigma * stdev_val]
-        outliers_low = [(i, p) for i, p in enumerate(all_data_points) 
-                        if metric_name in p and p[metric_name] < mean_val - sigma * stdev_val]
-    
-    return {
-        'min': min(values),
-        'max': max(values),
-        'mean': mean_val,
-        'median': statistics.median(values),
-        'q1': q1,
-        'q3': q3,
-        'p90': p90,
-        'p95': p95,
-        'p99': p99,
-        'stdev': stdev_val,
-        'variance': variance_val,
-        'cv': cv_val,
-        'ci_lower': ci[0],
-        'ci_upper': ci[1],
-        'outliers_high': outliers_high,
-        'outliers_low': outliers_low
-    }
-
-
-def analyze_data(
-    data_points: List[Dict[str, Any]],
-    config: "ReportConfig",
-    metrics: List[str] = None,
-    metric_config: Dict[str, Any] = None
-) -> Dict[str, Any]:
-    """
-    Calculate statistics and identify hotspots from data.
-    
-    This function is metric-agnostic - it analyzes whatever metrics are specified.
-    
-    Parameters:
-        data_points: List of parsed data points
-        config: ReportConfig object with thresholds and parameters
-        metrics: List of metric field names to analyze (default: ['draws', 'tris'])
-        metric_config: Optional MetricConfig-like dict with:
-            - timestamp_field: Field name for timestamps (default: 'ts')
-            - identifier_field: Field name for item identifier (default: 'testcase')
-            - threshold_mapping: Maps metrics to threshold config keys
-    
-    Returns:
-        dict: Dictionary containing statistical analysis results for each metric,
-              plus high_load, low_load, critical, frame_times, trends, etc.
-    """
-    if not data_points:
-        raise ValueError("analyze_data requires at least one data point")
-    
-    # Defaults for backward compatibility
-    if metrics is None:
-        metrics = ['draws', 'tris']
-    
-    if metric_config is None:
-        metric_config = {
-            'timestamp_field': 'ts',
-            'identifier_field': 'testcase',
-            'threshold_mapping': {
-                'draws': {
-                    'high': 'high_load_draw_threshold',
-                    'low': 'low_load_draw_threshold',
-                    'soft_cap': 'draw_soft_cap',
-                    'hard_cap': 'draw_hard_cap'
-                },
-                'tris': {
-                    'high': 'high_load_tri_threshold',
-                    'low': 'low_load_tri_threshold',
-                    'soft_cap': 'tri_soft_cap',
-                    'hard_cap': 'tri_hard_cap'
-                }
-            }
-        }
-    
-    n = len(data_points)
-    timestamp_field = metric_config.get('timestamp_field', 'ts')
-    identifier_field = metric_config.get('identifier_field', 'testcase')
-    threshold_mapping = metric_config.get('threshold_mapping', {})
-    indices = list(range(n))
-    
-    result = {'count': n}
-    
-    # Calculate statistics for each metric
-    for metric in metrics:
-        values = [p.get(metric, 0) for p in data_points]
-        result[metric] = calculate_metric_stats(values, config, data_points, metric)
-        
-        # Calculate trend for this metric
-        slope, intercept = _calculate_linear_regression(
-            [float(i) for i in indices], [float(v) for v in values]
-        )
-        stdev = result[metric]['stdev']
-        mean = result[metric]['mean']
-        direction = _classify_trend(slope, stdev, mean)
-        
-        # Add trend info
-        if 'trends' not in result:
-            result['trends'] = {}
-        result['trends'][metric] = {
-            'slope': slope,
-            'intercept': intercept,
-            'direction': direction
-        }
-        
-        # Add confidence intervals
-        if 'confidence_intervals' not in result:
-            result['confidence_intervals'] = {}
-        result['confidence_intervals'][metric] = (
-            result[metric]['ci_lower'],
-            result[metric]['ci_upper']
-        )
-        
-        # IQR and MAD outlier detection
-        if 'outliers_iqr' not in result:
-            result['outliers_iqr'] = {}
-        if 'outliers_mad' not in result:
-            result['outliers_mad'] = {}
-        result['outliers_iqr'][metric] = _detect_outliers_iqr(values, indices)
-        result['outliers_mad'][metric] = _detect_outliers_mad(values, indices, config.mad_threshold)
-    
-    # Frame time analysis using timestamp field
-    timestamps = [p.get(timestamp_field, 0) for p in data_points]
-    result['frame_times'] = _calculate_frame_times(timestamps)
-    
-    # High-load and low-load detection
-    # Uses threshold_mapping to get thresholds dynamically
-    high_load = []
-    low_load = []
-    
-    for i, p in enumerate(data_points):
-        is_high = False
-        is_low = True
-        
-        for metric in metrics:
-            if metric in threshold_mapping:
-                high_key = threshold_mapping[metric].get('high')
-                low_key = threshold_mapping[metric].get('low')
-                
-                high_threshold = getattr(config, high_key, None) if high_key else None
-                low_threshold = getattr(config, low_key, None) if low_key else None
-                
-                val = p.get(metric, 0)
-                if high_threshold is not None and val >= high_threshold:
-                    is_high = True
-                if low_threshold is not None and val >= low_threshold:
-                    is_low = False
-        
-        if is_high:
-            high_load.append((i, p))
-        if is_low and not is_high:
-            low_load.append((i, p))
-    
-    result['high_load'] = high_load
-    result['low_load'] = low_load
-    
-    # Critical hotspot detection - use first metric weighted more heavily
-    if len(metrics) >= 1:
-        primary_metric = metrics[0]
-        secondary_metric = metrics[1] if len(metrics) > 1 else None
-        
-        def score_point(i):
-            p = data_points[i]
-            score = p.get(primary_metric, 0)
-            if secondary_metric:
-                # Weight secondary metric less (normalized by factor)
-                score += p.get(secondary_metric, 0) / 1000
-            return score
-        
-        worst_idx = max(range(n), key=score_point)
-        result['critical'] = (worst_idx, data_points[worst_idx])
-    else:
-        result['critical'] = (0, data_points[0])
-    
-    # Build outliers list for templates (combined from all metrics)
-    outliers_combined = []
-    for metric in metrics:
-        for idx, p in result[metric].get('outliers_high', []):
-            # Calculate z-score
-            mean = result[metric]['mean']
-            stdev = result[metric]['stdev']
-            if stdev > 0:
-                zscore = (p.get(metric, 0) - mean) / stdev
-            else:
-                zscore = 0
-            outlier_entry = {
-                'index': idx,
-                identifier_field: p.get(identifier_field, ''),
-                **{m: p.get(m, 0) for m in metrics},
-                'zscore': zscore
-            }
-            if outlier_entry not in outliers_combined:
-                outliers_combined.append(outlier_entry)
-    
-    result['outliers'] = outliers_combined
-    
-    return result
 
 
 def format_data_table(
-    data_points: List[Dict[str, Any]], max_rows: int | None = None
+    data_points: List[Dict[str, Any]], 
+    max_rows: Optional[int] = None,
+    fields: Optional[List[str]] = None,
+    field_labels: Optional[Dict[str, str]] = None
 ) -> str:
     """
     Render a list of data points as a markdown table suitable for embedding in prompts.
     
-    Each data point is expected to be a mapping containing the keys: `testcase`, `draws`, `tris`, and `ts`. When `max_rows` is provided, the output is truncated to at most that many rows and a note is appended when truncation occurs.
-    
     Parameters:
-        data_points (List[Dict[str, Any]]): Sequence of data point dictionaries with keys `testcase`, `draws`, `tris`, and `ts`.
-        max_rows (int, optional): Maximum number of rows to include; when omitted, all rows are included.
+        data_points: Sequence of data point dictionaries
+        max_rows: Maximum number of rows to include; when omitted, all rows are included
+        fields: List of field names to include as columns (default: all fields from first data point)
+        field_labels: Dict mapping field names to display labels (default: field names as-is)
     
     Returns:
-        str: A markdown-formatted table with columns "Index", "Test Case", "Draw Calls", "Triangles", and "Timestamp", or the string "No data available." if `data_points` is empty.
+        str: A markdown-formatted table or "No data available." if `data_points` is empty.
     """
     from .utils import format_number
     
@@ -499,13 +199,40 @@ def format_data_table(
     if not display_points:
         return "No data available."
     
+    # Determine fields to display
+    if fields is None:
+        # Use all fields from first data point (excluding internal fields)
+        first_point = display_points[0]
+        fields = [k for k in first_point.keys() if not k.startswith('_')]
+    
+    if not fields:
+        return "No data available."
+    
+    # Get labels (default to field names)
+    if field_labels is None:
+        field_labels = {}
+    labels = {field: field_labels.get(field, field.replace('_', ' ').title()) for field in fields}
+    
     # Create table header
-    table = "| Index | Test Case | Draw Calls | Triangles | Timestamp |\n"
-    table += "|-------|-----------|------------|-----------|----------|\n"
+    header_row = "| Index | " + " | ".join(labels.values()) + " |\n"
+    separator_row = "|" + "|".join(["-------"] * (len(fields) + 1)) + "|\n"
+    table = header_row + separator_row
     
     # Add rows
     for idx, point in enumerate(display_points):
-        table += f"| {idx} | {point['testcase']} | {point['draws']} | {format_number(point['tris'])} | {point['ts']} |\n"
+        row_values = [str(idx)]
+        for field in fields:
+            value = point.get(field, '')
+            # Format numbers nicely
+            if isinstance(value, (int, float)):
+                if isinstance(value, float) and value >= 1000:
+                    value = format_number(int(value), 0)
+                elif isinstance(value, int) and value >= 1000:
+                    value = format_number(value, 0)
+                else:
+                    value = str(value)
+            row_values.append(str(value))
+        table += "| " + " | ".join(row_values) + " |\n"
     
     if max_rows is not None and total_samples > max_rows:
         table += f"\n(Showing first {max_rows} of {total_samples} total samples)"

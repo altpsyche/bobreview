@@ -1,0 +1,118 @@
+﻿usage: bobreview [-h] [--version] [--dir DIR] [--output OUTPUT]
+                 [--title TITLE] [--no-recommendations]
+                 [--llm-provider {openai,anthropic,ollama}]
+                 [--llm-api-key LLM_API_KEY] [--llm-api-base LLM_API_BASE]
+                 [--llm-model LLM_MODEL] [--llm-temperature LLM_TEMPERATURE]
+                 [--llm-max-tokens LLM_MAX_TOKENS]
+                 [--llm-chunk-size LLM_CHUNK_SIZE]
+                 [--llm-combine-warning-threshold LLM_COMBINE_WARNING_THRESHOLD]
+                 [--list-providers] [--cache-dir CACHE_DIR] [--use-cache]
+                 [--no-cache] [--clear-cache] [--dry-run]
+                 [--sample SAMPLE_SIZE] [--verbose] [--quiet]
+                 [--no-embed-images] [--linked-css] [--theme THEME_ID]
+                 [--disable-page PAGE_ID] [--plugin PLUGIN_NAME]
+                 [--report-system SYSTEM] [--list-report-systems]
+                 [--list-plugins] [--plugin-dir DIR] [--no-plugins]
+                 {plugins} ...
+
+BobReview - Performance Analysis and Review Tool for Game Development
+
+positional arguments:
+  {plugins}             Plugin management commands
+    plugins             Plugin management
+
+options:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  --dir DIR             Directory containing PNG files (default: current
+                        directory)
+  --output OUTPUT       Output directory/file path (creates index.html and
+                        additional pages)
+  --title TITLE         Report title (can also be extracted from parsed data,
+                        e.g., game.json)
+  --no-recommendations  Disable system-level recommendations section
+  --llm-provider {openai,anthropic,ollama}
+                        LLM provider to use (default: openai)
+  --llm-api-key LLM_API_KEY
+                        API key for LLM provider (or use OPENAI_API_KEY,
+                        ANTHROPIC_API_KEY env vars)
+  --llm-api-base LLM_API_BASE
+                        Custom API base URL (e.g., for Ollama:
+                        http://localhost:11434)
+  --llm-model LLM_MODEL
+                        Model to use (default depends on provider: gpt-4o,
+                        claude-3-5-sonnet-20241022, llama2)
+  --llm-temperature LLM_TEMPERATURE
+                        LLM temperature for generation (default: 0.7)
+  --llm-max-tokens LLM_MAX_TOKENS
+                        Maximum tokens for LLM responses (default: 2000)
+  --llm-chunk-size LLM_CHUNK_SIZE
+                        Number of data samples to send per LLM call (default:
+                        10)
+  --llm-combine-warning-threshold LLM_COMBINE_WARNING_THRESHOLD
+                        Character count threshold for warning when combining
+                        chunks (default: 100000)
+  --list-providers      List available LLM providers and exit
+  --cache-dir CACHE_DIR
+                        Directory for caching LLM responses (default:
+                        .bobreview_cache)
+  --use-cache           Use cached LLM responses when available (default:
+                        enabled)
+  --no-cache            Disable caching and always call LLM
+  --clear-cache         Clear all cached responses before running
+  --dry-run             Analyze data but skip LLM calls (generates placeholder
+                        content)
+  --sample SAMPLE_SIZE  Process only N random samples (for testing)
+  --verbose, -v         Enable verbose output (debug information)
+  --quiet, -q           Suppress all output except errors
+  --no-embed-images     Use external image files instead of embedding
+  --linked-css          Use external CSS file instead of embedding
+  --theme THEME_ID      Report theme ID (built-in: dark, ocean, purple,
+                        terminal, sunset, light, high_contrast, or plugin-
+                        registered)
+  --disable-page PAGE_ID
+                        Disable a page by ID (can be used multiple times)
+  --plugin PLUGIN_NAME  Plugin to use. Use --list-plugins to see available
+                        plugins. Plugin name matching is case-insensitive.
+  --report-system SYSTEM
+                        Report system to use (system ID). Required if --plugin
+                        has multiple systems. If omitted, uses the single
+                        report system from the plugin.
+  --list-report-systems
+                        List all available report systems and exit
+  --list-plugins        List all available plugins and exit
+  --plugin-dir DIR      Additional plugin directory (can be used multiple
+                        times)
+  --no-plugins          Disable plugin loading
+
+Examples:
+  # Basic usage with plugin (required)
+  bobreview --plugin <plugin-name> --dir ./screenshots
+
+  # Use Anthropic Claude
+  bobreview --plugin <plugin-name> --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
+
+  # Use local Ollama
+  bobreview --plugin <plugin-name> --dir ./screenshots --llm-provider ollama --llm-model llama2
+
+  # Custom title
+  bobreview --plugin <plugin-name> --dir ./screenshots --title "My Analysis"
+
+  # Explicit report system from plugin (required if plugin has multiple systems)
+  bobreview --plugin <plugin-name> --report-system <system-id> --dir ./screenshots
+
+  # Dry run to test without calling LLM
+  bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
+
+  # List available plugins and report systems
+  bobreview plugins list
+  bobreview --list-plugins
+  bobreview --list-report-systems
+
+  # Create a new plugin from template
+  bobreview plugins create my-plugin
+  bobreview plugins create my-plugin --template minimal
+
+  # List available LLM providers
+  bobreview --list-providers
+        

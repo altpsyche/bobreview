@@ -1,0 +1,62 @@
+{% extends "{{safe_name}}/pages/base.html.j2" %}
+{% from "components/macros.html.j2" import stat_card, metric_table %}
+
+{% block content %}
+<header>
+    <h1>Detailed Analysis</h1>
+    <nav class="nav-links">
+        <a href="index.html">Overview</a>
+        <a href="details.html" class="active">Details</a>
+    </nav>
+</header>
+
+{# Compute stats from data_points #}
+{% set scores = data_points|map(attribute="score")|list if data_points else [] %}
+{% set item_count = scores|length %}
+{% set avg_score = (scores|sum / item_count)|round(1) if item_count > 0 else 0 %}
+{% set max_score = scores|max if scores else 0 %}
+{% set min_score = scores|min if scores else 0 %}
+{% set score_range = max_score - min_score %}
+
+<div class="card">
+    <h2>Statistics</h2>
+    <div class="stats-grid">
+        {{ stat_card("Total Items", item_count) }}
+        {{ stat_card("Average", avg_score|format_number(1)) }}
+        {{ stat_card("Range", score_range|format_number(0)) }}
+        {{ stat_card("Spread", ((max_score - min_score) / max_score * 100)|round(0) if max_score > 0 else 0, subtitle="%") }}
+    </div>
+</div>
+
+<div class="card">
+    <h2>Distribution</h2>
+    <div class="chart-container">
+        <canvas id="distribution_chart"></canvas>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Full Data Table</h2>
+    <table>
+        <thead>
+            <tr><th>#</th><th>Name</th><th>Score</th><th>Category</th></tr>
+        </thead>
+        <tbody>
+            {% for item in data_points %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item.name }}</td>
+                <td class="{% if item.score >= 90 %}text-ok{% elif item.score < 70 %}text-danger{% endif %}">{{ item.score | format_number(0) }}</td>
+                <td><span class="badge">{{ item.category }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if charts.distribution_chart %}{{ charts.distribution_chart | safe }}{% endif %}
+</script>
+{% endblock %}

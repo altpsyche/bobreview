@@ -3,74 +3,40 @@
 Configuration and data models for BobReview.
 """
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional, List
+from typing import List
 
+# Import focused config classes
+from .config_classes import (
+    ReportConfig,
+    ThresholdConfig,
+    LLMConfig,
+    CacheConfig,
+    ExecutionConfig,
+    OutputConfig,
+)
 
-@dataclass
-class ReportConfig:
-    """Configuration for report generation."""
-    title: str = "Performance Analysis Report"
-    location: str = "Unknown Location"
-    draw_soft_cap: int = 550
-    draw_hard_cap: int = 600
-    tri_soft_cap: int = 100000
-    tri_hard_cap: int = 120000
-    high_load_draw_threshold: int = 600
-    high_load_tri_threshold: int = 100000
-    low_load_draw_threshold: int = 400
-    low_load_tri_threshold: int = 50000
-    outlier_sigma: float = 2.0
-    mad_threshold: float = 3.5  # MAD threshold for outlier detection
-    enable_recommendations: bool = True
-    
-    # LLM provider settings (unified across all providers)
-    llm_provider: str = "openai"  # 'openai', 'anthropic', 'ollama'
-    llm_api_key: Optional[str] = None  # API key for the selected provider
-    llm_api_base: Optional[str] = None  # Custom API base URL (e.g., for Ollama)
-    llm_model: str = "gpt-4o"  # Model name (provider-specific)
-    llm_temperature: float = 0.7
-    llm_max_tokens: int = 2000  # Max tokens for LLM responses
-    llm_chunk_size: int = 10  # Number of data samples to send per LLM call
-    llm_combine_warning_threshold: int = 100000  # Character count threshold for warning
-    
-    # Caching
-    cache_dir: Path = Path(".bobreview_cache")
-    use_cache: bool = True
-    clear_cache: bool = False
-    
-    # Execution
-    dry_run: bool = False
-    sample_size: Optional[int] = None
-    verbose: bool = False
-    quiet: bool = False
-    
-    # Output
-    embed_images: bool = True  # Embed images as base64 in HTML
-    linked_css: bool = False  # Use external CSS file
-    theme_id: str = 'dark'  # Report theme
-    disabled_pages: Optional[List[str]] = None  # Page IDs to exclude
-    
-    def __post_init__(self):
-        """
-        Initialize mutable default fields on construction.
-        
-        If `disabled_pages` was left as `None` during creation, set it to an empty list so each instance has its own mutable list rather than sharing a class-level default.
-        """
-        if self.disabled_pages is None:
-            self.disabled_pages = []
+# Re-export for backward compatibility
+__all__ = [
+    'ReportConfig',
+    'ThresholdConfig',
+    'LLMConfig',
+    'CacheConfig',
+    'ExecutionConfig',
+    'OutputConfig',
+    'validate_config',
+]
 
 
 def validate_config(config: ReportConfig) -> List[str]:
     """
     Validate a ReportConfig for logical consistency.
     
-    Performs validation of numeric thresholds, size limits, and LLM settings and collects human-readable error messages for each violated constraint.
+    Performs generic validation of numeric thresholds, size limits, and LLM settings.
+    Threshold validation is generic - checks that numeric thresholds are non-negative
+    and that soft_cap <= hard_cap for any threshold pairs found.
     
     Checks performed:
-    - draw_soft_cap <= draw_hard_cap and tri_soft_cap <= tri_hard_cap
-    - draw/tri caps and high/low load thresholds are >= 0
+    - Generic threshold validation (non-negative values, soft_cap <= hard_cap pairs)
     - outlier_sigma > 0
     - mad_threshold > 0
     - llm_chunk_size > 0
@@ -87,63 +53,72 @@ def validate_config(config: ReportConfig) -> List[str]:
         List[str]: List of error messages describing each violated constraint; empty if the configuration is valid.
     """
     errors = []
+    thresholds = config.thresholds
+    llm = config.llm
+    execution = config.execution
     
-    # Check threshold ordering
-    if config.draw_soft_cap > config.draw_hard_cap:
-        errors.append("draw_soft_cap must be <= draw_hard_cap")
+    # Generic threshold validation - check all numeric thresholds
+    threshold_dict = dict(thresholds) if isinstance(thresholds, dict) else {}
     
-    if config.tri_soft_cap > config.tri_hard_cap:
-        errors.append("tri_soft_cap must be <= tri_hard_cap")
+    # Find soft_cap/hard_cap pairs and validate ordering
+    soft_caps = {k: v for k, v in threshold_dict.items() if k.endswith('_soft_cap')}
+    for soft_key, soft_value in soft_caps.items():
+        if not isinstance(soft_value, (int, float)):
+            continue
+        
+        # Find corresponding hard_cap
+        hard_key = soft_key.replace('_soft_cap', '_hard_cap')
+        if hard_key in threshold_dict:
+            hard_value = threshold_dict[hard_key]
+            if isinstance(hard_value, (int, float)):
+                if soft_value > hard_value:
+                    errors.append(f"{soft_key} ({soft_value}) must be <= {hard_key} ({hard_value})")
+        
+        # Check non-negative
+        if soft_value < 0:
+            errors.append(f"{soft_key} must be non-negative")
     
-    # Check non-negative thresholds
-    if config.draw_soft_cap < 0:
-        errors.append("draw_soft_cap must be non-negative")
+    # Validate hard_caps are non-negative
+    hard_caps = {k: v for k, v in threshold_dict.items() if k.endswith('_hard_cap')}
+    for hard_key, hard_value in hard_caps.items():
+        if isinstance(hard_value, (int, float)) and hard_value < 0:
+            errors.append(f"{hard_key} must be non-negative")
     
-    if config.draw_hard_cap < 0:
-        errors.append("draw_hard_cap must be non-negative")
+    # Validate thresholds are non-negative
+    threshold_keys = {k: v for k, v in threshold_dict.items() if k.endswith('_threshold')}
+    for threshold_key, threshold_value in threshold_keys.items():
+        if isinstance(threshold_value, (int, float)) and threshold_value < 0:
+            errors.append(f"{threshold_key} must be non-negative")
     
-    if config.tri_soft_cap < 0:
-        errors.append("tri_soft_cap must be non-negative")
-    
-    if config.tri_hard_cap < 0:
-        errors.append("tri_hard_cap must be non-negative")
-    
-    if config.high_load_draw_threshold < 0:
-        errors.append("high_load_draw_threshold must be non-negative")
-    
-    if config.high_load_tri_threshold < 0:
-        errors.append("high_load_tri_threshold must be non-negative")
-    
-    if config.low_load_draw_threshold < 0:
-        errors.append("low_load_draw_threshold must be non-negative")
-    
-    if config.low_load_tri_threshold < 0:
-        errors.append("low_load_tri_threshold must be non-negative")
-    
-    if config.outlier_sigma <= 0:
+    # Validate generic outlier thresholds (if present)
+    outlier_sigma = threshold_dict.get('outlier_sigma')
+    if outlier_sigma is not None and isinstance(outlier_sigma, (int, float)) and outlier_sigma <= 0:
         errors.append("outlier_sigma must be > 0")
     
-    if config.mad_threshold <= 0:
+    mad_threshold = threshold_dict.get('mad_threshold')
+    if mad_threshold is not None and isinstance(mad_threshold, (int, float)) and mad_threshold <= 0:
         errors.append("mad_threshold must be > 0")
     
-    if config.llm_chunk_size <= 0:
+    # Note: All threshold validation is now generic - no hardcoded field names
+    
+    if llm.chunk_size <= 0:
         errors.append("llm_chunk_size must be > 0")
     
-    if config.llm_max_tokens <= 0:
+    if llm.max_tokens <= 0:
         errors.append("llm_max_tokens must be > 0")
     
-    if config.llm_combine_warning_threshold <= 0:
+    if llm.combine_warning_threshold <= 0:
         errors.append("llm_combine_warning_threshold must be > 0")
     
-    if config.sample_size is not None and config.sample_size <= 0:
+    if execution.sample_size is not None and execution.sample_size <= 0:
         errors.append("sample_size must be > 0")
     
-    if config.llm_temperature < 0 or config.llm_temperature > 2:
+    if llm.temperature < 0 or llm.temperature > 2:
         errors.append("llm_temperature must be between 0 and 2")
     
     # Validate provider
     valid_providers = ['openai', 'anthropic', 'ollama']
-    if config.llm_provider not in valid_providers:
+    if llm.provider not in valid_providers:
         errors.append(f"llm_provider must be one of: {', '.join(valid_providers)}")
     
     return errors

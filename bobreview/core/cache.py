@@ -176,8 +176,8 @@ def init_cache(config: "ReportConfig"):
     Initialize the module-level LLM cache using values from `config`.
     
     Parameters:
-        config (ReportConfig): Configuration containing `cache_dir` and `use_cache`; used to construct the LLMCache instance that will be returned by `get_cache()`.
+        config (ReportConfig): Configuration containing cache settings in `config.cache`; used to construct the LLMCache instance that will be returned by `get_cache()`.
     """
     global _cache_instance
-    _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
+    _cache_instance = LLMCache(config.cache.cache_dir, enabled=config.cache.use_cache, config=config)
 

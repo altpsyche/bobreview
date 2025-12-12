@@ -11,101 +11,73 @@ from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from .config import ReportConfig
 
-# Try to import optional dependencies
+# Try to import rich for beautiful CLI output
 try:
-    from colorama import init as colorama_init, Fore, Style
-    COLORAMA_AVAILABLE = True
-    colorama_init(autoreset=True)
+    from rich.console import Console
+    from rich.theme import Theme
+    RICH_AVAILABLE = True
+    
+    # Custom theme for consistent styling
+    _theme = Theme({
+        "info": "cyan",
+        "success": "green",
+        "warning": "yellow",
+        "error": "red bold",
+        "debug": "dim blue",
+    })
+    console = Console(theme=_theme)
+    err_console = Console(theme=_theme, stderr=True)
 except ImportError:
-    COLORAMA_AVAILABLE = False
-    # Fallback: create dummy color classes
-    class Fore:
-        RED = GREEN = YELLOW = BLUE = CYAN = MAGENTA = WHITE = RESET = ''
-    class Style:
-        BRIGHT = DIM = NORMAL = RESET_ALL = ''
+    RICH_AVAILABLE = False
+    console = None
+    err_console = None
 
 
 def log_info(message: str, config: "Optional[ReportConfig]" = None):
-    """
-    Log an informational message to standard output unless quiet mode is enabled.
-    
-    If color support is available, the message is prefixed with a cyan "[INFO]" tag; otherwise a plain "[INFO]" tag is used. If a `config` is provided and `config.quiet` is True, the message is suppressed.
-    
-    Parameters:
-        message (str): The message to log.
-        config (ReportConfig, optional): Configuration that may suppress output when `config.quiet` is True.
-    """
-    if config and config.quiet:
+    """Log an informational message to stdout."""
+    if config and config.execution.quiet:
         return
-    if COLORAMA_AVAILABLE:
-        print(f"{Fore.CYAN}[INFO]{Style.RESET_ALL} {message}")
+    if RICH_AVAILABLE:
+        console.print(f"[info]●[/info] {message}")
     else:
-        print(f"[INFO] {message}")
+        print(f"● {message}")
 
 
 def log_success(message: str, config: "Optional[ReportConfig]" = None):
-    """
-    Log a success message to stdout, prefixed with a check mark.
-    
-    If a ReportConfig with `quiet=True` is provided, the message is suppressed.
-    When terminal coloring is available, the check mark is rendered in green.
-    
-    Parameters:
-        message (str): The message to print.
-        config (ReportConfig, optional): Configuration used to determine whether output is suppressed.
-    """
-    if config and config.quiet:
+    """Log a success message to stdout."""
+    if config and config.execution.quiet:
         return
-    if COLORAMA_AVAILABLE:
-        print(f"{Fore.GREEN}[OK]{Style.RESET_ALL} {message}")
+    if RICH_AVAILABLE:
+        console.print(f"[success]✓[/success] {message}")
     else:
-        print(f"[OK] {message}")
+        print(f"✓ {message}")
 
 
 def log_warning(message: str, config: "Optional[ReportConfig]" = None):
-    """
-    Print a warning message to stdout unless suppressed by configuration.
-    
-    Parameters:
-        message (str): The warning text to display.
-        config (ReportConfig, optional): If provided and `config.quiet` is True, the warning is not printed.
-    """
-    if config and config.quiet:
+    """Log a warning message to stdout."""
+    if config and config.execution.quiet:
         return
-    if COLORAMA_AVAILABLE:
-        print(f"{Fore.YELLOW}[WARNING]{Style.RESET_ALL} {message}")
+    if RICH_AVAILABLE:
+        console.print(f"[warning]⚠[/warning] {message}")
     else:
-        print(f"[WARNING] {message}")
+        print(f"⚠ {message}")
 
 
 def log_error(message: str):
-    """
-    Write an error message to standard error with an "[ERROR]" prefix; when the terminal supports color, the prefix is shown in red.
-    
-    Parameters:
-        message (str): The error text to display.
-    """
-    if COLORAMA_AVAILABLE:
-        print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} {message}", file=sys.stderr)
+    """Log an error message to stderr."""
+    if RICH_AVAILABLE:
+        err_console.print(f"[error]✗[/error] {message}")
     else:
-        print(f"[ERROR] {message}", file=sys.stderr)
+        print(f"✗ {message}", file=sys.stderr)
 
 
 def log_verbose(message: str, config: "Optional[ReportConfig]" = None):
-    """
-    Log a debug message when verbose mode is enabled and not suppressed by quiet mode.
-    
-    Prints the provided message to stdout only if `config` is provided, `config.verbose` is True, and `config.quiet` is False. When colorama is available, the log is prefixed with a colored `[DEBUG]` marker.
-    
-    Parameters:
-        message (str): The message to log.
-        config (ReportConfig, optional): Configuration controlling verbosity and quiet suppression. If omitted or falsy, no output is produced.
-    """
-    if config and config.verbose and not config.quiet:
-        if COLORAMA_AVAILABLE:
-            print(f"{Fore.BLUE}[DEBUG]{Style.RESET_ALL} {message}")
+    """Log a debug message when verbose mode is enabled."""
+    if config and config.execution.verbose and not config.execution.quiet:
+        if RICH_AVAILABLE:
+            console.print(f"[debug]• {message}[/debug]")
         else:
-            print(f"[DEBUG] {message}")
+            print(f"• {message}")
 
 
 def format_number(n, decimals=1):

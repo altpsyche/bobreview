@@ -1,0 +1,541 @@
+/*
+ * {{name}} Plugin Styles
+ * 
+ * Premium layout and component styles.
+ * Theme colors are provided via CSS variables from get_theme_css().
+ */
+
+/* ===========================================
+   GLOBAL ENHANCEMENTS
+   =========================================== */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+    min-height: 100vh;
+}
+
+/* ===========================================
+   LAYOUT
+   =========================================== */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 2.5rem;
+}
+
+/* ===========================================
+   HEADER - Premium Hero Section
+   =========================================== */
+header {
+    text-align: center;
+    padding: 3rem 2rem 2rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    border-radius: 2px;
+}
+
+header h1 {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--text-main) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+    font-size: 2.75rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+}
+
+header p {
+    color: var(--text-soft);
+    font-size: 1.05rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* ===========================================
+   CARDS - Glassmorphism Style
+   =========================================== */
+.card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.card h2 {
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ===========================================
+   TABLES
+   =========================================== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+th {
+    color: var(--text-soft);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+tr:hover {
+    background: var(--bg-hover);
+}
+
+/* ===========================================
+   STAT CARDS & STATS GRID
+   =========================================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.stat-card {
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    text-align: center;
+    border: 1px solid var(--border-subtle);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft);
+}
+
+.stat-card-label {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card-value {
+    color: var(--text-main);
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.stat-card-sub {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.stat-card--ok .stat-card-value {
+    color: var(--ok);
+}
+
+.stat-card--warn .stat-card-value {
+    color: var(--warn);
+}
+
+.stat-card--danger .stat-card-value {
+    color: var(--danger);
+}
+
+/* ===========================================
+   NAVIGATION LINKS
+   =========================================== */
+.nav-links {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.nav-links a {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.nav-links a:hover {
+    color: var(--text-main);
+    background: var(--bg-soft);
+}
+
+.nav-links a.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+/* ===========================================
+   PROGRESS BARS
+   =========================================== */
+.progress-bar {
+    margin: 0.75rem 0;
+}
+
+.progress-bar-label {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}
+
+.progress-bar-track {
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    height: 8px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    background: var(--accent);
+    height: 100%;
+    border-radius: var(--radius-md);
+    transition: width 0.3s ease;
+}
+
+.progress-bar-value {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    text-align: right;
+    margin-top: 0.25rem;
+}
+
+.progress-bar--ok .progress-bar-fill {
+    background: var(--ok);
+}
+
+.progress-bar--warn .progress-bar-fill {
+    background: var(--warn);
+}
+
+.progress-bar--danger .progress-bar-fill {
+    background: var(--danger);
+}
+
+/* ===========================================
+   CALLOUTS / ALERTS
+   =========================================== */
+.callout {
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md);
+    margin: 1rem 0;
+    border-left: 4px solid;
+}
+
+.callout-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.callout-content {
+    color: var(--text-soft);
+}
+
+.callout--info {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.callout--info .callout-title {
+    color: var(--accent);
+}
+
+.callout--warn {
+    background: var(--warn-soft);
+    border-color: var(--warn);
+}
+
+.callout--warn .callout-title {
+    color: var(--warn);
+}
+
+.callout--danger {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+}
+
+.callout--danger .callout-title {
+    color: var(--danger);
+}
+
+.callout--ok {
+    background: var(--ok-soft);
+    border-color: var(--ok);
+}
+
+.callout--ok .callout-title {
+    color: var(--ok);
+}
+
+/* ===========================================
+   FEATURE CARDS
+   =========================================== */
+.feature-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    transform: translateX(4px);
+}
+
+.feature-card i {
+    font-size: 1.5rem;
+    color: var(--accent);
+}
+
+.feature-card-content h3 {
+    color: var(--text-main);
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.feature-card-content p {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+}
+
+/* ===========================================
+   CHARTS
+   =========================================== */
+.chart-container {
+    position: relative;
+    height: 300px;
+    padding: 1rem 0;
+}
+
+/* ===========================================
+   LLM / MARKDOWN CONTENT
+   =========================================== */
+.llm-content {
+    line-height: 1.8;
+}
+
+.llm-content p {
+    margin-bottom: 1rem;
+}
+
+.llm-content strong,
+.llm-content b {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.llm-content em,
+.llm-content i {
+    color: var(--text-soft);
+}
+
+.llm-content ul,
+.llm-content ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.llm-content li {
+    margin-bottom: 0.5rem;
+}
+
+.llm-content li::marker {
+    color: var(--accent);
+}
+
+.llm-content h3,
+.llm-content h4 {
+    color: var(--accent);
+    margin: 1.5rem 0 0.75rem;
+}
+
+.llm-content code {
+    background: var(--accent-soft);
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9em;
+    font-family: var(--font-mono);
+    color: var(--accent);
+}
+
+.llm-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.llm-content pre code {
+    background: none;
+    padding: 0;
+    color: var(--text-main);
+}
+
+.llm-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--text-soft);
+    font-style: italic;
+}
+
+.llm-content a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.llm-content a:hover {
+    border-bottom-color: var(--accent);
+}
+
+/* ===========================================
+   STATUS BADGES
+   =========================================== */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-xl);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-ok {
+    background: var(--ok-soft);
+    color: var(--ok);
+}
+
+.badge-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.badge-danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+/* ===========================================
+   UTILITIES
+   =========================================== */
+.text-soft {
+    color: var(--text-soft);
+}
+
+.text-accent {
+    color: var(--accent);
+}
+
+.text-ok {
+    color: var(--ok);
+}
+
+.text-warn {
+    color: var(--warn);
+}
+
+.text-danger {
+    color: var(--danger);
+}
+
+.mt-1 {
+    margin-top: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 1rem;
+}
+
+.mt-3 {
+    margin-top: 1.5rem;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+.mb-3 {
+    margin-bottom: 1.5rem;
+}

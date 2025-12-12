@@ -7,6 +7,320 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2025-12-12
+
+### Introducing Plugins
+
+BobReview v1.0.7 introduces a **complete plugin architecture** with PluginHelper API, CLI scaffolding, dynamic theme system with custom fonts, and the foundation for extensible report generation. Everything is now plugin-driven.
+
+### Theme System Enhancements
+
+- **Dynamic Font Loading**:
+  - Added `font_url` property to `ReportTheme` for Google Fonts URLs
+  - All 7 built-in themes now include `font_url` for their specific fonts
+  - Templates dynamically load only the fonts needed by the active theme
+  - Jinja2 CSS output now wrapped in `Markup()` to prevent quote escaping
+
+- **Naming Consistency**:
+  - Renamed `font_sans` → `font_family` to match CSS `--font-family` variable
+  - Python and CSS naming now consistent across the codebase
+
+- **Theme Fonts**:
+  - `dark`: Plus Jakarta Sans + JetBrains Mono
+  - `light`: Inter + Fira Code
+  - `ocean`: Inter + Fira Code
+  - `purple`: Fira Code
+  - `terminal`: JetBrains Mono (both sans and mono)
+  - `sunset`: Outfit + Source Code Pro
+  - Scaffolder custom themes: Space Grotesk + IBM Plex Mono
+
+- **CLI Theme Override**:
+  - `--theme` argument now accepts any theme ID (built-in or plugin-registered)
+  - Removed hardcoded theme choices from CLI for flexibility
+
+### HTML Sanitizer Improvements
+
+- **Markdown Tables Support**: Added `table`, `thead`, `tbody`, `tr`, `th`, `td` to allowed tags
+- **Horizontal Rules**: Added `hr` tag to allowed tags
+- LLM-generated markdown tables are now preserved in reports
+
+### CLI Enhancements
+
+- **Rich Library Migration**:
+  - Replaced `tqdm` and `colorama` with `rich` for unified beautiful CLI output
+  - Requirements simplified from 3 packages to 1
+
+- **Beautiful Help Display** (`--help`):
+  - Custom rich-formatted help with grouped options in panels
+  - Markdown intro describing tool capabilities
+  - Quick Start section showing both create and use commands
+  - Falls back to full argparse help with `--help --verbose`
+
+- **Rich Tables for List Commands**:
+  - `--list-providers` - Shows Provider, Default Model, API Key columns
+  - `--list-report-systems` - Shows ID, Version, Source, Description
+  - `--list-plugins` - Shows Plugin, Version, Status, Author, Components
+  - `--list-themes` - NEW command showing available themes with style (dark/light)
+
+- **Doctor Command** (`bobreview doctor`):
+  - Diagnoses setup issues with rich table output
+  - Checks: Python version, rich library, API keys, plugin directories, plugins
+  - Shows partial API keys for security (last 4 chars)
+  - Helpful notes for optional items
+
+- **Plugin Info Panel** (`plugins info <name>`):
+  - Rich panel display with styled details
+  - Shows version, author, description, path, status, provides
+
+- **Help Text Improvements**:
+  - Shortened and clarified 25+ argument descriptions
+  - Added `-t` shorthand for `--template`
+  - Program description changed to "Extensible Report Generation Framework"
+
+### Code Quality
+
+- **Input Validation**: `hex_to_rgba()` now validates:
+  - Alpha range (0.0-1.0)
+  - 3-character and 6-character hex formats
+  - Hex string content
+  
+- **Type Annotations**: Fixed return types for CSS generation functions:
+  - `get_theme_css()` → `Union[Markup, str]`
+  - `get_theme_css_block()` → `Markup`
+  - `mode` parameter now uses `Literal['embedded', 'linked']`
+
+### Theme System Improvements
+
+- **Theme Creation API**:
+  - `create_theme(id, name, base='dark', **overrides)` - Quick theme creation with inheritance
+  - `ReportTheme` dataclass - Full control over all 20+ theme properties
+  - `hex_to_rgba(hex_color, alpha)` - Public utility for generating soft color variants
+
+- **Theme Inheritance Fix**: `resolve_theme()` now correctly inherits parent values
+  - Child themes only override explicitly specified properties
+  - Parent theme values are preserved for unspecified properties
+
+- **CLI Theme Fix**: `--theme` argument respects JSON `preset` unless explicitly overridden
+
+- **Test Suite** (`tests/unit/core/`):
+  - `test_themes.py` - 45+ tests for ReportTheme, CSS generation, inheritance
+  - `test_theme_system.py` - 35+ tests for ThemeSystem facade
+  - Behavior-focused tests (not implementation-specific)
+
+### Added
+
+- **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
+  - Simplified registration API for plugins
+  - Methods: `add_data_parser()`, `add_theme()`, `add_templates()`, `add_report_system()`
+  - Convenience methods: `add_context_builder()`, `add_chart_generator()`, `add_llm_generator()`
+  - `setup_complete_report_system()` for one-call registration
+
+- **Plugin Scaffolding CLI** (P1 - Plugin Developer Experience):
+  - `bobreview plugins create <name>` - Generate complete plugin skeleton
+  - `--template minimal|full` - Choose template complexity
+  - `--theme dark|ocean|purple|terminal|sunset` - Choose color theme
+  - `--output-dir` - Custom output directory
+  - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+
+- **Consolidated Theme System** (`core/themes.py`):
+  - 7 built-in themes using `ReportTheme` dataclass: dark, light, high_contrast, ocean, purple, terminal, sunset
+  - `get_theme_by_id()` - Lookup theme by ID
+  - `get_available_themes()` - List all theme IDs
+  - `theme_to_dict()` - Convert theme to template context
+  - Plugins can create custom themes and register via `helper.add_theme()`
+
+- **PageRenderer Class** (`engine/page_renderer.py`):
+  - Extracted ~300 lines from executor.py for better modularity
+  - Methods: `render_all_pages()`, `_render_page()`, `_generate_charts()`
+  - Handles context building, image encoding, template rendering
+  - Injects theme colors from JSON config into template context
+
+- **Preset Factory Functions** (`engine/presets.py`):
+  - `create_simple_report_system()` - Single-page reports with defaults
+  - `create_csv_report_system()` - CSV-based reports
+  - `create_multi_page_report_system()` - Multi-page reports
+
+- **Plugin Scaffolder** generates complete plugin structure:
+  - `bobreview plugins create my-plugin` creates a ready-to-use plugin
+  - See [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT_GUIDE.md)
+
+### Fixed
+
+- **Bare `except:` Clauses** (P0 Critical Fix):
+  - Replaced bare `except:` with `except Exception as e:` in `engine/loader.py` lines 95, 198
+  - Errors now logged with `logger.debug()` for debuggability
+
+### Removed
+
+- **Dead Code** (P0 Critical Fix):
+  - Deleted `engine/page_generator_base.py` (unused `PageGeneratorTemplate`)
+  - Removed `PageGeneratorInterface` from `core/api.py` (replaced by template-based rendering)
+
+### Engine & Core Purification
+
+The engine and core directories are now completely plugin-agnostic:
+
+- **Removed from Core**: `analyze_data`, `calculate_metric_stats`, `_calculate_frame_times` moved to plugin
+- **Removed from Engine Schema**: `MetricConfig`, `StatisticsConfig`, `DerivedMetricConfig` moved to plugin
+- **Removed from Engine Schema**: `performance_zones` field from `ChartConfig`
+- **Added to Engine Schema**: `extensions: Dict[str, Any]` field for plugin-specific configuration
+- **Updated Parsing**: All parsing functions updated to handle new schema structure
+- **No Backward Compatibility**: Removed deprecated stubs and imports
+
+### CSS Architecture Overhaul
+
+Plugins are now fully self-contained with their own styles:
+
+- **Core CSS Minimized**: `core/static/styles.css` now only 67 lines (was 380+)
+  - Contains only theme token reference and minimal reset
+  - No plugin-specific components
+  
+- **Plugin CSS Separation**:
+  - Each plugin defines its own `templates/static/plugin.css`
+  - Each plugin defines its own `templates/static/base.css` (layout)
+  - Loaded via `{% include "static/plugin.css" %}` in templates
+  
+- **Theme Variable Alignment**: All plugins now use consistent variable names:
+  - `--bg`, `--bg-elevated`, `--bg-soft`
+  - `--accent`, `--accent-soft`, `--accent-strong`
+  - `--text-main`, `--text-soft`
+  - `--ok`, `--warn`, `--danger` (+ `-soft` variants)
+  - `--border-subtle`, `--radius-lg`, `--radius-md`
+  - `--shadow-soft`, `--sans`, `--mono`
+  
+- **Dynamic Theme Support**: Themes work with both embedded and external CSS:
+  - Embedded CSS: Uses Jinja templating `{{ theme.accent if theme else '#4ea1ff' }}`
+  - External CSS (`--linked-css`): Runtime-generated `static/theme.css` in output directory
+  - `generate_theme_css()` - Creates CSS :root block from ReportTheme
+  - CLI `--theme` overrides JSON `preset` for runtime switching
+
+
+
+### Added
+
+- **Focused Registry System** (`bobreview/core/plugin_system/registries/`):
+  - `ThemeRegistry`, `WidgetRegistry`, `DataParserRegistry`, `LLMGeneratorRegistry`
+  - `ChartTypeRegistry`, `PageRegistry`, `ServiceRegistry`, `ReportSystemRegistry`
+  - `ChartGeneratorRegistry`, `ContextBuilderRegistry`, `TemplatePathRegistry`
+  - `AnalyzerRegistry` - Plugins register their data analyzers here (v1.0.7)
+  - Each registry has a single, focused responsibility
+
+- **Focused Config Classes** (`bobreview/core/config_classes.py`):
+  - `ThresholdConfig` - All threshold values
+  - `LLMConfig` - All LLM provider settings
+  - `ExecutionConfig` - Execution behavior (dry_run, verbose, etc.)
+  - `OutputConfig` - Output settings (embed_images, theme_id, etc.)
+  - `CacheConfig` - Cache settings
+
+- **Responsibility Classes** (`bobreview/report_systems/`):
+  - `ConfigMerger` - Handles configuration merging
+  - `ServiceValidator` - Validates required services
+  - `PluginLifecycleManager` - Manages plugin lifecycle hooks
+
+- **Utility Functions** (`bobreview/core/`):
+  - `plugin_utils.py` - `safe_plugin_call()`, `call_plugin_lifecycle_hooks()`
+  - `config_utils.py` - `merge_config()`, `merge_nested_config()`
+
+### Changed
+
+- Plugin Registry API (v1.0.7):
+  ```python
+  # Focused interfaces
+  registry.themes.register(theme)
+  theme = registry.themes.get('dark')
+  ```
+
+- ReportConfig API (v1.0.7):
+  ```python
+  # Focused config classes
+  config.thresholds.draw_soft_cap = 600
+  config.llm.provider = 'openai'
+  config.execution.dry_run = True
+  ```
+
+- CLI API (v1.0.7):
+  ```bash
+  # Plugin is required (no backward compatibility)
+  bobreview --plugin <plugin-name> --dir ./screenshots
+  
+  # Report system selection:
+  # - If plugin has 1 system: auto-selected
+  # - If plugin has multiple: --report-system required
+  ```
+
+- ReportSystemExecutor:
+  - Now accepts dependencies via constructor (dependency injection)
+  - Uses focused responsibility classes internally
+  - Better testability and maintainability
+
+- Plugin System:
+  - Plugin infrastructure moved to `bobreview.core.plugin_system`
+  - All plugins use focused registry interfaces
+  - Cleaner, more predictable API
+
+- **Extension Point Abstraction** (`interface.py`):
+  - New `IExtensionPoint` interface - abstract access to plugin-provided implementations
+  - New `IPluginManager` interface - abstract plugin lifecycle management
+  - Core code now depends on interfaces, not concrete registry/loader
+  - Enables dependency injection and easier testing
+  - Usage:
+    ```python
+    from bobreview.core.plugin_system import get_extension_point, get_plugin_manager
+    
+    # Access implementations
+    extension_point = get_extension_point()
+    theme = extension_point.get_theme('dark')
+    
+    # Manage plugins
+    plugin_manager = get_plugin_manager()
+    plugin_manager.discover()
+    ```
+
+### Removed
+
+- **Backward Compatibility**:
+  - Removed delegation methods from PluginRegistry (use focused registries directly)
+  - Removed property delegations from ReportConfig (use focused configs directly)
+  - All code updated to use focused interfaces
+  - Cleaner, more predictable system
+
+### Technical Details
+
+New Files:
+- `bobreview/core/plugin_system/registries/` - 11 focused registry classes
+- `bobreview/core/plugin_system/` - Plugin infrastructure (base.py, loader.py, registry.py, manifest.py)
+- `bobreview/core/plugin_system/interface.py` - Extension point abstraction layer
+- `bobreview/core/config_classes.py` - Focused config classes
+- `bobreview/report_systems/config_merger.py` - Config merging responsibility
+- `bobreview/report_systems/service_validator.py` - Service validation responsibility
+- `bobreview/report_systems/plugin_lifecycle.py` - Plugin lifecycle responsibility
+- `bobreview/core/plugin_utils.py` - Plugin utility functions
+- `bobreview/core/config_utils.py` - Config utility functions
+
+Modified Files:
+- `bobreview/core/plugin_system/registry.py` - Composes focused registries
+- `bobreview/core/config.py` - Now uses focused config classes
+- `bobreview/report_systems/executor.py` - Uses dependency injection and responsibility classes
+- All plugin files - Updated to use focused registries
+- All service files - Updated to use focused configs
+
+Architecture Improvements:
+- Follows SOLID principles (SRP, OCP, LSP, ISP, DIP)
+- Follows DRY principle (no code duplication)
+- Better testability (dependency injection)
+- Better maintainability (focused responsibilities)
+- More predictable (no hidden delegation layers)
+
+### Benefits
+
+- Follows SOLID principles
+- Dependency injection enables better unit testing
+- Focused interfaces make code purpose clear
+- Type inference works better with focused classes
+- Single responsibility makes changes safer
+
+---
+
 ## [1.0.6] - 2025-12-05
 
 ### CMS-Style Jinja2 Template System
@@ -182,10 +496,12 @@ bobreview/
   - Theme and output settings
   
 - **New CLI Flags**:
-  - `--report-system SYSTEM`: Use a built-in or custom JSON report system
+  - `--plugin PLUGIN_NAME`: Plugin to use (required, e.g., "my-plugin")
+  - `--report-system SYSTEM`: Report system ID (optional, required if plugin has multiple systems)
   - `--list-report-systems`: List all available report systems
+  - `bobreview plugins list`: List all available plugins
 
-- **Built-in Report System**: `png_data_points` encapsulates the v1.0.3 workflow
+- **Plugin-Based Architecture**: Report systems are provided by plugins (e.g., a plugin provides report systems which encapsulate analysis workflows)
 
 - **User Custom Systems Directory**: `~/.bobreview/report_systems/` for custom JSON definitions
 
@@ -249,15 +565,15 @@ bobreview/
 
 - **New CLI Flags**: Enhanced control over report generation
   - `--theme THEME`: Choose report theme (dark, light, high_contrast)
-    - Example: `bobreview --dir . --theme light`
+    - Example: `bobreview --plugin <plugin-name> --dir . --theme light`
   - `--linked-css`: Use external CSS file instead of embedding
     - Creates `styles.css` in output directory for better maintainability
     - Reduces HTML file size, enables shared CSS across multiple reports
-    - Example: `bobreview --dir . --linked-css`
+    - Example: `bobreview --plugin <plugin-name> --dir . --linked-css`
   - `--disable-page PAGE_ID`: Exclude specific pages from report
     - Can be used multiple times to disable multiple pages
     - Valid IDs: home, metrics, zones, visuals, optimization, stats
-    - Example: `bobreview --dir . --disable-page stats --disable-page visuals`
+    - Example: `bobreview --plugin <plugin-name> --dir . --disable-page stats --disable-page visuals`
 
 - **CSS Handling Improvements**:
   - External CSS file support via `linked_css` config option
@@ -481,7 +797,7 @@ bobreview/
 - `colorama>=0.4.6,<1.0.0` (optional, recommended)
 
 ### Requirements
-- Python 3.7 or higher
+- Python 3.10 or higher
 - OpenAI API key
 - Internet connection for LLM API calls
 
@@ -552,6 +868,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.7]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.3...v1.0.4

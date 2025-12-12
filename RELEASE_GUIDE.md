@@ -1,18 +1,39 @@
 # BobReview - Release Guide
 
-## Performance Analysis Tool for Game Development
+## Extensible Report Generation Framework
 
-Version 1.0.5
+Version 1.0.7 - Plugin System
 
-### What's New in v1.0.5
+### What's New in v1.0.7
 
-- **Multi-Provider LLM Support**: Choose your AI provider
-  - OpenAI (GPT-4o, GPT-4-turbo, GPT-3.5) - default
-  - Anthropic (Claude 3 Opus, Sonnet, Haiku)
-  - Ollama (local models - Llama 2, Mistral, CodeLlama)
-- **Unified CLI Arguments**: `--llm-provider`, `--llm-api-key`, `--llm-model`
-- **Provider Factory**: Extensible architecture for custom providers
-- All v1.0.4 features preserved
+- **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
+  - Simplified registration API: `add_data_parser()`, `add_theme()`, `add_templates()`
+  - One-call setup: `setup_complete_report_system()`
+
+- **Plugin Scaffolding CLI**:
+  - `bobreview plugins create my-plugin` - Generate complete plugin skeleton
+  - `--template minimal|full` - Choose template complexity
+  - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+
+- **PageRenderer Class** (`engine/page_renderer.py`):
+  - ~300 lines extracted from executor.py for better modularity
+
+- **Preset Factory Functions** (`engine/presets.py`):
+  - `create_simple_report_system()`, `create_csv_report_system()`
+
+- **Plugin Scaffolder**: `bobreview plugins create my-plugin` creates complete plugin skeleton
+
+- **Critical Fixes**:
+  - Fixed bare `except:` clauses in `engine/loader.py`
+  - Removed dead code (`PageGeneratorInterface`, `PageGeneratorTemplate`)
+
+- **Plugin System**: Fully modular plugin architecture with SOLID and DRY principles
+  - **Focused Registries**: PluginRegistry split into 12 focused registries
+  - **Focused Config Classes**: ReportConfig split into 5 focused config classes
+  - **Dependency Injection**: No global singletons
+  - **Single Responsibility**: Executor split into focused classes
+
+- All v1.0.6 features preserved
 
 ---
 
@@ -70,7 +91,7 @@ export ANTHROPIC_API_KEY=your-anthropic-key
 ollama serve
 
 # Then use with --llm-provider ollama
-bobreview --dir . --llm-provider ollama --llm-model llama2
+bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama2
 ```
 
 > **Tip:** Add the API key to your shell profile for persistence (see [Making It Permanent](#making-api-key-permanent))
@@ -81,7 +102,7 @@ bobreview --dir . --llm-provider ollama --llm-model llama2
 bobreview --version
 ```
 
-You should see: `bobreview 1.0.5`
+You should see: `bobreview 1.0.7`
 
 ---
 
@@ -116,7 +137,8 @@ Where:
 
 2. Run BobReview:
    ```bash
-   bobreview --dir .
+   # Plugin is required
+   bobreview --plugin <plugin-name> --dir .
    ```
 
 3. Open the generated report:
@@ -134,29 +156,35 @@ Where:
 ### Common Commands
 
 ```bash
-# Custom report title and location
-bobreview --dir . --title "Forest Level" --location "Dark Forest"
+# Custom report title and location (using plugin)
+bobreview --plugin <plugin-name> --dir . --title "Forest Level" --location "Dark Forest"
 
 # Custom output filename
-bobreview --dir . --output forest_analysis.html
+bobreview --plugin <plugin-name> --dir . --output forest_analysis.html
 
 # Create standalone HTML with embedded images
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Test without calling OpenAI API (no cost)
-bobreview --dir . --dry-run
+bobreview --plugin <plugin-name> --dir . --dry-run
 
 # Process only 20 random samples (for quick testing)
-bobreview --dir . --sample 20
+bobreview --plugin <plugin-name> --dir . --sample 20
 
 # Use light theme
-bobreview --dir . --theme light
+bobreview --plugin <plugin-name> --dir . --theme light
 
 # Use Anthropic Claude instead of OpenAI
-bobreview --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
+bobreview --plugin <plugin-name> --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
 
 # Use local Ollama
-bobreview --dir . --llm-provider ollama --llm-model mistral
+bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model mistral
+
+# List available plugins
+bobreview plugins list
+
+# List available report systems
+bobreview --list-report-systems
 
 # List available providers
 bobreview --list-providers
@@ -171,13 +199,13 @@ bobreview --help
 
 ```bash
 # First run - calls OpenAI API and caches results
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Second run - uses cached results (instant, no API cost)
-bobreview --dir .
+bobreview --plugin <plugin-name> --dir .
 
 # Force fresh analysis (clears cache)
-bobreview --dir . --clear-cache
+bobreview --plugin <plugin-name> --dir . --clear-cache
 ```
 
 ---
@@ -186,7 +214,7 @@ bobreview --dir . --clear-cache
 
 ### System Requirements
 
-- **Python:** Version 3.7 or higher (check with `python --version`)
+- **Python:** Version 3.10 or higher (check with `python --version`)
 - **Internet:** Required for OpenAI API calls
 - **Disk Space:** ~50MB for installation
 - **API Key:** Valid OpenAI API key with available credits
@@ -210,11 +238,9 @@ bobreview --dir . --clear-cache
    - Invalid files are automatically skipped with warnings
 
 4. **Performance Thresholds**
-   - Default thresholds are conservative (600 draw calls, 120K triangles)
-   - Adjust based on your target platform:
-     ```bash
-     bobreview --dir . --draw-hard-cap 700 --tri-hard-cap 150000
-     ```
+   - Thresholds are defined in report system JSON files (part of plugins)
+   - For custom thresholds, create your own report system JSON or modify plugin configs
+   - See plugin documentation for threshold customization options
 
 5. **Standalone HTML Reports**
    - Creates a single HTML file with all images embedded (base64 encoding)
@@ -232,7 +258,7 @@ bobreview --dir . --clear-cache
 **"Command not found" error:**
 ```bash
 # Ensure Python Scripts is in PATH, or use:
-python -m bobreview.cli --dir .
+python -m bobreview.cli --plugin <plugin-name> --dir .
 ```
 
 **"No PNG files found" error:**
@@ -242,8 +268,8 @@ python -m bobreview.cli --dir .
 
 **"API key not found" error:**
 - Verify environment variable is set: `echo $OPENAI_API_KEY` (Linux/macOS) or `echo %OPENAI_API_KEY%` (Windows)
-- Or provide key via command line: `bobreview --dir . --llm-api-key sk-your-key`
-- Or use Ollama for local inference: `bobreview --dir . --llm-provider ollama`
+- Or provide key via command line: `bobreview --plugin <plugin-name> --dir . --llm-api-key sk-your-key`
+- Or use Ollama for local inference: `bobreview --plugin <plugin-name> --dir . --llm-provider ollama`
 
 **Slow performance:**
 - First run is slow (normal - API calls take time)
@@ -278,8 +304,13 @@ source ~/.bashrc
 ## Quick Reference
 
 ```bash
-# Basic usage
-bobreview --dir /path/to/screenshots
+# Basic usage - plugin is required
+bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
+
+# Plugin and Report System options
+--plugin PLUGIN_NAME      # Plugin to use (e.g., "my-plugin")
+--report-system SYSTEM    # Report system ID (optional, uses plugin default)
+--list-report-systems     # List all available report systems
 
 # Common options
 --title "TEXT"           # Custom report title
@@ -291,10 +322,10 @@ bobreview --dir /path/to/screenshots
 --clear-cache            # Force fresh analysis
 --no-embed-images        # Use external image files instead of embedding
 --linked-css             # Use external CSS file (styles.css)
---theme THEME            # Report theme: dark (default), light, high_contrast
+--theme THEME            # 7 themes: dark, light, high_contrast, ocean, purple, terminal, sunset
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 
-# LLM Provider Configuration (v1.0.5)
+# LLM Provider Configuration
 --llm-provider PROVIDER  # Provider: openai (default), anthropic, ollama
 --llm-api-key KEY        # API key for selected provider
 --llm-model MODEL        # Model name (default depends on provider)
@@ -308,8 +339,10 @@ bobreview --dir /path/to/screenshots
 bobreview --version      # Check version
 
 # Test installation
-python -c "from bobreview import ReportConfig; print('OK')"
+python -c "from bobreview.core import ReportConfig; print('OK')"
 ```
+
+---
 
 ---
 
@@ -318,8 +351,9 @@ python -c "from bobreview import ReportConfig; print('OK')"
 - **Full Documentation:** See `README.md` in the installation folder
 - **Quick Start:** See `QUICKSTART.md` for more examples
 - **Detailed Install Guide:** See `INSTALL.md` for advanced setup
+- **Release Notes:** See `docs/V1.0.7_RELEASE_NOTES.md` for v1.0.7 details
 
 ---
 
-**BobReview v1.0.5** - Performance analysis and review tool for game development  
-MIT License | Multi-provider LLM support (OpenAI, Anthropic, Ollama)
+**BobReview v1.0.7** - Extensible report generation framework  
+MIT License | Focused Architecture - SOLID & DRY Principles

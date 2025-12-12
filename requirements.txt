@@ -11,12 +11,12 @@
 openai>=1.0.0,<2.0.0     # OpenAI API client for LLM-powered analysis
 scipy>=1.11.0,<2.0.0     # Statistical functions for accurate t-distribution
 bleach>=6.0.0,<7.0.0     # HTML sanitization for LLM-generated content
+markdown>=3.4.0,<4.0.0   # Markdown to HTML conversion for LLM content
 jinja2>=3.1.0            # Template engine for CMS-style reports
 
 # Optional Dependencies (Recommended)
 # -----------------------------------
-tqdm>=4.65.0,<5.0.0      # Progress bars for better UX
-colorama>=0.4.6,<1.0.0   # Colored terminal output
+rich>=13.0.0,<14.0.0     # Beautiful CLI output (progress, tables, colors)
 
 # LLM Provider Dependencies (install based on your needs)
 # --------------------------------------------------------

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config.title | default("{{name}} Report") }}</title>
+    
+    {# Dynamic Google Fonts loading based on theme #}
+    {# Each theme can define its own font_url - loaded only if specified #}
+    {% if theme.font_url %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="{{ theme.font_url }}" rel="stylesheet">
+    {% endif %}
+    
+    {# FontAwesome for icons #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    {# Chart.js for chart rendering #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    {# Unified theme system - supports both embedded and linked CSS #}
+    {% if linked_css %}
+    <link rel="stylesheet" href="static/theme.css">
+    <link rel="stylesheet" href="static/plugin.css">
+    {% else %}
+    <style>
+        {# Use unified theme system - theme_name comes from context #}
+        {# get_theme_css() includes theme variables AND base styles #}
+        {{ get_theme_css(theme_name) }}
+    </style>
+    <style>
+        {# Include plugin-specific styles (layout and components) #}
+        {% include "{{safe_name}}/static/plugin.css" ignore missing %}
+    </style>
+    {% endif %}
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

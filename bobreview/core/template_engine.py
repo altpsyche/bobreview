@@ -18,10 +18,12 @@ from jinja2 import (
 )
 
 if TYPE_CHECKING:
-    from ..report_systems.schema import LabelConfig
+    from ..engine.schema import LabelConfig
 
 from .utils import format_number
-from ..pages.base import sanitize_llm_html, get_shared_css, get_trend_icon
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon, get_theme_css_block
+from .theme_system import get_theme_css
+from .plugin_system import get_extension_point
 
 
 # Global template engine instance
@@ -35,19 +37,24 @@ class TemplateEngine:
     Load order (first match wins):
     1. User templates: ~/.bobreview/templates/
     2. Custom paths (if provided via custom_paths parameter)
-    3. Package built-in templates: bobreview/templates/
+    3. Plugin-registered templates (from PluginRegistry)
     """
     
     def __init__(self, custom_paths: Optional[list] = None):
         """
         Initialize the template engine.
         
+        Load order (first match wins):
+        1. User templates: ~/.bobreview/templates/
+        2. Custom paths (if provided)
+        3. Plugin-registered templates (from PluginRegistry)
+        
         Parameters:
             custom_paths: Optional list of additional template directories
         """
         loaders = []
         
-        # User templates directory
+        # User templates directory (highest priority)
         user_template_dir = Path.home() / '.bobreview' / 'templates'
         if user_template_dir.exists():
             loaders.append(FileSystemLoader(str(user_template_dir)))
@@ -58,8 +65,23 @@ class TemplateEngine:
                 if Path(path).exists():
                     loaders.append(FileSystemLoader(str(path)))
         
-        # Package built-in templates
-        loaders.append(PackageLoader('bobreview', 'templates'))
+        # Plugin-registered template paths (in priority order)
+        # Lower priority number = higher priority (loaded first)
+        extension_point = get_extension_point()
+        # Get template paths with priority information
+        template_registrations = extension_point.get_template_paths()
+        # Already sorted by priority (lower number = higher priority)
+        sorted_registrations = template_registrations
+        for template_path, plugin_name, priority in sorted_registrations:
+            if template_path.exists():
+                loaders.append(FileSystemLoader(str(template_path)))
+        
+        # Require at least one template source
+        if not loaders:
+            raise ValueError(
+                "No template sources found. Templates must be provided by plugins. "
+                "Ensure at least one plugin with templates is loaded."
+            )
         
         self.env = Environment(
             loader=ChoiceLoader(loaders),
@@ -88,11 +110,11 @@ class TemplateEngine:
         
         Supports:
         - {key} - direct lookup
-        - {config.draw_soft_cap} - nested path lookup
+        - {config.threshold_name} - nested path lookup
         - Multiple placeholders in one string
         
         Example:
-            "Soft cap {draw_soft_cap} · hard cap {draw_hard_cap}" | interpolate(config)
+            "Threshold: {threshold_name} · Value: {value}" | interpolate(context)
         
         Parameters:
             template_str: String with {key} placeholders
@@ -107,35 +129,108 @@ class TemplateEngine:
         if not template_str or context is None:
             return template_str or ''
         
+        # Keep reference to original context for nested lookups
+        original_context = context
+        
         # Convert dataclass or object to dict if needed
-        if hasattr(context, '__dict__') and not isinstance(context, dict):
-            ctx = vars(context) if hasattr(context, '__dict__') else {}
-        elif isinstance(context, dict):
+        # Keep original context for attribute access (dataclasses, objects)
+        if isinstance(context, dict):
             ctx = context
+        elif hasattr(context, '__dict__'):
+            # For dataclasses/objects, create a dict but keep original for attribute access
+            ctx = vars(context) if hasattr(context, '__dict__') else {}
         else:
             ctx = {}
         
         def replace_var(match):
             var_path = match.group(1)
             
-            # Handle nested paths like config.draw_soft_cap
+            # Handle nested paths like config.threshold_name or simple names
             parts = var_path.split('.')
-            value = ctx
+            value = ctx if isinstance(ctx, dict) else original_context
+            found = False
             
+            # Try direct lookup first (works for dict or object with nested paths)
             for part in parts:
                 if isinstance(value, dict) and part in value:
                     value = value[part]
+                    found = True
                 elif hasattr(value, part):
                     value = getattr(value, part)
+                    found = True
+                elif isinstance(value, dict):
+                    # For dict subclasses like ThresholdConfig, try __getitem__ even if hasattr fails
+                    try:
+                        value = value[part]
+                        found = True
+                    except (KeyError, TypeError):
+                        found = False
+                        break
                 else:
-                    # Variable not found, keep original placeholder
-                    return match.group(0)
+                    found = False
+                    break
+            
+            # If simple name not found, try looking in thresholds
+            # Priority: system_def.thresholds (report system JSON) > config.thresholds (defaults)
+            if not found and len(parts) == 1:
+                simple_name = parts[0]
+                
+                # Priority 1: Try system_def.thresholds (from report system JSON) - this is the source of truth
+                if isinstance(ctx, dict) and 'system_def' in ctx:
+                    system_def = ctx['system_def']
+                    if hasattr(system_def, 'thresholds'):
+                        thresholds = system_def.thresholds
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                        elif hasattr(thresholds, simple_name):
+                            value = getattr(thresholds, simple_name)
+                            found = True
+                
+                # Priority 2: Try if context is a dict with 'config' key
+                if not found and isinstance(ctx, dict) and 'config' in ctx:
+                    config_obj = ctx['config']
+                    if hasattr(config_obj, 'thresholds'):
+                        thresholds = config_obj.thresholds
+                        # ThresholdConfig is a dict, so use dict access
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                        elif hasattr(thresholds, simple_name):
+                            value = getattr(thresholds, simple_name)
+                            found = True
+                
+                # Priority 3: Try if context itself is a config object with thresholds
+                if not found:
+                    config_obj = original_context
+                    # Handle both dict and object contexts
+                    if isinstance(config_obj, dict) and 'thresholds' in config_obj:
+                        thresholds = config_obj['thresholds']
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                    elif hasattr(config_obj, 'thresholds'):
+                        thresholds = config_obj.thresholds
+                        # ThresholdConfig is a dict subclass, so check dict access first
+                        if isinstance(thresholds, dict) and simple_name in thresholds:
+                            value = thresholds[simple_name]
+                            found = True
+                        elif hasattr(thresholds, simple_name):
+                            value = getattr(thresholds, simple_name)
+                            found = True
+            
+            if not found:
+                # Variable not found, keep original placeholder
+                return match.group(0)
             
             # Format numbers nicely
             if isinstance(value, float):
                 if value >= 1000:
-                    return f"{value:,.0f}"
-                return f"{value:.1f}"
+                    return f"{round(value):,}"
+                # For smaller values, preserve one decimal if fractional
+                if value != int(value):
+                    return f"{value:.1f}"
+                return str(int(value))
             if isinstance(value, int) and value >= 1000:
                 return f"{value:,}"
             return str(value)
@@ -181,6 +276,28 @@ class TemplateEngine:
     def _register_globals(self):
         """Register global template functions."""
         self.env.globals['get_css'] = get_shared_css
+        self.env.globals['get_theme_css'] = get_theme_css  # Use unified ThemeSystem
+        self.env.globals['get_theme_css_block'] = get_theme_css_block  # Keep for compatibility
+        
+        def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: Optional[dict] = None) -> str:
+            """
+            Get image source - either base64 data URI or relative file path.
+            
+            Parameters:
+                image_name: Name of the image file
+                images_dir_rel: Relative path to images directory (if not embedding)
+                image_data_uris: Dict of base64 data URIs (if embedding)
+            
+            Returns:
+                Image src string (base64 URI or file path)
+            """
+            if image_data_uris and image_name in image_data_uris:
+                return image_data_uris[image_name]
+            if images_dir_rel:
+                return f"{images_dir_rel}/{image_name}".replace('\\', '/')
+            return image_name
+        
+        self.env.globals['get_image_src'] = get_image_src
     
     def render(
         self, 
@@ -244,7 +361,7 @@ class TemplateEngine:
             return True
 
 
-def get_template_engine(custom_paths: Optional[list] = None) -> TemplateEngine:
+def get_template_engine(custom_paths: Optional[list] = None, force_refresh: bool = False) -> TemplateEngine:
     """
     Get or create the global template engine instance.
     
@@ -254,12 +371,13 @@ def get_template_engine(custom_paths: Optional[list] = None) -> TemplateEngine:
             Subsequent calls with different custom_paths will return the existing
             instance. To create a new instance with different paths, call
             reset_template_engine() first.
+        force_refresh: If True, recreate the engine to pick up new plugin templates.
     
     Returns:
         TemplateEngine instance
     """
     global _engine_instance
-    if _engine_instance is None:
+    if _engine_instance is None or force_refresh:
         _engine_instance = TemplateEngine(custom_paths)
     return _engine_instance
 
