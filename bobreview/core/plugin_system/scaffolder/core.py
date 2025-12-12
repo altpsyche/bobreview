@@ -27,6 +27,7 @@ from .generators import (
     generate_context_builder,
     generate_chart_generator,
     generate_analysis_module,
+    generate_theme_module,
     generate_manifest,
     generate_report_system,
 )
@@ -162,6 +163,10 @@ __all__ = ['{class_name}CsvParser']
     if template == 'full':
         analysis_content = generate_analysis_module(name, safe_name)
         (plugin_dir / "analysis.py").write_text(analysis_content, encoding='utf-8')
+        
+        # Create custom theme module
+        theme_content = generate_theme_module(name, safe_name, class_name)
+        (plugin_dir / "theme.py").write_text(theme_content, encoding='utf-8')
     
     # Create sample_data directory with better sample data
     sample_dir = plugin_dir / "sample_data"

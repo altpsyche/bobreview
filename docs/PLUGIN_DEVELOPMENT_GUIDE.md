@@ -243,7 +243,93 @@ def analyze_my_data(data_points: List[Dict[str, Any]], config=None) -> Dict[str,
 }
 ```
 
+### Step 5a: Create Custom Themes (Optional)
+
+Plugins can define custom themes. The scaffolder generates two examples when using `bobreview plugins create --template full`:
+
+**Approach 1: Full Standalone Theme** (complete control with fonts, radii, shadows)
+
+```python
+# theme.py
+from bobreview.core.themes import ReportTheme, hex_to_rgba
+
+MY_PLUGIN_THEME = ReportTheme(
+    id='my_plugin_full',
+    name='My Plugin Theme',
+    
+    # Backgrounds
+    bg='#0a0e14',
+    bg_elevated='#12171f',
+    bg_soft='#1a2028',
+    
+    # Accents
+    accent='#00d4aa',
+    accent_soft=hex_to_rgba('#00d4aa', 0.15),
+    accent_strong='#00ffcc',
+    
+    # Text
+    text_main='#e8eaed',
+    text_soft='#9aa0a6',
+    
+    # Status colors
+    ok='#34d399',
+    ok_soft=hex_to_rgba('#34d399', 0.15),
+    warn='#fbbf24',
+    warn_soft=hex_to_rgba('#fbbf24', 0.15),
+    danger='#f87171',
+    danger_soft=hex_to_rgba('#f87171', 0.15),
+    
+    # Fonts
+    font_sans='"Inter", system-ui, sans-serif',
+    font_mono='"JetBrains Mono", monospace',
+)
+```
+
+**Approach 2: Extend a Base Theme** (quick customization)
+
+```python
+from bobreview.core.themes import create_theme, hex_to_rgba
+
+MY_PLUGIN_DEEP_THEME = create_theme(
+    id='my_plugin_ocean_deep',
+    name='My Plugin Ocean Deep',
+    base='ocean',  # Inherit from ocean theme
+    
+    # Only override what you need
+    bg='#060d1a',
+    bg_elevated='#0c1628',
+    accent='#5afaff',
+    accent_soft=hex_to_rgba('#5afaff', 0.12),
+)
+```
+
+**Register in plugin.py:**
+
+```python
+from .theme import MY_PLUGIN_THEME, MY_PLUGIN_DEEP_THEME
+
+def on_load(self, registry):
+    helper = PluginHelper(registry, self.name)
+    helper.add_theme(MY_PLUGIN_THEME)
+    helper.add_theme(MY_PLUGIN_DEEP_THEME)
+```
+
+**Available base themes:** `dark`, `light`, `ocean`, `purple`, `terminal`, `sunset`
+
+| Property | Description |
+|----------|-------------|
+| `accent` | Primary accent (buttons, links) |
+| `accent_soft` | Translucent accent for backgrounds |
+| `bg`, `bg_elevated`, `bg_soft` | Background colors |
+| `text_main`, `text_soft` | Text colors |
+| `ok`, `warn`, `danger` + `_soft` | Status colors |
+| `font_sans`, `font_mono` | Font families |
+| `radius_sm/md/lg/xl` | Border radii |
+| `shadow_soft`, `shadow_strong` | Box shadows |
+
+
 ### Step 6: Create Chart Generator
+
 
 ```python
 # chart_generator.py

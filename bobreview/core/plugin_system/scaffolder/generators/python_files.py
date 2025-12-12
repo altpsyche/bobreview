@@ -19,7 +19,8 @@ from bobreview.core.plugin_system import BasePlugin, PluginHelper"""
         imports += """
 from .parsers.csv_parser import {class_name}CsvParser
 from .context_builder import {class_name}ContextBuilder
-from .chart_generator import {class_name}ChartGenerator""".format(class_name=class_name)
+from .chart_generator import {class_name}ChartGenerator
+from .theme import {safe_name}_THEME, {safe_name}_DEEP_THEME""".format(class_name=class_name, safe_name=safe_name.upper())
     else:
         imports += f"""
 from .parsers.csv_parser import {class_name}CsvParser"""
@@ -48,6 +49,14 @@ from .parsers.csv_parser import {class_name}CsvParser"""
         
         # Register default services
         helper.register_default_services()'''
+    
+    if template == 'full':
+        # Add theme registration for full template
+        registration += f'''
+        
+        # Register custom themes (see theme.py for customization)
+        helper.add_theme({safe_name.upper()}_THEME)       # Full standalone theme
+        helper.add_theme({safe_name.upper()}_DEEP_THEME)  # Ocean-based deep theme'''
     
     return f'''"""
 {name} Plugin - Main plugin class.
@@ -440,3 +449,129 @@ def analyze_{safe_name}_data(
                               if percentile(sorted_scores, 25) < p.get('score', 0) < percentile(sorted_scores, 75)],
     }}
 '''
+
+
+def generate_theme_module(name: str, safe_name: str, class_name: str) -> str:
+    """
+    Generate theme.py with custom theme examples.
+    
+    Shows plugin developers how to create themes:
+    - Full standalone theme with fonts and all properties
+    - Theme extending ocean base with deeper colors
+    """
+    return f'''"""
+Custom Themes for {name} Plugin.
+
+This module demonstrates two approaches to theme creation:
+
+1. FULL THEME - Complete standalone theme with all properties including fonts
+2. OCEAN DEEP THEME - Extends ocean base with deeper, moodier colors
+
+Register themes in plugin.py:
+    from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME
+    helper.add_theme({safe_name.upper()}_THEME)
+    helper.add_theme({safe_name.upper()}_DEEP_THEME)
+"""
+
+from bobreview.core.themes import ReportTheme, create_theme, hex_to_rgba
+
+
+# =============================================================================
+# FULL THEME - Complete standalone theme with fonts and everything
+# =============================================================================
+#
+# Use ReportTheme directly when you want full control over every property.
+# This is ideal for a completely custom branded experience.
+
+{safe_name.upper()}_THEME = ReportTheme(
+    id='{safe_name}_full',
+    name='{class_name} Theme',
+    
+    # Backgrounds - deep navy gradient feel
+    bg='#0a0e14',
+    bg_elevated='#12171f',
+    bg_soft='#1a2028',
+    
+    # Accents - vibrant teal/cyan
+    accent='#00d4aa',
+    accent_soft=hex_to_rgba('#00d4aa', 0.15),
+    accent_strong='#00ffcc',
+    
+    # Text - high contrast for readability
+    text_main='#e8eaed',
+    text_soft='#9aa0a6',
+    
+    # Status colors
+    ok='#34d399',            # Emerald green
+    ok_soft=hex_to_rgba('#34d399', 0.15),
+    warn='#fbbf24',          # Amber
+    warn_soft=hex_to_rgba('#fbbf24', 0.15),
+    danger='#f87171',        # Coral red
+    danger_soft=hex_to_rgba('#f87171', 0.15),
+    
+    # Borders and effects
+    border_subtle='#282f3a',
+    shadow_soft='0 8px 32px rgba(0, 0, 0, 0.4)',
+    shadow_strong='0 16px 48px rgba(0, 0, 0, 0.6)',
+    
+    # Border radius
+    radius_sm='4px',
+    radius_md='8px',
+    radius_lg='12px',
+    radius_xl='20px',
+    
+    # Fonts - modern, clean typography
+    font_sans='"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
+    font_mono='"JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace',
+    
+    # Chart styling
+    chart_grid_opacity=0.4,
+)
+
+
+# =============================================================================
+# OCEAN DEEP THEME - Extends ocean base with deeper, moodier feel
+# =============================================================================
+#
+# Use create_theme() when you want to extend a base theme and only override
+# specific properties. This is the simplest approach for quick customization.
+
+{safe_name.upper()}_DEEP_THEME = create_theme(
+    id='{safe_name}_ocean_deep',
+    name='{class_name} Ocean Deep',
+    base='ocean',  # Inherit from ocean theme
+    
+    # Deeper backgrounds for a moodier atmosphere
+    bg='#060d1a',            # Darker navy, almost black
+    bg_elevated='#0c1628',   # Deep ocean blue
+    bg_soft='#132035',       # Midnight blue
+    
+    # Accent: keeping ocean's teal but slightly more saturated
+    accent='#5afaff',        # Brighter cyan
+    accent_soft=hex_to_rgba('#5afaff', 0.12),
+    
+    # Softer text for less harsh contrast
+    text_soft='#6b7a94',     # Muted ocean gray
+    
+    # Deeper border for that underwater feel
+    border_subtle='#1a2744',
+)
+
+
+# =============================================================================
+# USAGE NOTES
+# =============================================================================
+#
+# 1. Register in plugin.py on_load():
+#        helper.add_theme({safe_name.upper()}_THEME)
+#        helper.add_theme({safe_name.upper()}_DEEP_THEME)
+#
+# 2. Use in report_systems/*.json:
+#        "theme": {{ "preset": "{safe_name}_full" }}
+#    or:
+#        "theme": {{ "preset": "{safe_name}_ocean_deep" }}
+#
+# 3. Users can override via CLI:
+#        bobreview --plugin {name} --theme {safe_name}_ocean_deep
+'''
+

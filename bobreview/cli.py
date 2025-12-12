@@ -383,8 +383,10 @@ Examples:
     )
     parser.add_argument(
         '--theme', type=str, default=None, dest='theme_id',
-        choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
-        help='Report theme (overrides plugin/JSON default: dark, ocean, purple, terminal, sunset, light, high_contrast)'
+        # Note: No choices restriction - plugins can register custom themes
+        # Built-in: dark, light, high_contrast, ocean, purple, terminal, sunset
+        # Plugin themes are validated at runtime after plugins are loaded
+        help='Report theme ID (built-in: dark, ocean, purple, terminal, sunset, light, high_contrast, or plugin-registered)'
     )
     parser.add_argument(
         '--disable-page', action='append', dest='disabled_pages', default=[],

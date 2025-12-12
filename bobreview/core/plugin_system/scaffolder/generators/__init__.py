@@ -12,6 +12,7 @@ from .python_files import (
     generate_context_builder,
     generate_chart_generator,
     generate_analysis_module,
+    generate_theme_module,
 )
 from .config_files import (
     generate_manifest,
@@ -24,6 +25,7 @@ __all__ = [
     'generate_context_builder',
     'generate_chart_generator',
     'generate_analysis_module',
+    'generate_theme_module',
     'generate_manifest',
     'generate_report_system',
 ]
