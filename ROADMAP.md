@@ -78,10 +78,11 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
   - Simplified registration API for plugins
   - Methods: add_data_parser, add_theme, add_templates, add_report_system
   - setup_complete_report_system() for one-call registration
-- **COMPLETE** (v1.0.7) - Plugin scaffolding CLI
+- **COMPLETE** (v1.0.7) - Plugin scaffolder CLI
   - `bobreview plugins create <name>` command
   - --template minimal|full for different complexity
-  - Generates complete plugin structure
+  - --theme for theme selection
+  - Generates complete plugin structure with all components
 - **COMPLETE** (v1.0.7) - PageRenderer class extraction
   - ~300 lines extracted from executor.py
   - Better modularity and testability
@@ -89,12 +90,19 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
   - create_simple_report_system()
   - create_csv_report_system()
   - create_multi_page_report_system()
-- **COMPLETE** (v1.0.7) - Hello World reference plugin
-  - Feature-complete example demonstrating all extension points
-  - CSV parser, context builder, chart generator, templates
+- **COMPLETE** (v1.0.7) - Dynamic font loading
+  - font_url property on ReportTheme
+  - All built-in themes include Google Fonts URLs
+  - Jinja2 templates dynamically load fonts
+- **COMPLETE** (v1.0.7) - Theme naming consistency
+  - Renamed font_sans to font_family
+  - Python and CSS naming aligned
+- **COMPLETE** (v1.0.7) - CLI theme override
+  - --theme accepts any theme ID (built-in or plugin)
 - **COMPLETE** (v1.0.7) - P0 Critical fixes
   - Fixed bare except: clauses in engine/loader.py
   - Removed dead code (PageGeneratorInterface, PageGeneratorTemplate)
+  - HTML sanitizer now supports markdown tables
 
 ### Visual Charts & Graphs
 - **COMPLETE** - Chart.js library integration
@@ -177,6 +185,7 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
 - **COMPLETE** - Data sampling strategies (all, random, sequential, mixed)
 - **COMPLETE** - Built-in png_data_points system (350+ lines)
 - **COMPLETE** - CLI flags (`--report-system`, `--list-report-systems`)
+- **COMPLETE** (v1.0.7) - --theme CLI accepts any registered theme ID
 - **COMPLETE** - Complete CLI override support
 - **COMPLETE** - User custom systems directory (~/.bobreview/report_systems/)
 - **COMPLETE** - Comprehensive documentation (REPORT_SYSTEMS_GUIDE.md)
@@ -436,8 +445,16 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
   - Multi-provider support (OpenAI, Anthropic, Ollama)
   - Unified CLI arguments (`--llm-provider`, `--llm-api-key`)
   - Provider factory pattern for extensibility
-- Core refactoring complete
-- Caching implemented
+- v1.0.6 - CMS-style Jinja2 Template System
+  - All UI text configurable via JSON labels
+  - Multi-source template loading
+- v1.0.7 - Plugin System
+  - PluginHelper API for simplified registration
+  - Plugin scaffolder CLI (`bobreview plugins create`)
+  - Dynamic font loading with font_url
+  - CLI --theme accepts any theme (built-in or plugin)
+  - No bundled plugins - create with scaffolder
+- Core architecture complete
 - Modular architecture with registry patterns
 - JSON-based report system definitions
 
@@ -484,6 +501,6 @@ Contributions are welcome. Consider:
 
 ---
 
-Last updated: December 9, 2025
+Last updated: December 12, 2025
 Current version: 1.0.7
 Next milestone: v2.0 - Enterprise Release

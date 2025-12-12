@@ -443,8 +443,9 @@ bobreview/
 
 | Document | Description |
 |----------|-------------|
+| [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT_GUIDE.md) | Create custom plugins |
+| [Core API Reference](CORE_API.md) | Complete API documentation |
 | [QUICKSTART.md](QUICKSTART.md) | Getting started tutorial |
-| [CORE_API.md](CORE_API.md) | Complete API reference |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
