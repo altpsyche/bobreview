@@ -70,12 +70,26 @@ def print_rich_help():
     if not RICH_AVAILABLE:
         return False
     
+    from rich.markdown import Markdown
+    
     print_banner()
+    console.print()
+    
+    # Tool description
+    intro = Markdown("""
+Generate beautiful HTML reports from any data using **LLM-powered analysis**.
+
+- **Extensible** - Create plugins for any data format  
+- **Themeable** - 7 built-in themes or create your own
+- **Multi-LLM** - OpenAI, Anthropic Claude, or local Ollama
+""")
+    console.print(intro)
     console.print()
     
     # Quick start
     console.print("[bold cyan]Quick Start[/bold cyan]")
-    console.print("  bobreview --plugin [cyan]<name>[/cyan] --dir [cyan]<path>[/cyan]")
+    console.print("  [dim]Create:[/dim]  bobreview plugins create [cyan]<name>[/cyan]")
+    console.print("  [dim]Use:[/dim]     bobreview --plugin [cyan]<name>[/cyan] --dir [cyan]<path>[/cyan]")
     console.print()
     
     # Core options
@@ -126,6 +140,81 @@ def print_rich_help():
     console.print()
     
     return True
+
+
+def handle_doctor_command():
+    """Run diagnostic checks on BobReview setup."""
+    if RICH_AVAILABLE:
+        from rich.markdown import Markdown
+        
+        print_banner()
+        console.print()
+        console.print("[bold]System Check[/bold]")
+        console.print()
+        
+        checks = []
+        all_ok = True
+        
+        # Python version
+        import sys
+        py_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        py_ok = sys.version_info >= (3, 10)
+        checks.append(("Python", py_version, py_ok, "3.10+ required" if not py_ok else ""))
+        
+        # Rich library
+        checks.append(("Rich library", "installed", True, ""))
+        
+        # API Keys
+        openai_key = os.environ.get('OPENAI_API_KEY', '')
+        anthropic_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        
+        if openai_key:
+            checks.append(("OpenAI API Key", f"...{openai_key[-4:]}", True, ""))
+        else:
+            checks.append(("OpenAI API Key", "not set", False, "Set OPENAI_API_KEY env var"))
+        
+        if anthropic_key:
+            checks.append(("Anthropic API Key", f"...{anthropic_key[-4:]}", True, ""))
+        else:
+            checks.append(("Anthropic API Key", "not set", False, "Set ANTHROPIC_API_KEY env var"))
+        
+        # Plugin directories
+        plugin_dirs = PluginDiscovery.get_plugin_dirs()
+        existing_dirs = [d for d in plugin_dirs if Path(d).exists()]
+        checks.append(("Plugin directories", f"{len(existing_dirs)} found", len(existing_dirs) > 0, ""))
+        
+        # Plugins
+        loader = init_loader(plugin_dirs)
+        plugins = loader.discover()
+        checks.append(("Plugins discovered", str(len(plugins)), True, ""))
+        
+        # Display results
+        table = Table(box=box.ROUNDED, border_style="cyan", show_header=False)
+        table.add_column("Check", style="bold", width=20)
+        table.add_column("Status", width=20)
+        table.add_column("Result", justify="center", width=8)
+        table.add_column("Note", style="dim")
+        
+        for check, status, ok, note in checks:
+            result = "[green]OK[/green]" if ok else "[yellow]--[/yellow]"
+            if not ok:
+                all_ok = False
+            table.add_row(check, status, result, note)
+        
+        console.print(table)
+        console.print()
+        
+        if all_ok:
+            console.print("[green]All checks passed![/green]")
+        else:
+            console.print("[yellow]Some checks need attention.[/yellow]")
+            console.print("[dim]Note: API keys are optional if using --dry-run or Ollama.[/dim]")
+        
+        console.print()
+        return 0
+    else:
+        print("Doctor requires 'rich' library: pip install rich")
+        return 1
 
 
 def _load_plugins(extra_dirs, config):
@@ -610,6 +699,8 @@ Examples:
                                 choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
                                 help='Base color theme for templates (default: dark)')
     
+    # doctor command
+    doctor_parser = subparsers.add_parser('doctor', help='Check system setup')
     
     # Parse args
     args = parser.parse_args()
@@ -759,6 +850,10 @@ Examples:
     # Handle plugin commands
     if args.command == 'plugins':
         return handle_plugin_command(args)
+    
+    # Handle doctor command
+    if args.command == 'doctor':
+        return handle_doctor_command()
     
     # Validate that --plugin is provided if not using list commands
     if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers or args.list_themes):
