@@ -221,7 +221,7 @@ def handle_plugin_command(args):
             print(f"  1. Edit {created_path}/manifest.json to update author and description")
             print(f"  2. Modify parsers/csv_parser.py for your data format")
             print(f"  3. Change theme in report_systems/{args.name.replace('-', '_')}.json (theme.preset)")
-            print(f"  4. Test with: bobreview generate --plugin {args.name} --dir {created_path}/sample_data")
+            print(f"  4. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
             return 0
         except Exception as e:
             print(f"Error creating plugin: {e}")

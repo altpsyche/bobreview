@@ -98,8 +98,9 @@ class ChartConfig:
     id: str
     type: str  # 'line', 'bar', 'scatter', 'histogram'
     title: str
-    x_field: str
-    y_field: str
+    # Both optional with defaults - histograms only need y_field, bar charts need both
+    x_field: str = ''
+    y_field: str = ''
     # Plugin-specific options go in the options dict (e.g., performance_zones)
     options: Dict[str, Any] = field(default_factory=dict)
 
@@ -487,8 +488,8 @@ def parse_chart_config(data: Dict[str, Any]) -> ChartConfig:
         id=data['id'],
         type=data['type'],
         title=data['title'],
-        x_field=data['x_field'],
-        y_field=data['y_field'],
+        x_field=data.get('x_field', ''),
+        y_field=data.get('y_field', ''),
         options=data.get('options', {})
     )
 
