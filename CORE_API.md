@@ -266,6 +266,7 @@ class ReportTheme:
     # Fonts
     font_mono: str = '"SF Mono", Menlo, ...'
     font_family: str = 'system-ui, ...'
+    font_url: str = ''  # Google Fonts URL for dynamic loading
 
 # Built-in themes
 DARK_THEME: ReportTheme

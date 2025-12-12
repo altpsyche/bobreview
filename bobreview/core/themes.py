@@ -651,9 +651,22 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
             accent_soft=hex_to_rgba('#ff6b35', 0.15),
         )
     """
+    # Validate alpha
+    if not (0.0 <= alpha <= 1.0):
+        raise ValueError(f"alpha must be between 0.0 and 1.0, got {alpha}")
+    
     hex_color = hex_color.lstrip('#')
+    
+    # Normalize 3-char to 6-char
     if len(hex_color) == 3:
         hex_color = ''.join(c * 2 for c in hex_color)
+    
+    # Validate length and content
+    if len(hex_color) != 6:
+        raise ValueError(f"Invalid hex color '{hex_color}': expected 3 or 6 hex digits")
+    if any(c not in "0123456789abcdefABCDEF" for c in hex_color):
+        raise ValueError(f"Invalid hex color '{hex_color}': contains non-hex characters")
+    
     r = int(hex_color[0:2], 16)
     g = int(hex_color[2:4], 16)
     b = int(hex_color[4:6], 16)

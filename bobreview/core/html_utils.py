@@ -64,7 +64,10 @@ def sanitize_llm_html(content: str) -> str:
         'p', 'strong', 'em', 'b', 'i', 'u', 
         'ul', 'ol', 'li', 'br', 'span', 'div',
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'a', 'code', 'pre', 'blockquote'
+        'a', 'code', 'pre', 'blockquote',
+        # Common markdown outputs (safe, structural)
+        'hr',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td'
     ]
     
     # Whitelist of safe attributes
@@ -108,7 +111,7 @@ def get_shared_css() -> str:
     return css_path.read_text(encoding='utf-8')
 
 
-def get_theme_css_block(theme=None) -> str:
+def get_theme_css_block(theme=None) -> 'Markup':
     """
     Get CSS :root block with theme variables for embedding in templates.
     

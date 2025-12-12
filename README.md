@@ -112,7 +112,7 @@ bobreview plugins create my-plugin --template minimal
 
 ### Plugin Structure
 
-```
+```text
 my_plugin/
 ├── manifest.json           # Plugin metadata
 ├── plugin.py               # Main plugin class (on_load registration)
@@ -293,6 +293,16 @@ class MyPlugin(BasePlugin):
 
 Then use in JSON: `"theme": { "preset": "neon" }`
 
+**Via CLI** (override at runtime):
+
+```bash
+# Use built-in theme
+bobreview --plugin my-plugin --dir ./data --theme ocean
+
+# Use your custom plugin theme
+bobreview --plugin my-plugin --dir ./data --theme neon
+```
+
 ### Available Theme Properties
 
 | Property | Purpose |
@@ -397,7 +407,7 @@ Report systems are JSON files that define your analysis pipeline:
 
 ## Architecture
 
-```
+```text
 bobreview/
 ├── cli.py                    # Command-line interface
 ├── core/

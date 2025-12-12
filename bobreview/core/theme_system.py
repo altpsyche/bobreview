@@ -10,7 +10,7 @@ This module unifies theme operations across the codebase.
 """
 
 from pathlib import Path
-from typing import Optional, Dict, Any, Literal
+from typing import Optional, Dict, Any, Literal, Union
 import warnings
 from markupsafe import Markup
 from .themes import ReportTheme, resolve_theme, get_theme_by_id, get_theme_css_variables, get_available_themes
@@ -195,7 +195,7 @@ class ThemeSystem:
         theme_id: str,
         mode: Literal['embedded', 'linked'] = 'embedded',
         include_base: bool = True
-    ) -> str:
+    ) -> Union[Markup, str]:
         """
         Get CSS for a theme in the specified mode.
         
@@ -309,7 +309,7 @@ def get_resolved_theme(theme_id: str) -> Optional[ReportTheme]:
     return get_theme_system().resolve_theme(theme_id)
 
 
-def get_theme_css(theme_id: Optional[str] = None, mode: str = 'embedded', include_base: bool = True) -> str:
+def get_theme_css(theme_id: Optional[str] = None, mode: Literal['embedded', 'linked'] = 'embedded', include_base: bool = True) -> Union[Markup, str]:
     """
     Get CSS for a theme.
     

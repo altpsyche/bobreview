@@ -379,8 +379,17 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
         return js_code
     
     def _hex_to_rgba(self, hex_color: str, alpha: float) -> str:
-        """Convert hex color to rgba string."""
+        \"\"\"Convert hex color to rgba string.\"\"\"
+        if not (0.0 <= alpha <= 1.0):
+            raise ValueError(f"alpha must be between 0.0 and 1.0, got {alpha}")
+        
         hex_color = hex_color.lstrip('#')
+        if len(hex_color) == 3:
+            hex_color = ''.join([c*2 for c in hex_color])
+        if len(hex_color) != 6:
+            raise ValueError(f"Invalid hex color '{hex_color}': expected 3 or 6 hex digits")
+        if any(c not in "0123456789abcdefABCDEF" for c in hex_color):
+            raise ValueError(f"Invalid hex color '{hex_color}': contains non-hex characters")
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
         return f"rgba({r}, {g}, {b}, {alpha})"
 '''
