@@ -520,9 +520,14 @@ from bobreview.core.themes import ReportTheme, create_theme, hex_to_rgba
     radius_lg='12px',
     radius_xl='20px',
     
-    # Fonts - modern, clean typography
-    font_sans='"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
-    font_mono='"JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace',
+    # Fonts - distinctive typography (different from built-in themes)
+    # Space Grotesk: Modern geometric sans with character
+    # IBM Plex Mono: Clean technical monospace
+    font_sans='"Space Grotesk", "Outfit", "Rubik", system-ui, sans-serif',
+    font_mono='"IBM Plex Mono", "Source Code Pro", "Cascadia Code", monospace',
+    
+    # Google Fonts URL - templates use this to load the fonts dynamically
+    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
     
     # Chart styling
     chart_grid_opacity=0.4,

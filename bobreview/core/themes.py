@@ -95,6 +95,8 @@ class ReportTheme:
     # Fonts
     font_mono: str = '"SF Mono", Menlo, Consolas, monospace'
     font_sans: str = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    # Google Fonts URL for loading web fonts (optional - only needed for web fonts)
+    font_url: str = ''
     
     # Chart styling
     chart_grid_opacity: float = 0.5
@@ -166,7 +168,8 @@ DARK_THEME = ReportTheme(
     warn='#e6b35c',
     warn_soft='rgba(230, 179, 92, 0.15)',
     ok='#4fd18b',
-    ok_soft='rgba(79, 209, 139, 0.15)'
+    ok_soft='rgba(79, 209, 139, 0.15)',
+    font_url='https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
 )
 
 LIGHT_THEME = ReportTheme(
@@ -187,7 +190,8 @@ LIGHT_THEME = ReportTheme(
     warn_soft='rgba(255, 193, 7, 0.1)',
     ok='#28a745',
     ok_soft='rgba(40, 167, 69, 0.1)',
-    shadow_soft='0 4px 12px rgba(0, 0, 0, 0.1)'
+    shadow_soft='0 4px 12px rgba(0, 0, 0, 0.1)',
+    font_url='https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap',
 )
 
 HIGH_CONTRAST_THEME = ReportTheme(
@@ -207,7 +211,8 @@ HIGH_CONTRAST_THEME = ReportTheme(
     warn='#ffff00',
     warn_soft='rgba(255, 255, 0, 0.2)',
     ok='#00ff00',
-    ok_soft='rgba(0, 255, 0, 0.2)'
+    ok_soft='rgba(0, 255, 0, 0.2)',
+    # High contrast uses system fonts for maximum compatibility
 )
 
 # =============================================================================
@@ -236,6 +241,7 @@ OCEAN_THEME = ReportTheme(
     danger_soft='rgba(255, 107, 107, 0.15)',
     font_sans='"Inter", system-ui, -apple-system, sans-serif',
     font_mono='"Fira Code", "SF Mono", Consolas, monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap',
 )
 
 # Purple Night Theme - Dracula-inspired
@@ -257,6 +263,7 @@ PURPLE_THEME = ReportTheme(
     warn_soft='rgba(255, 184, 108, 0.15)',
     danger='#ff5555',
     danger_soft='rgba(255, 85, 85, 0.15)',
+    font_url='https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap',
 )
 
 # Terminal Theme - GitHub-style green, JetBrains Mono
@@ -280,6 +287,7 @@ TERMINAL_THEME = ReportTheme(
     danger_soft='rgba(248, 81, 73, 0.15)',
     font_sans='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
     font_mono='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+    font_url='https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap',
 )
 
 # Sunset Theme - Warm orange tones, Outfit font
@@ -303,6 +311,7 @@ SUNSET_THEME = ReportTheme(
     danger_soft='rgba(255, 107, 107, 0.15)',
     font_sans='"Outfit", "Poppins", system-ui, sans-serif',
     font_mono='"Source Code Pro", "Fira Code", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap',
 )
 
 # All built-in themes
@@ -531,6 +540,7 @@ def theme_to_dict(theme: ReportTheme) -> dict:
         # Fonts
         "font_sans": theme.font_sans,
         "font_mono": theme.font_mono,
+        "font_url": theme.font_url,
         
         # Aliases for backward compatibility
         "border": theme.border_subtle,

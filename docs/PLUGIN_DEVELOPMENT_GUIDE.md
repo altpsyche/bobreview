@@ -279,9 +279,10 @@ MY_PLUGIN_THEME = ReportTheme(
     danger='#f87171',
     danger_soft=hex_to_rgba('#f87171', 0.15),
     
-    # Fonts
-    font_sans='"Inter", system-ui, sans-serif',
-    font_mono='"JetBrains Mono", monospace',
+    # Fonts (Google Fonts URL enables dynamic loading)
+    font_sans='"Space Grotesk", system-ui, sans-serif',
+    font_mono='"IBM Plex Mono", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
 )
 ```
 
@@ -324,6 +325,7 @@ def on_load(self, registry):
 | `text_main`, `text_soft` | Text colors |
 | `ok`, `warn`, `danger` + `_soft` | Status colors |
 | `font_sans`, `font_mono` | Font families |
+| `font_url` | Google Fonts URL (enables dynamic font loading) |
 | `radius_sm/md/lg/xl` | Border radii |
 | `shadow_soft`, `shadow_strong` | Box shadows |
 
