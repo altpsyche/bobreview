@@ -23,7 +23,7 @@ from .engine.executor import ReportSystemExecutor
 from .services.llm.providers import list_providers, get_provider_info
 
 # Import plugin system
-from .core.plugin_system import get_loader, init_loader, PluginDiscovery, PluginManifest
+from .core.plugin_system import get_loader, init_loader, PluginDiscovery, PluginManifest, PluginLoadError
 
 # Import template engine
 from .core.template_engine import reset_template_engine
@@ -142,7 +142,7 @@ Generate beautiful HTML reports from any data using **LLM-powered analysis**.
     return True
 
 
-def handle_doctor_command():
+def handle_doctor_command(extra_dirs=None):
     """Run diagnostic checks on BobReview setup."""
     if RICH_AVAILABLE:
         from rich.markdown import Markdown
@@ -179,7 +179,7 @@ def handle_doctor_command():
             checks.append(("Anthropic API Key", "not set", False, "Set ANTHROPIC_API_KEY env var"))
         
         # Plugin directories
-        plugin_dirs = PluginDiscovery.get_plugin_dirs()
+        plugin_dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=extra_dirs)
         existing_dirs = [d for d in plugin_dirs if Path(d).exists()]
         checks.append(("Plugin directories", f"{len(existing_dirs)} found", len(existing_dirs) > 0, ""))
         
@@ -663,10 +663,7 @@ Examples:
         metavar='DIR',
         help='Extra plugin search directory (repeatable)'
     )
-    parser.add_argument(
-        '--no-plugins', action='store_true',
-        help='Disable plugin loading'
-    )
+    # NOTE: --no-plugins was removed - plugins are now mandatory for report generation
     
     # Plugin subcommands
     subparsers = parser.add_subparsers(dest='command', help='Plugin management commands')
@@ -852,7 +849,7 @@ Examples:
     
     # Handle doctor command
     if args.command == 'doctor':
-        return handle_doctor_command()
+        return handle_doctor_command(extra_dirs=getattr(args, 'plugin_dirs', []))
     
     # Validate that --plugin is provided if not using list commands
     if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers or args.list_themes):
@@ -953,21 +950,36 @@ Examples:
     
     log_verbose(f"LLM Provider: {config.llm.provider} (model: {config.llm.model})", config)
     
-    # Load plugins (unless disabled)
     # IMPORTANT: Plugins must be loaded BEFORE template engine is first accessed
     # to ensure plugin templates are available
-    if not args.no_plugins:
-        _load_plugins(args.plugin_dirs, config)
-        
-        # Refresh template engine to pick up plugin templates
-        reset_template_engine()
+    _load_plugins(args.plugin_dirs, config)
+    
+    # Refresh template engine to pick up plugin templates
+    reset_template_engine()
     
     # Use the JSON-based report system framework
     try:
         # Plugin is required - determine which report system to use
         if args.report_system:
-            # Explicit system specified
+            # Explicit system specified - ensure the plugin is loaded first
             report_system_id = args.report_system
+            plugin_manager = get_loader()
+            if not plugin_manager.get_discovered_plugins():
+                plugin_manager.discover()
+            matched_manifest = None
+            plugin_name_normalized = args.plugin.lower().replace('-', '_').replace(' ', '')
+            for manifest in plugin_manager.get_discovered_plugins():
+                manifest_name_normalized = manifest.name.lower().replace('-', '_').replace(' ', '')
+                if manifest.name == args.plugin or manifest_name_normalized == plugin_name_normalized:
+                    matched_manifest = manifest
+                    break
+            if matched_manifest and not plugin_manager.is_loaded(matched_manifest.name):
+                try:
+                    plugin_manager.load(matched_manifest.name)
+                    log_info(f"Loaded plugin: {matched_manifest.name}", config)
+                except PluginLoadError as e:
+                    log_warning(f"Failed to load plugin '{matched_manifest.name}': {e}", config)
+                args.plugin = matched_manifest.name
         else:
             # No explicit system - auto-select if only one, require selection if multiple
             plugin_manager = get_loader()
@@ -998,7 +1010,7 @@ Examples:
                     try:
                         plugin_manager.load(matched_manifest.name)
                         log_info(f"Loaded plugin: {matched_manifest.name}", config)
-                    except Exception as e:
+                    except PluginLoadError as e:
                         log_warning(f"Failed to load plugin '{matched_manifest.name}': {e}", config)
                 # Update args.plugin to the actual plugin name for consistency
                 args.plugin = matched_manifest.name
