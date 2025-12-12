@@ -28,17 +28,104 @@ from .core.plugin_system import get_loader, init_loader, PluginDiscovery, Plugin
 # Import template engine
 from .core.template_engine import reset_template_engine
 
-# Check for tqdm availability
+# Import rich for beautiful CLI output
 try:
-    from tqdm import tqdm
-    TQDM_AVAILABLE = True
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+    from rich import box
+    RICH_AVAILABLE = True
+    console = Console()
 except ImportError:
-    TQDM_AVAILABLE = False
-    class tqdm:
-        def __init__(self, iterable=None, desc=None, total=None, **kwargs):
-            self.iterable = iterable
-        def __iter__(self):
-            return iter(self.iterable)
+    RICH_AVAILABLE = False
+    console = None
+
+
+def print_banner():
+    """Print a styled banner for BobReview."""
+    if not RICH_AVAILABLE:
+        print(f"\nBobReview v{__version__}")
+        print("=" * 40)
+        return
+    
+    title = Text()
+    title.append("Bob", style="bold cyan")
+    title.append("Review", style="bold white")
+    title.append(f" v{__version__}", style="dim")
+    
+    console.print()
+    console.print(Panel(
+        title,
+        subtitle="[dim]Extensible Report Generation Framework[/dim]",
+        box=box.ROUNDED,
+        border_style="cyan",
+        padding=(0, 2),
+    ))
+
+
+def print_rich_help():
+    """Print beautiful rich-formatted help instead of argparse default."""
+    if not RICH_AVAILABLE:
+        return False
+    
+    print_banner()
+    console.print()
+    
+    # Quick start
+    console.print("[bold cyan]Quick Start[/bold cyan]")
+    console.print("  bobreview --plugin [cyan]<name>[/cyan] --dir [cyan]<path>[/cyan]")
+    console.print()
+    
+    # Core options
+    core_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    core_table.add_column("Option", style="cyan", width=25)
+    core_table.add_column("Description")
+    core_table.add_row("--plugin <name>", "Plugin to use (required)")
+    core_table.add_row("--dir <path>", "Data directory (default: .)")
+    core_table.add_row("--output <file>", "Output file (default: report.html)")
+    core_table.add_row("--title <text>", "Custom report title")
+    core_table.add_row("--theme <id>", "Color theme (use --list-themes)")
+    console.print(Panel(core_table, title="[bold]Core Options[/bold]", border_style="dim"))
+    
+    # LLM options
+    llm_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    llm_table.add_column("Option", style="cyan", width=25)
+    llm_table.add_column("Description")
+    llm_table.add_row("--llm-provider <name>", "openai, anthropic, or ollama")
+    llm_table.add_row("--llm-model <model>", "Model name (provider default)")
+    llm_table.add_row("--llm-api-key <key>", "API key (or use env vars)")
+    llm_table.add_row("--llm-temperature <n>", "Creativity 0.0-2.0 (default: 0.7)")
+    llm_table.add_row("--dry-run", "Skip LLM calls (placeholder content)")
+    console.print(Panel(llm_table, title="[bold]LLM Options[/bold]", border_style="dim"))
+    
+    # Discovery commands
+    discover_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    discover_table.add_column("Option", style="cyan", width=25)
+    discover_table.add_column("Description")
+    discover_table.add_row("--list-plugins", "Show available plugins")
+    discover_table.add_row("--list-themes", "Show available themes")
+    discover_table.add_row("--list-providers", "Show available LLM providers")
+    discover_table.add_row("--list-report-systems", "Show available report systems")
+    console.print(Panel(discover_table, title="[bold]Discovery[/bold]", border_style="dim"))
+    
+    # Plugin management
+    plugin_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    plugin_table.add_column("Command", style="cyan", width=25)
+    plugin_table.add_column("Description")
+    plugin_table.add_row("plugins create <name>", "Scaffold a new plugin")
+    plugin_table.add_row("plugins list", "Show installed plugins")
+    plugin_table.add_row("plugins info <name>", "Show plugin details")
+    console.print(Panel(plugin_table, title="[bold]Plugin Management[/bold]", border_style="dim"))
+    
+    # Other options
+    console.print("[dim]Other: --verbose, --quiet, --no-cache, --sample <n>, --version[/dim]")
+    console.print()
+    console.print("[dim]Full help: bobreview --help --verbose[/dim]")
+    console.print()
+    
+    return True
 
 
 def _load_plugins(extra_dirs, config):
@@ -84,24 +171,52 @@ def handle_plugin_command(args):
     if args.plugin_command == 'list':
         plugins = loader.get_discovered_plugins()
         if not plugins:
-            print("No plugins found.")
-            print(f"\nPlugin directories searched:")
-            for d in dirs:
-                print(f"  - {d}")
-            print("\nTo add plugins, place them in ~/.bobreview/plugins/")
+            if RICH_AVAILABLE:
+                console.print("[dim]No plugins found.[/dim]")
+                console.print(f"\n[dim]Plugin directories searched:[/dim]")
+                for d in dirs:
+                    console.print(f"  [cyan]•[/cyan] {d}")
+                console.print("\n[dim]To add plugins:[/dim] bobreview plugins create my-plugin")
+            else:
+                print("No plugins found.")
+                print(f"\nPlugin directories searched:")
+                for d in dirs:
+                    print(f"  - {d}")
+                print("\nTo add plugins, place them in ~/.bobreview/plugins/")
             return 0
         
-        print("Installed plugins:\n")
-        for p in plugins:
-            status = "✓ loaded" if p.loaded else "○ available"
-            print(f"  {p.name} v{p.version} [{status}]")
+        if RICH_AVAILABLE:
+            table = Table(title="Installed Plugins", box=box.ROUNDED, border_style="cyan")
+            table.add_column("Plugin", style="bold")
+            table.add_column("Version", style="dim")
+            table.add_column("Status", justify="center")
             if args.verbose:
-                print(f"    Author: {p.author}")
-                print(f"    {p.description}")
-                if p.provides:
-                    provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
-                    print(f"    Provides: {provides_str}")
-                print()
+                table.add_column("Author")
+                table.add_column("Components")
+            
+            for p in plugins:
+                status = "[green]✓ loaded[/green]" if p.loaded else "[dim]○ available[/dim]"
+                if args.verbose:
+                    provides_str = ", ".join(f"{k}:{len(v)}" for k, v in p.provides.items()) if p.provides else ""
+                    table.add_row(p.name, p.version, status, p.author or "", provides_str)
+                else:
+                    table.add_row(p.name, p.version, status)
+            
+            console.print()
+            console.print(table)
+            console.print()
+        else:
+            print("Installed plugins:\n")
+            for p in plugins:
+                status = "✓ loaded" if p.loaded else "○ available"
+                print(f"  {p.name} v{p.version} [{status}]")
+                if args.verbose:
+                    print(f"    Author: {p.author}")
+                    print(f"    {p.description}")
+                    if p.provides:
+                        provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
+                        print(f"    Provides: {provides_str}")
+                    print()
         return 0
     
     elif args.plugin_command == 'install':
@@ -174,21 +289,52 @@ def handle_plugin_command(args):
                 break
         
         if not found:
-            print(f"Plugin not found: {args.name}")
+            if RICH_AVAILABLE:
+                console.print(f"[red]✗[/red] Plugin not found: {args.name}")
+            else:
+                print(f"Plugin not found: {args.name}")
             return 1
         
-        print(f"Plugin: {found.name}")
-        print(f"  Version: {found.version}")
-        print(f"  Author: {found.author}")
-        print(f"  Description: {found.description}")
-        print(f"  Path: {found.path}")
-        print(f"  Status: {'loaded' if found.loaded else 'not loaded'}")
-        if found.dependencies:
-            print(f"  Dependencies: {', '.join(found.dependencies)}")
-        if found.provides:
-            print("  Provides:")
-            for ext_type, items in found.provides.items():
-                print(f"    {ext_type}: {', '.join(items)}")
+        if RICH_AVAILABLE:
+            # Build info content
+            info_lines = []
+            info_lines.append(f"[bold]Version:[/bold] {found.version}")
+            info_lines.append(f"[bold]Author:[/bold] {found.author or 'Unknown'}")
+            info_lines.append(f"[bold]Description:[/bold] {found.description or 'No description'}")
+            info_lines.append(f"[bold]Path:[/bold] {found.path}")
+            status = "[green]✓ loaded[/green]" if found.loaded else "[dim]○ not loaded[/dim]"
+            info_lines.append(f"[bold]Status:[/bold] {status}")
+            
+            if found.dependencies:
+                info_lines.append(f"[bold]Dependencies:[/bold] {', '.join(found.dependencies)}")
+            
+            if found.provides:
+                provides_lines = []
+                for ext_type, items in found.provides.items():
+                    provides_lines.append(f"  {ext_type}: {', '.join(items)}")
+                info_lines.append(f"[bold]Provides:[/bold]\n" + "\n".join(provides_lines))
+            
+            console.print()
+            console.print(Panel(
+                "\n".join(info_lines),
+                title=f"[bold cyan]{found.name}[/bold cyan]",
+                border_style="cyan",
+                box=box.ROUNDED,
+            ))
+            console.print()
+        else:
+            print(f"Plugin: {found.name}")
+            print(f"  Version: {found.version}")
+            print(f"  Author: {found.author}")
+            print(f"  Description: {found.description}")
+            print(f"  Path: {found.path}")
+            print(f"  Status: {'loaded' if found.loaded else 'not loaded'}")
+            if found.dependencies:
+                print(f"  Dependencies: {', '.join(found.dependencies)}")
+            if found.provides:
+                print("  Provides:")
+                for ext_type, items in found.provides.items():
+                    print(f"    {ext_type}: {', '.join(items)}")
         return 0
     
     elif args.plugin_command == 'create':
@@ -234,11 +380,17 @@ def handle_plugin_command(args):
 
 def main():
     """
-    Parse CLI arguments, analyze PNG-captured performance data, optionally call an LLM, and write an HTML performance report.
+    Parse CLI arguments and generate reports using plugins.
     
     Returns:
         exit_code (int): 0 on success, 1 on failure.
     """
+    # Show rich help for --help (intercept before argparse)
+    if '--help' in sys.argv or '-h' in sys.argv:
+        # Check if --verbose is also passed for full argparse help
+        if '--verbose' not in sys.argv and '-v' not in sys.argv:
+            if print_rich_help():
+                return 0
     parser = argparse.ArgumentParser(
         prog='bobreview',
         description='BobReview - Extensible Report Generation Framework',
@@ -412,6 +564,10 @@ Examples:
         '--list-plugins', action='store_true',
         help='Show available plugins'
     )
+    parser.add_argument(
+        '--list-themes', action='store_true',
+        help='Show available color themes'
+    )
     
     # Plugin arguments
     parser.add_argument(
@@ -460,30 +616,63 @@ Examples:
     
     # Handle --list-providers
     if args.list_providers:
-        print("Available LLM providers:\n")
-        for provider_name in list_providers():
-            info = get_provider_info(provider_name)
-            key_info = f"(requires {info['env_key_name']})" if info['requires_api_key'] else "(no API key needed)"
-            print(f"  {provider_name}")
-            print(f"    Default model: {info['default_model']}")
-            print(f"    {key_info}")
-            print()
+        if RICH_AVAILABLE:
+            table = Table(title="LLM Providers", box=box.ROUNDED, border_style="cyan")
+            table.add_column("Provider", style="bold")
+            table.add_column("Default Model")
+            table.add_column("API Key", justify="center")
+            
+            for provider_name in list_providers():
+                info = get_provider_info(provider_name)
+                key_status = f"[yellow]{info['env_key_name']}[/yellow]" if info['requires_api_key'] else "[green]Not required[/green]"
+                table.add_row(provider_name, info['default_model'], key_status)
+            
+            console.print()
+            console.print(table)
+            console.print()
+        else:
+            print("Available LLM providers:\n")
+            for provider_name in list_providers():
+                info = get_provider_info(provider_name)
+                key_info = f"(requires {info['env_key_name']})" if info['requires_api_key'] else "(no API key needed)"
+                print(f"  {provider_name}")
+                print(f"    Default model: {info['default_model']}")
+                print(f"    {key_info}")
+                print()
         return 0
     
     # Handle --list-report-systems
     if args.list_report_systems:
         systems = list_available_systems()
         if not systems:
-            print("No report systems found.")
+            if RICH_AVAILABLE:
+                console.print("[dim]No report systems found.[/dim]")
+            else:
+                print("No report systems found.")
             return 0
         
-        print("Available report systems:\n")
-        for system in systems:
-            source_label = "built-in" if system['source'] == 'builtin' else "custom"
-            print(f"  {system['id']} ({source_label}) - v{system['version']}")
-            print(f"    {system['description']}")
-            print(f"    Path: {system['path']}")
-            print()
+        if RICH_AVAILABLE:
+            table = Table(title="Report Systems", box=box.ROUNDED, border_style="cyan")
+            table.add_column("ID", style="bold")
+            table.add_column("Version", style="dim")
+            table.add_column("Source", justify="center")
+            table.add_column("Description")
+            
+            for system in systems:
+                source_label = "[green]built-in[/green]" if system['source'] == 'builtin' else "[yellow]plugin[/yellow]"
+                table.add_row(system['id'], system['version'], source_label, system['description'] or "")
+            
+            console.print()
+            console.print(table)
+            console.print()
+        else:
+            print("Available report systems:\n")
+            for system in systems:
+                source_label = "built-in" if system['source'] == 'builtin' else "custom"
+                print(f"  {system['id']} ({source_label}) - v{system['version']}")
+                print(f"    {system['description']}")
+                print(f"    Path: {system['path']}")
+                print()
         return 0
     
     # Handle --list-plugins
@@ -494,25 +683,77 @@ Examples:
         plugins = loader.get_discovered_plugins()
         
         if not plugins:
-            print("No plugins found.")
-            print(f"\nPlugin directories searched:")
-            for d in dirs:
-                print(f"  - {d}")
-            print("\nTo add plugins, place them in ~/.bobreview/plugins/")
+            if RICH_AVAILABLE:
+                console.print("[dim]No plugins found.[/dim]")
+                console.print(f"\n[dim]Plugin directories searched:[/dim]")
+                for d in dirs:
+                    console.print(f"  [cyan]•[/cyan] {d}")
+                console.print("\n[dim]To add plugins:[/dim] bobreview plugins create my-plugin")
+            else:
+                print("No plugins found.")
+                print(f"\nPlugin directories searched:")
+                for d in dirs:
+                    print(f"  - {d}")
+                print("\nTo add plugins, place them in ~/.bobreview/plugins/")
             return 0
         
-        print("Available plugins:\n")
-        for p in plugins:
-            status = "✓ loaded" if p.loaded else "○ available"
-            print(f"  {p.name} v{p.version} [{status}]")
-            if p.description:
-                print(f"    {p.description}")
-            if p.author:
-                print(f"    Author: {p.author}")
-            if p.provides:
-                provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
-                print(f"    Provides: {provides_str}")
-            print()
+        if RICH_AVAILABLE:
+            table = Table(title="Available Plugins", box=box.ROUNDED, border_style="cyan")
+            table.add_column("Plugin", style="bold")
+            table.add_column("Version", style="dim")
+            table.add_column("Status", justify="center")
+            table.add_column("Author")
+            table.add_column("Components")
+            
+            for p in plugins:
+                status = "[green]✓ loaded[/green]" if p.loaded else "[dim]○ available[/dim]"
+                provides_str = ", ".join(f"{k}:{len(v)}" for k, v in p.provides.items()) if p.provides else ""
+                table.add_row(p.name, p.version, status, p.author or "", provides_str)
+            
+            console.print()
+            console.print(table)
+            console.print()
+        else:
+            print("Available plugins:\n")
+            for p in plugins:
+                status = "✓ loaded" if p.loaded else "○ available"
+                print(f"  {p.name} v{p.version} [{status}]")
+                if p.description:
+                    print(f"    {p.description}")
+                if p.author:
+                    print(f"    Author: {p.author}")
+                if p.provides:
+                    provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
+                    print(f"    Provides: {provides_str}")
+                print()
+        return 0
+    
+    # Handle --list-themes
+    if args.list_themes:
+        from .core.themes import BUILTIN_THEMES
+        
+        if RICH_AVAILABLE:
+            table = Table(title="Available Themes", box=box.ROUNDED, border_style="cyan")
+            table.add_column("Theme ID", style="bold")
+            table.add_column("Name")
+            table.add_column("Style")
+            
+            for theme in BUILTIN_THEMES:
+                # Simple style indicator
+                style_type = "dark" if "dark" in theme.id or theme.id in ["ocean", "purple", "terminal", "sunset"] else "light"
+                if theme.id == "high_contrast":
+                    style_type = "high contrast"
+                table.add_row(theme.id, theme.name, style_type)
+            
+            console.print()
+            console.print(table)
+            console.print("\n[dim]Use --theme <id> to apply a theme[/dim]")
+            console.print()
+        else:
+            print("Available themes:\n")
+            for theme in BUILTIN_THEMES:
+                print(f"  {theme.id} - {theme.name}")
+            print("\nUse --theme <id> to apply a theme")
         return 0
     
     # Handle plugin commands
@@ -520,8 +761,8 @@ Examples:
         return handle_plugin_command(args)
     
     # Validate that --plugin is provided if not using list commands
-    if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers):
-        parser.error("--plugin is required (unless using --list-plugins, --list-report-systems, or --list-providers)")
+    if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers or args.list_themes):
+        parser.error("--plugin is required (unless using a --list-* command)")
     
     # Handle quiet + verbose conflict
     if args.quiet and args.verbose:
