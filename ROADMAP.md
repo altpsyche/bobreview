@@ -62,7 +62,7 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
   - Extracted common utilities (plugin_utils, config_utils)
   - No code duplication
 - **COMPLETE** (v1.0.7) - Focused architecture
-  - 11 focused registries (themes, generators, parsers, etc.)
+  - 12 focused registries (themes, generators, parsers, etc.)
   - 5 focused config classes (thresholds, LLM, execution, output, cache)
   - Focused responsibility classes (ConfigMerger, ServiceValidator, PluginLifecycleManager)
 - **COMPLETE** (v1.0.7) - Plugin infrastructure relocation

@@ -88,7 +88,7 @@ xdg-open report.html # Linux
 | **Markdown → HTML** | LLM responses rendered with beautiful styling |
 | **Intelligent Caching** | Cache LLM responses to save costs |
 | **Standalone HTML** | Images embedded as base64 for easy sharing |
-| **Extensible Registry** | 13 registries for themes, parsers, generators, etc. |
+| **Extensible Registry** | 12 registries for themes, parsers, generators, etc. |
 
 ---
 
@@ -416,7 +416,7 @@ bobreview/
 │   │   ├── registry.py       # Component registration
 │   │   ├── plugin_helper.py  # PluginHelper facade
 │   │   ├── scaffolder.py     # Plugin scaffolding
-│   │   └── registries/       # 13 focused registries
+│   │   └── registries/       # 12 focused registries
 │   ├── template_engine.py    # Jinja2 with custom filters
 │   ├── html_utils.py         # Markdown→HTML, sanitization
 │   └── config.py             # ReportConfig

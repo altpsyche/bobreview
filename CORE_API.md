@@ -59,7 +59,7 @@ bobreview/
 │       ├── base.py          # BasePlugin ABC
 │       ├── registry.py      # PluginRegistry composition
 │       ├── loader.py        # PluginLoader discovery
-│       └── registries/      # 11 focused registries
+│       └── registries/      # 12 focused registries
 │
 ├── services/                # Pluggable services
 │   ├── container.py         # ServiceContainer (DI)

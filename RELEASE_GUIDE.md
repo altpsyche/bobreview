@@ -28,7 +28,7 @@ Version 1.0.7 - Plugin System
   - Removed dead code (`PageGeneratorInterface`, `PageGeneratorTemplate`)
 
 - **Plugin System**: Fully modular plugin architecture with SOLID and DRY principles
-  - **Focused Registries**: PluginRegistry split into 11 focused registries
+  - **Focused Registries**: PluginRegistry split into 12 focused registries
   - **Focused Config Classes**: ReportConfig split into 5 focused config classes
   - **Dependency Injection**: No global singletons
   - **Single Responsibility**: Executor split into focused classes
