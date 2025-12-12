@@ -14,7 +14,7 @@
 
 <!-- Visual Analysis Overview -->
 <section class="panel">
-  <h2>{{ labels.get('visual_analysis', 'Visual Analysis') }}</h2>
+  <h2><i class="fas fa-chart-pie"></i> {{ labels.get('visual_analysis', 'Visual Analysis') }}</h2>
   <p class="body-text">
     These charts show how performance varies across your captured frames. Look for clusters, spikes, and patterns that indicate optimization opportunities.
   </p>
@@ -39,7 +39,7 @@
 
 <!-- Draw Calls Timeline -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('draw_calls', 'Draw Calls') }} Timeline</h2>
+  <h2><i class="fas fa-stream"></i> {{ labels.get('draw_calls', 'Draw Calls') }} Timeline</h2>
   <p class="body-text">
     Timeline showing how draw calls vary across captures. Color-coded by performance zone.
   </p>
@@ -67,7 +67,7 @@
 
 <!-- Triangles Timeline -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('triangles', 'Triangles') }} Timeline</h2>
+  <h2><i class="fas fa-stream"></i> {{ labels.get('triangles', 'Triangles') }} Timeline</h2>
   <p class="body-text">
     Timeline showing how triangles vary across captures. This reveals patterns in your data.
   </p>
@@ -95,7 +95,7 @@
 
 <!-- Scatter Plot: Draw Calls vs Triangles -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('draw_calls', 'Draw Calls') }} vs {{ labels.get('triangles', 'Triangles') }}</h2>
+  <h2><i class="fas fa-braille"></i> {{ labels.get('draw_calls', 'Draw Calls') }} vs {{ labels.get('triangles', 'Triangles') }}</h2>
   <p class="body-text">
     Scatter plot showing the relationship between draw calls and triangles. Points are color-coded by performance zone.
   </p>

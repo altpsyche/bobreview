@@ -26,7 +26,7 @@
 
 <!-- Performance Overview Section -->
 <section class="panel">
-  <h2>{{ labels.get('executive_summary', 'Performance Overview') }}</h2>
+  <h2><i class="fas fa-tachometer-alt"></i> {{ labels.get('executive_summary', 'Performance Overview') }}</h2>
   
   <div class="performance-header">
     <!-- Performance Grade Card -->
@@ -72,7 +72,7 @@
 
 <!-- Navigation Cards -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('detailed_analysis', 'Detailed Analysis') }}</h2>
+  <h2><i class="fas fa-search"></i> {{ labels.get('detailed_analysis', 'Detailed Analysis') }}</h2>
   <p class="body-text">{{ content.explore_sections|default('Explore different aspects of the performance analysis:') }}</p>
   
   <div class="card-grid">
@@ -88,7 +88,7 @@
 
 <!-- Quick Stats Section -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('quick_stats', 'Quick Statistics') }}</h2>
+  <h2><i class="fas fa-chart-line"></i> {{ labels.get('quick_stats', 'Quick Statistics') }}</h2>
   
   <div class="stats-grid">
     {# Data-driven quick stats from JSON #}

@@ -6,7 +6,7 @@
 {% block content %}
 <!-- Statistical Summary -->
 <section class="panel">
-  <h2>{{ labels.get('statistical_summary', 'Performance Details') }}</h2>
+  <h2><i class="fas fa-chart-bar"></i> {{ labels.get('statistical_summary', 'Performance Details') }}</h2>
   
   {% if llm.stats_interpretation %}
   <div class="llm-content">
@@ -17,20 +17,20 @@
 
 <!-- Draw Calls Complete Statistics -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('draw_calls', 'Draw Calls') }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
+  <h2><i class="fas fa-draw-polygon"></i> {{ labels.get('draw_calls', 'Draw Calls') }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
   {{ metric_table(labels.get('draw_calls', 'Draw Calls'), stats.draws, labels) }}
 </section>
 
 <!-- Triangles Complete Statistics -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('triangles', 'Triangles') }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
+  <h2><i class="fas fa-shapes"></i> {{ labels.get('triangles', 'Triangles') }} {{ labels.get('complete_stats', 'Complete Statistics') }}</h2>
   {{ metric_table(labels.get('triangles', 'Triangles'), stats.tris, labels) }}
 </section>
 
 <!-- Performance Spikes (Outliers) -->
 {% if stats.outliers %}
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('outlier_analysis', 'Performance Spikes') }}</h2>
+  <h2><i class="fas fa-bolt"></i> {{ labels.get('outlier_analysis', 'Performance Spikes') }}</h2>
   <p class="body-text">
     These frames show unusual performance that differs significantly from the typical load:
   </p>
@@ -60,11 +60,11 @@
         <td>
           {% if outlier.zscore is defined %}
             {% if outlier.zscore > 3 %}
-            <span style="color: var(--danger);">🔴 Critical</span>
+            <span style="color: var(--danger);"><i class="fas fa-circle"></i> Critical</span>
             {% elif outlier.zscore > 2.5 %}
-            <span style="color: var(--warn);">🟠 High</span>
+            <span style="color: var(--warn);"><i class="fas fa-circle"></i> High</span>
             {% else %}
-            <span style="color: var(--accent);">🟡 Moderate</span>
+            <span style="color: var(--accent);"><i class="fas fa-circle"></i> Moderate</span>
             {% endif %}
           {% else %}—{% endif %}
         </td>
@@ -78,7 +78,7 @@
 <!-- Expected Performance Range -->
 {% if stats.draws.ci_lower is defined and stats.draws.ci_upper is defined %}
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('confidence_intervals', 'Expected Performance Range') }}</h2>
+  <h2><i class="fas fa-sliders-h"></i> {{ labels.get('confidence_intervals', 'Expected Performance Range') }}</h2>
   <p class="body-text">Based on your data, most frames should fall within these ranges:</p>
   
   <div class="stats-grid">
@@ -90,7 +90,7 @@
 
 <!-- Full Data Table -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('full_sample_table', 'All Captured Frames') }}</h2>
+  <h2><i class="fas fa-table"></i> {{ labels.get('full_sample_table', 'All Captured Frames') }}</h2>
   <p class="body-text">Complete list of all captured frames:</p>
   
   <table>

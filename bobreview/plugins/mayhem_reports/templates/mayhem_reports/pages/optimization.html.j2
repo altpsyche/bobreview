@@ -44,7 +44,7 @@
 
 <!-- Performance Budgets -->
 <section class="panel">
-  <h2>{{ labels.get('performance_budgets', 'Performance Budgets') }}</h2>
+  <h2><i class="fas fa-bullseye"></i> {{ labels.get('performance_budgets', 'Performance Budgets') }}</h2>
   <p class="body-text">
     Establish and maintain performance budgets to ensure consistent frame rates and responsive gameplay. Any capture exceeding the hard cap should be treated as a performance issue.
   </p>
@@ -79,7 +79,7 @@
 
 <!-- Critical Hotspot -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('critical_hotspot', 'Critical Hotspot') }} - Index {{ critical.index }}</h2>
+  <h2><i class="fas fa-fire"></i> {{ labels.get('critical_hotspot', 'Critical Hotspot') }} - Index {{ critical.index }}</h2>
   <p class="body-text">
     The highest-priority optimization target. This frame has the worst performance characteristics and should be addressed first for maximum impact.
   </p>
@@ -129,7 +129,7 @@
 
 <!-- High-Geometry Hotspots -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('high_geometry_hotspots', 'High-Geometry Hotspots') }}</h2>
+  <h2><i class="fas fa-cubes"></i> {{ labels.get('high_geometry_hotspots', 'High-Geometry Hotspots') }}</h2>
   <p class="body-text">
     Frames with excessive triangles (≥ {{ config.thresholds.high_load_tri_threshold|format_number(0) }}).
     Affects <strong>{{ ns.high_geometry_count }} frames</strong>.
@@ -149,7 +149,7 @@
 
 <!-- High-Draw Hotspots -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('high_draw_hotspots', 'High-Draw Hotspots') }}</h2>
+  <h2><i class="fas fa-layer-group"></i> {{ labels.get('high_draw_hotspots', 'High-Draw Hotspots') }}</h2>
   <p class="body-text">
     Frames with excessive draw calls (≥ {{ config.thresholds.high_load_draw_threshold }}).
     Affects <strong>{{ ns.high_draw_count }} frames</strong>.
@@ -171,7 +171,7 @@
 <!-- System-Level Recommendations -->
 {% if llm.recommendations %}
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('system_recommendations', 'System-Level Recommendations') }}</h2>
+  <h2><i class="fas fa-lightbulb"></i> {{ labels.get('system_recommendations', 'System-Level Recommendations') }}</h2>
   <p class="body-text">
     Strategic recommendations for improving overall performance architecture and workflow.
   </p>
@@ -183,7 +183,7 @@
 
 <!-- Optimization Priority Matrix -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('priority_matrix', 'Optimization Priority Matrix') }}</h2>
+  <h2><i class="fas fa-th-large"></i> {{ labels.get('priority_matrix', 'Optimization Priority Matrix') }}</h2>
   <p class="body-text">
     Prioritize optimization work based on impact and effort. Focus on high-impact, low-effort improvements first.
   </p>

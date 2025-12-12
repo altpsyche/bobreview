@@ -22,7 +22,7 @@
 
 <!-- Overview Cards -->
 <section class="panel">
-  <h2>{{ labels.get('zones_overview', 'Performance Zones') }}</h2>
+  <h2><i class="fas fa-map-marker-alt"></i> {{ labels.get('zones_overview', 'Performance Zones') }}</h2>
   <p class="body-text">
     Performance zones categorize captures based on their resource usage. This helps identify problematic areas requiring optimization and establish baseline performance expectations.
   </p>
@@ -36,7 +36,7 @@
 
 <!-- High-Load Frames (Hotspots) -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('high_load_frames', 'Performance Hotspots') }}</h2>
+  <h2><i class="fas fa-exclamation-triangle"></i> {{ labels.get('high_load_frames', 'Performance Hotspots') }}</h2>
   <p class="body-text">
     These scenes exceed your performance budget (≥{{ config.thresholds.high_load_draw_threshold }} draws or ≥{{ config.thresholds.high_load_tri_threshold|format_number(0) }} tris) and require optimization attention.
   </p>
@@ -87,7 +87,7 @@
 
 <!-- Low-Load Frames (Optimized) -->
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('low_load_baselines', 'Optimized Scenes') }}</h2>
+  <h2><i class="fas fa-check-circle"></i> {{ labels.get('low_load_baselines', 'Optimized Scenes') }}</h2>
   <p class="body-text">
     These scenes perform well under budget (≤{{ config.thresholds.low_load_draw_threshold }} draws and ≤{{ config.thresholds.low_load_tri_threshold|format_number(0) }} tris) - use them as reference for optimization targets.
   </p>
@@ -133,7 +133,7 @@
 <!-- Critical Hotspot -->
 {% if stats.count > 0 and critical %}
 <section class="panel" style="margin-top: 20px;">
-  <h2>{{ labels.get('critical_hotspot', 'Critical Hotspot') }}</h2>
+  <h2><i class="fas fa-fire"></i> {{ labels.get('critical_hotspot', 'Critical Hotspot') }}</h2>
   <p class="body-text">
     The single worst-performing capture that demands the highest priority for optimization work.
   </p>
