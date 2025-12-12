@@ -344,13 +344,13 @@ def handle_plugin_command(args):
         return 0
     
     elif args.plugin_command == 'uninstall':
-        user_plugins = Path.home() / ".bobreview" / "plugins"
+        user_plugins = (Path.home() / ".bobreview" / "plugins").resolve()
         
         # Find the plugin
         found = None
         for p in loader.get_discovered_plugins():
             if p.name == args.name and p.path:
-                found = Path(p.path)
+                found = Path(p.path).expanduser().resolve()
                 break
         
         if not found:
@@ -358,9 +358,8 @@ def handle_plugin_command(args):
             return 1
         
         # Only allow uninstalling from user directory
-        try:
-            found.relative_to(user_plugins)
-        except ValueError:
+        # Use resolved paths to prevent path traversal via .. components
+        if not found.is_relative_to(user_plugins):
             print(f"Cannot uninstall built-in plugin: {args.name}")
             return 1
         
