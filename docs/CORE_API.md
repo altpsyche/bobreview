@@ -560,6 +560,7 @@ class PluginRegistry:
     chart_generators: ChartGeneratorRegistry
     context_builders: ContextBuilderRegistry
     template_paths: TemplatePathRegistry
+    analyzers: AnalyzerRegistry
     
     def get_component_owner(self, component_key: str) -> str: ...
     def unregister_plugin_components(self, plugin_name: str) -> int: ...

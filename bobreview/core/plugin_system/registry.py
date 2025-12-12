@@ -20,6 +20,7 @@ from .registries import (
     ChartGeneratorRegistry,
     ContextBuilderRegistry,
     TemplatePathRegistry,
+    AnalyzerRegistry,
 )
 
 if TYPE_CHECKING:
@@ -63,6 +64,7 @@ class PluginRegistry:
         self.chart_generators = ChartGeneratorRegistry()
         self.context_builders = ContextBuilderRegistry()
         self.template_paths = TemplatePathRegistry()
+        self.analyzers = AnalyzerRegistry()
     
     # ─────────────────────────────────────────────────────────────────────────
     # Utility Methods
@@ -78,7 +80,8 @@ class PluginRegistry:
         for registry in [
             self.themes, self.widgets, self.data_parsers, self.llm_generators,
             self.chart_types, self.pages, self.services, self.report_systems,
-            self.chart_generators, self.context_builders, self.template_paths
+            self.chart_generators, self.context_builders, self.template_paths,
+            self.analyzers
         ]:
             owner = registry.get_component_owner(component_key)
             if owner:
@@ -108,6 +111,7 @@ class PluginRegistry:
         total += self.chart_generators.unregister_plugin_components(plugin_name)
         total += self.context_builders.unregister_plugin_components(plugin_name)
         total += self.template_paths.unregister_plugin_components(plugin_name)
+        total += self.analyzers.unregister_plugin_components(plugin_name)
         
         logger.info(f"Unregistered {total} total components from plugin: {plugin_name}")
         return total
@@ -126,6 +130,7 @@ class PluginRegistry:
             'chart_generators': len(self.chart_generators.get_all()),
             'context_builders': len(self.context_builders.get_all()),
             'template_paths': len(self.template_paths.get_paths()),
+            'analyzers': len(self.analyzers.get_all()),
         }
     
     def __repr__(self) -> str:

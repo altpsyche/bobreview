@@ -502,8 +502,7 @@ class MyPlugin(BasePlugin):
         helper.add_data_parser('my_parser', MyParser)
         
         from .analysis import analyze_my_data
-        from bobreview.core.plugin_system.registries import get_analyzer_registry
-        get_analyzer_registry().register('my_analyzer', analyze_my_data)
+        helper.add_analyzer('my_analyzer', analyze_my_data)
         
         from .chart_generator import MyChartGenerator
         helper.add_chart_generator('my_report', MyChartGenerator)

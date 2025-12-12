@@ -91,10 +91,10 @@ class AnalyticsService(BaseService):
         
         try:
             # Get analyzer from the plugin registry
-            from ..core.plugin_system.registries import get_analyzer_registry
+            from ..core.plugin_system.registry import get_registry
             
-            analyzer_registry = get_analyzer_registry()
-            analyzer_func = analyzer_registry.get()  # Get default analyzer
+            registry = get_registry()
+            analyzer_func = registry.analyzers.get()  # Get default analyzer
             
             if analyzer_func:
                 from ..core.config import ReportConfig

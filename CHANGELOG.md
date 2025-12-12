@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2025-12-13
+
+### AnalyzerRegistry Consistency Fix
+
+- **Unified Analyzer Registration**: `AnalyzerRegistry` is now part of `PluginRegistry` like all other registries
+  - **Breaking**: Removed `get_analyzer_registry()` function — use `helper.add_analyzer()` or `registry.analyzers`
+  - Now uses consistent PluginHelper pattern: `helper.add_analyzer('name', func)`
+  - `AnalyzerRegistry` now extends `BaseRegistry` for plugin ownership tracking
+  - Added `get_all()`, `unregister_plugin_components()` methods for consistency
+  - Updated PLUGIN_DEVELOPMENT_GUIDE.md and scaffolder to generate correct pattern
+
 ## [1.0.7] - 2025-12-12
 
 ### Introducing Plugins

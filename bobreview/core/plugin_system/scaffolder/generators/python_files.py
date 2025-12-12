@@ -20,13 +20,30 @@ from bobreview.core.plugin_system import BasePlugin, PluginHelper"""
 from .parsers.csv_parser import {class_name}CsvParser
 from .context_builder import {class_name}ContextBuilder
 from .chart_generator import {class_name}ChartGenerator
-from .theme import {safe_name}_THEME, {safe_name}_DEEP_THEME""".format(class_name=class_name, safe_name=safe_name.upper())
+from .analysis import analyze_{safe_name}_data
+from .theme import {safe_name}_THEME, {safe_name}_DEEP_THEME""".format(class_name=class_name, safe_name=safe_name.upper() if 'THEME' in '{safe_name}_THEME' else safe_name)
+        # Fix the format - safe_name should be lowercase for function, uppercase for theme
+        imports = """from pathlib import Path
+from bobreview.core.plugin_system import BasePlugin, PluginHelper
+from .parsers.csv_parser import {class_name}CsvParser
+from .context_builder import {class_name}ContextBuilder
+from .chart_generator import {class_name}ChartGenerator
+from .analysis import analyze_{safe_name}_data
+from .theme import {safe_name_upper}_THEME, {safe_name_upper}_DEEP_THEME""".format(
+            class_name=class_name, 
+            safe_name=safe_name,
+            safe_name_upper=safe_name.upper()
+        )
     else:
         imports += f"""
-from .parsers.csv_parser import {class_name}CsvParser"""
+from .parsers.csv_parser import {class_name}CsvParser
+from .analysis import analyze_{safe_name}_data"""
     
     registration = f'''        # Register data parser
-        helper.add_data_parser("{safe_name}_csv", {class_name}CsvParser)'''
+        helper.add_data_parser("{safe_name}_csv", {class_name}CsvParser)
+        
+        # Register analyzer function
+        helper.add_analyzer("{safe_name}", analyze_{safe_name}_data)'''
     
     if template == 'full':
         registration += f'''
@@ -401,7 +418,7 @@ def generate_analysis_module(name: str, safe_name: str) -> str:
 Statistical Analysis for {name} Plugin.
 
 Provides common statistical functions for data analysis.
-Register with: get_analyzer_registry().register('{safe_name}', analyze_{safe_name}_data)
+Register with: helper.add_analyzer('{safe_name}', analyze_{safe_name}_data)
 """
 
 from typing import List, Dict, Any
