@@ -309,7 +309,7 @@ Then use in JSON: `"theme": { "preset": "neon" }`
 | `border_subtle` | Border colors |
 | `shadow_soft` | Box shadow |
 | `radius_lg` / `radius_md` | Border radius |
-| `font_sans` / `font_mono` | Typography |
+| `font_family` / `font_mono` | Typography |
 
 ### Available CSS Variables
 

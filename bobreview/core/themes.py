@@ -52,7 +52,7 @@ class ReportTheme:
         
         # Fonts
         font_mono: Monospace font family
-        font_sans: Sans-serif font family
+        font_family: Sans-serif font family
     """
     id: str
     name: str
@@ -94,7 +94,7 @@ class ReportTheme:
     
     # Fonts
     font_mono: str = '"SF Mono", Menlo, Consolas, monospace'
-    font_sans: str = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    font_family: str = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     # Google Fonts URL for loading web fonts (optional - only needed for web fonts)
     font_url: str = ''
     
@@ -169,6 +169,8 @@ DARK_THEME = ReportTheme(
     warn_soft='rgba(230, 179, 92, 0.15)',
     ok='#4fd18b',
     ok_soft='rgba(79, 209, 139, 0.15)',
+    font_family='"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
+    font_mono='"JetBrains Mono", "SF Mono", Consolas, monospace',
     font_url='https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
 )
 
@@ -191,6 +193,8 @@ LIGHT_THEME = ReportTheme(
     ok='#28a745',
     ok_soft='rgba(40, 167, 69, 0.1)',
     shadow_soft='0 4px 12px rgba(0, 0, 0, 0.1)',
+    font_family='"Inter", system-ui, -apple-system, sans-serif',
+    font_mono='"Fira Code", "SF Mono", Consolas, monospace',
     font_url='https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap',
 )
 
@@ -213,6 +217,8 @@ HIGH_CONTRAST_THEME = ReportTheme(
     ok='#00ff00',
     ok_soft='rgba(0, 255, 0, 0.2)',
     # High contrast uses system fonts for maximum compatibility
+    font_family='system-ui, -apple-system, "Segoe UI", sans-serif',
+    font_mono='Consolas, "Courier New", monospace',
 )
 
 # =============================================================================
@@ -239,7 +245,7 @@ OCEAN_THEME = ReportTheme(
     warn_soft='rgba(255, 217, 61, 0.15)',
     danger='#ff6b6b',
     danger_soft='rgba(255, 107, 107, 0.15)',
-    font_sans='"Inter", system-ui, -apple-system, sans-serif',
+    font_family='"Inter", system-ui, -apple-system, sans-serif',
     font_mono='"Fira Code", "SF Mono", Consolas, monospace',
     font_url='https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap',
 )
@@ -263,6 +269,8 @@ PURPLE_THEME = ReportTheme(
     warn_soft='rgba(255, 184, 108, 0.15)',
     danger='#ff5555',
     danger_soft='rgba(255, 85, 85, 0.15)',
+    font_family='"Fira Code", system-ui, sans-serif',
+    font_mono='"Fira Code", "SF Mono", Consolas, monospace',
     font_url='https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap',
 )
 
@@ -285,7 +293,7 @@ TERMINAL_THEME = ReportTheme(
     warn_soft='rgba(210, 153, 34, 0.15)',
     danger='#f85149',
     danger_soft='rgba(248, 81, 73, 0.15)',
-    font_sans='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
+    font_family='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
     font_mono='"JetBrains Mono", "Cascadia Code", Consolas, monospace',
     font_url='https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap',
 )
@@ -309,7 +317,7 @@ SUNSET_THEME = ReportTheme(
     warn_soft='rgba(255, 179, 71, 0.15)',
     danger='#ff6b6b',
     danger_soft='rgba(255, 107, 107, 0.15)',
-    font_sans='"Outfit", "Poppins", system-ui, sans-serif',
+    font_family='"Outfit", "Poppins", system-ui, sans-serif',
     font_mono='"Source Code Pro", "Fira Code", monospace',
     font_url='https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap',
 )
@@ -473,7 +481,7 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
   --radius-xl: {theme.radius_xl};
   
   /* Fonts */
-  --font-family: {theme.font_sans};
+  --font-family: {theme.font_family};
   --font-mono: {theme.font_mono};
   
   /* Font Weights */
@@ -538,7 +546,7 @@ def theme_to_dict(theme: ReportTheme) -> dict:
         "radius_xl": theme.radius_xl,
         
         # Fonts
-        "font_sans": theme.font_sans,
+        "font_family": theme.font_family,
         "font_mono": theme.font_mono,
         "font_url": theme.font_url,
         

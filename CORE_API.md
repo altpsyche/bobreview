@@ -265,7 +265,7 @@ class ReportTheme:
     
     # Fonts
     font_mono: str = '"SF Mono", Menlo, ...'
-    font_sans: str = 'system-ui, ...'
+    font_family: str = 'system-ui, ...'
 
 # Built-in themes
 DARK_THEME: ReportTheme

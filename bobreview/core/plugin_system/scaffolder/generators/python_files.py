@@ -523,7 +523,7 @@ from bobreview.core.themes import ReportTheme, create_theme, hex_to_rgba
     # Fonts - distinctive typography (different from built-in themes)
     # Space Grotesk: Modern geometric sans with character
     # IBM Plex Mono: Clean technical monospace
-    font_sans='"Space Grotesk", "Outfit", "Rubik", system-ui, sans-serif',
+    font_family='"Space Grotesk", "Outfit", "Rubik", system-ui, sans-serif',
     font_mono='"IBM Plex Mono", "Source Code Pro", "Cascadia Code", monospace',
     
     # Google Fonts URL - templates use this to load the fonts dynamically

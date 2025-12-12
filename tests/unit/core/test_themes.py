@@ -195,11 +195,11 @@ class TestThemeCharacteristics:
 
     def test_ocean_theme_uses_inter_font(self):
         """Ocean theme uses Inter font."""
-        assert 'Inter' in OCEAN_THEME.font_sans
+        assert 'Inter' in OCEAN_THEME.font_family
 
     def test_terminal_theme_uses_jetbrains_mono(self):
         """Terminal theme uses JetBrains Mono for both fonts."""
-        assert 'JetBrains Mono' in TERMINAL_THEME.font_sans
+        assert 'JetBrains Mono' in TERMINAL_THEME.font_family
         assert 'JetBrains Mono' in TERMINAL_THEME.font_mono
 
 
