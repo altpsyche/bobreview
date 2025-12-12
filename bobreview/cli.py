@@ -241,7 +241,7 @@ def main():
     """
     parser = argparse.ArgumentParser(
         prog='bobreview',
-        description='BobReview - Performance Analysis and Review Tool for Game Development',
+        description='BobReview - Extensible Report Generation Framework',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -281,47 +281,47 @@ Examples:
     )
     parser.add_argument(
         '--dir', type=str, default='.',
-        help='Directory containing PNG files (default: current directory)'
+        help='Directory containing data files to analyze (default: current directory)'
     )
     parser.add_argument(
         '--output', type=str, default='report.html',
-        help='Output directory/file path (creates index.html and additional pages)'
+        help='Output file path for generated report (default: report.html)'
     )
     parser.add_argument(
         '--title', type=str, default=None,
-        help='Report title (can also be extracted from parsed data, e.g., game.json)'
+        help='Custom report title'
     )
     
     parser.add_argument(
         '--no-recommendations', action='store_true',
-        help='Disable system-level recommendations section'
+        help='Skip LLM recommendations section'
     )
     
     # LLM Provider arguments (unified)
     parser.add_argument(
         '--llm-provider', type=str, default='openai',
         choices=['openai', 'anthropic', 'ollama'],
-        help='LLM provider to use (default: openai)'
+        help='LLM provider (default: openai)'
     )
     parser.add_argument(
         '--llm-api-key', type=str, default=None,
-        help='API key for LLM provider (or use OPENAI_API_KEY, ANTHROPIC_API_KEY env vars)'
+        help='API key (or use OPENAI_API_KEY / ANTHROPIC_API_KEY env vars)'
     )
     parser.add_argument(
         '--llm-api-base', type=str, default=None,
-        help='Custom API base URL (e.g., for Ollama: http://localhost:11434)'
+        help='Custom API endpoint (for Ollama: http://localhost:11434)'
     )
     parser.add_argument(
         '--llm-model', type=str, default=None,
-        help='Model to use (default depends on provider: gpt-4o, claude-3-5-sonnet-20241022, llama2)'
+        help='Model name (defaults: gpt-4o, claude-3-5-sonnet, llama2)'
     )
     parser.add_argument(
         '--llm-temperature', type=float, default=0.7,
-        help='LLM temperature for generation (default: 0.7)'
+        help='Creativity (0.0-2.0, default: 0.7)'
     )
     parser.add_argument(
         '--llm-max-tokens', type=int, default=2000,
-        help='Maximum tokens for LLM responses (default: 2000)'
+        help='Max response tokens (default: 2000)'
     )
     parser.add_argument(
         '--llm-chunk-size', type=int, default=10,
@@ -333,91 +333,91 @@ Examples:
     )
     parser.add_argument(
         '--list-providers', action='store_true',
-        help='List available LLM providers and exit'
+        help='Show available LLM providers'
     )
     
     # Caching options
     parser.add_argument(
         '--cache-dir', type=str, default='.bobreview_cache',
-        help='Directory for caching LLM responses (default: .bobreview_cache)'
+        help='Cache directory (default: .bobreview_cache)'
     )
     parser.add_argument(
         '--use-cache', action='store_true', default=True,
-        help='Use cached LLM responses when available (default: enabled)'
+        help='Enable response caching (default)'
     )
     parser.add_argument(
         '--no-cache', action='store_false', dest='use_cache',
-        help='Disable caching and always call LLM'
+        help='Disable caching, always call LLM'
     )
     parser.add_argument(
         '--clear-cache', action='store_true',
-        help='Clear all cached responses before running'
+        help='Clear cache before running'
     )
     
     # Execution options
     parser.add_argument(
         '--dry-run', action='store_true',
-        help='Analyze data but skip LLM calls (generates placeholder content)'
+        help='Skip LLM calls (placeholder content)'
     )
     parser.add_argument(
         '--sample', type=int, default=None, dest='sample_size',
-        help='Process only N random samples (for testing)'
+        help='Process only N random samples'
     )
     
     # Output options
     parser.add_argument(
         '--verbose', '-v', action='store_true',
-        help='Enable verbose output (debug information)'
+        help='Show debug information'
     )
     parser.add_argument(
         '--quiet', '-q', action='store_true',
-        help='Suppress all output except errors'
+        help='Errors only'
     )
     parser.add_argument(
         '--no-embed-images', action='store_false', dest='embed_images', default=True,
-        help='Use external image files instead of embedding'
+        help='Link to images instead of embedding'
     )
     parser.add_argument(
         '--linked-css', action='store_true', default=False,
-        help='Use external CSS file instead of embedding'
+        help='Link to CSS instead of embedding'
     )
     parser.add_argument(
         '--theme', type=str, default=None, dest='theme_id',
         # Note: No choices restriction - plugins can register custom themes
         # Built-in: dark, light, high_contrast, ocean, purple, terminal, sunset
         # Plugin themes are validated at runtime after plugins are loaded
-        help='Report theme ID (built-in: dark, ocean, purple, terminal, sunset, light, high_contrast, or plugin-registered)'
+        help='Color theme (dark, ocean, purple, terminal, sunset, light, high_contrast)'
     )
     parser.add_argument(
         '--disable-page', action='append', dest='disabled_pages', default=[],
         metavar='PAGE_ID',
-        help='Disable a page by ID (can be used multiple times)'
+        help='Exclude page by ID (repeatable)'
     )
     # Plugin and report system selection
     parser.add_argument(
         '--plugin', type=str, required=False,
         metavar='PLUGIN_NAME',
-        help='Plugin to use. Use --list-plugins to see available plugins. Plugin name matching is case-insensitive.'
+        help='Plugin to use (see --list-plugins)'
     )
     parser.add_argument(
         '--report-system', type=str, default=None,
         metavar='SYSTEM',
-        help='Report system to use (system ID). Required if --plugin has multiple systems. If omitted, uses the single report system from the plugin.'
+        help='Report system ID (required if plugin has multiple)'
     )
     parser.add_argument(
         '--list-report-systems', action='store_true',
-        help='List all available report systems and exit'
+        help='Show available report systems'
     )
     parser.add_argument(
         '--list-plugins', action='store_true',
-        help='List all available plugins and exit'
+        help='Show available plugins'
     )
     
     # Plugin arguments
     parser.add_argument(
         '--plugin-dir', action='append', dest='plugin_dirs', default=[],
         metavar='DIR',
-        help='Additional plugin directory (can be used multiple times)'
+        help='Extra plugin search directory (repeatable)'
     )
     parser.add_argument(
         '--no-plugins', action='store_true',
@@ -431,28 +431,28 @@ Examples:
     plugins_parser = subparsers.add_parser('plugins', help='Plugin management')
     plugins_subparsers = plugins_parser.add_subparsers(dest='plugin_command')
     
-    plugins_list = plugins_subparsers.add_parser('list', help='List installed plugins')
-    plugins_list.add_argument('--verbose', '-v', action='store_true', help='Show detailed info')
+    plugins_list = plugins_subparsers.add_parser('list', help='Show installed plugins')
+    plugins_list.add_argument('--verbose', '-v', action='store_true', help='Include details')
     
-    plugins_install = plugins_subparsers.add_parser('install', help='Install a plugin')
-    plugins_install.add_argument('path', help='Path to plugin directory')
+    plugins_install = plugins_subparsers.add_parser('install', help='Install a plugin from path')
+    plugins_install.add_argument('path', help='Plugin directory path')
     
-    plugins_uninstall = plugins_subparsers.add_parser('uninstall', help='Uninstall a plugin')
-    plugins_uninstall.add_argument('name', help='Plugin name to uninstall')
+    plugins_uninstall = plugins_subparsers.add_parser('uninstall', help='Remove a plugin')
+    plugins_uninstall.add_argument('name', help='Plugin name')
     
-    plugins_info = plugins_subparsers.add_parser('info', help='Show plugin details')
+    plugins_info = plugins_subparsers.add_parser('info', help='Show plugin info')
     plugins_info.add_argument('name', help='Plugin name')
     
-    plugins_create = plugins_subparsers.add_parser('create', help='Create a new plugin from template')
-    plugins_create.add_argument('name', help='Plugin name (e.g., my-plugin)')
+    plugins_create = plugins_subparsers.add_parser('create', help='Scaffold a new plugin')
+    plugins_create.add_argument('name', help='Plugin name (e.g. my-plugin)')
     plugins_create.add_argument('--output-dir', '-o', type=str, default=None,
-                                help='Output directory (default: ~/.bobreview/plugins/<name>)')
-    plugins_create.add_argument('--template', type=str, default='full',
+                                help='Where to create (default: ~/.bobreview/plugins/)')
+    plugins_create.add_argument('--template', '-t', type=str, default='full',
                                 choices=['minimal', 'full'],
-                                help='Template type: minimal (basic) or full (all features)')
+                                help='minimal = basic, full = all features (default)')
     plugins_create.add_argument('--theme', type=str, default='dark',
                                 choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
-                                help='Color theme (dark, ocean, purple, terminal, sunset, light, high_contrast)')
+                                help='Base color theme for templates (default: dark)')
     
     
     # Parse args
