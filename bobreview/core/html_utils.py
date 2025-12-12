@@ -120,11 +120,13 @@ def get_theme_css_block(theme=None) -> str:
     
     Returns:
         CSS string with :root { ... } block, or empty string if no theme
+        (wrapped in Markup to prevent HTML escaping)
     """
     from .theme_system import get_theme_css
+    from markupsafe import Markup
     
     if not theme:
-        return ''
+        return Markup('')
     
     # Extract theme_id from different input types
     if isinstance(theme, str):
@@ -134,9 +136,10 @@ def get_theme_css_block(theme=None) -> str:
     elif isinstance(theme, dict):
         theme_id = theme.get('id', 'dark')
     else:
-        return ''
+        return Markup('')
     
     # Delegate to unified get_theme_css (without base styles)
+    # get_theme_css already returns Markup, so this is safe
     return get_theme_css(theme_id, mode='embedded', include_base=False)
 
 
