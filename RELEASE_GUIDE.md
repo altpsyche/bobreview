@@ -214,7 +214,7 @@ bobreview --plugin <plugin-name> --dir . --clear-cache
 
 ### System Requirements
 
-- **Python:** Version 3.7 or higher (check with `python --version`)
+- **Python:** Version 3.10 or higher (check with `python --version`)
 - **Internet:** Required for OpenAI API calls
 - **Disk Space:** ~50MB for installation
 - **API Key:** Valid OpenAI API key with available credits

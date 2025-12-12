@@ -584,7 +584,7 @@ bobreview --plugin my-plugin --dir ./data --dry-run --verbose
 ### Verify Plugin Import
 
 ```bash
-python -c "from bobreview.plugins.my_plugin import MyPlugin; print('OK')"
+python -c "from my_plugin.plugin import MyPlugin; print('OK')"
 ```
 
 ---

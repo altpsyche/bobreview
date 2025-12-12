@@ -7,7 +7,7 @@ name = "bobreview"
 version = "1.0.7"
 description = "Performance Analysis and Review Tool for Game Development"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 keywords = ["performance", "analysis", "game", "development", "profiling", "reports"]
 authors = [

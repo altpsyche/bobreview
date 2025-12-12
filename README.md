@@ -3,7 +3,7 @@
 **Extensible Report Generation Framework** — Generate professional HTML reports from any data using LLM-powered analysis.
 
 ![Version](https://img.shields.io/badge/version-1.0.7-blue)
-![Python](https://img.shields.io/badge/python-3.9+-green)
+![Python](https://img.shields.io/badge/python-3.10+-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
 ---

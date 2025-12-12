@@ -764,7 +764,7 @@ bobreview/
 - `colorama>=0.4.6,<1.0.0` (optional, recommended)
 
 ### Requirements
-- Python 3.7 or higher
+- Python 3.10 or higher
 - OpenAI API key
 - Internet connection for LLM API calls
 
