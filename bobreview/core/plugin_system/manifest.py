@@ -187,7 +187,7 @@ def validate_manifest(manifest: PluginManifest) -> List[str]:
         'widgets', 'parsers', 'themes', 'charts', 'pages', 'llm_generators', 'services',
         'llm-generators', 'data-parsers', 'report-systems', 'templates',  # Hyphenated versions
         'data_parsers', 'report_systems', 'template_paths', 'chart-generators', 'chart_generators',
-        'context-builders', 'context_builders'
+        'context-builders', 'context_builders', 'analyzers'
     }
     for key in manifest.provides:
         if key not in valid_extension_points:
