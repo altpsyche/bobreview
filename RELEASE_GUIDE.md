@@ -21,8 +21,7 @@ Version 1.0.7 - Plugin System
 - **Preset Factory Functions** (`engine/presets.py`):
   - `create_simple_report_system()`, `create_csv_report_system()`
 
-- **Hello World Plugin** (`plugins/hello_world/`):
-  - Feature-complete reference plugin demonstrating all extension points
+- **Plugin Scaffolder**: `bobreview plugins create my-plugin` creates complete plugin skeleton
 
 - **Critical Fixes**:
   - Fixed bare `except:` clauses in `engine/loader.py`

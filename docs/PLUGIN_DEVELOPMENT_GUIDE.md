@@ -1,6 +1,6 @@
 # BobReview Plugin Development Guide
 
-This guide walks through creating a custom report plugin for BobReview, using the `mayhem-reports` plugin as a reference implementation.
+This guide walks through creating a custom report plugin for BobReview using the CLI scaffolder and PluginHelper API.
 
 ## Table of Contents
 
@@ -106,30 +106,26 @@ bobreview plugins create my-plugin
 
 ```python
 # parsers/my_parser.py
-from bobreview.core.api import ParserInterface
+from bobreview.core.api import DataParserInterface
 from typing import List, Dict, Any
 from pathlib import Path
 
-class MyParser(ParserInterface):
-    """Parse data from custom file format."""
+class MyCsvParser(DataParserInterface):
+    """Parse data from CSV files."""
     
-    def parse(self, directory: Path, pattern: str = None) -> List[Dict[str, Any]]:
-        data_points = []
-        
-        for file_path in directory.glob("*.csv"):
-            point = self._parse_file(file_path)
-            if point:
-                data_points.append(point)
-        
-        return data_points
+    def parse_file(self, file_path: Path) -> Dict[str, Any]:
+        """Parse a single CSV file."""
+        import csv
+        with open(file_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        if rows:
+            return rows[0]  # Return first row as example
+        return None
     
-    def _parse_file(self, file_path: Path) -> Dict[str, Any]:
-        return {
-            "name": file_path.stem,
-            "value": 100,
-            "category": "A",
-            "timestamp": "2024-01-01"
-        }
+    def discover_files(self, directory: Path) -> List[Path]:
+        """Find all CSV files in directory."""
+        return sorted(directory.glob("*.csv"))
 ```
 
 ### Step 4: Create the Analyzer
@@ -383,7 +379,10 @@ class MyChartGenerator(ChartGeneratorInterface):
 """
     
     def _hex_to_rgba(self, hex_color: str, alpha: float) -> str:
+        """Convert hex color to rgba string."""
         hex_color = hex_color.lstrip('#')
+        if len(hex_color) == 3:
+            hex_color = ''.join([c*2 for c in hex_color])
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
         return f"rgba({r}, {g}, {b}, {alpha})"
 ```
@@ -490,8 +489,7 @@ class MyContextBuilder(ContextBuilderInterface):
 ```python
 # plugin.py
 from pathlib import Path
-from bobreview.core.plugin_system.base import BasePlugin
-from bobreview.core.plugin_system.helper import PluginHelper
+from bobreview.core.plugin_system import BasePlugin, PluginHelper
 
 class MyPlugin(BasePlugin):
     name = "my-plugin"
@@ -519,7 +517,7 @@ class MyPlugin(BasePlugin):
         helper.add_builtin_themes()
         
         report_dir = Path(__file__).parent / 'report_systems'
-        helper.add_report_systems(report_dir)
+        helper.add_report_systems_from_dir(report_dir)
 ```
 
 ---
@@ -593,4 +591,4 @@ python -c "from bobreview.plugins.my_plugin import MyPlugin; print('OK')"
 
 ## Reference Implementation
 
-See `bobreview/plugins/mayhem_reports/` for a complete working example.
+Use `bobreview plugins create my-plugin --template full` to generate a complete working example.

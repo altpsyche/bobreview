@@ -7,11 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.7] - 2024-12-11
+## [1.0.7] - 2025-12-12
 
-### Plugin Developer Experience
+### Introducing Plugins
 
-BobReview v1.0.7 introduces plugin development experience with new helper classes, CLI scaffolding, modular architecture refinements, and a refined theme system.
+BobReview v1.0.7 introduces a **complete plugin architecture** with PluginHelper API, CLI scaffolding, dynamic theme system with custom fonts, and the foundation for extensible report generation. Everything is now plugin-driven.
+
+### Theme System Enhancements
+
+- **Dynamic Font Loading**:
+  - Added `font_url` property to `ReportTheme` for Google Fonts URLs
+  - All 7 built-in themes now include `font_url` for their specific fonts
+  - Templates dynamically load only the fonts needed by the active theme
+  - Jinja2 CSS output now wrapped in `Markup()` to prevent quote escaping
+
+- **Naming Consistency**:
+  - Renamed `font_sans` → `font_family` to match CSS `--font-family` variable
+  - Python and CSS naming now consistent across the codebase
+
+- **Theme Fonts**:
+  - `dark`: Plus Jakarta Sans + JetBrains Mono
+  - `light`: Inter + Fira Code
+  - `ocean`: Inter + Fira Code
+  - `purple`: Fira Code
+  - `terminal`: JetBrains Mono (both sans and mono)
+  - `sunset`: Outfit + Source Code Pro
+  - Scaffolder custom themes: Space Grotesk + IBM Plex Mono
+
+- **CLI Theme Override**:
+  - `--theme` argument now accepts any theme ID (built-in or plugin-registered)
+  - Removed hardcoded theme choices from CLI for flexibility
+
+### HTML Sanitizer Improvements
+
+- **Markdown Tables Support**: Added `table`, `thead`, `tbody`, `tr`, `th`, `td` to allowed tags
+- **Horizontal Rules**: Added `hr` tag to allowed tags
+- LLM-generated markdown tables are now preserved in reports
+
+### Code Quality
+
+- **Input Validation**: `hex_to_rgba()` now validates:
+  - Alpha range (0.0-1.0)
+  - 3-character and 6-character hex formats
+  - Hex string content
+  
+- **Type Annotations**: Fixed return types for CSS generation functions:
+  - `get_theme_css()` → `Union[Markup, str]`
+  - `get_theme_css_block()` → `Markup`
+  - `mode` parameter now uses `Literal['embedded', 'linked']`
 
 ### Theme System Improvements
 
@@ -64,12 +107,9 @@ BobReview v1.0.7 introduces plugin development experience with new helper classe
   - `create_csv_report_system()` - CSV-based reports
   - `create_multi_page_report_system()` - Multi-page reports
 
-- **Hello World Plugin** (`plugins/hello_world/`):
-  - Feature-complete reference plugin demonstrating all extension points
-  - CSV data parser, context builder, chart generator
-  - Custom "Cyberpunk Neon" theme with pink/cyan accents
-  - Jinja2 templates (home, rankings pages)
-  - Report system JSON definition
+- **Plugin Scaffolder** generates complete plugin structure:
+  - `bobreview plugins create my-plugin` creates a ready-to-use plugin
+  - See [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT_GUIDE.md)
 
 ### Fixed
 

@@ -428,8 +428,7 @@ bobreview/
 │   ├── llm_service.py        # LLM content generation
 │   ├── analytics_service.py  # Statistical analysis
 │   └── chart_service.py      # Chart.js generation
-└── plugins/
-    └── hello_world/          # Example plugin
+└── plugins/                  # (empty - create with scaffolder)
 ```
 
 **Design Principles:**
