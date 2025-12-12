@@ -43,8 +43,20 @@ class MayhemReportsChartGenerator(ChartGeneratorInterface):
         y_field = chart_config.get('y_field', 'draws')
         x_field = chart_config.get('x_field', 'index')
         
-        # Get theme for colors
-        theme = get_theme_by_id('terminal') or get_theme_by_id('dark') or DARK_THEME
+        # Get theme for colors - priority:
+        # 1. Theme object passed in chart_config (from page_renderer context)
+        # 2. Theme ID from chart_config
+        # 3. Theme from config object
+        # 4. Fallback to dark theme
+        theme = chart_config.get('theme')
+        if theme is None:
+            theme_id = chart_config.get('theme_id')
+            if theme_id:
+                theme = get_theme_by_id(theme_id)
+            elif config and hasattr(config, 'theme') and config.theme:
+                theme = get_theme_by_id(config.theme)
+        if theme is None:
+            theme = DARK_THEME
         
         # Get thresholds from config
         thresholds = {}

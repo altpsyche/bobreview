@@ -398,6 +398,14 @@ class PageRenderer:
             
             charts_dict = {}
             for chart_config in page_config.charts:
+                # Get theme ID from system definition's theme config
+                theme_id = None
+                if hasattr(self.system_def, 'theme') and self.system_def.theme:
+                    if hasattr(self.system_def.theme, 'preset'):
+                        theme_id = self.system_def.theme.preset
+                    elif isinstance(self.system_def.theme, str):
+                        theme_id = self.system_def.theme
+                
                 chart_config_dict = {
                     'id': chart_config.id,
                     'type': chart_config.type,
@@ -406,6 +414,8 @@ class PageRenderer:
                     'y_field': chart_config.y_field,
                     'options': chart_config.options,
                     'labels': labels_dict,
+                    # Pass theme ID for chart coloring
+                    'theme_id': theme_id,
                 }
                 
                 try:
