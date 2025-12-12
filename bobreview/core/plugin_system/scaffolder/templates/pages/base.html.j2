@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config.title | default("{{name}} Report") }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    {# Unified theme system - supports both embedded and linked CSS #}
+    {% if linked_css %}
+    <link rel="stylesheet" href="static/theme.css">
+    <link rel="stylesheet" href="static/plugin.css">
+    {% else %}
+    <style>
+        {# Use unified theme system - theme_name comes from context #}
+        {# get_theme_css() includes theme variables AND base styles #}
+        {{ get_theme_css(theme_name) }}
+    </style>
+    <style>
+        {# Include plugin-specific styles (layout and components) #}
+        {% include "{{safe_name}}/static/plugin.css" ignore missing %}
+    </style>
+    {% endif %}
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

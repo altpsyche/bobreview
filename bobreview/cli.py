@@ -192,7 +192,7 @@ def handle_plugin_command(args):
         return 0
     
     elif args.plugin_command == 'create':
-        from .core.plugin_system.scaffolder import create_plugin
+        from .core.plugin_system.scaffolder.core import create_plugin
         
         # Determine output directory
         if args.output_dir:
