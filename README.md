@@ -89,6 +89,28 @@ xdg-open report.html # Linux
 | **Intelligent Caching** | Cache LLM responses to save costs |
 | **Standalone HTML** | Images embedded as base64 for easy sharing |
 | **Extensible Registry** | 12 registries for themes, parsers, generators, etc. |
+---
+
+## CLI Commands
+
+```bash
+# Discovery
+bobreview --list-plugins         # Show available plugins
+bobreview --list-themes          # Show available themes
+bobreview --list-providers       # Show LLM providers
+
+# Diagnostics
+bobreview doctor                 # Check system setup
+
+# Plugin management
+bobreview plugins create <name>  # Scaffold a new plugin
+bobreview plugins list           # List installed plugins
+bobreview plugins info <name>    # Show plugin details
+
+# Help
+bobreview --help                 # Beautiful grouped help
+bobreview --help --verbose       # Full argparse help
+```
 
 ---
 

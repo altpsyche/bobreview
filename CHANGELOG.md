@@ -44,6 +44,39 @@ BobReview v1.0.7 introduces a **complete plugin architecture** with PluginHelper
 - **Horizontal Rules**: Added `hr` tag to allowed tags
 - LLM-generated markdown tables are now preserved in reports
 
+### CLI Enhancements
+
+- **Rich Library Migration**:
+  - Replaced `tqdm` and `colorama` with `rich` for unified beautiful CLI output
+  - Requirements simplified from 3 packages to 1
+
+- **Beautiful Help Display** (`--help`):
+  - Custom rich-formatted help with grouped options in panels
+  - Markdown intro describing tool capabilities
+  - Quick Start section showing both create and use commands
+  - Falls back to full argparse help with `--help --verbose`
+
+- **Rich Tables for List Commands**:
+  - `--list-providers` - Shows Provider, Default Model, API Key columns
+  - `--list-report-systems` - Shows ID, Version, Source, Description
+  - `--list-plugins` - Shows Plugin, Version, Status, Author, Components
+  - `--list-themes` - NEW command showing available themes with style (dark/light)
+
+- **Doctor Command** (`bobreview doctor`):
+  - Diagnoses setup issues with rich table output
+  - Checks: Python version, rich library, API keys, plugin directories, plugins
+  - Shows partial API keys for security (last 4 chars)
+  - Helpful notes for optional items
+
+- **Plugin Info Panel** (`plugins info <name>`):
+  - Rich panel display with styled details
+  - Shows version, author, description, path, status, provides
+
+- **Help Text Improvements**:
+  - Shortened and clarified 25+ argument descriptions
+  - Added `-t` shorthand for `--template`
+  - Program description changed to "Extensible Report Generation Framework"
+
 ### Code Quality
 
 - **Input Validation**: `hex_to_rgba()` now validates:
