@@ -19,9 +19,10 @@ from .api import (
     DataParserInterface,
     LLMGeneratorInterface,
     ChartGeneratorInterface,
-    ContextBuilderInterface
+    ContextBuilderInterface,
+    ComponentInterface,
 )
-from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon, get_theme_css_block
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
 
 __all__ = [
     # Config
@@ -71,10 +72,10 @@ __all__ = [
     'LLMGeneratorInterface',
     'ChartGeneratorInterface',
     'ContextBuilderInterface',
+    'ComponentInterface',
     
     # HTML Utilities
     'sanitize_llm_html',
     'get_shared_css',
     'get_trend_icon',
-    'get_theme_css_block',
 ]

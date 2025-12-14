@@ -97,6 +97,7 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
             "preset": color_theme  # dark, ocean, purple, terminal, sunset
         },
         
+        # Pages define report structure
         "pages": [
             {
                 "id": "home",
@@ -107,50 +108,25 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
                     "type": "jinja2",
                     "name": f"{safe_name}/pages/home.html.j2"
                 },
-                "llm_content": ["summary", "recommendations"],
-                "llm_mappings": {
-                    "summary": "summary",
-                    "recommendations": "recommendations"
-                },
                 "charts": [
                     {
                         "id": "score_chart",
                         "type": "bar",
-                        "title": "Score Comparison",
+                        "title": "Scores Overview",
                         "x_field": "name",
                         "y_field": "score"
                     }
-                ],
-                "data_requirements": {
-                    "data_points": False,
-                    "images": False
-                },
-                "enabled": True
+                ]
             },
             {
                 "id": "details",
                 "filename": "details.html",
                 "nav_label": "Details",
                 "nav_order": 2,
-                "card_icon": "fa-chart-bar",
-                "card_description": "Detailed statistics and full data table.",
                 "template": {
                     "type": "jinja2",
                     "name": f"{safe_name}/pages/details.html.j2"
-                },
-                "charts": [
-                    {
-                        "id": "distribution_chart",
-                        "type": "histogram",
-                        "title": "Score Distribution",
-                        "y_field": "score"
-                    }
-                ],
-                "data_requirements": {
-                    "data_points": True,
-                    "images": False
-                },
-                "enabled": True
+                }
             }
         ],
         
@@ -158,3 +134,84 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
             "default_filename": f"{safe_name}_report.html"
         }
     }
+
+
+def generate_user_report_config(name: str, safe_name: str, color_theme: str = 'dark') -> str:
+    """
+    Generate a user-facing report_config.yaml for end users.
+    
+    This is the CMS-style config that end users edit to compose reports
+    from plugin-provided components.
+    """
+    return f'''# ─────────────────────────────────────────────────────────────────────────────
+# USER REPORT CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# This file is for END USERS to compose reports from plugin components.
+# Edit this file to customize your report's pages and content.
+#
+# TWO CONFIGURATION LAYERS:
+#   1. Plugin's report_systems/{safe_name}.json → Defines what's POSSIBLE
+#   2. This YAML file → Decides what to USE
+#
+# Usage:
+#   bobreview validate report_config.yaml  # Validate config
+#   bobreview build report_config.yaml     # Generate report
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: "{name} Report"
+plugin: "{name}"
+data_source: "./sample_data/*.csv"
+theme: "{color_theme}"
+output_dir: "./output"
+
+pages:
+  # ─── Overview Page ─────────────────────────────────────────────────────────
+  - id: overview
+    title: "Overview"
+    layout: grid
+    nav_order: 1
+    components:
+      # Stat Card Widget
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Average Score"
+          value: "{{{{ stats.score.mean | round(1) }}}}"
+          subtitle: "across all items"
+      
+      # Bar Chart
+      - type: chart
+        chart: bar
+        title: "Scores by Item"
+        x: name
+        y: score
+      
+      # LLM-generated summary
+      - type: llm
+        generator: summary
+
+  # ─── Details Page ──────────────────────────────────────────────────────────
+  - id: details
+    title: "Details"
+    layout: single-column
+    nav_order: 2
+    components:
+      # Score Distribution Chart
+      - type: chart
+        chart: histogram
+        title: "Score Distribution"
+        y: score
+      
+      # Full Data Table
+      - type: data_table
+        columns:
+          - name
+          - score
+          - category
+        sortable: true
+
+      # LLM Recommendations
+      - type: llm
+        generator: recommendations
+'''

@@ -85,6 +85,38 @@ bobreview/
 
 ## Core Module
 
+### DataFrame
+
+Located in `core/dataframe.py`. Universal data format for all components (inspired by Grafana).
+
+```python
+from bobreview.core.dataframe import DataFrame, Column, ColumnType
+
+# Create from existing data
+df = DataFrame.from_dicts([
+    {'name': 'Alpha', 'score': 95},
+    {'name': 'Beta', 'score': 82}
+])
+
+# Access data
+for row in df:
+    print(row['name'], row['score'])
+
+df.column_names  # ['name', 'score']
+df[0]            # {'name': 'Alpha', 'score': 95}
+df['score']      # [95, 82]
+
+# Transform
+df.filter(lambda r: r['score'] > 90)
+df.sort_by('score', descending=True)
+df.select('name', 'score')
+```
+
+**Data Flow:**
+```
+Parser → List[Dict] → DataService.parse_dataframe() → DataFrame → Components
+```
+
 ### Interfaces
 
 Located in `core/api.py`. Plugins implement these ABCs:
@@ -109,7 +141,7 @@ class LLMGeneratorInterface(ABC):
     @abstractmethod
     def generate(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: ReportConfig,
         context: Dict[str, Any]
@@ -122,7 +154,7 @@ class ChartGeneratorInterface(ABC):
     @abstractmethod
     def generate_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: ReportConfig,
         chart_config: Dict[str, Any]
@@ -148,11 +180,48 @@ class ContextBuilderInterface(ABC):
     @abstractmethod
     def build_context(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: ReportConfig,
         base_context: Dict[str, Any]
     ) -> Dict[str, Any]: ...
+```
+
+#### `ComponentInterface`
+```python
+class ComponentInterface(ABC):
+    """Reusable UI components that templates render dynamically."""
+    
+    @property
+    @abstractmethod
+    def component_type(self) -> str:
+        """Return component ID (e.g., 'stat_card', 'gauge')."""
+    
+    @abstractmethod
+    def render(
+        self,
+        props: Dict[str, Any],
+        context: Dict[str, Any]
+    ) -> str:
+        """Render to HTML string."""
+    
+    async def render_async(
+        self,
+        props: Dict[str, Any],
+        context: Dict[str, Any]
+    ) -> str:
+        """Async render for components that fetch data."""
+        return self.render(props, context)  # Default: sync
+    
+    @property
+    def is_async(self) -> bool:
+        """Return True if render_async does actual async work."""
+        return False
+```
+
+**Template usage:**
+```jinja2
+{{ render_component('stat_card', {'title': 'Total', 'value': 42}) }}
 ```
 
 ---
@@ -294,14 +363,14 @@ class TemplateEngine:
         self,
         template_name: str,
         context: Dict[str, Any],
-        labels: Optional[LabelConfig] = None
+        labels: Optional[Labels] = None
     ) -> str: ...
     
     def render_string(
         self,
         template_string: str,
         context: Dict[str, Any],
-        labels: Optional[LabelConfig] = None
+        labels: Optional[Labels] = None
     ) -> str: ...
     
     def template_exists(self, template_name: str) -> bool: ...
@@ -452,8 +521,14 @@ class PluginHelper:
     # Data Parsing
     def add_data_parser(self, parser_id: str, parser_class: Type): ...
     
+    # UI Components
+    def add_widget(self, widget_id: str, widget_class: Type): ...
+    def add_page(self, page_id: str, page_def: Dict[str, Any]): ...
+    def add_chart_type(self, chart_type_id: str, chart_config: Dict[str, Any]): ...
+    
     # Themes
     def add_theme(self, theme: ReportTheme): ...
+    def add_builtin_themes(self): ...
     
     # Templates
     def add_templates(self, template_dir: Union[str, Path]): ...
@@ -475,11 +550,11 @@ class PluginHelper:
     # Services
     def register_default_services(self, container=None): ...
     
-    # Convenience
+    # Convenience - register everything in one call
     def setup_complete_report_system(
         self, system_id, system_def, parser_class=None,
-        context_builder_class=None, chart_generator_class=None,
-        template_dir=None
+        analyzer_func=None, context_builder_class=None,
+        chart_generator_class=None, template_dir=None
     ): ...
 ```
 

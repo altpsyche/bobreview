@@ -7,16 +7,156 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.8] - 2025-12-13
+## [1.0.8] - 2025-12-14
 
-### AnalyzerRegistry Consistency Fix
+### Plugin Component Types (NEW)
 
-- **Unified Analyzer Registration**: `AnalyzerRegistry` is now part of `PluginRegistry` like all other registries
-  - **Breaking**: Removed `get_analyzer_registry()` function — use `helper.add_analyzer()` or `registry.analyzers`
-  - Now uses consistent PluginHelper pattern: `helper.add_analyzer('name', func)`
+New `ComponentInterface` for reusable UI components:
+
+```python
+from bobreview.core.api import ComponentInterface
+
+class StatCardComponent(ComponentInterface):
+    @property
+    def component_type(self) -> str:
+        return 'stat_card'
+    
+    def render(self, props, context) -> str:
+        return f'<div class="stat-card">{props["value"]}</div>'
+    
+    # Optional: async rendering for data fetching
+    @property
+    def is_async(self) -> bool:
+        return True
+    
+    async def render_async(self, props, context) -> str:
+        data = await fetch_api(props['url'])
+        return self._format(data)
+```
+
+- **New**: `ComponentInterface` with `render()` and `render_async()`
+- **New**: `ComponentRegistry` (14th registry) with instance caching
+- **New**: `helper.add_component(id, class)` for plugin registration
+- **New**: `render_component()` template function
+- **New**: Scaffolder generates `components.py` with DataFrame-aware examples
+
+### DataFrame Architecture (Inspired by Grafana)
+
+Universal data format for all components:
+
+```python
+from bobreview.core.dataframe import DataFrame
+
+df = DataFrame.from_dicts([{'name': 'A', 'score': 95}])
+df.filter(lambda r: r['score'] > 90)
+df.sort_by('score', descending=True)
+```
+
+- **New**: `core/dataframe.py` — DataFrame class with filter, sort, select
+- **Updated**: All interfaces accept `Union[List[Dict], DataFrame]`
+- **Updated**: `DataService.parse_dataframe()` returns DataFrame
+
+### Removed (Breaking Changes)
+
+Items removed and their replacements:
+
+| Removed | Replaced By | Location |
+|---------|-------------|----------|
+| `LabelConfig` alias | `Labels` | `engine/schema.py` |
+| `get_theme_css_block()` | `get_theme_css()` | `core/html_utils.py` |
+| Theme dict aliases (`border`, `success`, `warning`) | Direct names (`border_subtle`, `ok`, `warn`) | `core/themes.py` |
+
+### Plugin Refactor Guide
+
+If your plugin uses old patterns, update as follows:
+
+**1. Type imports:**
+```diff
+-from bobreview.engine.schema import LabelConfig
++from bobreview.engine.schema import Labels
+```
+
+**2. Theme CSS:**
+```diff
+-from bobreview.core import get_theme_css_block
+-css = get_theme_css_block(theme)
++from bobreview.core import get_theme_css
++css = get_theme_css(theme_id)
+```
+
+**3. Interface signatures (if custom implementations):**
+```diff
+-def generate(self, data_points: List[Dict], ...):
++def generate(self, data: Union[List[Dict], DataFrame], ...):
++    data_points = list(data) if hasattr(data, '__iter__') else data
+```
+
+**4. Add components (optional new feature):**
+```python
+# In plugin on_load():
+from .components import MyStatCard
+helper.add_component('my_stat_card', MyStatCard)
+```
+
+**5. Template theme variables:**
+```diff
+-{{ theme.border }}
++{{ theme.border_subtle }}
+-{{ theme.success }}
++{{ theme.ok }}
+```
+
+### Bug Fixes
+
+**Scaffolder Plugin Generation:**
+- Fixed `report_system.json` missing required `pages` field
+- Added required page fields: `filename`, `nav_label`, `nav_order`
+- Fixed template config format to use `{"type": "jinja2", "name": "path"}`
+- Fixed analyzer signature to accept `**kwargs` from AnalyticsService
+
+**Executor Data Parameter Consistency:**
+- Fixed `ReportSystemExecutor.analyze_data()` missing `data_points` conversion
+- Fixed all interface calls to use `data=` param instead of `data_points=`:
+  - `AnalyticsService.analyze(data=...)`
+  - `LLMService.generate_all(data=...)`
+  - `ContextBuilderInterface.build_context(data=...)`
+  - `ChartGeneratorInterface.generate_chart(data=...)`
+
+**Template Fixes:**
+- Fixed `details.html.j2` template to check `{% if charts is defined %}`
+
+### PluginHelper API Improvements
+
+- **Complete API Coverage**: All 12 registries now have dedicated helper methods:
+  - Added `helper.add_widget(id, class)` for UI widgets
+  - Added `helper.add_page(id, def)` for page definitions
+  - Added `helper.add_chart_type(id, config)` for chart configurations
+  - Fixed docstring typo (`add_report_system_from_json` → `add_report_systems_from_dir`)
+
+- **Unified Analyzer Registration**: `AnalyzerRegistry` is now part of `PluginRegistry`
+  - **Breaking**: Removed `get_analyzer_registry()` — use `helper.add_analyzer()` or `registry.analyzers`
   - `AnalyzerRegistry` now extends `BaseRegistry` for plugin ownership tracking
-  - Added `get_all()`, `unregister_plugin_components()` methods for consistency
-  - Updated PLUGIN_DEVELOPMENT_GUIDE.md and scaffolder to generate correct pattern
+  - `AnalyticsService` now correctly uses `registry.analyzers`
+
+- **Improved `setup_complete_report_system()`**: Now includes `analyzer_func` parameter
+  ```python
+  helper.setup_complete_report_system(
+      system_id="my_plugin",
+      system_def=system_def,
+      parser_class=MyParser,
+      analyzer_func=analyze_data,  # NEW
+      context_builder_class=MyContextBuilder,
+      chart_generator_class=MyChartGenerator,
+      template_dir=Path(__file__).parent / "templates"
+  )
+  ```
+
+- **Scaffolder Generates Complete Examples**: Generated plugins now demonstrate all advanced features:
+  - Uses `helper.setup_complete_report_system()` for one-call component registration
+  - **All pages** (home, details, summary) registered via `helper.add_page()` for consistency
+  - Creates `widgets.py` with reusable StatCard component
+  - Registers custom gauge chart type via `helper.add_chart_type()`
+  - Report system JSON now contains only config (data source, LLM settings) — no hardcoded pages
 
 ## [1.0.7] - 2025-12-12
 

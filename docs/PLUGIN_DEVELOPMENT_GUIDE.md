@@ -34,6 +34,41 @@ Data Files → Parser → Data Points → Analyzer → Statistics
                             Jinja2 Templates → HTML Pages
 ```
 
+### Architecture: Two Configuration Layers
+
+BobReview uses **two separate configuration files** for different audiences:
+
+| Configuration | Created By | Purpose | Format |
+|--------------|------------|---------|--------|
+| **Report System JSON** | Plugin Developer | Define plugin capabilities | `report_systems/*.json` |
+| **Report Config YAML** | End User | Compose pages from components | `report_config.yaml` |
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PLUGIN DEVELOPER LAYER                                         │
+│  report_systems/my_plugin.json                                  │
+│  ───────────────────────────────────────────────────────────    │
+│  • data_source: what data types plugin supports (CSV, FBX...)  │
+│  • llm_generators (summary, recommendations, custom)            │
+│  • widgets, charts, analyzers available                         │
+│  • default theme configuration                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  END USER LAYER                                                  │
+│  report_config.yaml                                              │
+│  ───────────────────────────────────────────────────────────    │
+│  • plugin: "my-plugin" ← which plugin to use (REQUIRED)         │
+│  • data_source: "./data/*.csv" ← user's data                    │
+│  • pages: [...] ← which pages to include                        │
+│  • components: [...] ← what to show on each page                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> [!IMPORTANT]
+> **Plugins are always required.** Users cannot create reports without a plugin.
+> The plugin defines what data types are supported and what components are available.
+
 ---
 
 ## Plugin Structure
@@ -332,7 +367,7 @@ def on_load(self, registry):
 ```python
 # chart_generator.py
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from bobreview.core.api import ChartGeneratorInterface
 from bobreview.core.themes import get_theme_by_id, DARK_THEME
 
@@ -340,11 +375,14 @@ class MyChartGenerator(ChartGeneratorInterface):
     
     def generate_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: Any,
         chart_config: Dict[str, Any]
     ) -> str:
+        # Convert to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         chart_id = chart_config.get('id', 'chart')
         title = chart_config.get('title', 'Chart')
         y_field = chart_config.get('y_field', 'value')
@@ -489,6 +527,7 @@ class MyContextBuilder(ContextBuilderInterface):
 ```python
 # plugin.py
 from pathlib import Path
+import json
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
 
 class MyPlugin(BasePlugin):
@@ -498,25 +537,33 @@ class MyPlugin(BasePlugin):
     def on_load(self, registry) -> None:
         helper = PluginHelper(registry, self.name)
         
+        # Import components
         from .parsers.my_parser import MyParser
-        helper.add_data_parser('my_parser', MyParser)
-        
         from .analysis import analyze_my_data
-        helper.add_analyzer('my_analyzer', analyze_my_data)
-        
-        from .chart_generator import MyChartGenerator
-        helper.add_chart_generator('my_report', MyChartGenerator)
-        
         from .context_builder import MyContextBuilder
-        helper.add_context_builder('my_report', MyContextBuilder)
+        from .chart_generator import MyChartGenerator
         
-        template_dir = Path(__file__).parent / 'templates'
-        helper.add_templates(template_dir)
+        # Load report system definition
+        report_system_path = Path(__file__).parent / "report_systems" / "my_plugin.json"
+        with open(report_system_path) as f:
+            system_def = json.load(f)
         
+        # Register everything in one call
+        helper.setup_complete_report_system(
+            system_id="my_plugin",
+            system_def=system_def,
+            parser_class=MyParser,
+            analyzer_func=analyze_my_data,
+            context_builder_class=MyContextBuilder,
+            chart_generator_class=MyChartGenerator,
+            template_dir=Path(__file__).parent / "templates"
+        )
+        
+        # Register themes
         helper.add_builtin_themes()
         
-        report_dir = Path(__file__).parent / 'report_systems'
-        helper.add_report_systems_from_dir(report_dir)
+        # Register default services
+        helper.register_default_services()
 ```
 
 ---

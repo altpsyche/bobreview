@@ -8,11 +8,14 @@ This service handles LLM content generation:
 - Combining chunks
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, TYPE_CHECKING
 import logging
 
 from .base import BaseService, LLMServiceError
 from ..core.plugin_system import get_extension_point
+
+if TYPE_CHECKING:
+    from ..core.dataframe import DataFrame
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ class LLMService(BaseService):
         service = LLMService(config={'provider': 'openai', 'model': 'gpt-4o'})
         content = service.generate(
             generator_config=generator,
-            data_points=data,
+            data=data,  # DataFrame or List[Dict]
             stats=stats,
             context={'location': 'City Level'}
         )
@@ -67,7 +70,7 @@ class LLMService(BaseService):
     def generate(
         self,
         generator_config: Any,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         context: Dict[str, Any],
         dry_run: bool = False,
@@ -81,7 +84,7 @@ class LLMService(BaseService):
         
         Parameters:
             generator_config: LLMGeneratorConfig from report system
-            data_points: Input data points
+            data: DataFrame or List[Dict] with input data points
             stats: Statistical analysis results
             context: Additional context (thresholds, config, etc.)
             dry_run: If True, return placeholder instead of calling LLM
@@ -90,6 +93,9 @@ class LLMService(BaseService):
         Returns:
             Generated content string
         """
+        # Convert DataFrame to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         if dry_run:
             return self._get_placeholder(generator_config.id, generator_config.name)
         
@@ -166,7 +172,7 @@ class LLMService(BaseService):
     def generate_all(
         self,
         generators: List[Any],
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         context: Dict[str, Any],
         dry_run: bool = False,
@@ -177,7 +183,7 @@ class LLMService(BaseService):
         
         Parameters:
             generators: List of LLMGeneratorConfig
-            data_points: Input data points
+            data: DataFrame or List[Dict] with input data points
             stats: Statistical analysis results
             context: Additional context
             dry_run: If True, return placeholders
@@ -186,6 +192,9 @@ class LLMService(BaseService):
         Returns:
             Dict mapping generator ID to content
         """
+        # Convert DataFrame to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         results = {}
         enabled = [g for g in generators if g.enabled]
         total = len(enabled)

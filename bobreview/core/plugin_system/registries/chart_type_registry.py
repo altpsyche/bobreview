@@ -2,7 +2,7 @@
 Chart type registry for managing chart types.
 """
 
-from typing import Dict, Type, Optional
+from typing import Dict, Type, Optional, Any
 import logging
 
 from .base_registry import BaseRegistry
@@ -22,22 +22,21 @@ class ChartTypeRegistry(BaseRegistry):
         super().__init__()
         self._chart_types: Dict[str, Type] = {}
     
-    def register(self, chart_cls: Type, plugin_name: str = "") -> None:
+    def register(self, chart_type_id: str, chart_config: Any, plugin_name: str = "") -> None:
         """
         Register a chart type.
         
         Parameters:
-            chart_cls: Chart class with `chart_type` attribute
-            plugin_name: Name of the plugin registering this chart
+            chart_type_id: Unique identifier for the chart type
+            chart_config: Chart configuration (dict or class)
+            plugin_name: Name of the plugin registering this chart type
         """
-        chart_type = getattr(chart_cls, 'chart_type', chart_cls.__name__)
+        if chart_type_id in self._chart_types:
+            logger.warning(f"Overwriting existing chart type: {chart_type_id}")
         
-        if chart_type in self._chart_types:
-            logger.warning(f"Overwriting existing chart type: {chart_type}")
-        
-        self._chart_types[chart_type] = chart_cls
-        self._register_component(f"chart:{chart_type}", plugin_name, overwrite=True)
-        logger.debug(f"Registered chart type: {chart_type} from {plugin_name or 'core'}")
+        self._chart_types[chart_type_id] = chart_config
+        self._register_component(f"chart:{chart_type_id}", plugin_name, overwrite=True)
+        logger.debug(f"Registered chart type: {chart_type_id} from {plugin_name or 'core'}")
     
     def get(self, chart_type: str) -> Optional[Type]:
         """Get a chart type class by name."""

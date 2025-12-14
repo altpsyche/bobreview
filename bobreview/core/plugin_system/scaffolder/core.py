@@ -28,8 +28,11 @@ from .generators import (
     generate_chart_generator,
     generate_analysis_module,
     generate_theme_module,
+    generate_widgets_module,
+    generate_component_module,
     generate_manifest,
     generate_report_system,
+    generate_user_report_config,
 )
 
 
@@ -115,6 +118,14 @@ __all__ = ['{class_name}CsvParser']
         # Create chart_generator.py
         chart_content = generate_chart_generator(name, class_name)
         (plugin_dir / "chart_generator.py").write_text(chart_content, encoding='utf-8')
+        
+        # Create widgets.py (custom UI components)
+        widgets_content = generate_widgets_module(name, safe_name, class_name)
+        (plugin_dir / "widgets.py").write_text(widgets_content, encoding='utf-8')
+        
+        # Create components.py (ComponentInterface implementations)
+        components_content = generate_component_module(name, safe_name, class_name)
+        (plugin_dir / "components.py").write_text(components_content, encoding='utf-8')
     
     # Create report_systems directory
     rs_dir = plugin_dir / "report_systems"
@@ -139,6 +150,11 @@ __all__ = ['{class_name}CsvParser']
     # Create details page for multi-page example
     details_template = _read_template("pages/details.html.j2", name=name, safe_name=safe_name)
     (templates_dir / "details.html.j2").write_text(details_template, encoding='utf-8')
+    
+    # Create summary page (for custom page registration demo)
+    if template == 'full':
+        summary_template = _generate_summary_template(name, safe_name)
+        (templates_dir / "summary.html.j2").write_text(summary_template, encoding='utf-8')
     
     # Create components directory with macros
     components_dir = plugin_dir / "templates" / "components"
@@ -188,6 +204,11 @@ Lima Gateway,92,Infrastructure
 """
     (sample_dir / "sample.csv").write_text(sample_csv, encoding='utf-8')
     
+    # Create user-facing report_config.yaml
+    # This is the CMS-style config that end users edit to compose reports
+    user_config = generate_user_report_config(name, safe_name, color_theme)
+    (plugin_dir / "report_config.yaml").write_text(user_config, encoding='utf-8')
+    
     return plugin_dir
 
 
@@ -213,3 +234,52 @@ def _read_template(relative_path: str, **kwargs) -> str:
         content = content.replace("{{" + key + "}}", value)
     
     return content
+
+
+def _generate_summary_template(name: str, safe_name: str) -> str:
+    """Generate summary.html.j2 template for custom page demo."""
+    return f'''{{% extends "{safe_name}/pages/base.html.j2" %}}
+
+{{% block title %}}{name} - Summary{{% endblock %}}
+
+{{% block content %}}
+<div class="summary-page">
+    <h1>Summary</h1>
+    <p class="page-intro">
+        This page demonstrates how users can compose reports using plugin components.
+        Pages are defined in <code>report_config.yaml</code>.
+    </p>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card__title">Total Items</div>
+            <div class="stat-card__value">{{{{ data_points | length }}}}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__title">Average Score</div>
+            <div class="stat-card__value">{{{{ "%.1f" | format(stats.score.mean | default(0)) }}}}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__title">Top Score</div>
+            <div class="stat-card__value">{{{{ stats.score.max | default(0) }}}}</div>
+        </div>
+    </div>
+    
+    <div class="info-box">
+        <h3>Define Pages in YAML</h3>
+        <p>Users compose reports in <code>report_config.yaml</code>:</p>
+        <pre><code>pages:
+  - id: summary
+    title: "Summary"
+    components:
+      - type: widget
+        widget: {safe_name}_stat_card
+      - type: chart
+        chart: bar
+        x: name
+        y: score</code></pre>
+    </div>
+</div>
+{{% endblock %}}
+'''
+

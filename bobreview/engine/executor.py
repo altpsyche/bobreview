@@ -11,13 +11,13 @@ NOTE: This executor now uses the services package for modular, pluggable process
 """
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional, TYPE_CHECKING
+from typing import Dict, List, Any, Optional, Union, TYPE_CHECKING
 from dataclasses import asdict
 from datetime import datetime
 import os
 import jinja2
 
-from .schema import ReportSystemDefinition, LabelConfig
+from .schema import ReportSystemDefinition, Labels
 
 # Import from new package structure
 from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, image_to_base64
@@ -34,6 +34,7 @@ from .plugin_lifecycle import PluginLifecycleManager
 
 if TYPE_CHECKING:
     from ..core.template_engine import TemplateEngine
+    from ..core.dataframe import DataFrame
 
 
 class ReportSystemExecutor:
@@ -277,15 +278,16 @@ class ReportSystemExecutor:
             sort_by=sort_by
         )
     
-    def _build_meta_text(self, stats: Dict[str, Any], data_points: List[Dict[str, Any]]) -> str:
+    def _build_meta_text(self, stats: Dict[str, Any], data: Union[List[Dict[str, Any]], 'DataFrame']) -> str:
         """
         Build meta text for report header.
         """
+        data_points = list(data) if hasattr(data, '__iter__') else data
         count = stats.get('count', len(data_points))
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
         return f"{count} items · Generated {timestamp}"
     
-    def analyze_data(self, data_points: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def analyze_data(self, data: Union[List[Dict[str, Any]], 'DataFrame']) -> Dict[str, Any]:
         """
         Calculate statistics using AnalyticsService from the container.
         
@@ -302,6 +304,9 @@ class ReportSystemExecutor:
         analytics_service: AnalyticsService = self.container.get('analytics')
         
         try:
+            # Convert DataFrame to list for analysis
+            data_points = list(data) if hasattr(data, '__iter__') else data
+            
             # Get metrics config from extensions (plugin-provided)
             metrics_ext = self.system_def.extensions.get('metrics')
             metrics = None
@@ -320,7 +325,7 @@ class ReportSystemExecutor:
             
             # Pass the full report_config - service uses it directly
             return analytics_service.analyze(
-                data_points=data_points,
+                data=data_points,  # Service uses 'data' param
                 metrics=metrics,
                 metrics_config=metrics_config,
                 report_config=self.config  # Pass config directly
@@ -333,14 +338,14 @@ class ReportSystemExecutor:
     
     def generate_llm_content(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any]
     ) -> Dict[str, str]:
         """
         Generate content for all LLM generators using LLMService.
         
         Parameters:
-            data_points: List of data points
+            data: DataFrame or List[Dict] with data points
             stats: Statistical analysis results
         
         Returns:
@@ -364,7 +369,7 @@ class ReportSystemExecutor:
         
         return llm_service.generate_all(
             generators=self.system_def.llm_generators,
-            data_points=data_points,
+            data=data,  # LLMService uses 'data' param, not 'data_points'
             stats=stats,
             context=context,
             dry_run=self.config.execution.dry_run,
@@ -373,7 +378,7 @@ class ReportSystemExecutor:
     
     def generate_pages(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         llm_results: Dict[str, str],
         input_dir: Path,
@@ -385,7 +390,7 @@ class ReportSystemExecutor:
         Delegates to PageRenderer for the actual rendering logic.
         
         Parameters:
-            data_points: List of data points
+            data: DataFrame or List[Dict] with data points
             stats: Statistical analysis results
             llm_results: Generated LLM content
             input_dir: Input directory (for images)
@@ -401,7 +406,7 @@ class ReportSystemExecutor:
         )
         
         renderer.render_all_pages(
-            data_points=data_points,
+            data=data,  # PageRenderer uses 'data' param
             stats=stats,
             llm_results=llm_results,
             input_dir=input_dir,

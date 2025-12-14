@@ -695,6 +695,22 @@ Examples:
                                 choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
                                 help='Base color theme for templates (default: dark)')
     
+    # build command - build report from user config
+    build_parser = subparsers.add_parser('build', help='Build report from config file')
+    build_parser.add_argument('config', help='Path to report config YAML')
+    build_parser.add_argument('--output', '-o', type=str, default=None,
+                             help='Output directory (overrides config)')
+    build_parser.add_argument('--dry-run', action='store_true',
+                             help='Validate only, do not generate')
+    build_parser.add_argument('--plugin-dir', action='append', dest='plugin_dirs', default=[],
+                             help='Extra plugin directory')
+    
+    # validate command - validate a report config
+    validate_parser = subparsers.add_parser('validate', help='Validate report config file')
+    validate_parser.add_argument('config', help='Path to report config YAML')
+    validate_parser.add_argument('--plugin-dir', action='append', dest='plugin_dirs', default=[],
+                                help='Extra plugin directory')
+    
     # doctor command
     doctor_parser = subparsers.add_parser('doctor', help='Check system setup')
     
@@ -850,6 +866,114 @@ Examples:
     # Handle doctor command
     if args.command == 'doctor':
         return handle_doctor_command(extra_dirs=getattr(args, 'plugin_dirs', []))
+    
+    # Handle build command
+    if args.command == 'build':
+        from .core.report_builder import get_report_builder
+        from .core.report_config import load_report_config, validate_report_config
+        
+        # Load plugins
+        _load_plugins(getattr(args, 'plugin_dirs', []), None)
+        
+        builder = get_report_builder()
+        
+        if RICH_AVAILABLE:
+            console.print(f"[bold]Building report from:[/bold] {args.config}")
+        else:
+            print(f"Building report from: {args.config}")
+        
+        try:
+            result = builder.build(
+                config_path=args.config,
+                output_dir=getattr(args, 'output', None),
+                dry_run=getattr(args, 'dry_run', False)
+            )
+            
+            if result['success']:
+                if RICH_AVAILABLE:
+                    console.print("[green]✓ Report built successfully[/green]")
+                    if result.get('dry_run'):
+                        console.print(f"[dim]Dry run - {len(result.get('pages', []))} pages validated[/dim]")
+                    else:
+                        console.print(f"[dim]Output: {result.get('output_dir')}[/dim]")
+                else:
+                    print("✓ Report built successfully")
+                    if result.get('dry_run'):
+                        print(f"Dry run - {len(result.get('pages', []))} pages validated")
+                    else:
+                        print(f"Output: {result.get('output_dir')}")
+                return 0
+            else:
+                if RICH_AVAILABLE:
+                    console.print("[red]✗ Build failed:[/red]")
+                    for err in result.get('errors', []):
+                        console.print(f"  [red]•[/red] {err}")
+                else:
+                    print("✗ Build failed:")
+                    for err in result.get('errors', []):
+                        print(f"  - {err}")
+                return 1
+        except FileNotFoundError as e:
+            if RICH_AVAILABLE:
+                console.print(f"[red]✗ Config file not found:[/red] {e}")
+            else:
+                print(f"✗ Config file not found: {e}")
+            return 1
+        except Exception as e:
+            if RICH_AVAILABLE:
+                console.print(f"[red]✗ Build error:[/red] {e}")
+            else:
+                print(f"✗ Build error: {e}")
+            return 1
+    
+    # Handle validate command
+    if args.command == 'validate':
+        from .core.report_config import load_user_report_config, validate_user_report_config
+        
+        if RICH_AVAILABLE:
+            console.print(f"[bold]Validating:[/bold] {args.config}")
+        else:
+            print(f"Validating: {args.config}")
+        
+        try:
+            config = load_user_report_config(args.config)
+            errors = validate_user_report_config(config)
+            
+            if errors:
+                if RICH_AVAILABLE:
+                    console.print("[red]✗ Validation failed:[/red]")
+                    for err in errors:
+                        console.print(f"  [red]•[/red] {err}")
+                else:
+                    print("✗ Validation failed:")
+                    for err in errors:
+                        print(f"  - {err}")
+                return 1
+            else:
+                if RICH_AVAILABLE:
+                    console.print("[green]✓ Config is valid[/green]")
+                    console.print(f"  [dim]Name:[/dim] {config.name}")
+                    console.print(f"  [dim]Plugin:[/dim] {config.plugin}")
+                    console.print(f"  [dim]Pages:[/dim] {len(config.pages)}")
+                else:
+                    print("✓ Config is valid")
+                    print(f"  Name: {config.name}")
+                    print(f"  Plugin: {config.plugin}")
+                    print(f"  Pages: {len(config.pages)}")
+                return 0
+        except FileNotFoundError as e:
+            if RICH_AVAILABLE:
+                console.print(f"[red]✗ File not found:[/red] {e}")
+            else:
+                print(f"✗ File not found: {e}")
+            return 1
+        except Exception as e:
+            if RICH_AVAILABLE:
+                console.print(f"[red]✗ Error:[/red] {e}")
+            else:
+                print(f"✗ Error: {e}")
+            return 1
+
     
     # Validate that --plugin is provided if not using list commands
     if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers or args.list_themes):

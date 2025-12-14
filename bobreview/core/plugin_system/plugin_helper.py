@@ -30,7 +30,7 @@ class PluginHelper:
                 helper.add_data_parser("csv", MyCsvParser)
                 helper.add_theme(my_theme)
                 helper.add_templates(Path(__file__).parent / "templates")
-                helper.add_report_system_from_json(Path(__file__).parent / "report_systems")
+                helper.add_report_systems_from_dir(Path(__file__).parent / "report_systems")
     """
     
     def __init__(self, registry: 'PluginRegistry', plugin_name: str):
@@ -62,6 +62,51 @@ class PluginHelper:
         if not hasattr(parser_class, 'parser_name'):
             parser_class.parser_name = parser_id
         self.registry.data_parsers.register(parser_class, plugin_name=self.plugin_name)
+    
+    def add_widget(self, widget_id: str, widget_class: Type) -> None:
+        """
+        Register a UI widget.
+        
+        Parameters:
+            widget_id: Unique identifier for the widget
+            widget_class: Widget implementation class
+        """
+        self.registry.widgets.register(widget_id, widget_class, plugin_name=self.plugin_name)
+    
+    def add_page(self, page_id: str, page_def: Dict[str, Any]) -> None:
+        """
+        Register a page definition.
+        
+        Parameters:
+            page_id: Unique identifier for the page
+            page_def: Page definition dictionary
+        """
+        self.registry.pages.register(page_id, page_def, plugin_name=self.plugin_name)
+    
+    def add_chart_type(self, chart_type_id: str, chart_config: Dict[str, Any]) -> None:
+        """
+        Register a chart type configuration.
+        
+        Parameters:
+            chart_type_id: Unique identifier (e.g., 'bar', 'scatter', 'histogram')
+            chart_config: Chart configuration dictionary
+        """
+        self.registry.chart_types.register(chart_type_id, chart_config, plugin_name=self.plugin_name)
+    
+    def add_component(self, component_id: str, component_class: Type) -> None:
+        """
+        Register a UI component.
+        
+        Components are reusable UI elements that templates can render:
+            {{ render_component('stat_card', {'title': 'Total', 'value': 42}) }}
+        
+        The component class should implement ComponentInterface.
+        
+        Parameters:
+            component_id: Unique identifier for the component (e.g., 'stat_card')
+            component_class: Class implementing ComponentInterface
+        """
+        self.registry.components.register(component_id, component_class, plugin_name=self.plugin_name)
     
     # -------------------------------------------------------------------------
     # Themes
@@ -247,6 +292,7 @@ class PluginHelper:
         system_id: str,
         system_def: Dict[str, Any],
         parser_class: Optional[Type] = None,
+        analyzer_func: Optional[Callable] = None,
         context_builder_class: Optional[Type] = None,
         chart_generator_class: Optional[Type] = None,
         template_dir: Optional[Union[str, Path]] = None
@@ -258,6 +304,7 @@ class PluginHelper:
             system_id: Unique identifier for the report system
             system_def: Report system definition dict
             parser_class: Optional data parser class
+            analyzer_func: Optional analyzer function for statistical analysis
             context_builder_class: Optional context builder class
             chart_generator_class: Optional chart generator class
             template_dir: Optional templates directory
@@ -269,6 +316,10 @@ class PluginHelper:
         if parser_class:
             parser_type = system_def.get('data_source', {}).get('type', system_id)
             self.add_data_parser(parser_type, parser_class)
+        
+        # Register analyzer if provided
+        if analyzer_func:
+            self.add_analyzer(system_id, analyzer_func)
         
         # Register context builder if provided
         if context_builder_class:

@@ -8,10 +8,13 @@ This service handles all statistical calculations:
 - Performance zone classification
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, TYPE_CHECKING
 import logging
 
 from .base import BaseService, AnalyticsServiceError
+
+if TYPE_CHECKING:
+    from ..core.dataframe import DataFrame
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ class AnalyticsService(BaseService):
     Example:
         service = AnalyticsService()
         stats = service.analyze(
-            data_points=data,
+            data=data,  # DataFrame or List[Dict]
             metrics=['draws', 'tris'],
             metrics_config=system_def.metrics
         )
@@ -36,7 +39,7 @@ class AnalyticsService(BaseService):
     
     def analyze(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         metrics: List[str],
         metrics_config: Any,
         report_config: Any = None,
@@ -46,7 +49,7 @@ class AnalyticsService(BaseService):
         Calculate statistics for data points.
         
         Parameters:
-            data_points: List of data points to analyze
+            data: DataFrame or List[Dict] with data points to analyze
             metrics: List of metric field names
             metrics_config: Dict-like config with timestamp_field, identifier_field, threshold_mapping
             report_config: ReportConfig instance (preferred, contains all thresholds)
@@ -58,6 +61,8 @@ class AnalyticsService(BaseService):
         Raises:
             AnalyticsServiceError: If analysis fails
         """
+        # Convert DataFrame to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
         if not data_points:
             raise AnalyticsServiceError("No data points to analyze")
         

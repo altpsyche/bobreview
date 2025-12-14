@@ -4,6 +4,9 @@ Core API: Interfaces for plugin components.
 This module defines the primary API that plugins implement. All interfaces
 should be here, providing a clear contract between core and plugins.
 
+Data Flow:
+    Parser → List[Dict] → DataService → DataFrame → Components
+
 Dependency Direction:
 - Core defines the contract (this module)
 - Plugins implement the contract
@@ -12,11 +15,12 @@ Dependency Direction:
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional, TYPE_CHECKING
+from typing import Dict, List, Any, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..engine.schema import DataSourceConfig
     from .config import ReportConfig
+    from .dataframe import DataFrame
 
 
 class DataParserInterface(ABC):
@@ -215,7 +219,7 @@ class LLMGeneratorInterface(ABC):
     @abstractmethod
     def generate(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         config: 'ReportConfig',
         context: Dict[str, Any]
@@ -223,14 +227,11 @@ class LLMGeneratorInterface(ABC):
         """
         Generate LLM content from data and statistics.
         
-        This is the core method that plugins must implement.
-        It should use the LLM to generate content based on the provided data.
-        
         Parameters:
-            data_points: List of parsed data point dictionaries
-            stats: Statistical analysis results (from core.analysis.analyze_data)
-            config: ReportConfig with LLM settings and thresholds
-            context: Additional context (location, title, thresholds dict, etc.)
+            data: DataFrame or List[Dict] with parsed data points
+            stats: Statistical analysis results
+            config: ReportConfig with LLM settings
+            context: Additional context
         
         Returns:
             Generated content. Can be:
@@ -273,7 +274,7 @@ class ChartGeneratorInterface(ABC):
     @abstractmethod
     def generate_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         config: 'ReportConfig',
         chart_config: Dict[str, Any]
@@ -282,11 +283,10 @@ class ChartGeneratorInterface(ABC):
         Generate chart from data and statistics.
         
         Parameters:
-            data_points: List of parsed data points
+            data: DataFrame or List[Dict] with parsed data
             stats: Statistical analysis results
             config: ReportConfig with settings
-            chart_config: Chart-specific configuration from report system JSON
-                        Contains: id, type, title, x_field, y_field, options
+            chart_config: Chart configuration
         
         Returns:
             Chart representation as string. Format depends on chart type:
@@ -329,7 +329,7 @@ class ContextBuilderInterface(ABC):
     @abstractmethod
     def build_context(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         config: 'ReportConfig',
         base_context: Dict[str, Any]
@@ -338,10 +338,10 @@ class ContextBuilderInterface(ABC):
         Build template context from data and statistics.
         
         Parameters:
-            data_points: List of parsed data points
+            data: DataFrame or List[Dict] with parsed data
             stats: Statistical analysis results
             config: ReportConfig with settings
-            base_context: Base context already prepared by framework
+            base_context: Base context from framework
         
         Returns:
             Enriched context dictionary. Should merge with base_context.
@@ -356,3 +356,107 @@ class ContextBuilderInterface(ABC):
         """
         pass
 
+
+class ComponentInterface(ABC):
+    """
+    Core API: Interface for reusable UI components.
+    
+    Plugins implement this to define custom UI components (stat cards, gauges,
+    data tables, etc.) that templates can render dynamically.
+    
+    Components are rendered via the `render_component` template function:
+        {{ render_component('stat_card', {'title': 'Total', 'value': 42}) }}
+    
+    Example:
+        class StatCardComponent(ComponentInterface):
+            @property
+            def component_type(self) -> str:
+                return 'stat_card'
+            
+            def render(self, props: Dict[str, Any], context: Dict[str, Any]) -> str:
+                title = props.get('title', '')
+                value = props.get('value', 0)
+                return f'''
+                    <div class="stat-card">
+                        <h3>{title}</h3>
+                        <span class="value">{value}</span>
+                    </div>
+                '''
+    """
+    
+    @property
+    @abstractmethod
+    def component_type(self) -> str:
+        """
+        Return the component type identifier.
+        
+        This ID is used to lookup the component in templates:
+            {{ render_component('stat_card', props) }}
+        
+        Returns:
+            Unique component type string (e.g., 'stat_card', 'gauge', 'data_table')
+        """
+        pass
+    
+    @abstractmethod
+    def render(
+        self,
+        props: Dict[str, Any],
+        context: Dict[str, Any]
+    ) -> str:
+        """
+        Render the component to an HTML string.
+        
+        Parameters:
+            props: Component properties passed from template
+                   (e.g., {'title': 'Score', 'value': 95, 'color': 'green'})
+            context: Template context (stats, config, data, etc.)
+        
+        Returns:
+            HTML string for the rendered component
+        
+        Example:
+            def render(self, props, context):
+                value = props.get('value', 0)
+                threshold = context.get('stats', {}).get('mean', 50)
+                color = 'green' if value > threshold else 'red'
+                return f'<span style="color: {color}">{value}</span>'
+        """
+        pass
+    
+    async def render_async(
+        self,
+        props: Dict[str, Any],
+        context: Dict[str, Any]
+    ) -> str:
+        """
+        Async render for components that need to fetch data.
+        
+        Override this method for components that perform async operations
+        (API calls, database queries, etc.). The default implementation
+        falls back to the sync render() method.
+        
+        Parameters:
+            props: Component properties passed from template
+            context: Template context (stats, config, data, etc.)
+        
+        Returns:
+            HTML string for the rendered component
+        
+        Example:
+            async def render_async(self, props, context):
+                data = await fetch_external_data(props.get('source'))
+                return self._format_table(data)
+        """
+        # Default: fall back to sync render
+        return self.render(props, context)
+    
+    @property
+    def is_async(self) -> bool:
+        """
+        Return True if this component requires async rendering.
+        
+        Override to return True if render_async does actual async work.
+        This helps the renderer decide which method to call.
+        """
+        return False

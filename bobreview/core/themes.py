@@ -434,8 +434,7 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     Generate CSS :root block with theme variables.
     
     This generates a complete set of CSS custom properties that override
-    the default styles.css variables. Includes all standard variables plus
-    aliases for backward compatibility.
+    the default styles.css variables.
     
     Parameters:
         theme: ReportTheme instance
@@ -497,8 +496,7 @@ def theme_to_dict(theme: ReportTheme) -> dict:
     """
     Convert a ReportTheme to a dict for template context.
     
-    Includes all theme values plus aliases for backward compatibility.
-    Templates can use either the standard names or aliases.
+    Templates can use these values for dynamic styling.
     
     Parameters:
         theme: ReportTheme instance
@@ -549,12 +547,6 @@ def theme_to_dict(theme: ReportTheme) -> dict:
         "font_family": theme.font_family,
         "font_mono": theme.font_mono,
         "font_url": theme.font_url,
-        
-        # Aliases for backward compatibility
-        "border": theme.border_subtle,
-        "text_secondary": theme.text_soft,
-        "success": theme.ok,
-        "warning": theme.warn,
     }
 
 

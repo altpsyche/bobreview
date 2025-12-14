@@ -12,68 +12,85 @@ Generates source code for plugin components:
 
 def generate_plugin_py(name: str, safe_name: str, class_name: str, template: str) -> str:
     """Generate the main plugin.py file."""
-    imports = """from pathlib import Path
-from bobreview.core.plugin_system import BasePlugin, PluginHelper"""
     
     if template == 'full':
-        imports += """
-from .parsers.csv_parser import {class_name}CsvParser
-from .context_builder import {class_name}ContextBuilder
-from .chart_generator import {class_name}ChartGenerator
-from .analysis import analyze_{safe_name}_data
-from .theme import {safe_name}_THEME, {safe_name}_DEEP_THEME""".format(class_name=class_name, safe_name=safe_name.upper() if 'THEME' in '{safe_name}_THEME' else safe_name)
-        # Fix the format - safe_name should be lowercase for function, uppercase for theme
-        imports = """from pathlib import Path
+        imports = f"""from pathlib import Path
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
 from .parsers.csv_parser import {class_name}CsvParser
 from .context_builder import {class_name}ContextBuilder
 from .chart_generator import {class_name}ChartGenerator
 from .analysis import analyze_{safe_name}_data
-from .theme import {safe_name_upper}_THEME, {safe_name_upper}_DEEP_THEME""".format(
-            class_name=class_name, 
-            safe_name=safe_name,
-            safe_name_upper=safe_name.upper()
+from .widgets import {class_name}StatCard
+from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME"""
+        
+        registration = f'''        # Load report system definition
+        import json
+        report_system_path = Path(__file__).parent / "report_systems" / "{safe_name}.json"
+        with open(report_system_path) as f:
+            system_def = json.load(f)
+        
+        # Register core components
+        helper.setup_complete_report_system(
+            system_id="{safe_name}",
+            system_def=system_def,
+            parser_class={class_name}CsvParser,
+            analyzer_func=analyze_{safe_name}_data,
+            context_builder_class={class_name}ContextBuilder,
+            chart_generator_class={class_name}ChartGenerator,
+            template_dir=Path(__file__).parent / "templates"
         )
-    else:
-        imports += f"""
-from .parsers.csv_parser import {class_name}CsvParser
-from .analysis import analyze_{safe_name}_data"""
-    
-    registration = f'''        # Register data parser
-        helper.add_data_parser("{safe_name}_csv", {class_name}CsvParser)
         
-        # Register analyzer function
-        helper.add_analyzer("{safe_name}", analyze_{safe_name}_data)'''
-    
-    if template == 'full':
-        registration += f'''
+        # ─────────────────────────────────────────────────────────────────────
+        # Register Components (users compose these in report_config.yaml)
+        # ─────────────────────────────────────────────────────────────────────
         
-        # Register context builder
-        helper.add_context_builder("{safe_name}", {class_name}ContextBuilder)
+        # Custom widget (reusable UI component)
+        helper.add_widget("{safe_name}_stat_card", {class_name}StatCard)
         
-        # Register chart generator
-        helper.add_chart_generator("{safe_name}", {class_name}ChartGenerator)'''
-    
-    registration += '''
+        # Custom chart type (gauge visualization)
+        helper.add_chart_type("{safe_name}_gauge", {{
+            "type": "doughnut",
+            "options": {{
+                "cutout": "70%",
+                "circumference": 180,
+                "rotation": 270
+            }},
+            "description": "Semi-circular gauge chart for progress/scores"
+        }})
         
-        # Register templates
-        template_dir = Path(__file__).parent / "templates"
-        helper.add_templates(template_dir)
-        
-        # Register report systems
-        report_systems_dir = Path(__file__).parent / "report_systems"
-        helper.add_report_systems_from_dir(report_systems_dir)
+        # Custom themes
+        helper.add_theme({safe_name.upper()}_THEME)
+        helper.add_theme({safe_name.upper()}_DEEP_THEME)
         
         # Register default services
-        helper.register_default_services()'''
-    
-    if template == 'full':
-        # Add theme registration for full template
-        registration += f'''
+        helper.register_default_services()
         
-        # Register custom themes (see theme.py for customization)
-        helper.add_theme({safe_name.upper()}_THEME)       # Full standalone theme
-        helper.add_theme({safe_name.upper()}_DEEP_THEME)  # Ocean-based deep theme'''
+        # NOTE: Pages are user-defined in report_config.yaml, not here.'''
+    else:
+        imports = f"""from pathlib import Path
+from bobreview.core.plugin_system import BasePlugin, PluginHelper
+from .parsers.csv_parser import {class_name}CsvParser
+from .analysis import analyze_{safe_name}_data"""
+        
+        registration = f'''        # Load report system definition
+        import json
+        report_system_path = Path(__file__).parent / "report_systems" / "{safe_name}.json"
+        with open(report_system_path) as f:
+            system_def = json.load(f)
+        
+        # Register core components
+        helper.setup_complete_report_system(
+            system_id="{safe_name}",
+            system_def=system_def,
+            parser_class={class_name}CsvParser,
+            analyzer_func=analyze_{safe_name}_data,
+            template_dir=Path(__file__).parent / "templates"
+        )
+        
+        # Register default services
+        helper.register_default_services()
+        
+        # NOTE: Pages are user-defined in report_config.yaml, not here.'''
     
     return f'''"""
 {name} Plugin - Main plugin class.
@@ -112,6 +129,9 @@ def generate_csv_parser(name: str, class_name: str) -> str:
     """Generate CSV parser file."""
     return f'''"""
 CSV Parser for {name} Plugin.
+
+Data Flow:
+    CSV → Parser.parse_directory() → List[Dict] → DataFrame
 """
 
 from pathlib import Path
@@ -182,7 +202,7 @@ def generate_context_builder(name: str, class_name: str) -> str:
 Context Builder for {name} Plugin.
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from bobreview.core.api import ContextBuilderInterface
 
 
@@ -191,13 +211,16 @@ class {class_name}ContextBuilder(ContextBuilderInterface):
     
     def build_context(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: Any,
         base_context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Build enriched context for template rendering."""
         context = dict(base_context)
+        
+        # Convert DataFrame to list if needed
+        data_points = list(data) if hasattr(data, "__iter__") else data
         
         # Sort by score (descending)
         ranked = sorted(data_points, key=lambda x: x.get('score', 0), reverse=True)
@@ -229,7 +252,7 @@ Generates Chart.js JavaScript code with theme-aware coloring.
 """
 
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from bobreview.core.api import ChartGeneratorInterface
 from bobreview.core.themes import get_theme_by_id, DARK_THEME
 
@@ -239,7 +262,7 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
     
     def generate_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: Any,
         chart_config: Dict[str, Any]
@@ -249,6 +272,9 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
         
         Returns JavaScript code that creates the chart, NOT JSON config.
         """
+        # Convert DataFrame to list if needed
+        data_points = list(data) if hasattr(data, "__iter__") else data
+        
         chart_id = chart_config.get('id', 'chart')
         chart_type = chart_config.get('type', 'bar')
         title = chart_config.get('title', 'Chart')
@@ -427,7 +453,8 @@ import statistics
 
 def analyze_{safe_name}_data(
     data_points: List[Dict[str, Any]],
-    config: Any = None
+    config: Any = None,
+    **kwargs  # Accept metrics, metric_config from AnalyticsService
 ) -> Dict[str, Any]:
     """
     Compute statistics from parsed data.
@@ -435,6 +462,7 @@ def analyze_{safe_name}_data(
     Parameters:
         data_points: List of parsed data points with 'score' field
         config: Optional ReportConfig
+        **kwargs: Additional args from AnalyticsService (metrics, metric_config)
     
     Returns:
         Dict with computed statistics
@@ -606,3 +634,338 @@ from bobreview.core.themes import ReportTheme, create_theme, hex_to_rgba
 #        bobreview --plugin {name} --theme {safe_name}_ocean_deep
 '''
 
+
+def generate_widgets_module(name: str, safe_name: str, class_name: str) -> str:
+    """Generate widgets.py with custom widget examples."""
+    return f'''"""
+Custom Widgets for {name} Plugin.
+
+Widgets are reusable UI components that can be used across templates.
+Register widgets with: helper.add_widget('widget_id', WidgetClass)
+"""
+
+from typing import Dict, Any
+
+
+class {class_name}StatCard:
+    """
+    A reusable stat card widget for displaying key metrics.
+    
+    Usage in templates:
+        {{{{ widgets.{safe_name}_stat_card.render(title="Score", value=85, trend="up") }}}}
+    """
+    
+    @staticmethod
+    def render(
+        title: str,
+        value: Any,
+        subtitle: str = "",
+        trend: str = "",  # "up", "down", or ""
+        status: str = "neutral"  # "ok", "warn", "danger", "neutral"
+    ) -> str:
+        """
+        Render the stat card HTML.
+        
+        Parameters:
+            title: Card title
+            value: Main value to display
+            subtitle: Optional subtitle text
+            trend: Trend indicator ("up", "down", or "")
+            status: Status color ("ok", "warn", "danger", "neutral")
+        
+        Returns:
+            HTML string for the stat card
+        """
+        trend_icon = ""
+        if trend == "up":
+            trend_icon = '<span class="trend trend-up">↑</span>'
+        elif trend == "down":
+            trend_icon = '<span class="trend trend-down">↓</span>'
+        
+        status_class = f"stat-card--{{status}}" if status != "neutral" else ""
+        
+        return f"""
+        <div class="stat-card {{status_class}}">
+            <div class="stat-card__title">{{title}}</div>
+            <div class="stat-card__value">{{value}} {{trend_icon}}</div>
+            <div class="stat-card__subtitle">{{subtitle}}</div>
+        </div>
+        """
+    
+    @staticmethod
+    def get_css() -> str:
+        """Return CSS for the stat card widget."""
+        return """
+        .stat-card {{
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+        }}
+        .stat-card__title {{
+            font-size: 0.875rem;
+            color: var(--text-soft);
+            margin-bottom: 0.5rem;
+        }}
+        .stat-card__value {{
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }}
+        .stat-card__subtitle {{
+            font-size: 0.75rem;
+            color: var(--text-soft);
+            margin-top: 0.25rem;
+        }}
+        .stat-card--ok {{ border-color: var(--ok); }}
+        .stat-card--warn {{ border-color: var(--warn); }}
+        .stat-card--danger {{ border-color: var(--danger); }}
+        .trend {{ margin-left: 0.25rem; }}
+#        .trend-down {{ color: var(--danger); }}
+#        """
+#
+#
+# =============================================================================
+# USAGE NOTES
+# =============================================================================
+#
+# 1. Register in plugin.py on_load():
+#        from .widgets import {class_name}StatCard
+#        helper.add_widget("{safe_name}_stat_card", {class_name}StatCard)
+#
+# 2. Use in Jinja2 templates:
+#        {{{{ widgets.{safe_name}_stat_card.render(title="Score", value=85) }}}}
+#
+# 3. Include widget CSS in your template:
+#        <style>{{{{ widgets.{safe_name}_stat_card.get_css() }}}}</style>
+'''
+
+
+def generate_component_module(name: str, safe_name: str, class_name: str) -> str:
+    """
+    Generate components.py with ComponentInterface implementations.
+    
+    Creates example components demonstrating:
+    - Sync component (StatCardComponent)
+    - Async component with data fetching (DataTableComponent)
+    - DataFrame integration for data-aware components
+    """
+    return f'''"""
+UI Components for {name} plugin.
+
+Components implement ComponentInterface for reusable UI elements
+that templates can render via render_component().
+
+Data Flow:
+    Parser → List[Dict] → DataService → DataFrame → Components
+
+Usage in templates:
+    {{{{ render_component('stat_card', {{'title': 'Total', 'value': 42}}) }}}}
+    {{{{ render_component('data_table', {{'columns': ['name', 'value']}}) }}}}
+"""
+
+from typing import Dict, Any, List, Union
+from bobreview.core.api import ComponentInterface
+
+# Optional: Import DataFrame for type hints
+try:
+    from bobreview.core.dataframe import DataFrame
+except ImportError:
+    DataFrame = None
+
+
+class {class_name}StatCardComponent(ComponentInterface):
+    """
+    A stat card component displaying a metric with optional trend indicator.
+    
+    Props:
+        title: Card title (required)
+        value: Main numeric value (required)
+        subtitle: Optional description text
+        trend: 'up', 'down', or None
+        status: 'ok', 'warn', 'danger' for border color
+    """
+    
+    @property
+    def component_type(self) -> str:
+        return '{safe_name}_stat_card'
+    
+    def render(self, props: Dict[str, Any], context: Dict[str, Any]) -> str:
+        title = props.get('title', '')
+        value = props.get('value', 0)
+        subtitle = props.get('subtitle', '')
+        trend = props.get('trend')
+        status = props.get('status', '')
+        
+        # Format value
+        if isinstance(value, float):
+            formatted = f"{{value:,.1f}}"
+        elif isinstance(value, int):
+            formatted = f"{{value:,}}"
+        else:
+            formatted = str(value)
+        
+        # Trend icon
+        trend_html = ''
+        if trend == 'up':
+            trend_html = '<span class="trend trend-up">↑</span>'
+        elif trend == 'down':
+            trend_html = '<span class="trend trend-down">↓</span>'
+        
+        # Status class
+        status_class = f' stat-card--{{status}}' if status else ''
+        
+        return f"""
+        <div class="stat-card{{status_class}}">
+            <div class="stat-card__title">{{title}}</div>
+            <div class="stat-card__value">{{formatted}}{{trend_html}}</div>
+            {{% if subtitle %}}<div class="stat-card__subtitle">{{subtitle}}</div>{{% endif %}}
+        </div>
+        """
+    
+    @staticmethod
+    def get_css() -> str:
+        """Return component CSS styles."""
+        return """
+        .stat-card {{
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+        }}
+        .stat-card__title {{
+            font-size: 0.875rem;
+            color: var(--text-soft);
+            margin-bottom: 0.5rem;
+        }}
+        .stat-card__value {{
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }}
+        .stat-card__subtitle {{
+            font-size: 0.75rem;
+            color: var(--text-soft);
+            margin-top: 0.25rem;
+        }}
+        .stat-card--ok {{ border-color: var(--ok); }}
+        .stat-card--warn {{ border-color: var(--warn); }}
+        .stat-card--danger {{ border-color: var(--danger); }}
+        .trend {{ margin-left: 0.25rem; }}
+        .trend-up {{ color: var(--ok); }}
+        .trend-down {{ color: var(--danger); }}
+        """
+
+
+class {class_name}DataTableComponent(ComponentInterface):
+    """
+    A data table component that renders DataFrame or List[Dict] data.
+    
+    Props:
+        data: DataFrame or List[Dict] (required)
+        columns: List of column names to display (optional, defaults to all)
+        max_rows: Maximum rows to show (default: 10)
+        title: Optional table title
+    
+    This component demonstrates DataFrame integration.
+    """
+    
+    @property
+    def component_type(self) -> str:
+        return '{safe_name}_data_table'
+    
+    @property
+    def is_async(self) -> bool:
+        # Set to True if fetching external data
+        return False
+    
+    def render(self, props: Dict[str, Any], context: Dict[str, Any]) -> str:
+        data = props.get('data', [])
+        columns = props.get('columns')
+        max_rows = props.get('max_rows', 10)
+        title = props.get('title', '')
+        
+        # Convert DataFrame to list if needed
+        if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+            # It's a DataFrame
+            rows = list(data)[:max_rows]
+            columns = columns or data.column_names
+        else:
+            # It's a list
+            rows = list(data)[:max_rows]
+            if rows and not columns:
+                columns = list(rows[0].keys())
+        
+        if not rows or not columns:
+            return '<div class="data-table--empty">No data available</div>'
+        
+        # Build HTML
+        header = ''.join(f'<th>{{col}}</th>' for col in columns)
+        body = ''
+        for row in rows:
+            cells = ''.join(f'<td>{{row.get(col, "")}}</td>' for col in columns)
+            body += f'<tr>{{cells}}</tr>'
+        
+        title_html = f'<caption>{{title}}</caption>' if title else ''
+        
+        return f"""
+        <table class="data-table">
+            {{title_html}}
+            <thead><tr>{{header}}</tr></thead>
+            <tbody>{{body}}</tbody>
+        </table>
+        """
+    
+    @staticmethod
+    def get_css() -> str:
+        """Return component CSS styles."""
+        return """
+        .data-table {{
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-elevated);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }}
+        .data-table caption {{
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-main);
+        }}
+        .data-table th {{
+            background: var(--bg-soft);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 500;
+            color: var(--text-soft);
+            font-size: 0.875rem;
+        }}
+        .data-table td {{
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border-subtle);
+            color: var(--text-main);
+        }}
+        .data-table--empty {{
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-soft);
+        }}
+        """
+
+
+# =============================================================================
+# USAGE
+# =============================================================================
+#
+# 1. Register in plugin.py on_load():
+#        from .components import {class_name}StatCardComponent, {class_name}DataTableComponent
+#        helper.add_component('{safe_name}_stat_card', {class_name}StatCardComponent)
+#        helper.add_component('{safe_name}_data_table', {class_name}DataTableComponent)
+#
+# 2. Use in templates:
+#        {{{{ render_component('{safe_name}_stat_card', {{'title': 'Score', 'value': 85}}) }}}}
+#        {{{{ render_component('{safe_name}_data_table', {{'data': data, 'columns': ['name', 'value']}}) }}}}
+'''

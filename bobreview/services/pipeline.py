@@ -169,7 +169,7 @@ class ReportPipeline:
             analytics = self.container.get('analytics')
             
             return analytics.analyze(
-                data_points=data_points,
+                data=data_points,  # Service uses 'data' param
                 metrics=metrics_ext.get('primary', []),
                 metrics_config=metrics_ext,
                 report_config=config
@@ -202,7 +202,7 @@ class ReportPipeline:
             
             return llm_service.generate_all(
                 generators=system_def.llm_generators,
-                data_points=data_points,
+                data=data_points,  # Service uses 'data' param
                 stats=stats,
                 context=context,
                 dry_run=config.execution.dry_run

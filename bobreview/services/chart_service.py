@@ -8,11 +8,14 @@ This service handles chart generation:
 - Performance zone coloring
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union, TYPE_CHECKING
 import json
 import logging
 
 from .base import BaseService, ChartServiceError
+
+if TYPE_CHECKING:
+    from ..core.dataframe import DataFrame
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,7 @@ class ChartService(BaseService):
     Example:
         service = ChartService(theme=get_theme())
         charts = service.generate_page_charts(
-            data_points=data,
+            data=data,  # DataFrame or List[Dict]
             page_type='visuals',
             thresholds={'high_draw': 600, 'low_draw': 400}
         )
@@ -110,7 +113,7 @@ class ChartService(BaseService):
     
     def generate_timeline_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         value_field: str,
         high_threshold: float,
         low_threshold: float,
@@ -123,7 +126,7 @@ class ChartService(BaseService):
         Generate a timeline chart with performance zone coloring.
         
         Parameters:
-            data_points: List of data points
+            data: DataFrame or List[Dict] with data points
             value_field: Field name for y-axis values
             high_threshold: High-load threshold
             low_threshold: Low-load threshold
@@ -135,6 +138,9 @@ class ChartService(BaseService):
         Returns:
             JavaScript code for Chart.js
         """
+        # Convert DataFrame to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         colors = self.get_theme_colors()
         
         # Build data with colors
@@ -318,7 +324,7 @@ class ChartService(BaseService):
     
     def generate_scatter_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         x_field: str,
         y_field: str,
         chart_id: str,
@@ -333,7 +339,7 @@ class ChartService(BaseService):
         Generate a scatter plot with performance zone coloring.
         
         Parameters:
-            data_points: List of data points
+            data: DataFrame or List[Dict] with data points
             x_field: Field for x-axis
             y_field: Field for y-axis
             chart_id: HTML canvas element ID
@@ -343,6 +349,9 @@ class ChartService(BaseService):
         Returns:
             JavaScript code for Chart.js
         """
+        # Convert DataFrame to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         colors = self.get_theme_colors()
         
         points = []

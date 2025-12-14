@@ -57,6 +57,6 @@
 
 {% block scripts %}
 <script>
-{% if charts.distribution_chart %}{{ charts.distribution_chart | safe }}{% endif %}
+{% if charts is defined and charts.distribution_chart %}{{ charts.distribution_chart | safe }}{% endif %}
 </script>
 {% endblock %}

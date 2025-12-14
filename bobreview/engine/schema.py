@@ -207,9 +207,6 @@ class Labels:
         return self._data
 
 
-# Type alias for backward compatibility
-LabelConfig = Labels
-
 
 @dataclass
 class ReportSystemDefinition:

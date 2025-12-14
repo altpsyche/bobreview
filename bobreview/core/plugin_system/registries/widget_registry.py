@@ -22,24 +22,21 @@ class WidgetRegistry(BaseRegistry):
         super().__init__()
         self._widgets: Dict[str, Type] = {}
     
-    def register(self, widget_cls: Type, plugin_name: str = "") -> None:
+    def register(self, widget_id: str, widget_cls: Type, plugin_name: str = "") -> None:
         """
         Register a widget class.
         
         Parameters:
-            widget_cls: Widget class with `widget_type` attribute
+            widget_id: Unique identifier for the widget
+            widget_cls: Widget implementation class
             plugin_name: Name of the plugin registering this widget
         """
-        widget_type = getattr(widget_cls, 'widget_type', None)
-        if not widget_type:
-            raise ValueError(f"Widget class must have 'widget_type' attribute: {widget_cls}")
+        if widget_id in self._widgets:
+            logger.warning(f"Overwriting existing widget type: {widget_id}")
         
-        if widget_type in self._widgets:
-            logger.warning(f"Overwriting existing widget type: {widget_type}")
-        
-        self._widgets[widget_type] = widget_cls
-        self._register_component(f"widget:{widget_type}", plugin_name, overwrite=True)
-        logger.debug(f"Registered widget: {widget_type} from {plugin_name or 'core'}")
+        self._widgets[widget_id] = widget_cls
+        self._register_component(f"widget:{widget_id}", plugin_name, overwrite=True)
+        logger.debug(f"Registered widget: {widget_id} from {plugin_name or 'core'}")
     
     def get(self, widget_type: str) -> Optional[Type]:
         """Get a widget class by type."""

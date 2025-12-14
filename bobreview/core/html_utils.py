@@ -111,40 +111,6 @@ def get_shared_css() -> str:
     return css_path.read_text(encoding='utf-8')
 
 
-def get_theme_css_block(theme=None) -> 'Markup':
-    """
-    Get CSS :root block with theme variables for embedding in templates.
-    
-    This is a convenience wrapper that delegates to get_theme_css().
-    Kept for backward compatibility.
-    
-    Parameters:
-        theme: Theme ID string, ReportTheme instance, or dict with 'id' key
-    
-    Returns:
-        CSS string with :root { ... } block, or empty string if no theme
-        (wrapped in Markup to prevent HTML escaping)
-    """
-    from .theme_system import get_theme_css
-    from markupsafe import Markup
-    
-    if not theme:
-        return Markup('')
-    
-    # Extract theme_id from different input types
-    if isinstance(theme, str):
-        theme_id = theme
-    elif hasattr(theme, 'id'):
-        theme_id = theme.id
-    elif isinstance(theme, dict):
-        theme_id = theme.get('id', 'dark')
-    else:
-        return Markup('')
-    
-    # Delegate to unified get_theme_css (without base styles)
-    # get_theme_css already returns Markup, so this is safe
-    return get_theme_css(theme_id, mode='embedded', include_base=False)
-
 
 def get_trend_icon(trend: str) -> str:
     """

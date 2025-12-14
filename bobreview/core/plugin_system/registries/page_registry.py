@@ -22,20 +22,19 @@ class PageRegistry(BaseRegistry):
         super().__init__()
         self._pages: Dict[str, Any] = {}
     
-    def register(self, page: Any, plugin_name: str = "") -> None:
+    def register(self, page_id: str, page_def: Any, plugin_name: str = "") -> None:
         """
         Register a page definition.
         
         Parameters:
-            page: Page definition with `id` attribute
+            page_id: Unique identifier for the page
+            page_def: Page definition (dict or object with attributes)
             plugin_name: Name of the plugin registering this page
         """
-        page_id = getattr(page, 'id', getattr(page, 'page_id', str(page)))
-        
         if page_id in self._pages:
             logger.warning(f"Overwriting existing page: {page_id}")
         
-        self._pages[page_id] = page
+        self._pages[page_id] = page_def
         self._register_component(f"page:{page_id}", plugin_name, overwrite=True)
         logger.debug(f"Registered page: {page_id} from {plugin_name or 'core'}")
     

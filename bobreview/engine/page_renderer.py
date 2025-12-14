@@ -16,17 +16,18 @@ This class handles:
 import os
 from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Any, Optional, TYPE_CHECKING
+from typing import Dict, List, Any, Optional, Union, TYPE_CHECKING
 import jinja2
 
 from ..core import log_info, log_verbose, log_warning, log_error, image_to_base64
-from .schema import PageConfig, LabelConfig
+from .schema import PageConfig, Labels
 
 if TYPE_CHECKING:
     from ..core.template_engine import TemplateEngine
     from ..core.plugin_system import IExtensionPoint
     from ..core.config import ReportConfig
     from .schema import ReportSystemDefinition
+    from ..core.dataframe import DataFrame
 
 
 class PageRenderer:
@@ -62,7 +63,7 @@ class PageRenderer:
     
     def render_all_pages(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
         llm_results: Dict[str, str],
         input_dir: Path,
@@ -72,12 +73,15 @@ class PageRenderer:
         Render all enabled pages to the output directory.
         
         Parameters:
-            data_points: Parsed data points
+            data: DataFrame or List[Dict] with parsed data
             stats: Statistical analysis results
             llm_results: Generated LLM content
             input_dir: Input directory (for images)
             output_path: Output file path (determines output directory)
         """
+        # Convert DataFrame to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         # Pre-encode images if needed
         image_data_uris = self._encode_images(data_points, input_dir)
         
@@ -363,7 +367,7 @@ class PageRenderer:
                 'images_dir_rel': context.get('images_dir_rel'),
             }
             plugin_context = builder.build_context(
-                data_points=data_points,
+                data=data_points,  # Interface uses 'data' param
                 stats=stats,
                 config=self.config,
                 base_context=base_context
@@ -420,7 +424,7 @@ class PageRenderer:
                 
                 try:
                     chart_result = chart_generator.generate_chart(
-                        data_points=data_points,
+                        data=data_points,  # Interface uses 'data' param
                         stats=stats,
                         config=self.config,
                         chart_config=chart_config_dict

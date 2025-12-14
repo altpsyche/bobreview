@@ -17,6 +17,7 @@ from .chart_generator_registry import ChartGeneratorRegistry
 from .context_builder_registry import ContextBuilderRegistry
 from .template_path_registry import TemplatePathRegistry
 from .analyzer_registry import AnalyzerRegistry
+from .component_registry import ComponentRegistry
 
 __all__ = [
     'ThemeRegistry',
@@ -31,4 +32,5 @@ __all__ = [
     'ContextBuilderRegistry',
     'TemplatePathRegistry',
     'AnalyzerRegistry',
+    'ComponentRegistry',
 ]

@@ -6,14 +6,17 @@ This service handles all data ingestion tasks:
 - Parsing using configured parsers (via ParserFactory)
 - Validation against schema
 - Sampling and sorting
+
+Data flows through DataFrame for universal format compatibility.
 """
 
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 import random
 import logging
 
 from .base import BaseService, DataServiceError
+from ..core.dataframe import DataFrame
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +48,15 @@ class DataService(BaseService):
         from ..engine.parser_factory import ParserFactory
         self.factory = ParserFactory()  # Uses global extension point
     
-    def parse(
+    def parse_dataframe(
         self,
         input_dir: Path,
         data_source_config: Any,
         sample_size: Optional[int] = None,
         sort_by: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> DataFrame:
         """
-        Parse data from input directory.
+        Parse data and return as DataFrame (preferred method).
         
         Parameters:
             input_dir: Directory containing input files
@@ -62,45 +65,54 @@ class DataService(BaseService):
             sort_by: Optional field to sort by
             
         Returns:
-            List of parsed data points
-            
-        Raises:
-            DataServiceError: If parsing fails
+            DataFrame with parsed data
         """
         try:
-            # Create parser instance using factory
             parser = self.factory.create(data_source_config)
-            
-            # Parse directory
             data_points = parser.parse_directory(input_dir)
             
             if not data_points:
                 logger.warning(f"No data points found in {input_dir}")
-                return []
+                return DataFrame(source=str(input_dir))
             
             logger.info(f"Parsed {len(data_points)} data points from {input_dir}")
             
-            # Apply sampling if requested
-            if sample_size and sample_size < len(data_points):
-                # Preserve order by taking first N points
-                data_points = data_points[:sample_size]
+            df = DataFrame.from_dicts(
+                data_points,
+                source=str(input_dir),
+                plugin=getattr(data_source_config, 'type', None)
+            )
+            
+            if sample_size and sample_size < len(df):
+                df.rows = df.rows[:sample_size]
                 logger.debug(f"Sampled down to {sample_size} points")
             
-            # Sort if requested
-            if sort_by and data_points:
-                # Only sort if all points have the field
-                if all(sort_by in point for point in data_points):
-                    data_points.sort(key=lambda x: x[sort_by])
-                    logger.debug(f"Sorted by {sort_by}")
-                else:
-                    logger.warning(f"Cannot sort: field '{sort_by}' missing in some points")
+            if sort_by and len(df) > 0 and sort_by in df.column_names:
+                df = df.sort_by(sort_by)
+                logger.debug(f"Sorted by {sort_by}")
             
-            return data_points
+            return df
             
         except ValueError as e:
             raise DataServiceError(str(e)) from e
         except Exception as e:
             raise DataServiceError(f"Failed to parse data: {e}") from e
+    
+    def parse(
+        self,
+        input_dir: Path,
+        data_source_config: Any,
+        sample_size: Optional[int] = None,
+        sort_by: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Parse data (legacy method - prefer parse_dataframe).
+        
+        Returns:
+            List of parsed data points
+        """
+        df = self.parse_dataframe(input_dir, data_source_config, sample_size, sort_by)
+        return df.to_dicts()
     
     def validate(
         self,

@@ -353,12 +353,7 @@ class TestThemeToDict:
         assert 'warn' in result
         assert 'danger' in result
 
-    def test_contains_backward_compat_aliases(self):
-        """Result contains backward compatibility aliases."""
-        result = theme_to_dict(DARK_THEME)
-        assert result['border'] == result['border_subtle']
-        assert result['success'] == result['ok']
-        assert result['warning'] == result['warn']
+
 
     def test_none_theme_returns_empty_dict(self):
         """None theme returns empty dict."""

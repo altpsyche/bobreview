@@ -18,10 +18,10 @@ from jinja2 import (
 )
 
 if TYPE_CHECKING:
-    from ..engine.schema import LabelConfig
+    from ..engine.schema import Labels
 
 from .utils import format_number
-from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon, get_theme_css_block
+from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
 from .theme_system import get_theme_css
 from .plugin_system import get_extension_point
 
@@ -277,7 +277,6 @@ class TemplateEngine:
         """Register global template functions."""
         self.env.globals['get_css'] = get_shared_css
         self.env.globals['get_theme_css'] = get_theme_css  # Use unified ThemeSystem
-        self.env.globals['get_theme_css_block'] = get_theme_css_block  # Keep for compatibility
         
         def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: Optional[dict] = None) -> str:
             """
@@ -298,12 +297,45 @@ class TemplateEngine:
             return image_name
         
         self.env.globals['get_image_src'] = get_image_src
+        
+        # Render component - access components via extension point
+        def render_component(component_id: str, props: Optional[Dict[str, Any]] = None, **kwargs) -> 'Markup':
+            """
+            Render a plugin-defined UI component.
+            
+            Usage in templates:
+                {{ render_component('stat_card', {'title': 'Total', 'value': 42}) }}
+                {{ render_component('gauge', value=85, max=100) }}
+            
+            Parameters:
+                component_id: Component type ID (e.g., 'stat_card', 'gauge')
+                props: Dictionary of component properties
+                **kwargs: Additional properties (merged with props)
+            
+            Returns:
+                Rendered HTML (Markup-safe)
+            """
+            from markupsafe import Markup
+            
+            # Merge props with kwargs
+            all_props = dict(props or {})
+            all_props.update(kwargs)
+            
+            # Get registry via extension point
+            extension_point = get_extension_point()
+            registry = extension_point.get_registry()
+            
+            # Render the component
+            html = registry.components.render(component_id, all_props, {})
+            return Markup(html)
+        
+        self.env.globals['render_component'] = render_component
     
     def render(
         self, 
         template_name: str, 
         context: Dict[str, Any],
-        labels: Optional["LabelConfig"] = None
+        labels: Optional["Labels"] = None
     ) -> str:
         """
         Render a template with the given context.
@@ -311,7 +343,7 @@ class TemplateEngine:
         Parameters:
             template_name: Name of the template file (e.g., 'pages/homepage.html.j2')
             context: Dictionary of template variables (not mutated)
-            labels: Optional LabelConfig for UI text labels
+            labels: Optional Labels for UI text
         
         Returns:
             Rendered HTML string
@@ -329,7 +361,7 @@ class TemplateEngine:
         self, 
         template_string: str, 
         context: Dict[str, Any],
-        labels: Optional["LabelConfig"] = None
+        labels: Optional["Labels"] = None
     ) -> str:
         """
         Render an inline template string.
@@ -337,7 +369,7 @@ class TemplateEngine:
         Parameters:
             template_string: Raw Jinja2 template string
             context: Dictionary of template variables (not mutated)
-            labels: Optional LabelConfig for UI text labels
+            labels: Optional Labels for UI text
         
         Returns:
             Rendered string

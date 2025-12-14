@@ -1,0 +1,113 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# USER REPORT CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# This file is for END USERS to compose reports from plugin components.
+# 
+# TWO CONFIGURATION LAYERS:
+#   1. Plugin's report_systems/*.json → Plugin dev defines what's POSSIBLE
+#   2. This YAML file → End user decides what to USE
+#
+# The plugin provides building blocks (widgets, charts, analyzers).
+# You compose pages by picking which components to include.
+#
+# Usage:
+#   bobreview validate report_config.yaml  # Validate config
+#   bobreview build report_config.yaml     # Generate report
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: "My Custom Report"
+plugin: "my-plugin"  # Plugin that provides the components
+data_source: "./data/*.csv"  # Path pattern for your data files
+theme: "dark"  # Theme: dark, light, ocean, purple, terminal, sunset
+output_dir: "./output"
+
+# Optional metadata
+version: "1.0"
+author: "Your Name"
+description: "My custom report generated from data analysis"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGES
+# Define your report pages here. Each page contains components.
+# ─────────────────────────────────────────────────────────────────────────────
+
+pages:
+  # ─── Overview Page ─────────────────────────────────────────────────────────
+  - id: overview
+    title: "Overview"
+    layout: grid  # grid, flex, or single-column
+    nav_order: 1
+    components:
+      # Stat Card Widget
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Average Score"
+          value: "{{ stats.score.mean | round(1) }}"
+          subtitle: "across all items"
+          trend: "up"  # up, down, or empty
+          status: "ok"  # ok, warn, danger, neutral
+      
+      # Bar Chart
+      - type: chart
+        chart: bar
+        title: "Scores by Item"
+        x: name
+        y: score
+      
+      # LLM-generated summary
+      - type: llm
+        generator: summary
+  
+  # ─── Details Page ──────────────────────────────────────────────────────────
+  - id: details
+    title: "Details"
+    layout: single-column
+    nav_order: 2
+    components:
+      # Score Distribution Chart
+      - type: chart
+        chart: histogram
+        title: "Score Distribution"
+        y: score
+      
+      # Full Data Table
+      - type: data_table
+        columns:
+          - name
+          - score
+          - category
+        sortable: true
+        paginated: true
+        page_size: 25
+      
+      # LLM Recommendations
+      - type: llm
+        generator: recommendations
+
+  # ─── Custom Summary Page ───────────────────────────────────────────────────
+  - id: summary
+    title: "Summary"
+    layout: flex
+    nav_order: 3
+    components:
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Total Items"
+          value: "{{ data_points | length }}"
+      
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Max Score"
+          value: "{{ stats.score.max }}"
+          status: "ok"
+      
+      - type: widget
+        widget: stat_card  
+        config:
+          title: "Min Score"
+          value: "{{ stats.score.min }}"
+          status: "warn"
