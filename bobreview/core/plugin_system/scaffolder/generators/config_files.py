@@ -108,6 +108,7 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
                     "type": "jinja2",
                     "name": f"{safe_name}/pages/home.html.j2"
                 },
+                "llm_content": ["summary", "recommendations"],
                 "charts": [
                     {
                         "id": "score_chart",
@@ -165,75 +166,215 @@ def generate_user_report_config(name: str, safe_name: str, color_theme: str = 'd
     This is the CMS-style config that end users edit to compose reports
     from plugin-provided components.
     """
-    return f'''# ─────────────────────────────────────────────────────────────────────────────
-# USER REPORT CONFIGURATION
-# ─────────────────────────────────────────────────────────────────────────────
+    return f'''# ═══════════════════════════════════════════════════════════════════════════════
+# {name.upper()} REPORT CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════════
 #
-# This file is for END USERS to compose reports from plugin components.
-# Edit this file to customize your report's pages and content.
+# This YAML file lets you customize your report without coding.
+# Edit pages, add charts, configure LLM content — all by editing this file.
 #
-# TWO CONFIGURATION LAYERS:
-#   1. Plugin's report_systems/{safe_name}.json → Defines what's POSSIBLE
-#   2. This YAML file → Decides what to USE
+# QUICK START:
+#   1. Edit the sections below to customize your report
+#   2. Run: bobreview --plugin {safe_name} --dir ./sample_data
+#   3. Open the generated HTML report
 #
-# Usage:
-#   bobreview validate report_config.yaml  # Validate config
-#   bobreview build report_config.yaml     # Generate report
-# ─────────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# REPORT SETTINGS
+# ─────────────────────────────────────────────────────────────────────────────────
 
 name: "{name} Report"
-plugin: "{name}"
-data_source: "./sample_data/*.csv"
+plugin: "{safe_name}"
+data_source: "./sample_data/*.csv"    # Path to your data files (supports glob patterns)
+output_dir: "./output"                 # Where to save generated HTML
+
+# THEME OPTIONS: dark, light, ocean, purple, terminal, sunset
 theme: "{color_theme}"
-output_dir: "./output"
+
+# Optional metadata (shown in report footer)
+version: "1.0"
+author: ""
+description: "Generated report for {name} data analysis"
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# PAGES
+# ─────────────────────────────────────────────────────────────────────────────────
+#
+# Each page becomes an HTML file with navigation links.
+#
+# PAGE PROPERTIES:
+#   id:         Unique identifier (used in URLs)
+#   title:      Page title shown in nav and header
+#   layout:     grid | flex | single-column
+#   nav_order:  Sort order in navigation (lower = first)
+#   components: List of widgets, charts, tables, or LLM content
+#
+# ─────────────────────────────────────────────────────────────────────────────────
 
 pages:
-  # ─── Overview Page ─────────────────────────────────────────────────────────
+  # ┌─────────────────────────────────────────────────────────────────────────────┐
+  # │ OVERVIEW PAGE                                                                │
+  # └─────────────────────────────────────────────────────────────────────────────┘
   - id: overview
     title: "Overview"
-    layout: grid
+    layout: grid           # grid = responsive cards, flex = horizontal, single-column = stacked
     nav_order: 1
     components:
-      # Stat Card Widget
+      # ── STAT CARDS ──────────────────────────────────────────────────────────────
+      # Display key metrics in highlighted cards
+      #
+      # OPTIONS:
+      #   title:    Card header
+      #   value:    Number or template expression like {{{{ stats.score.mean }}}}
+      #   subtitle: Small text below value
+      #   status:   ok (green) | warn (yellow) | danger (red) | neutral
+      #   trend:    up | down | (empty for no arrow)
+      
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Total Items"
+          value: "{{{{ data_points | length }}}}"
+          subtitle: "in dataset"
+      
       - type: widget
         widget: stat_card
         config:
           title: "Average Score"
           value: "{{{{ stats.score.mean | round(1) }}}}"
           subtitle: "across all items"
-      
-      # Bar Chart
+          status: ok
+
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Highest Score"
+          value: "{{{{ stats.score.max }}}}"
+          status: ok
+          trend: up
+
+      - type: widget
+        widget: stat_card
+        config:
+          title: "Lowest Score"
+          value: "{{{{ stats.score.min }}}}"
+          status: warn
+          trend: down
+
+      # ── CHARTS ──────────────────────────────────────────────────────────────────
+      # Visualize your data with Chart.js
+      #
+      # CHART TYPES:
+      #   bar       - Vertical bars comparing values
+      #   line      - Trend line with gradient fill
+      #   histogram - Distribution of values (auto-binned)
+      #   doughnut  - Pie chart grouped by category
+      #   scatter   - X-Y scatter plot
+      #
+      # OPTIONS:
+      #   title: Chart title
+      #   x:     Field for X-axis (e.g., name, category)
+      #   y:     Field for Y-axis (e.g., score, value)
+
       - type: chart
         chart: bar
         title: "Scores by Item"
         x: name
         y: score
-      
-      # LLM-generated summary
+
+      - type: chart
+        chart: line
+        title: "Score Trend"
+        x: name
+        y: score
+
+      # ── LLM CONTENT ─────────────────────────────────────────────────────────────
+      # AI-generated insights using your configured LLM provider
+      #
+      # AVAILABLE GENERATORS (defined in report_systems/{safe_name}.json):
+      #   summary         - Executive summary of the data
+      #   recommendations - Actionable recommendations
+      #
+      # To add more generators, edit report_systems/{safe_name}.json
+
       - type: llm
         generator: summary
 
-  # ─── Details Page ──────────────────────────────────────────────────────────
+  # ┌─────────────────────────────────────────────────────────────────────────────┐
+  # │ DETAILS PAGE                                                                 │
+  # └─────────────────────────────────────────────────────────────────────────────┘
   - id: details
     title: "Details"
     layout: single-column
     nav_order: 2
     components:
-      # Score Distribution Chart
+      # ── HISTOGRAM ───────────────────────────────────────────────────────────────
       - type: chart
         chart: histogram
         title: "Score Distribution"
         y: score
-      
-      # Full Data Table
+
+      # ── CATEGORY BREAKDOWN ──────────────────────────────────────────────────────
+      - type: chart
+        chart: doughnut
+        title: "By Category"
+        x: category
+        y: score
+
+      # ── DATA TABLE ──────────────────────────────────────────────────────────────
+      # Display raw data in a sortable table
+      #
+      # OPTIONS:
+      #   columns:   List of field names to show
+      #   sortable:  Enable column sorting (true/false)
+      #   paginated: Enable pagination (true/false)
+      #   page_size: Rows per page (default: 25)
+
       - type: data_table
         columns:
           - name
           - score
           - category
         sortable: true
+        paginated: true
+        page_size: 10
 
-      # LLM Recommendations
+      # ── LLM RECOMMENDATIONS ─────────────────────────────────────────────────────
       - type: llm
         generator: recommendations
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HOW TO ADD MORE PAGES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Copy this template and add to the pages list above:
+#
+#   - id: my_new_page
+#     title: "My New Page"
+#     layout: grid
+#     nav_order: 3
+#     components:
+#       - type: chart
+#         chart: bar
+#         title: "My Chart"
+#         x: name
+#         y: score
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# AVAILABLE TEMPLATE VARIABLES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Use these in widget values with {{{{ }}}} syntax:
+#
+#   data_points             - List of all data items
+#   data_points | length    - Number of items
+#   stats.score.mean        - Average score
+#   stats.score.min         - Minimum score
+#   stats.score.max         - Maximum score
+#   stats.score.median      - Median score
+#   stats.count             - Total count
+#
+# ═══════════════════════════════════════════════════════════════════════════════
 '''
+

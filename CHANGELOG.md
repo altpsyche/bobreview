@@ -9,9 +9,137 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.8] - 2025-12-14
 
-### Plugin Component Types (NEW)
+> **MIGRATION GUIDE**: This release standardizes all API signatures and removes backward compatibility shims. Follow this guide to update your plugins.
 
-New `ComponentInterface` for reusable UI components:
+---
+
+### Breaking Changes Summary
+
+| Category | Old | New |
+|----------|-----|-----|
+| Interface params | `data_points: List[Dict]` | `data: Union[List[Dict], DataFrame]` |
+| Type alias | `LabelConfig` | `Labels` |
+| Theme function | `get_theme_css_block()` | `get_theme_css()` |
+| Theme vars | `theme.border`, `theme.success` | `theme.border_subtle`, `theme.ok` |
+| Analyzer registry | `get_analyzer_registry()` | `registry.analyzers` |
+
+---
+
+### Interface Signature Changes
+
+All core interfaces now accept `Union[List[Dict], DataFrame]` as the `data` parameter:
+
+#### LLMGeneratorInterface.generate()
+
+```diff
+-def generate(self, data_points: List[Dict], stats, config, context):
++def generate(self, data: Union[List[Dict], DataFrame], stats, config, context):
++    data_points = list(data)  # Convert internally if needed
+```
+
+#### ChartGeneratorInterface.generate_chart()
+
+```diff
+-def generate_chart(self, data_points: List[Dict], stats, config, chart_config):
++def generate_chart(self, data: Union[List[Dict], DataFrame], stats, config, chart_config):
++    data_points = list(data)  # Convert internally if needed
+```
+
+#### ContextBuilderInterface.build_context()
+
+```diff
+-def build_context(self, data_points: List[Dict], stats, config, base_context):
++def build_context(self, data: Union[List[Dict], DataFrame], stats, config, base_context):
++    data_points = list(data)  # Convert internally if needed
+```
+
+---
+
+### Service Call Parameter Changes
+
+All service method calls must use `data=` instead of `data_points=`:
+
+#### AnalyticsService.analyze()
+
+```diff
+-analytics.analyze(data_points=data, metrics=metrics, ...)
++analytics.analyze(data=data, metrics=metrics, ...)
+```
+
+#### LLMService.generate_all()
+
+```diff
+-llm_service.generate_all(data_points=data_points, stats=stats, ...)
++llm_service.generate_all(data=data, stats=stats, ...)
+```
+
+#### PageRenderer calls
+
+```diff
+# _apply_context_builder
+-builder.build_context(data_points=data_points, ...)
++builder.build_context(data=data_points, ...)
+
+# _generate_charts  
+-chart_generator.generate_chart(data_points=data_points, ...)
++chart_generator.generate_chart(data=data_points, ...)
+```
+
+---
+
+### Removed Functions & Aliases
+
+| Removed | Replacement | File |
+|---------|-------------|------|
+| `LabelConfig` | `Labels` | `engine/schema.py` |
+| `get_theme_css_block(theme)` | `get_theme_css(theme_id)` | `core/html_utils.py` |
+| `get_analyzer_registry()` | `registry.analyzers` | N/A |
+
+---
+
+### Theme Variable Renames
+
+Update your Jinja2 templates:
+
+```diff
+-{{ theme.border }}
++{{ theme.border_subtle }}
+
+-{{ theme.success }}
++{{ theme.ok }}
+
+-{{ theme.warning }}
++{{ theme.warn }}
+```
+
+---
+
+### Scaffolder Improvements
+
+New plugins now generate with complete features:
+
+| Feature | Description |
+|---------|-------------|
+| **Multiple Chart Types** | Bar, Line (gradient fill), Histogram, Doughnut (multi-color) |
+| **Pages Config** | Includes `filename`, `nav_label`, `nav_order`, `charts[]` |
+| **Template Config** | Uses `{"type": "jinja2", "name": "path"}` format |
+| **Analyzer Signature** | Accepts `**kwargs` for `metrics`, `metric_config` |
+
+---
+
+### New Features
+
+#### DataFrame Support
+
+```python
+from bobreview.core.dataframe import DataFrame
+
+df = DataFrame.from_dicts([{'name': 'A', 'score': 95}])
+df.filter(lambda r: r['score'] > 90)
+df.sort_by('score', descending=True)
+```
+
+#### ComponentInterface
 
 ```python
 from bobreview.core.api import ComponentInterface
@@ -23,120 +151,64 @@ class StatCardComponent(ComponentInterface):
     
     def render(self, props, context) -> str:
         return f'<div class="stat-card">{props["value"]}</div>'
-    
-    # Optional: async rendering for data fetching
-    @property
-    def is_async(self) -> bool:
-        return True
-    
-    async def render_async(self, props, context) -> str:
-        data = await fetch_api(props['url'])
-        return self._format(data)
 ```
 
-- **New**: `ComponentInterface` with `render()` and `render_async()`
-- **New**: `ComponentRegistry` (14th registry) with instance caching
-- **New**: `helper.add_component(id, class)` for plugin registration
-- **New**: `render_component()` template function
-- **New**: Scaffolder generates `components.py` with DataFrame-aware examples
+#### Multiple Chart Types
 
-### DataFrame Architecture (Inspired by Grafana)
+Chart generator now supports:
+- `bar` — Standard bar chart with theme colors
+- `line` — Line chart with gradient fill
+- `histogram` — Auto-binning histogram
+- `pie` / `doughnut` — Multi-color palette from theme
 
-Universal data format for all components:
-
-```python
-from bobreview.core.dataframe import DataFrame
-
-df = DataFrame.from_dicts([{'name': 'A', 'score': 95}])
-df.filter(lambda r: r['score'] > 90)
-df.sort_by('score', descending=True)
-```
-
-- **New**: `core/dataframe.py` — DataFrame class with filter, sort, select
-- **Updated**: All interfaces accept `Union[List[Dict], DataFrame]`
-- **Updated**: `DataService.parse_dataframe()` returns DataFrame
-
-### Removed (Breaking Changes)
-
-Items removed and their replacements:
-
-| Removed | Replaced By | Location |
-|---------|-------------|----------|
-| `LabelConfig` alias | `Labels` | `engine/schema.py` |
-| `get_theme_css_block()` | `get_theme_css()` | `core/html_utils.py` |
-| Theme dict aliases (`border`, `success`, `warning`) | Direct names (`border_subtle`, `ok`, `warn`) | `core/themes.py` |
-
-### Plugin Refactor Guide
-
-If your plugin uses old patterns, update as follows:
-
-**1. Type imports:**
-```diff
--from bobreview.engine.schema import LabelConfig
-+from bobreview.engine.schema import Labels
-```
-
-**2. Theme CSS:**
-```diff
--from bobreview.core import get_theme_css_block
--css = get_theme_css_block(theme)
-+from bobreview.core import get_theme_css
-+css = get_theme_css(theme_id)
-```
-
-**3. Interface signatures (if custom implementations):**
-```diff
--def generate(self, data_points: List[Dict], ...):
-+def generate(self, data: Union[List[Dict], DataFrame], ...):
-+    data_points = list(data) if hasattr(data, '__iter__') else data
-```
-
-**4. Add components (optional new feature):**
-```python
-# In plugin on_load():
-from .components import MyStatCard
-helper.add_component('my_stat_card', MyStatCard)
-```
-
-**5. Template theme variables:**
-```diff
--{{ theme.border }}
-+{{ theme.border_subtle }}
--{{ theme.success }}
-+{{ theme.ok }}
-```
+---
 
 ### Bug Fixes
 
-**Scaffolder Plugin Generation:**
-- Fixed `report_system.json` missing required `pages` field
-- Added required page fields: `filename`, `nav_label`, `nav_order`
-- Fixed template config format to use `{"type": "jinja2", "name": "path"}`
-- Fixed analyzer signature to accept `**kwargs` from AnalyticsService
+| File | Issue | Fix |
+|------|-------|-----|
+| `executor.py` | `analyze_data()` used undefined `data_points` | Added `data_points = list(data)` |
+| `executor.py` | Service calls used `data_points=` | Changed to `data=` |
+| `page_renderer.py` | Interface calls used `data_points=` | Changed to `data=` |
+| `pipeline.py` | Service calls used `data_points=` | Changed to `data=` |
+| `config_files.py` | Missing `pages` in report_system.json | Added complete page structure |
+| `config_files.py` | Template as string | Changed to dict `{"type", "name"}` |
+| `config_files.py` | Missing `llm_content` in pages | Added `llm_content: ["summary", "recommendations"]` |
+| `python_files.py` | Analyzer missing `**kwargs` | Added `**kwargs` to signature |
+| `details.html.j2` | `charts` undefined error | Added `{% if charts is defined %}` |
 
-**Executor Data Parameter Consistency:**
-- Fixed `ReportSystemExecutor.analyze_data()` missing `data_points` conversion
-- Fixed all interface calls to use `data=` param instead of `data_points=`:
-  - `AnalyticsService.analyze(data=...)`
-  - `LLMService.generate_all(data=...)`
-  - `ContextBuilderInterface.build_context(data=...)`
-  - `ChartGeneratorInterface.generate_chart(data=...)`
+---
 
-**Template Fixes:**
-- Fixed `details.html.j2` template to check `{% if charts is defined %}`
+### Added
 
-### PluginHelper API Improvements
+- **ComponentInterface**: New interface for reusable UI components with `render()` and `render_async()`
+- **ComponentRegistry**: 14th registry with instance caching for component classes
+- **DataFrame class**: `core/dataframe.py` — filter, sort, select operations
+- **Multiple chart types**: Bar, Line (gradient), Histogram, Doughnut (multi-color)
+- **Chart generator methods**: `_generate_line_chart()`, `_generate_pie_chart()`
+- **Template helper**: `render_component()` function for Jinja2 templates
+- **ReportBuilder service** (`core/report_builder.py`): Builds reports from user YAML configs
+  - Converts `UserReportConfig` → `ReportSystemDefinition` → `ReportSystemExecutor`
+  - `get_report_builder()` global accessor
+  - `list_available_components()` for discovering plugin components
+- **UserReportConfig schema** (`core/report_config.py`): CMS-style YAML report composition
+  - `UserPageConfig`, `UserWidgetConfig`, `UserChartConfig`, `UserLLMConfig` dataclasses
+  - `load_user_report_config()`, `validate_user_report_config()`, `save_user_report_config()`
+- **Example config**: `examples/report_config.yaml` — Complete user report YAML example
+
+### Changed
+
+#### PluginHelper API Improvements
 
 - **Complete API Coverage**: All 12 registries now have dedicated helper methods:
-  - Added `helper.add_widget(id, class)` for UI widgets
-  - Added `helper.add_page(id, def)` for page definitions
-  - Added `helper.add_chart_type(id, config)` for chart configurations
-  - Fixed docstring typo (`add_report_system_from_json` → `add_report_systems_from_dir`)
+  - `helper.add_widget(id, class)` for UI widgets
+  - `helper.add_page(id, def)` for page definitions
+  - `helper.add_chart_type(id, config)` for chart configurations
+  - `helper.add_component(id, class)` for ComponentInterface implementations
 
 - **Unified Analyzer Registration**: `AnalyzerRegistry` is now part of `PluginRegistry`
-  - **Breaking**: Removed `get_analyzer_registry()` — use `helper.add_analyzer()` or `registry.analyzers`
-  - `AnalyzerRegistry` now extends `BaseRegistry` for plugin ownership tracking
-  - `AnalyticsService` now correctly uses `registry.analyzers`
+  - Use `helper.add_analyzer()` or `registry.analyzers`
+  - `AnalyzerRegistry` extends `BaseRegistry` for plugin ownership tracking
 
 - **Improved `setup_complete_report_system()`**: Now includes `analyzer_func` parameter
   ```python
@@ -151,12 +223,50 @@ helper.add_component('my_stat_card', MyStatCard)
   )
   ```
 
-- **Scaffolder Generates Complete Examples**: Generated plugins now demonstrate all advanced features:
-  - Uses `helper.setup_complete_report_system()` for one-call component registration
-  - **All pages** (home, details, summary) registered via `helper.add_page()` for consistency
-  - Creates `widgets.py` with reusable StatCard component
-  - Registers custom gauge chart type via `helper.add_chart_type()`
-  - Report system JSON now contains only config (data source, LLM settings) — no hardcoded pages
+#### Scaffolder Enhancements
+
+- Generated plugins now include 4 chart types (bar, line, histogram, doughnut)
+- Uses `helper.setup_complete_report_system()` for one-call component registration
+- All pages registered via `helper.add_page()` for consistency
+- Creates `widgets.py` with reusable StatCard component
+- Report system JSON now includes `pages[]` with complete structure
+- **Enhanced `report_config.yaml`** with comprehensive inline documentation:
+  - Component type reference (widget, chart, data_table, llm)
+  - Chart type options (bar, line, histogram, doughnut, scatter)
+  - Stat card configuration (status, trend, subtitle)
+  - Template variable reference (stats.score.mean, etc.)
+  - How-to-add-pages template
+
+---
+
+### Files Modified
+
+Core:
+- `bobreview/core/api.py` — Updated interface docstrings
+- `bobreview/core/config.py` — Removed compat comment
+- `bobreview/core/plugin_system/registry.py` — Updated docstring
+- `bobreview/core/plugin_system/manifest.py` — Updated format comment
+
+Engine:
+- `bobreview/engine/executor.py` — Fixed data param, DI comment
+- `bobreview/engine/page_renderer.py` — Fixed interface calls
+
+Services:
+- `bobreview/services/analytics_service.py` — Fixed docstring example
+- `bobreview/services/chart_service.py` — Fixed docstring example
+- `bobreview/services/llm_service.py` — Fixed docstring example
+- `bobreview/services/pipeline.py` — Fixed service calls
+- `bobreview/services/data_service.py` — Updated method docstring
+
+Scaffolder:
+- `scaffolder/generators/config_files.py` — Added charts to pages
+- `scaffolder/generators/python_files.py` — Added line/pie/doughnut charts
+- `scaffolder/templates/pages/home.html.j2` — Added trend chart canvas
+- `scaffolder/templates/pages/details.html.j2` — Added category chart canvas
+
+Docs:
+- `docs/CORE_API.md` — `LabelConfig` → `Labels`
+- `docs/PLUGIN_DEVELOPMENT_GUIDE.md` — Updated chart generator example
 
 ## [1.0.7] - 2025-12-12
 
@@ -1019,6 +1129,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.8]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.4...v1.0.5

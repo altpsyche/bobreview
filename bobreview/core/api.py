@@ -202,18 +202,18 @@ class LLMGeneratorInterface(ABC):
     Core API: Interface for LLM content generators.
     
     Plugins implement this to provide custom LLM-powered content generation.
-    The generator takes data points, statistics, and configuration to produce
+    The generator takes data, statistics, and configuration to produce
     AI-generated content (text, structured data, etc.).
     
     Example:
         class MyGenerator(LLMGeneratorInterface):
-            def generate(self, data_points, stats, config, context):
+            def generate(self, data, stats, config, context):
+                # Convert to list for internal use
+                data_points = list(data)
                 # Build prompt from data
                 prompt = self._build_prompt(data_points, stats)
-                # Call LLM
-                response = call_llm(prompt, config.llm)
-                # Process response
-                return self._process_response(response)
+                # Call LLM and process response
+                return call_llm(prompt, config.llm)
     """
     
     @abstractmethod
@@ -262,7 +262,9 @@ class ChartGeneratorInterface(ABC):
     
     Example:
         class MyChartGenerator(ChartGeneratorInterface):
-            def generate_chart(self, data_points, stats, config, chart_config):
+            def generate_chart(self, data, stats, config, chart_config):
+                # Convert to list for internal use
+                data_points = list(data)
                 # Generate Chart.js JSON
                 return json.dumps({
                     'type': 'line',
@@ -319,7 +321,9 @@ class ContextBuilderInterface(ABC):
     
     Example:
         class MyContextBuilder(ContextBuilderInterface):
-            def build_context(self, data_points, stats, config, base_context):
+            def build_context(self, data, stats, config, base_context):
+                # Convert to list for internal use
+                data_points = list(data)
                 # Add custom data
                 base_context['custom_metric'] = self._calculate_custom(data_points)
                 base_context['custom_charts'] = self._generate_charts(stats)

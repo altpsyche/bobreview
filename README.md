@@ -2,7 +2,7 @@
 
 **Extensible Report Generation Framework** — Generate professional HTML reports from any data using LLM-powered analysis.
 
-![Version](https://img.shields.io/badge/version-1.0.7-blue)
+![Version](https://img.shields.io/badge/version-1.0.8-blue)
 ![Python](https://img.shields.io/badge/python-3.10+-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -82,13 +82,14 @@ xdg-open report.html # Linux
 |---------|-------------|
 | **Plugin Scaffolding** | `bobreview plugins create` generates a complete plugin structure |
 | **PluginHelper API** | Simple facade for registering parsers, themes, templates |
+| **YAML Report Config** | CMS-style report composition via `report_config.yaml` |
 | **Custom CSS Themes** | Separate `theme.css` and `plugin.css` for easy customization |
 | **Multi-LLM Support** | OpenAI, Anthropic Claude, local Ollama |
 | **JSON Report Systems** | Define analysis pipelines declaratively |
 | **Markdown → HTML** | LLM responses rendered with beautiful styling |
 | **Intelligent Caching** | Cache LLM responses to save costs |
 | **Standalone HTML** | Images embedded as base64 for easy sharing |
-| **Extensible Registry** | 12 registries for themes, parsers, generators, etc. |
+| **Extensible Registry** | 14 registries for themes, parsers, generators, components |
 ---
 
 ## CLI Commands
@@ -220,6 +221,79 @@ bobreview plugins create my-plugin --template minimal
 --verbose              # Detailed output
 --no-cache             # Disable caching
 --clear-cache          # Clear cache before run
+```
+
+---
+
+## Customizing Reports with YAML
+
+Each plugin includes a `report_config.yaml` that lets you customize the report without coding. Edit this file to add pages, change charts, configure widgets, and control LLM content.
+
+### Open the Config
+
+```bash
+# After creating a plugin
+cd ~/.bobreview/plugins/my_plugin/
+code report_config.yaml   # or open in any editor
+```
+
+### Add a New Page
+
+```yaml
+pages:
+  - id: my_page
+    title: "My Analysis"
+    layout: grid          # grid | flex | single-column
+    nav_order: 3
+    components:
+      - type: chart
+        chart: bar
+        title: "My Chart"
+        x: name
+        y: score
+```
+
+### Component Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `widget` | Stat cards, badges | `{ type: widget, widget: stat_card, config: {...} }` |
+| `chart` | Chart.js visualizations | `{ type: chart, chart: bar, x: name, y: score }` |
+| `data_table` | Sortable data tables | `{ type: data_table, columns: [name, score] }` |
+| `llm` | AI-generated content | `{ type: llm, generator: summary }` |
+
+### Chart Types
+
+| Chart | Use Case |
+|-------|----------|
+| `bar` | Compare values across categories |
+| `line` | Show trends over time/sequence |
+| `histogram` | Distribution of values |
+| `doughnut` | Category breakdown |
+| `scatter` | X-Y correlations |
+
+### Template Variables
+
+Use these in widget values with `{{ }}` syntax:
+
+| Variable | Description |
+|----------|-------------|
+| `data_points \| length` | Total item count |
+| `stats.score.mean` | Average value |
+| `stats.score.min` | Minimum value |
+| `stats.score.max` | Maximum value |
+
+### Example: Full Stat Card
+
+```yaml
+- type: widget
+  widget: stat_card
+  config:
+    title: "Performance Score"
+    value: "{{ stats.score.mean | round(1) }}"
+    subtitle: "average across all items"
+    status: ok        # ok (green), warn (yellow), danger (red)
+    trend: up         # up, down, or empty
 ```
 
 ---
@@ -437,9 +511,11 @@ bobreview/
 │   │   ├── loader.py         # Plugin discovery & loading
 │   │   ├── registry.py       # Component registration
 │   │   ├── plugin_helper.py  # PluginHelper facade
-│   │   ├── scaffolder.py     # Plugin scaffolding
-│   │   └── registries/       # 12 focused registries
+│   │   ├── scaffolder/       # Plugin scaffolding
+│   │   └── registries/       # 14 focused registries (incl. ComponentRegistry)
 │   ├── template_engine.py    # Jinja2 with custom filters
+│   ├── report_config.py      # User YAML config schema
+│   ├── report_builder.py     # ReportBuilder service
 │   ├── html_utils.py         # Markdown→HTML, sanitization
 │   └── config.py             # ReportConfig
 ├── engine/

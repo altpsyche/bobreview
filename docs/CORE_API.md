@@ -8,8 +8,11 @@
 
 - [Architecture Overview](#architecture-overview)
 - [Core Module (`core/`)](#core-module)
+  - [DataFrame](#dataframe)
   - [Interfaces (`api.py`)](#interfaces)
   - [Configuration (`config.py`, `config_classes.py`)](#configuration)
+  - [Report Configuration (`report_config.py`)](#report-configuration)
+  - [Report Builder (`report_builder.py`)](#report-builder)
   - [Themes](#themes)
   - [Template Engine](#template-engine)
   - [HTML Utilities](#html-utilities)
@@ -55,11 +58,13 @@ bobreview/
 │   ├── cache.py             # LLMCache
 │   ├── utils.py             # Logging, formatting
 │   ├── template_engine.py   # Jinja2 template loading
+│   ├── report_config.py     # User report YAML schema
+│   ├── report_builder.py    # ReportBuilder service
 │   └── plugin_system/       # Plugin infrastructure
 │       ├── base.py          # BasePlugin ABC
 │       ├── registry.py      # PluginRegistry composition
 │       ├── loader.py        # PluginLoader discovery
-│       └── registries/      # 12 focused registries
+│       └── registries/      # 14 focused registries (incl. ComponentRegistry)
 │
 ├── services/                # Pluggable services
 │   ├── container.py         # ServiceContainer (DI)
@@ -293,6 +298,77 @@ class ReportConfig:
     cache: CacheConfig = None           # Auto-initialized
     execution: ExecutionConfig = None   # Auto-initialized
     output: OutputConfig = None         # Auto-initialized
+```
+
+---
+
+### Report Configuration
+
+Located in `core/report_config.py`. Schema for end-user YAML report composition.
+
+```python
+@dataclass
+class UserReportConfig:
+    """User-defined report configuration (YAML)."""
+    name: str
+    plugin: str          # Plugin that provides components
+    data_source: str     # Path pattern for data files
+    theme: str = "dark"
+    output_dir: str = "./output"
+    pages: List[UserPageConfig] = field(default_factory=list)
+
+@dataclass
+class UserPageConfig:
+    """Configuration for a single page."""
+    id: str
+    title: str
+    layout: Literal["grid", "flex", "single-column"] = "single-column"
+    nav_order: int = 0
+    enabled: bool = True
+    components: List[Dict[str, Any]] = field(default_factory=list)
+
+# Utility functions
+def load_user_report_config(config_path: Union[str, Path]) -> UserReportConfig: ...
+def validate_user_report_config(config: UserReportConfig) -> List[str]: ...
+def save_user_report_config(config: UserReportConfig, output_path: Union[str, Path]): ...
+```
+
+---
+
+### Report Builder
+
+Located in `core/report_builder.py`. Builds reports from user YAML configs.
+
+```python
+class ReportBuilder:
+    """Builds reports from user YAML configuration."""
+    
+    def build(
+        self,
+        config_path: str,
+        output_dir: Optional[str] = None,
+        dry_run: bool = False
+    ) -> Dict[str, Any]:
+        """Build a report from a user configuration file."""
+        ...
+    
+    def list_available_components(
+        self, 
+        plugin_name: Optional[str] = None
+    ) -> Dict[str, List[str]]:
+        """List all available components from plugins."""
+        ...
+
+# Global access
+def get_report_builder() -> ReportBuilder: ...
+```
+
+**Usage:**
+```python
+from bobreview.core.report_builder import get_report_builder
+
+builder = get_report_builder()
+result = builder.build("report_config.yaml", output_dir="./output")
 ```
 
 ---
@@ -760,7 +836,7 @@ class DataService(BaseService):
     
     def validate(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],
         required_fields: List[str]
     ) -> Dict[str, Any]: ...  # {'valid': bool, 'errors': List, 'warnings': List}
     
@@ -781,7 +857,7 @@ Located in `services/analytics_service.py`.
 class AnalyticsService(BaseService):
     def analyze(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],
         metrics: List[str],
         metrics_config: Any,
         report_config: Any = None,
@@ -803,7 +879,7 @@ class AnalyticsService(BaseService):
     
     def classify_performance_zones(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],
         metric: str,
         high_threshold: float,
         low_threshold: float
@@ -863,7 +939,7 @@ class LLMService(BaseService):
     def generate(
         self,
         generator_config: LLMGeneratorConfig,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],
         stats: Dict[str, Any],
         context: Dict[str, Any],
         dry_run: bool = False,
@@ -873,7 +949,7 @@ class LLMService(BaseService):
     def generate_all(
         self,
         generators: List[LLMGeneratorConfig],
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], DataFrame],
         stats: Dict[str, Any],
         context: Dict[str, Any],
         dry_run: bool = False,
@@ -942,9 +1018,9 @@ class ReportSystemExecutor:
     
     def execute(self, input_dir: Path, output_path: Path) -> bool: ...
     def parse_data(self, input_dir: Path) -> List[Dict[str, Any]]: ...
-    def analyze_data(self, data_points: List[Dict[str, Any]]) -> Dict[str, Any]: ...
-    def generate_llm_content(self, data_points, stats) -> Dict[str, str]: ...
-    def generate_pages(self, data_points, stats, llm_results, input_dir, output_path): ...
+    def analyze_data(self, data: Union[List[Dict], DataFrame]) -> Dict[str, Any]: ...
+    def generate_llm_content(self, data, stats) -> Dict[str, str]: ...
+    def generate_pages(self, data, stats, llm_results, input_dir, output_path): ...
 ```
 
 **Pipeline Steps**:

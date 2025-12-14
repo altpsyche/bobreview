@@ -44,7 +44,7 @@ class PluginRegistry:
         # Plugin registers a widget (new way - direct access)
         registry.widgets.register(MyCustomWidget)
         
-        # Or use backward-compatible methods
+        # Or use convenience methods
         registry.register_widget(MyCustomWidget)
         
         # Application queries widgets

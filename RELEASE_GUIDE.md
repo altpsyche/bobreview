@@ -2,9 +2,9 @@
 
 ## Extensible Report Generation Framework
 
-Version 1.0.7 - Plugin System
+Version 1.0.8 - Standardized APIs & DataFrame Support
 
-### What's New in v1.0.7
+### What's New in v1.0.8
 
 - **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
   - Simplified registration API: `add_data_parser()`, `add_theme()`, `add_templates()`
@@ -102,7 +102,7 @@ bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama
 bobreview --version
 ```
 
-You should see: `bobreview 1.0.7`
+You should see: `bobreview 1.0.8`
 
 ---
 
@@ -355,5 +355,5 @@ python -c "from bobreview.core import ReportConfig; print('OK')"
 
 ---
 
-**BobReview v1.0.7** - Extensible report generation framework  
+**BobReview v1.0.8** - Extensible report generation framework  
 MIT License | Focused Architecture - SOLID & DRY Principles

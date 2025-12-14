@@ -379,11 +379,11 @@ This generates a complete plugin with:
 - Read [README.md](README.md) for complete documentation
 - Check [INSTALL.md](INSTALL.md) for advanced installation
 - Review [ROADMAP.md](ROADMAP.md) for upcoming features
-- See [CHANGELOG.md](CHANGELOG.md) for v1.0.7 changes
+- See [CHANGELOG.md](CHANGELOG.md) for v1.0.8 changes
 - Try different configurations and explore options
 
 ---
 
-**BobReview v1.0.7** - Plugin System  
+**BobReview v1.0.8** - DataFrame & Standardized APIs  
 Extensible report generation framework.
 

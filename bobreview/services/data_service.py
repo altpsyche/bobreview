@@ -106,7 +106,7 @@ class DataService(BaseService):
         sort_by: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Parse data (legacy method - prefer parse_dataframe).
+        Parse data and return as list of dicts.
         
         Returns:
             List of parsed data points

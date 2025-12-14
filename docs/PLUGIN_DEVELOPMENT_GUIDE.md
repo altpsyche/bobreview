@@ -170,7 +170,11 @@ class MyCsvParser(DataParserInterface):
 from typing import List, Dict, Any
 import statistics
 
-def analyze_my_data(data_points: List[Dict[str, Any]], config=None) -> Dict[str, Any]:
+def analyze_my_data(
+    data_points: List[Dict[str, Any]],
+    config=None,
+    **kwargs  # Accept metrics, metric_config from AnalyticsService
+) -> Dict[str, Any]:
     values = [p.get('value', 0) for p in data_points]
     
     if not values:
@@ -436,11 +440,14 @@ class MyContextBuilder(ContextBuilderInterface):
     
     def build_context(
         self,
-        data_points: List[Dict[str, Any]],
+        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: Any,
-        page_config: Dict[str, Any]
+        base_context: Dict[str, Any]
     ) -> Dict[str, Any]:
+        # Convert to list for internal use
+        data_points = list(data) if hasattr(data, '__iter__') else data
+        
         critical = None
         if data_points:
             critical_idx = max(range(len(data_points)), 

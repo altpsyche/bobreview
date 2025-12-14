@@ -15,7 +15,7 @@ from .config_classes import (
     OutputConfig,
 )
 
-# Re-export for backward compatibility
+# Re-exports from models module
 __all__ = [
     'ReportConfig',
     'ThresholdConfig',

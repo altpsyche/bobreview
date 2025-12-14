@@ -74,7 +74,7 @@ class ReportSystemExecutor:
         self.system_def = system_def
         self.config = config
         
-        # Use dependency injection with fallback to globals for backward compatibility
+        # Dependency injection with global defaults when not provided
         if container is None:
             container = get_container()
         if registry is None:

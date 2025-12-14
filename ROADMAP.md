@@ -502,5 +502,5 @@ Contributions are welcome. Consider:
 ---
 
 Last updated: December 12, 2025
-Current version: 1.0.7
+Current version: 1.0.8
 Next milestone: v2.0 - Enterprise Release
