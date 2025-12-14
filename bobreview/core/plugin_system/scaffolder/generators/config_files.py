@@ -126,7 +126,15 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
                 "template": {
                     "type": "jinja2",
                     "name": f"{safe_name}/pages/details.html.j2"
-                }
+                },
+                "charts": [
+                    {
+                        "id": "distribution_chart",
+                        "type": "histogram",
+                        "title": "Score Distribution",
+                        "y_field": "score"
+                    }
+                ]
             }
         ],
         
