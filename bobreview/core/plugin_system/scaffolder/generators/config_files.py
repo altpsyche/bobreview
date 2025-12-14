@@ -115,6 +115,13 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
                         "title": "Scores Overview",
                         "x_field": "name",
                         "y_field": "score"
+                    },
+                    {
+                        "id": "trend_chart",
+                        "type": "line",
+                        "title": "Score Trend",
+                        "x_field": "name",
+                        "y_field": "score"
                     }
                 ]
             },
@@ -132,6 +139,13 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
                         "id": "distribution_chart",
                         "type": "histogram",
                         "title": "Score Distribution",
+                        "y_field": "score"
+                    },
+                    {
+                        "id": "category_chart",
+                        "type": "doughnut",
+                        "title": "By Category",
+                        "x_field": "category",
                         "y_field": "score"
                     }
                 ]

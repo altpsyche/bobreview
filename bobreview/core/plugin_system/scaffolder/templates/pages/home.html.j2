@@ -43,6 +43,13 @@
 </div>
 
 <div class="card">
+    <h2>Score Trend</h2>
+    <div class="chart-container">
+        <canvas id="trend_chart"></canvas>
+    </div>
+</div>
+
+<div class="card">
     <h2>Top Rankings</h2>
     <table>
         <thead>
@@ -71,6 +78,7 @@
 
 {% block scripts %}
 <script>
-{% if charts.score_chart %}{{ charts.score_chart | safe }}{% endif %}
+{% if charts is defined and charts.score_chart %}{{ charts.score_chart | safe }}{% endif %}
+{% if charts is defined and charts.trend_chart %}{{ charts.trend_chart | safe }}{% endif %}
 </script>
 {% endblock %}

@@ -301,7 +301,13 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
         if chart_type == 'histogram':
             return self._generate_histogram(chart_id, title, values, y_field, theme)
         
-        # Build JavaScript code
+        if chart_type in ('pie', 'doughnut'):
+            return self._generate_pie_chart(chart_id, title, labels, values, chart_type, theme)
+        
+        if chart_type == 'line':
+            return self._generate_line_chart(chart_id, title, labels, values, theme)
+        
+        # Default: Bar chart
         js_code = f"""
 // {title} Chart
 (function() {{
@@ -349,6 +355,121 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
 }})();
 """
         return js_code
+    
+    def _generate_line_chart(self, chart_id: str, title: str, labels: List[str], values: List[float], theme) -> str:
+        """Generate line chart with gradient fill."""
+        accent = theme.accent
+        accent_soft = self._hex_to_rgba(theme.accent, 0.2)
+        text_soft = theme.text_soft
+        text_main = theme.text_main
+        grid = self._hex_to_rgba(theme.text_soft, 0.15)
+        bg = self._hex_to_rgba(theme.bg, 0.94)
+        
+        return f"""
+// {title} Line Chart
+(function() {{
+    const ctx = document.getElementById('{chart_id}').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, '{self._hex_to_rgba(theme.accent, 0.4)}');
+    gradient.addColorStop(1, '{self._hex_to_rgba(theme.accent, 0.0)}');
+    
+    new Chart(ctx, {{
+        type: 'line',
+        data: {{
+            labels: {json.dumps(labels)},
+            datasets: [{{
+                label: {json.dumps(title)},
+                data: {json.dumps(values)},
+                borderColor: '{accent}',
+                backgroundColor: gradient,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '{accent}',
+                pointBorderColor: '{text_main}'
+            }}]
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {{
+                title: {{ display: true, text: {json.dumps(title)}, color: '{text_main}' }},
+                legend: {{ labels: {{ color: '{text_soft}' }} }},
+                tooltip: {{
+                    backgroundColor: '{bg}',
+                    titleColor: '{text_main}',
+                    bodyColor: '{text_soft}',
+                    borderColor: '{accent}',
+                    borderWidth: 1
+                }}
+            }},
+            scales: {{
+                x: {{ ticks: {{ color: '{text_soft}' }}, grid: {{ color: '{grid}' }} }},
+                y: {{ ticks: {{ color: '{text_soft}' }}, grid: {{ color: '{grid}' }}, beginAtZero: true }}
+            }}
+        }}
+    }});
+}})();
+"""
+    
+    def _generate_pie_chart(self, chart_id: str, title: str, labels: List[str], values: List[float], chart_type: str, theme) -> str:
+        """Generate pie or doughnut chart with theme colors."""
+        text_soft = theme.text_soft
+        text_main = theme.text_main
+        bg = self._hex_to_rgba(theme.bg, 0.94)
+        
+        # Generate color palette based on theme
+        colors = [
+            theme.accent,
+            getattr(theme, 'ok', '#22c55e'),
+            getattr(theme, 'warn', '#eab308'),
+            getattr(theme, 'danger', '#ef4444'),
+            self._hex_to_rgba(theme.accent, 0.6),
+            self._hex_to_rgba(getattr(theme, 'ok', '#22c55e'), 0.6),
+        ]
+        
+        # Extend colors if needed
+        while len(colors) < len(values):
+            colors.extend(colors)
+        colors = colors[:len(values)]
+        
+        return f"""
+// {title} {chart_type.title()} Chart
+(function() {{
+    const ctx = document.getElementById('{chart_id}').getContext('2d');
+    new Chart(ctx, {{
+        type: '{chart_type}',
+        data: {{
+            labels: {json.dumps(labels)},
+            datasets: [{{
+                data: {json.dumps(values)},
+                backgroundColor: {json.dumps(colors)},
+                borderColor: '{theme.bg}',
+                borderWidth: 2
+            }}]
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {{
+                title: {{ display: true, text: {json.dumps(title)}, color: '{text_main}' }},
+                legend: {{ 
+                    position: 'right',
+                    labels: {{ color: '{text_soft}', padding: 15 }} 
+                }},
+                tooltip: {{
+                    backgroundColor: '{bg}',
+                    titleColor: '{text_main}',
+                    bodyColor: '{text_soft}',
+                    borderColor: '{theme.accent}',
+                    borderWidth: 1
+                }}
+            }}
+        }}
+    }});
+}})();
+"""
     
     def _generate_histogram(self, chart_id: str, title: str, values: List[float], field: str, theme) -> str:
         """Generate histogram chart."""

@@ -36,6 +36,13 @@
 </div>
 
 <div class="card">
+    <h2>By Category</h2>
+    <div class="chart-container">
+        <canvas id="category_chart"></canvas>
+    </div>
+</div>
+
+<div class="card">
     <h2>Full Data Table</h2>
     <table>
         <thead>
@@ -58,5 +65,6 @@
 {% block scripts %}
 <script>
 {% if charts is defined and charts.distribution_chart %}{{ charts.distribution_chart | safe }}{% endif %}
+{% if charts is defined and charts.category_chart %}{{ charts.category_chart | safe }}{% endif %}
 </script>
 {% endblock %}
