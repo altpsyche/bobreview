@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.8] - 2025-12-14
 
+### Unified Configuration & API Cleanup
+
+**Configuration Consolidation & API Standardization** — This release unifies the entire configuration system into a single flat `Config` class, standardizes all interface signatures, and removes backward compatibility shims for a cleaner, more maintainable codebase.
+
 > **MIGRATION GUIDE**: This release standardizes all API signatures, consolidates configuration, and removes backward compatibility shims. Follow this guide to update your plugins.
 
 ---
@@ -43,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### New Configuration Flow
 
-```
+```text
 CLI Args → Config (flat) → ReportSystemExecutor
      ↓
 YAML Config → Config.load_config() → Single source of truth

@@ -84,7 +84,15 @@ class DataService(BaseService):
             )
             
             if sample_size and sample_size < len(df):
-                df.rows = df.rows[:sample_size]
+                # Create new DataFrame with sampled rows instead of mutating
+                sampled_df = DataFrame(
+                    columns=df.columns.copy(),
+                    rows=df.rows[:sample_size],
+                    metadata=df.metadata.copy(),
+                    source=df.source,
+                    plugin=df.plugin
+                )
+                df = sampled_df
                 logger.debug(f"Sampled down to {sample_size} points")
             
             if sort_by and len(df) > 0 and sort_by in df.column_names:

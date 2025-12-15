@@ -381,13 +381,15 @@ class MyChartGenerator(ChartGeneratorInterface):
     
     def generate_chart(
         self,
-        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
+        data: Union[List[Dict[str, Any]], "DataFrame"],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: Any,
         chart_config: Dict[str, Any]
     ) -> str:
         # Convert to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        # Note: hasattr(data, '__iter__') will be True for both List and DataFrame
+        # DataFrame iteration yields dicts via __iter__
+        data_points = list(data)
         
         chart_id = chart_config.get('id', 'chart')
         title = chart_config.get('title', 'Chart')
@@ -435,7 +437,7 @@ class MyChartGenerator(ChartGeneratorInterface):
 
 ```python
 # context_builder.py
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 from bobreview.core.api import ContextBuilderInterface
 
 class MyContextBuilder(ContextBuilderInterface):

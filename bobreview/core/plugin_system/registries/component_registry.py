@@ -92,7 +92,7 @@ class ComponentRegistry(BaseRegistry):
         try:
             return instance.render(props, context)
         except Exception as e:
-            logger.error(f"Error rendering component {component_id}: {e}")
+            logger.exception(f"Error rendering component {component_id}: {e}")
             return f"<!-- Error rendering '{component_id}': {e} -->"
     
     async def render_async(self, component_id: str, props: Dict[str, Any], context: Dict[str, Any]) -> str:
@@ -112,7 +112,7 @@ class ComponentRegistry(BaseRegistry):
                 return await instance.render_async(props, context)
             return instance.render(props, context)
         except Exception as e:
-            logger.error(f"Error rendering component {component_id}: {e}")
+            logger.exception(f"Error rendering component {component_id}: {e}")
             return f"<!-- Error rendering '{component_id}': {e} -->"
 
     

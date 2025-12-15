@@ -28,6 +28,7 @@ class Config:
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000
     llm_chunk_size: int = 10
+    llm_combine_warning_threshold: int = 100000  # Character threshold for combine warning
     
     # Theme and output
     theme: str = "dark"
@@ -61,6 +62,12 @@ class Config:
             errors.append("llm_max_tokens must be > 0")
         if self.llm_provider not in ['openai', 'anthropic', 'ollama']:
             errors.append(f"Invalid llm_provider: {self.llm_provider}")
+        if self.output_dir and not isinstance(self.output_dir, (str, Path)):
+            errors.append("output_dir must be a string or Path")
+        if self.theme and not isinstance(self.theme, str):
+            errors.append("theme must be a string")
+        if self.cache_dir and not isinstance(self.cache_dir, Path):
+            errors.append("cache_dir must be a Path")
         return errors
 
 

@@ -93,8 +93,8 @@ class LLMService(BaseService):
         Returns:
             Generated content string
         """
-        # Convert DataFrame to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        # Convert DataFrame to list of dicts for internal use
+        data_points = list(data)
         
         if dry_run:
             return self._get_placeholder(generator_config.id, generator_config.name)
@@ -192,8 +192,8 @@ class LLMService(BaseService):
         Returns:
             Dict mapping generator ID to content
         """
-        # Convert DataFrame to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        # Convert DataFrame to list of dicts for internal use
+        data_points = list(data)
         
         results = {}
         enabled = [g for g in generators if g.enabled]
@@ -210,7 +210,7 @@ class LLMService(BaseService):
             try:
                 content = self.generate(
                     generator,
-                    data_points,
+                    data,  # Let generate() handle conversion
                     stats,
                     context,
                     dry_run=dry_run,

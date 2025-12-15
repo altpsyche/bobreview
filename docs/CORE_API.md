@@ -1116,7 +1116,7 @@ from bobreview.engine import load_report_system, ReportSystemExecutor
 from pathlib import Path
 
 config = Config(
-    title="My Report",
+    name="My Report",
     llm_provider="openai",
     llm_model="gpt-4o"
 )

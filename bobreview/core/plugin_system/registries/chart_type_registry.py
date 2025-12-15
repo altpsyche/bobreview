@@ -20,7 +20,7 @@ class ChartTypeRegistry(BaseRegistry):
     def __init__(self):
         """Initialize the chart type registry."""
         super().__init__()
-        self._chart_types: Dict[str, Type] = {}
+        self._chart_types: Dict[str, Any] = {}
     
     def register(self, chart_type_id: str, chart_config: Any, plugin_name: str = "") -> None:
         """
@@ -38,11 +38,11 @@ class ChartTypeRegistry(BaseRegistry):
         self._register_component(f"chart:{chart_type_id}", plugin_name, overwrite=True)
         logger.debug(f"Registered chart type: {chart_type_id} from {plugin_name or 'core'}")
     
-    def get(self, chart_type: str) -> Optional[Type]:
+    def get(self, chart_type: str) -> Optional[Any]:
         """Get a chart type class by name."""
         return self._chart_types.get(chart_type)
     
-    def get_all(self) -> Dict[str, Type]:
+    def get_all(self) -> Dict[str, Any]:
         """Get all registered chart types."""
         return dict(self._chart_types)
     

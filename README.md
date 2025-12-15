@@ -90,6 +90,7 @@ xdg-open report.html # Linux
 | **Intelligent Caching** | Cache LLM responses to save costs |
 | **Standalone HTML** | Images embedded as base64 for easy sharing |
 | **Extensible Registry** | 14 registries for themes, parsers, generators, components |
+
 ---
 
 ## CLI Commands

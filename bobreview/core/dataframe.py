@@ -80,14 +80,14 @@ class DataFrame:
         """Iterate over rows as dictionaries."""
         col_names = [c.name for c in self.columns]
         for row in self.rows:
-            yield dict(zip(col_names, row))
+            yield dict(zip(col_names, row, strict=True))
     
     def __getitem__(self, key: Union[int, str]) -> Any:
         """Access row by index or column by name."""
         if isinstance(key, int):
             # Return row as dict
             col_names = [c.name for c in self.columns]
-            return dict(zip(col_names, self.rows[key]))
+            return dict(zip(col_names, self.rows[key], strict=True))
         elif isinstance(key, str):
             # Return column values
             col_idx = self._column_index(key)
@@ -184,7 +184,7 @@ class DataFrame:
         col_names = [c.name for c in self.columns]
         filtered_rows = [
             row for row in self.rows
-            if predicate(dict(zip(col_names, row)))
+            if predicate(dict(zip(col_names, row, strict=True)))
         ]
         return DataFrame(
             columns=self.columns.copy(),

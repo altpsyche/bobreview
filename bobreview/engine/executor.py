@@ -212,13 +212,17 @@ class ReportSystemExecutor:
             
             # Set report title
             # Priority: 1) CLI (config.title), 2) JSON (system_def.title), 3) default "Report"
-            if self.config.title is None:
+            # Use local variable to avoid mutating the config object
+            if not self.config.title:
                 if hasattr(self.system_def, 'title') and self.system_def.title:
-                    self.config.title = self.system_def.title
-                    log_verbose(f"Using title from JSON config: {self.config.title}", self.config)
+                    title = self.system_def.title
+                    log_verbose(f"Using title from JSON config: {title}", self.config)
                 else:
-                    self.config.title = "Report"
+                    title = "Report"
                     log_verbose("Using default title: Report", self.config)
+                # Create a new config with the resolved title to avoid mutation
+                from dataclasses import replace
+                self.config = replace(self.config, title=title)
             
             # 3. Generate LLM content
             llm_results = self.generate_llm_content(data_points, stats)
@@ -280,7 +284,13 @@ class ReportSystemExecutor:
         """
         Build meta text for report header.
         """
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        # Convert DataFrame to list for internal use
+        if hasattr(data, 'to_dicts'):
+            data_points = list(data)  # DataFrame iteration yields dicts
+        elif isinstance(data, list):
+            data_points = data
+        else:
+            raise ValueError(f"Unsupported data type: {type(data)}")
         count = stats.get('count', len(data_points))
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
         return f"{count} items · Generated {timestamp}"

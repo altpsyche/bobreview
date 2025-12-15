@@ -138,8 +138,8 @@ class ChartService(BaseService):
         Returns:
             JavaScript code for Chart.js
         """
-        # Convert DataFrame to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        # Convert DataFrame to list of dicts for internal use
+        data_points = list(data)
         
         colors = self.get_theme_colors()
         
@@ -349,8 +349,8 @@ class ChartService(BaseService):
         Returns:
             JavaScript code for Chart.js
         """
-        # Convert DataFrame to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        # Convert DataFrame to list of dicts for internal use
+        data_points = list(data)
         
         colors = self.get_theme_colors()
         

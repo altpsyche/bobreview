@@ -62,7 +62,12 @@ class AnalyticsService(BaseService):
             AnalyticsServiceError: If analysis fails
         """
         # Convert DataFrame to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        if hasattr(data, 'to_dicts'):
+            data_points = list(data)  # DataFrame iteration yields dicts
+        elif isinstance(data, list):
+            data_points = data
+        else:
+            raise AnalyticsServiceError(f"Unsupported data type: {type(data)}")
         if not data_points:
             raise AnalyticsServiceError("No data points to analyze")
         

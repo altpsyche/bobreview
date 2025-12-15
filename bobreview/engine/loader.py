@@ -4,8 +4,10 @@ Report system loader for discovering and loading JSON report system definitions.
 This module handles:
 - Loading report systems from built-in and user directories
 - Discovering available report systems
-- Merging JSON definitions with CLI overrides
 - Caching loaded definitions
+
+Note: CLI overrides are now handled by Config.load_config(), not in this loader.
+The cli_overrides parameter only influences the cache key for caching purposes.
 """
 
 import copy
@@ -265,9 +267,13 @@ def load_report_system(
     
     Parameters:
         id_or_path: Report system ID or path to JSON file
-        cli_overrides: Optional CLI argument overrides
+        cli_overrides: Optional CLI argument overrides (only used for cache key generation)
         use_cache: Whether to use cached definitions
         plugin_name: Optional plugin name to prioritize search in
+    
+    Note:
+        CLI overrides are applied via Config.load_config(), not in this function.
+        The cli_overrides parameter here only affects cache key generation.
     
     Returns:
         ReportSystemDefinition object

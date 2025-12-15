@@ -80,7 +80,12 @@ class PageRenderer:
             output_path: Output file path (determines output directory)
         """
         # Convert DataFrame to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        if hasattr(data, 'to_dicts'):
+            data_points = list(data)  # DataFrame iteration
+        elif isinstance(data, list):
+            data_points = data
+        else:
+            raise ValueError(f"Unsupported data type: {type(data)}")
         
         # Pre-encode images if needed
         image_data_uris = self._encode_images(data_points, input_dir)
@@ -403,7 +408,7 @@ class PageRenderer:
             charts_dict = {}
             for chart_config in page_config.charts:
                 # Get theme ID from config
-                theme_id = self.config.theme if hasattr(self, 'config') else 'dark'
+                theme_id = self.config.theme
                 
                 chart_config_dict = {
                     'id': chart_config.id,

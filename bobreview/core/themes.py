@@ -6,7 +6,9 @@ Themes are registered via the plugin registry, but the definitions live here.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union, Literal
+from pathlib import Path
+from markupsafe import Markup
 
 
 @dataclass
@@ -669,10 +671,6 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
 # THEME SYSTEM (Unified API)
 # =============================================================================
 
-from typing import Union, Literal
-from pathlib import Path
-from markupsafe import Markup
-
 
 class ThemeSystem:
     """Unified theme system - singleton for theme operations."""
@@ -705,8 +703,8 @@ class ThemeSystem:
             return self.resolve_theme(theme_config)
         if isinstance(theme_config, dict):
             raise TypeError(
-                f"Theme config must be a string, not dict. "
-                f"Use flat format: theme='dark' instead of theme={{'preset': 'dark'}}"
+                "Theme config must be a string, not dict. "
+                "Use flat format: theme='dark' instead of theme={'preset': 'dark'}"
             )
         return self.resolve_theme('dark')
     
@@ -738,7 +736,7 @@ class ThemeSystem:
         
         theme = self.resolve_theme(theme_id)
         if not theme:
-            return
+            raise ValueError(f"Cannot generate CSS file: theme '{theme_id}' not found")
         
         css = get_theme_css_variables(theme) + '\n' + get_shared_css()
         output_path.parent.mkdir(parents=True, exist_ok=True)

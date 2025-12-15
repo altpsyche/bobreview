@@ -60,7 +60,7 @@ class AnalyzerRegistry(BaseRegistry):
             default: If True, set as the default analyzer
         """
         self._analyzers[name] = analyzer
-        self._register_component(name, plugin_name)
+        self._register_component(f"analyzer:{name}", plugin_name)
         logger.debug(f"Registered analyzer: {name} (plugin: {plugin_name or 'core'})")
         
         if default or self._default is None:
@@ -110,15 +110,15 @@ class AnalyzerRegistry(BaseRegistry):
         # Find analyzers owned by this plugin
         to_remove = [
             name for name, owner in self._component_owners.items()
-            if owner == plugin_name
+            if owner == plugin_name and name.startswith('analyzer:')
         ]
         
         # Remove from analyzers dict
         for name in to_remove:
-            if name in self._analyzers:
-                del self._analyzers[name]
-            # Reset default if needed
-            if self._default == name:
+            analyzer_name = name.split(':', 1)[1]
+            if analyzer_name in self._analyzers:
+                del self._analyzers[analyzer_name]
+            if self._default == analyzer_name:
                 self._default = next(iter(self._analyzers), None)
         
         # Call parent to clean up ownership tracking

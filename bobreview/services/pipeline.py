@@ -95,7 +95,8 @@ class ReportPipeline:
                 data_points, stats, system_def, config
             )
             result['llm_content'] = llm_content
-            log_info("LLM content generation complete", config)
+            if not config.dry_run:
+                log_info("LLM content generation complete", config)
             
             # Step 4: Generate charts (via ChartService if available)
             charts = self._generate_charts(data_points, system_def, config)
@@ -190,6 +191,8 @@ class ReportPipeline:
     ) -> Dict[str, str]:
         """Generate LLM content using LLMService."""
         if config.dry_run:
+            from ..core import log_info
+            log_info("LLM content generation skipped (dry run)", config)
             return {}
         
         if self.container.has('llm'):

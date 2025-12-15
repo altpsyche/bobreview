@@ -266,6 +266,8 @@ pages:
       - type: llm
         id: recommendations
         title: "Recommendations"
+        # Note: {name} here is a Python f-string (evaluated at scaffold time), while {{{{name}}}} above
+        # is a Jinja2 template variable (evaluated at render time). This inserts the plugin name.
         prompt: "Based on this {name} data, provide 3-5 actionable recommendations for improvement."
 
       # ── INLINE WIDGETS ────────────────────────────────────────────────────────────

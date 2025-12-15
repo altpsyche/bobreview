@@ -6,34 +6,37 @@ Version 1.0.8 - Standardized APIs & DataFrame Support
 
 ### What's New in v1.0.8
 
-- **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
-  - Simplified registration API: `add_data_parser()`, `add_theme()`, `add_templates()`
-  - One-call setup: `setup_complete_report_system()`
+- **Unified Configuration System**:
+  - Single flat `Config` class replaces nested config classes
+  - YAML configuration support (`report_config.yaml`) for plugins
+  - CLI arguments unified into single entry point
+
+- **DataFrame Support**:
+  - New `DataFrame` class for universal data format
+  - All interfaces now accept `Union[List[Dict], DataFrame]`
+  - Filter, sort, and select operations on DataFrames
+
+- **Component Interface**:
+  - New `ComponentInterface` for reusable UI components
+  - Component registry with instance caching
+  - Support for widgets, charts, and custom components
+
+- **Multiple Chart Types**:
+  - Bar, Line (gradient fill), Histogram, Doughnut charts
+  - Chart generator supports multiple chart configurations
 
 - **Plugin Scaffolding CLI**:
   - `bobreview plugins create my-plugin` - Generate complete plugin skeleton
   - `--template minimal|full` - Choose template complexity
   - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
 
-- **PageRenderer Class** (`engine/page_renderer.py`):
-  - ~300 lines extracted from executor.py for better modularity
+- **Breaking Changes**:
+  - Flat config format (no nested `llm_config`, `theme`, etc.)
+  - YAML config required for plugins (pages defined in YAML, not JSON)
+  - Interface signatures changed to accept DataFrame
+  - Theme variable renames (`border` → `border_subtle`, `success` → `ok`)
 
-- **Preset Factory Functions** (`engine/presets.py`):
-  - `create_simple_report_system()`, `create_csv_report_system()`
-
-- **Plugin Scaffolder**: `bobreview plugins create my-plugin` creates complete plugin skeleton
-
-- **Critical Fixes**:
-  - Fixed bare `except:` clauses in `engine/loader.py`
-  - Removed dead code (`PageGeneratorInterface`, `PageGeneratorTemplate`)
-
-- **Plugin System**: Fully modular plugin architecture with SOLID and DRY principles
-  - **Focused Registries**: PluginRegistry split into 12 focused registries
-  - **Focused Config Classes**: ReportConfig split into 5 focused config classes
-  - **Dependency Injection**: No global singletons
-  - **Single Responsibility**: Executor split into focused classes
-
-- All v1.0.6 features preserved
+- All v1.0.7 features preserved
 
 ---
 
@@ -339,7 +342,7 @@ bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
 bobreview --version      # Check version
 
 # Test installation
-python -c "from bobreview.core import ReportConfig; print('OK')"
+python -c "from bobreview.core.config import Config; print('OK')"
 ```
 
 ---
@@ -351,7 +354,7 @@ python -c "from bobreview.core import ReportConfig; print('OK')"
 - **Full Documentation:** See `README.md` in the installation folder
 - **Quick Start:** See `QUICKSTART.md` for more examples
 - **Detailed Install Guide:** See `INSTALL.md` for advanced setup
-- **Release Notes:** See `docs/V1.0.7_RELEASE_NOTES.md` for v1.0.7 details
+- **Release Notes:** See `CHANGELOG.md` for v1.0.8 migration guide and details
 
 ---
 

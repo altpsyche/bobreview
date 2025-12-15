@@ -225,7 +225,7 @@ class ReportBuilder:
                 'output_path': str(output_path) if success else None,
             }
         except Exception as e:
-            logger.error(f"Build failed: {e}")
+            logger.exception(f"Build failed: {e}")
             return {
                 'success': False,
                 'errors': [str(e)],
@@ -488,15 +488,23 @@ class ReportBuilder:
         List all available components from plugins.
         
         Parameters:
-            plugin_name: Optional plugin to filter by
+            plugin_name: Optional plugin to filter by (currently unused)
             
         Returns:
             Dict with component types and their IDs
         """
+        widgets = self.registry.widgets.get_all()
+        chart_types = self.registry.chart_types.get_all()
+        analyzers = self.registry.analyzers.get_all()
+        
+        # TODO: Implement plugin_name filtering when component ownership tracking is available
+        # if plugin_name:
+        #     widgets = {k: v for k, v in widgets.items() if ...}
+        
         return {
-            'widgets': list(self.registry.widgets.get_all().keys()),
-            'chart_types': list(self.registry.chart_types.get_all().keys()),
-            'analyzers': list(self.registry.analyzers.get_all().keys()),
+            'widgets': list(widgets.keys()),
+            'chart_types': list(chart_types.keys()),
+            'analyzers': list(analyzers.keys()),
             'data_parsers': list(self.registry.data_parsers.get_all().keys()),
             'themes': [t.id for t in self.registry.themes.get_all().values()],
         }
