@@ -843,10 +843,11 @@ class {class_name}StatCard:
         .stat-card--warn {{ border-color: var(--warn); }}
         .stat-card--danger {{ border-color: var(--danger); }}
         .trend {{ margin-left: 0.25rem; }}
-#        .trend-down {{ color: var(--danger); }}
-#        """
-#
-#
+        .trend-up {{ color: var(--ok); }}
+        .trend-down {{ color: var(--danger); }}
+        """
+
+
 # =============================================================================
 # USAGE NOTES
 # =============================================================================

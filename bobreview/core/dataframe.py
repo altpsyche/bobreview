@@ -210,9 +210,21 @@ class DataFrame:
     def sort_by(self, column: str, descending: bool = False) -> "DataFrame":
         """Sort rows by column."""
         idx = self._column_index(column)
+        col = self.columns[idx]
+        
+        # Use type-appropriate default for None values
+        if col.type == ColumnType.NUMBER:
+            # For numbers: None values go to end (inf for ascending, -inf for descending)
+            default = float('inf') if not descending else float('-inf')
+        elif col.type == ColumnType.BOOLEAN:
+            default = False
+        else:
+            # For strings, datetime, or unknown types
+            default = ""
+        
         sorted_rows = sorted(
             self.rows,
-            key=lambda r: r[idx] if r[idx] is not None else "",
+            key=lambda r: r[idx] if r[idx] is not None else default,
             reverse=descending
         )
         return DataFrame(

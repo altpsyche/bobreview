@@ -28,7 +28,6 @@ class Config:
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2000
     llm_chunk_size: int = 10
-    llm_enable_cache: bool = True
     
     # Theme and output
     theme: str = "dark"

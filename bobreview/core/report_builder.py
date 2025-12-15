@@ -71,6 +71,9 @@ class ReportBuilder:
         Returns:
             Build result with status and output paths
         """
+        # Clean up any inline widgets from previous builds
+        self.registry.unregister_plugin_components('_inline')
+        
         # Load and validate user config
         user_config = load_user_config(config_path)
         errors = validate_user_config(user_config)
@@ -117,90 +120,91 @@ class ReportBuilder:
             }
         
         # Convert user config to ReportSystemDefinition
+        # Note: This may register inline widgets, so we need cleanup in finally
         system_def = self._to_system_definition(user_config)
         
-        # ────────────────────────────────────────────────────────────────────────
-        # RESOLVE CONFIGURATION (CLI > YAML > JSON > Defaults)
-        # ────────────────────────────────────────────────────────────────────────
-        
-        # Load JSON config from plugin
-        json_config = self._load_json_config(user_config.plugin)
-        
-        # Build CLI args dict
-        cli_args = {}
-        if output_dir:
-            cli_args['output_dir'] = output_dir
-        if output_file:
-            cli_args['output_file'] = output_file
-        if input_dir:
-            cli_args['input_dir'] = input_dir
-        if config:
-            # Extract CLI settings from flat Config
-            if hasattr(config, 'llm_provider'):
-                if config.llm_provider:
-                    cli_args['provider'] = config.llm_provider
-                if config.llm_model:
-                    cli_args['model'] = config.llm_model
-                if config.llm_temperature:
-                    cli_args['temperature'] = config.llm_temperature
-            if config.title:
-                cli_args['title'] = config.title
-            if hasattr(config, 'theme') and config.theme:
-                cli_args['theme'] = config.theme
-        
-        # Resolve config with precedence: CLI > passed config > JSON > Defaults
-        report_config = load_config(
-            cli_args=cli_args if cli_args else None,
-            json_data=json_config
-        )
-        
-        # Override with passed config values (from CLI main())
-        if config:
-            if config.llm_provider:
-                report_config.llm_provider = config.llm_provider
-            if config.llm_model:
-                report_config.llm_model = config.llm_model
-            if config.llm_api_key:
-                report_config.llm_api_key = config.llm_api_key
-            if config.theme:
-                report_config.theme = config.theme
-            if config.verbose:
-                report_config.verbose = config.verbose
-            if config.dry_run:
-                report_config.dry_run = config.dry_run
-        
-        logger.info(f"Config resolved: provider={report_config.llm_provider}, theme={report_config.theme}")
-        
-        # ────────────────────────────────────────────────────────────────────────
-        # APPLY RESOLVED CONFIG
-        # ────────────────────────────────────────────────────────────────────────
-        
-        # Output directory
-        output = Path(output_dir) if output_dir else Path(report_config.output_dir)
-        output.mkdir(parents=True, exist_ok=True)
-        
-        # Find input data
-        if input_dir:
-            data_dir = Path(input_dir)
-            if not data_dir.exists():
-                return {
-                    'success': False,
-                    'errors': [f"Input directory not found: {data_dir}"],
-                    'config_path': config_path
-                }
-        else:
-            # Try to find data from user config's data_source pattern
-            data_source_pattern = user_config.data_source if hasattr(user_config, 'data_source') else './*.csv'
-            data_dir = self._resolve_data_source(data_source_pattern)
-            if not data_dir:
-                return {
-                    'success': False,
-                    'errors': [f"No data found. Use --dir to specify input directory."],
-                    'config_path': config_path
-                }
-        
-        # Execute via ReportSystemExecutor
         try:
+            # ────────────────────────────────────────────────────────────────────────
+            # RESOLVE CONFIGURATION (CLI > YAML > JSON > Defaults)
+            # ────────────────────────────────────────────────────────────────────────
+            
+            # Load JSON config from plugin
+            json_config = self._load_json_config(user_config.plugin)
+            
+            # Build CLI args dict
+            cli_args = {}
+            if output_dir:
+                cli_args['output_dir'] = output_dir
+            if output_file:
+                cli_args['output_file'] = output_file
+            if input_dir:
+                cli_args['input_dir'] = input_dir
+            if config:
+                # Extract CLI settings from flat Config
+                if hasattr(config, 'llm_provider'):
+                    if config.llm_provider:
+                        cli_args['provider'] = config.llm_provider
+                    if config.llm_model:
+                        cli_args['model'] = config.llm_model
+                    if config.llm_temperature:
+                        cli_args['temperature'] = config.llm_temperature
+                if config.title:
+                    cli_args['title'] = config.title
+                if hasattr(config, 'theme') and config.theme:
+                    cli_args['theme'] = config.theme
+            
+            # Resolve config with precedence: CLI > passed config > JSON > Defaults
+            report_config = load_config(
+                cli_args=cli_args if cli_args else None,
+                json_data=json_config
+            )
+            
+            # Override with passed config values (from CLI main())
+            if config:
+                if config.llm_provider:
+                    report_config.llm_provider = config.llm_provider
+                if config.llm_model:
+                    report_config.llm_model = config.llm_model
+                if config.llm_api_key:
+                    report_config.llm_api_key = config.llm_api_key
+                if config.theme:
+                    report_config.theme = config.theme
+                if config.verbose:
+                    report_config.verbose = config.verbose
+                if config.dry_run:
+                    report_config.dry_run = config.dry_run
+            
+            logger.info(f"Config resolved: provider={report_config.llm_provider}, theme={report_config.theme}")
+            
+            # ────────────────────────────────────────────────────────────────────────
+            # APPLY RESOLVED CONFIG
+            # ────────────────────────────────────────────────────────────────────────
+            
+            # Output directory
+            output = Path(output_dir) if output_dir else Path(report_config.output_dir)
+            output.mkdir(parents=True, exist_ok=True)
+            
+            # Find input data
+            if input_dir:
+                data_dir = Path(input_dir)
+                if not data_dir.exists():
+                    return {
+                        'success': False,
+                        'errors': [f"Input directory not found: {data_dir}"],
+                        'config_path': config_path
+                    }
+            else:
+                # Try to find data from user config's data_source pattern
+                data_source_pattern = user_config.data_source if hasattr(user_config, 'data_source') else './*.csv'
+                data_dir = self._resolve_data_source(data_source_pattern)
+                if not data_dir:
+                    return {
+                        'success': False,
+                        'errors': [f"No data found. Use --dir to specify input directory."],
+                        'config_path': config_path
+                    }
+            
+            # Execute via ReportSystemExecutor
             executor = ReportSystemExecutor(
                 system_def=system_def,
                 config=report_config
@@ -227,6 +231,9 @@ class ReportBuilder:
                 'errors': [str(e)],
                 'config_path': config_path
             }
+        finally:
+            # Clean up inline widgets registered during this build
+            self.registry.unregister_plugin_components('_inline')
     
     def _to_system_definition(self, user_config: UserConfig) -> ReportSystemDefinition:
         """Convert user YAML config to ReportSystemDefinition."""
@@ -240,7 +247,7 @@ class ReportBuilder:
             charts = []
             llm_content = []
             
-            for comp in page.components:
+            for i, comp in enumerate(page.components):
                 comp_type = comp.get('type', '')
                 
                 if comp_type == 'chart':

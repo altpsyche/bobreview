@@ -89,7 +89,7 @@ class ServiceValidator:
                 'model': config.llm_model,
                 'temperature': config.llm_temperature,
                 'max_tokens': config.llm_max_tokens,
-                'use_cache': config.llm_enable_cache,
+                'use_cache': config.use_cache,
             }
             self.container.register('llm', LLMService(llm_config))
             log_verbose("Registered LLMService with runtime config", config)
