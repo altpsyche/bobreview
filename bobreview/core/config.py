@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from ..services.llm.providers.factory import list_providers
+
 
 @dataclass
 class Config:
@@ -60,7 +62,7 @@ class Config:
             errors.append("llm_temperature must be 0-2")
         if self.llm_max_tokens <= 0:
             errors.append("llm_max_tokens must be > 0")
-        if self.llm_provider not in ['openai', 'anthropic', 'ollama']:
+        if self.llm_provider not in list_providers():
             errors.append(f"Invalid llm_provider: {self.llm_provider}")
         if self.output_dir and not isinstance(self.output_dir, (str, Path)):
             errors.append("output_dir must be a string or Path")
