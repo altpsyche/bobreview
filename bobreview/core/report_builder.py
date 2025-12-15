@@ -225,7 +225,7 @@ class ReportBuilder:
                 'output_path': str(output_path) if success else None,
             }
         except Exception as e:
-            logger.exception(f"Build failed: {e}")
+            logger.exception("Build failed")
             return {
                 'success': False,
                 'errors': [str(e)],

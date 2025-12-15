@@ -219,8 +219,15 @@ class {class_name}ContextBuilder(ContextBuilderInterface):
         """Build enriched context for template rendering."""
         context = dict(base_context)
         
-        # Convert DataFrame to list if needed
-        data_points = list(data) if hasattr(data, "__iter__") else data
+        # Convert DataFrame to list if needed (exclude strings)
+        if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+            # It's a DataFrame
+            data_points = list(data)
+        elif isinstance(data, list):
+            data_points = data
+        else:
+            # Fallback: try to convert, but exclude strings
+            data_points = list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
         
         # Sort by score (descending)
         ranked = sorted(data_points, key=lambda x: x.get('score', 0), reverse=True)
@@ -272,8 +279,15 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
         
         Returns JavaScript code that creates the chart, NOT JSON config.
         """
-        # Convert DataFrame to list if needed
-        data_points = list(data) if hasattr(data, "__iter__") else data
+        # Convert DataFrame to list if needed (exclude strings)
+        if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+            # It's a DataFrame
+            data_points = list(data)
+        elif isinstance(data, list):
+            data_points = data
+        else:
+            # Fallback: try to convert, but exclude strings
+            data_points = list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
         
         chart_id = chart_config.get('id', 'chart')
         chart_type = chart_config.get('type', 'bar')
@@ -359,7 +373,6 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
     def _generate_line_chart(self, chart_id: str, title: str, labels: List[str], values: List[float], theme) -> str:
         """Generate line chart with gradient fill."""
         accent = theme.accent
-        accent_soft = self._hex_to_rgba(theme.accent, 0.2)
         text_soft = theme.text_soft
         text_main = theme.text_main
         grid = self._hex_to_rgba(theme.text_soft, 0.15)

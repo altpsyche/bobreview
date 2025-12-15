@@ -15,6 +15,7 @@ from jinja2 import (
     ChoiceLoader,
     TemplateNotFound,
     select_autoescape,
+    pass_context,
 )
 from markupsafe import Markup
 
@@ -300,7 +301,8 @@ class TemplateEngine:
         self.env.globals['get_image_src'] = get_image_src
         
         # Render component - access components via extension point
-        def render_component(component_id: str, props: Optional[Dict[str, Any]] = None, **kwargs) -> Markup:
+        @pass_context
+        def render_component(context, component_id: str, props: Optional[Dict[str, Any]] = None, **kwargs) -> Markup:
             """
             Render a plugin-defined UI component.
             
@@ -315,6 +317,13 @@ class TemplateEngine:
             
             Returns:
                 Rendered HTML (Markup-safe)
+            
+            Note:
+                Plugin components are trusted to return safe HTML. This function
+                bypasses Jinja2 autoescaping by wrapping output in Markup, which
+                is appropriate for plugin-provided components that handle their
+                own sanitization. If untrusted plugins are supported in the future,
+                a sanitization layer should be added here.
             """
             
             # Merge props with kwargs
@@ -325,8 +334,9 @@ class TemplateEngine:
             extension_point = get_extension_point()
             registry = extension_point.get_registry()
             
-            # Render the component
-            html = registry.components.render(component_id, all_props, {})
+            # Render the component with template context (config, labels, etc.)
+            # Plugin components are trusted to return safe HTML; bypass Jinja autoescape.
+            html = registry.components.render(component_id, all_props, context)  # noqa: S704
             return Markup(html)
         
         self.env.globals['render_component'] = render_component
