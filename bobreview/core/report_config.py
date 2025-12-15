@@ -183,7 +183,7 @@ def validate_user_config(config: UserConfig) -> List[str]:
     page_ids = set()
     for page in config.pages:
         if not page.id:
-            errors.append(f"Page is missing 'id'")
+            errors.append("Page is missing 'id'")
         elif page.id in page_ids:
             errors.append(f"Duplicate page id: {page.id}")
         else:
@@ -254,6 +254,9 @@ def save_user_config(config: UserConfig, output_path: Union[str, Path]) -> None:
         data['author'] = config.author
     if config.description:
         data['description'] = config.description
+    
+    if config.config:
+        data['config'] = config.config
     
     for page in config.pages:
         page_data = {

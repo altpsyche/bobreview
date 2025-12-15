@@ -200,7 +200,7 @@ class ReportBuilder:
                 if not data_dir:
                     return {
                         'success': False,
-                        'errors': [f"No data found. Use --dir to specify input directory."],
+                        'errors': ["No data found. Use --dir to specify input directory."],
                         'config_path': config_path
                     }
             

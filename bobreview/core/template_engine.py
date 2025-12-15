@@ -16,6 +16,7 @@ from jinja2 import (
     TemplateNotFound,
     select_autoescape,
 )
+from markupsafe import Markup
 
 if TYPE_CHECKING:
     from ..engine.schema import Labels
@@ -299,7 +300,7 @@ class TemplateEngine:
         self.env.globals['get_image_src'] = get_image_src
         
         # Render component - access components via extension point
-        def render_component(component_id: str, props: Optional[Dict[str, Any]] = None, **kwargs) -> 'Markup':
+        def render_component(component_id: str, props: Optional[Dict[str, Any]] = None, **kwargs) -> Markup:
             """
             Render a plugin-defined UI component.
             
@@ -315,7 +316,6 @@ class TemplateEngine:
             Returns:
                 Rendered HTML (Markup-safe)
             """
-            from markupsafe import Markup
             
             # Merge props with kwargs
             all_props = dict(props or {})

@@ -938,11 +938,14 @@ class {class_name}StatCardComponent(ComponentInterface):
         # Status class
         status_class = f' stat-card--{{status}}' if status else ''
         
+        # Subtitle HTML (conditional)
+        subtitle_html = f'<div class="stat-card__subtitle">{{subtitle}}</div>' if subtitle else ''
+        
         return f"""
         <div class="stat-card{{status_class}}">
             <div class="stat-card__title">{{title}}</div>
             <div class="stat-card__value">{{formatted}}{{trend_html}}</div>
-            {{% if subtitle %}}<div class="stat-card__subtitle">{{subtitle}}</div>{{% endif %}}
+            {{subtitle_html}}
         </div>
         """
     

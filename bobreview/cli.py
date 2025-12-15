@@ -953,6 +953,16 @@ Examples:
         )
     
     # Build configuration using unified Config class
+    # Extract directory and filename from --output (which is a file path)
+    if hasattr(args, 'output') and args.output:
+        output_path = Path(args.output)
+        # If parent is current directory, use '.'; otherwise use the parent directory
+        output_dir = str(output_path.parent) if output_path.parent != Path('.') else '.'
+        output_filename = output_path.name
+    else:
+        output_dir = './output'
+        output_filename = 'report.html'
+    
     config = Config(
         title=args.title or "",
         llm_provider=args.llm_provider,
@@ -963,7 +973,8 @@ Examples:
         llm_max_tokens=args.llm_max_tokens,
         llm_chunk_size=args.llm_chunk_size,
         theme=args.theme_id or 'dark',
-        output_dir=str(args.output) if hasattr(args, 'output') and args.output else './output',
+        output_dir=output_dir,
+        output_filename=output_filename,
         embed_images=args.embed_images,
         linked_css=args.linked_css,
         verbose=args.verbose,
