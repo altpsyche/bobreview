@@ -46,7 +46,6 @@ class ReportBuilder:
         """Initialize the report builder."""
         self.registry = get_registry()
         self.loader = get_loader()
-        self._dataframe: Optional[DataFrame] = None  # Parsed data
     
     def build(
         self,
@@ -483,12 +482,12 @@ class ReportBuilder:
             plugin_name='_inline'
         )
     
-    def list_available_components(self, plugin_name: Optional[str] = None) -> Dict[str, List[str]]:
+    def list_available_components(self, _plugin_name: Optional[str] = None) -> Dict[str, List[str]]:
         """
         List all available components from plugins.
         
         Parameters:
-            plugin_name: Optional plugin to filter by (currently unused)
+            _plugin_name: Optional plugin to filter by (currently unused, reserved for future component ownership filtering)
             
         Returns:
             Dict with component types and their IDs

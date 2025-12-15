@@ -192,9 +192,6 @@ class LLMService(BaseService):
         Returns:
             Dict mapping generator ID to content
         """
-        # Convert DataFrame to list of dicts for internal use
-        data_points = list(data)
-        
         results = {}
         enabled = [g for g in generators if g.enabled]
         total = len(enabled)

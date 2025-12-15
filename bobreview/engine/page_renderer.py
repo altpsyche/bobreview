@@ -81,7 +81,7 @@ class PageRenderer:
         """
         # Convert DataFrame to list for internal use
         if hasattr(data, 'to_dicts'):
-            data_points = list(data)  # DataFrame iteration
+            data_points = data.to_dicts()  # DataFrame explicit conversion
         elif isinstance(data, list):
             data_points = data
         else:

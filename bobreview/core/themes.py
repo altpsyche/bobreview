@@ -711,9 +711,11 @@ class ThemeSystem:
     def get_css(self, theme_id: str, mode: Literal['embedded', 'linked'] = 'embedded', include_base: bool = True) -> Union[Markup, str]:
         """Get CSS for a theme."""
         from .html_utils import get_shared_css
+        import logging
         
         theme = self.resolve_theme(theme_id)
         if not theme:
+            logging.getLogger(__name__).warning(f"Theme '{theme_id}' not found, returning empty CSS")
             return ''
         
         if mode == 'embedded':

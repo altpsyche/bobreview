@@ -85,6 +85,9 @@ class DataService(BaseService):
             
             if sample_size and sample_size < len(df):
                 # Create new DataFrame with sampled rows instead of mutating
+                # Note: This performs sequential truncation (first N rows), not random sampling.
+                # This approach is deterministic and reproducible, which is preferable for debugging.
+                # If random sampling is needed, use random.sample() on row indices instead.
                 sampled_df = DataFrame(
                     columns=df.columns.copy(),
                     rows=df.rows[:sample_size],

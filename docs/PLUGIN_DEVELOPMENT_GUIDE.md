@@ -43,7 +43,7 @@ BobReview uses **two separate configuration files** for different audiences:
 | **Report System JSON** | Plugin Developer | Define plugin capabilities | `report_systems/*.json` |
 | **Report Config YAML** | End User | Compose pages from components | `report_config.yaml` |
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  PLUGIN DEVELOPER LAYER                                         │
 │  report_systems/my_plugin.json                                  │
@@ -73,7 +73,7 @@ BobReview uses **two separate configuration files** for different audiences:
 
 ## Plugin Structure
 
-```
+```text
 ~/.bobreview/plugins/your_plugin/
 ├── __init__.py              # Package init, exports plugin class
 ├── manifest.json            # Plugin metadata and capabilities
@@ -580,6 +580,17 @@ class MyPlugin(BasePlugin):
 ---
 
 ## Component Reference
+
+### Security Note: Component HTML is Trusted
+
+Component HTML returned by `render()` bypasses Jinja2 autoescaping. Plugin authors
+must ensure their components sanitize any user-provided data to prevent XSS attacks.
+Never directly embed untrusted user input in component HTML.
+
+The template engine wraps component output in `Markup()` which marks it as safe HTML,
+bypassing Jinja2's default autoescaping. This is appropriate for the current trusted-plugin
+architecture, but if untrusted plugins are supported in the future, a sanitization layer
+should be added.
 
 ### Theme CSS Variables
 

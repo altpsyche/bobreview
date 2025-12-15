@@ -206,6 +206,16 @@ from typing import Dict, List, Any, Union
 from bobreview.core.api import ContextBuilderInterface
 
 
+def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
+    """Convert DataFrame or other iterable to List[Dict]."""
+    if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+        return list(data)
+    elif isinstance(data, list):
+        return data
+    else:
+        return list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
+
+
 class {class_name}ContextBuilder(ContextBuilderInterface):
     """Build template context for {name} reports."""
     
@@ -219,15 +229,8 @@ class {class_name}ContextBuilder(ContextBuilderInterface):
         """Build enriched context for template rendering."""
         context = dict(base_context)
         
-        # Convert DataFrame to list if needed (exclude strings)
-        if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
-            # It's a DataFrame
-            data_points = list(data)
-        elif isinstance(data, list):
-            data_points = data
-        else:
-            # Fallback: try to convert, but exclude strings
-            data_points = list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
+        # Convert DataFrame to list if needed
+        data_points = _normalize_data_to_list(data)
         
         # Sort by score (descending)
         ranked = sorted(data_points, key=lambda x: x.get('score', 0), reverse=True)
@@ -264,6 +267,16 @@ from bobreview.core.api import ChartGeneratorInterface
 from bobreview.core.themes import get_theme_by_id, DARK_THEME
 
 
+def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
+    """Convert DataFrame or other iterable to List[Dict]."""
+    if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+        return list(data)
+    elif isinstance(data, list):
+        return data
+    else:
+        return list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
+
+
 class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
     """Generate Chart.js JavaScript code with theme support."""
     
@@ -279,15 +292,8 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
         
         Returns JavaScript code that creates the chart, NOT JSON config.
         """
-        # Convert DataFrame to list if needed (exclude strings)
-        if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
-            # It's a DataFrame
-            data_points = list(data)
-        elif isinstance(data, list):
-            data_points = data
-        else:
-            # Fallback: try to convert, but exclude strings
-            data_points = list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
+        # Convert DataFrame to list if needed
+        data_points = _normalize_data_to_list(data)
         
         chart_id = chart_config.get('id', 'chart')
         chart_type = chart_config.get('type', 'bar')
