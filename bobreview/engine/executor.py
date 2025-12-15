@@ -20,7 +20,7 @@ import jinja2
 from .schema import ReportSystemDefinition, Labels
 
 # Import from new package structure
-from ..core import ReportConfig, log_info, log_verbose, log_warning, log_error, image_to_base64
+from ..core import Config, log_info, log_verbose, log_warning, log_error, image_to_base64
 
 # Import services and plugin system
 from ..services import ServiceContainer, DataService, AnalyticsService, ChartService, LLMService, get_container
@@ -28,7 +28,6 @@ from ..core.plugin_system import PluginRegistry, PluginLoader, get_extension_poi
 from ..core.template_engine import get_template_engine
 
 # Import new responsibility classes
-from .config_merger import ConfigMerger
 from .service_validator import ServiceValidator
 from .plugin_lifecycle import PluginLifecycleManager
 
@@ -54,7 +53,7 @@ class ReportSystemExecutor:
     def __init__(
         self,
         system_def: ReportSystemDefinition,
-        config: ReportConfig,
+        config: Config,
         container: Optional[ServiceContainer] = None,
         registry: Optional[PluginRegistry] = None,
         template_engine: Optional['TemplateEngine'] = None,
@@ -96,7 +95,6 @@ class ReportSystemExecutor:
         self._plugin_manager = plugin_manager
         
         # Initialize responsibility classes
-        self.config_merger = ConfigMerger()
         self.service_validator = ServiceValidator(container)
         # Use plugin_manager for lifecycle manager (fallback to plugin_loader if provided)
         if plugin_loader is not None:
@@ -106,8 +104,8 @@ class ReportSystemExecutor:
             from .plugin_lifecycle import PluginLifecycleManager
             self.lifecycle_manager = PluginLifecycleManager(self._plugin_manager.loader if hasattr(self._plugin_manager, 'loader') else None)
         
-        # Merge configuration and validate services
-        self.config_merger.merge(self.config, self.system_def)
+        # NOTE: Config should already be fully resolved before reaching executor
+        # No merging needed - load_config() handles CLI > YAML > JSON > Defaults
         self.services_available = self._ensure_services()
     
     def _ensure_services(self) -> bool:
@@ -274,7 +272,7 @@ class ReportSystemExecutor:
         return data_service.parse(
             input_dir=input_dir,
             data_source_config=self.system_def.data_source,
-            sample_size=self.config.execution.sample_size,
+            sample_size=self.config.sample_size,
             sort_by=sort_by
         )
     
@@ -372,7 +370,7 @@ class ReportSystemExecutor:
             data=data,  # LLMService uses 'data' param, not 'data_points'
             stats=stats,
             context=context,
-            dry_run=self.config.execution.dry_run,
+            dry_run=self.config.dry_run,
             report_config=self.config
         )
     

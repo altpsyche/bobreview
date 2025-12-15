@@ -13,7 +13,7 @@ from typing import Dict, List, Any, TYPE_CHECKING
 from .schema import LLMGeneratorConfig, PromptCategoryConfig
 
 if TYPE_CHECKING:
-    from ..core.config import ReportConfig
+    from ..core.config import Config
 
 
 class LLMGeneratorTemplate:

@@ -6,7 +6,7 @@ Responsible for validating that required services are available.
 
 from typing import Dict, Any, Optional
 from ..services import ServiceContainer
-from ..core import ReportConfig, log_warning, log_verbose
+from ..core import Config, log_warning, log_verbose
 from ..services import LLMService
 from ..core.plugin_system import get_plugin_manager
 
@@ -30,14 +30,14 @@ class ServiceValidator:
     def validate_required(
         self,
         required_services: Dict[str, str],
-        config: ReportConfig
+        config: Config
     ) -> bool:
         """
         Validate that all required services are available.
         
         Parameters:
             required_services: Dict mapping service name to description
-            config: ReportConfig for logging
+            config: Config for logging
         
         Returns:
             True if all services are available, False otherwise
@@ -73,23 +73,23 @@ class ServiceValidator:
         
         return True
     
-    def ensure_llm_service(self, config: ReportConfig) -> None:
+    def ensure_llm_service(self, config: Config) -> None:
         """
         Ensure LLM service is registered, creating it if needed.
         
         LLM service needs runtime config, so we register it here if not already registered.
         
         Parameters:
-            config: ReportConfig with LLM settings
+            config: Config with LLM settings
         """
         if not self.container.has('llm'):
             llm_config = {
-                'provider': config.llm.provider,
-                'api_key': config.llm.api_key,
-                'model': config.llm.model,
-                'temperature': config.llm.temperature,
-                'max_tokens': config.llm.max_tokens,
-                'use_cache': config.llm.enable_cache,
+                'provider': config.llm_provider,
+                'api_key': config.llm_api_key,
+                'model': config.llm_model,
+                'temperature': config.llm_temperature,
+                'max_tokens': config.llm_max_tokens,
+                'use_cache': config.llm_enable_cache,
             }
             self.container.register('llm', LLMService(llm_config))
             log_verbose("Registered LLMService with runtime config", config)

@@ -88,7 +88,7 @@ class LLMService(BaseService):
             stats: Statistical analysis results
             context: Additional context (thresholds, config, etc.)
             dry_run: If True, return placeholder instead of calling LLM
-            report_config: ReportConfig instance for Python generators
+            report_config: Config instance for Python generators
             
         Returns:
             Generated content string
@@ -187,7 +187,7 @@ class LLMService(BaseService):
             stats: Statistical analysis results
             context: Additional context
             dry_run: If True, return placeholders
-            report_config: ReportConfig instance
+            report_config: Config instance
             
         Returns:
             Dict mapping generator ID to content

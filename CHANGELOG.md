@@ -9,7 +9,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.8] - 2025-12-14
 
-> **MIGRATION GUIDE**: This release standardizes all API signatures and removes backward compatibility shims. Follow this guide to update your plugins.
+> **MIGRATION GUIDE**: This release standardizes all API signatures, consolidates configuration, and removes backward compatibility shims. Follow this guide to update your plugins.
+
+---
+
+### Configuration Consolidation (Breaking)
+
+**Files Deleted:**
+- `core/config_classes.py` → merged into `core/config.py`
+- `core/config_resolver.py` → merged into `core/config.py`
+- `core/config_utils.py` → removed (unused)
+- `core/theme_system.py` → merged into `core/themes.py`
+- `engine/config_merger.py` → removed (unused)
+- `engine/presets.py` → removed (unused)
+- `engine/loader.py::merge_cli_overrides()` → removed (60 lines)
+
+**CLI Unified (Breaking):**
+- Removed `build` subcommand - use `bobreview --plugin <name>` instead
+- Single entry point: `--plugin` builds from plugin's YAML config
+- All internal code now uses flat `Config` class
+
+**Schema Simplified:**
+- `schema.py::LLMConfig` class → removed
+- `schema.py::ThemeConfig` class → removed  
+- `schema.py::OutputConfig` class → removed
+- `ReportSystemDefinition` → now only structural fields (no config duplication)
+
+**Internal API Unified (48+ fixes):**
+- All `config.llm.provider` → `config.llm_provider`
+- All `config.execution.dry_run` → `config.dry_run`
+- All `config.output.embed_images` → `config.embed_images`
+- All `config.cache.use_cache` → `config.use_cache`
+
+#### New Configuration Flow
+
+```
+CLI Args → Config (flat) → ReportSystemExecutor
+     ↓
+YAML Config → Config.load_config() → Single source of truth
+     ↓
+JSON Plugin → ReportSystemDefinition (flat) → Same field names
+```
+
+#### JSON Format Change (Breaking)
+
+**Before (nested):**
+```json
+{
+  "llm_config": {"provider": "openai", "model": "gpt-4o"},
+  "theme": {"preset": "dark"},
+  "output": {"default_filename": "report.html"}
+}
+```
+
+**After (flat):**
+```json
+{
+  "llm_provider": "openai",
+  "llm_model": "gpt-4o", 
+  "theme": "dark",
+  "output_filename": "report.html"
+}
+```
+
+> **Note:** Parser accepts both formats for backward compatibility.
+
+#### Config Class Change
+
+**Before:** Multiple nested classes
+```python
+config = ReportConfig(
+    llm=LLMConfig(provider="openai"),
+    output=OutputConfig(theme_id="dark")
+)
+```
+
+**After:** Single flat class
+```python
+config = Config(
+    llm_provider="openai",
+    theme="dark"
+)
+```
 
 ---
 
@@ -17,11 +98,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Category | Old | New |
 |----------|-----|-----|
+| **Report config** | Pages in JSON | Pages in YAML (required) |
 | Interface params | `data_points: List[Dict]` | `data: Union[List[Dict], DataFrame]` |
 | Type alias | `LabelConfig` | `Labels` |
 | Theme function | `get_theme_css_block()` | `get_theme_css()` |
 | Theme vars | `theme.border`, `theme.success` | `theme.border_subtle`, `theme.ok` |
 | Analyzer registry | `get_analyzer_registry()` | `registry.analyzers` |
+
+---
+
+### YAML Config Required for Plugins
+
+**This is a breaking change.** Plugins now require `report_config.yaml` to define pages and components.
+
+#### Architecture Change
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| **Plugin Dev** | `report_systems/*.json` | Define capabilities (LLM generators, data source, theme) |
+| **User** | `report_config.yaml` | Define structure (pages, components) |
+
+#### Migration for Existing Plugins
+
+If your plugin only has JSON, create `report_config.yaml` in your plugin directory:
+
+```yaml
+name: "My Plugin Report"
+plugin: my_plugin
+version: "1.0.0"
+theme: dark
+
+pages:
+  - id: home
+    title: Overview
+    layout: default
+    nav_order: 1
+    components:
+      - type: llm
+        generator: summary
+      - type: chart
+        chart: bar
+        title: Scores
+        x: name
+        y: score
+```
+
+The `pages` array in JSON is now **ignored** - pages must be defined in YAML.
 
 ---
 

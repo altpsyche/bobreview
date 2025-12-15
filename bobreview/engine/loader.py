@@ -242,67 +242,8 @@ def load_report_system_json(path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
-def merge_cli_overrides(
-    system_data: Dict[str, Any],
-    cli_overrides: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """
-    Merge CLI argument overrides into report system definition.
-    
-    CLI arguments can override certain fields from the JSON, such as:
-    - thresholds (draw_hard_cap, tri_hard_cap, etc.)
-    - llm_config (model, temperature, etc.)
-    - output settings (embed_images, linked_css, etc.)
-    
-    Parameters:
-        system_data: Base report system data from JSON
-        cli_overrides: Dictionary of CLI override values
-    
-    Returns:
-        Merged report system data
-    """
-    if not cli_overrides:
-        return system_data
-    
-    # Create a deep copy to avoid modifying original (including nested dicts)
-    merged = copy.deepcopy(system_data)
-    
-    # Merge thresholds
-    if 'thresholds' in cli_overrides:
-        if 'thresholds' not in merged:
-            merged['thresholds'] = {}
-        merged['thresholds'].update(cli_overrides['thresholds'])
-    
-    # Merge LLM config
-    if 'llm_config' in cli_overrides:
-        if 'llm_config' not in merged:
-            merged['llm_config'] = {}
-        merged['llm_config'].update(cli_overrides['llm_config'])
-    
-    # Merge output config
-    if 'output' in cli_overrides:
-        if 'output' not in merged:
-            merged['output'] = {}
-        merged['output'].update(cli_overrides['output'])
-    
-    # Merge theme
-    if 'theme' in cli_overrides:
-        if 'theme' not in merged:
-            merged['theme'] = {}
-        merged['theme'].update(cli_overrides['theme'])
-    
-    # Handle page disabling
-    if 'disabled_pages' in cli_overrides:
-        disabled_ids = cli_overrides['disabled_pages']
-        if 'pages' in merged:
-            for page in merged['pages']:
-                if page.get('id') in disabled_ids:
-                    page['enabled'] = False
-        # Remove CLI-only key from merged dict
-        merged.pop('disabled_pages', None)
-    
-    return merged
 
+# merge_cli_overrides removed - Config.load_config() handles all merging
 
 def load_report_system(
     id_or_path: str,
@@ -396,9 +337,8 @@ def load_report_system(
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in report system file {json_path}: {e}") from e
     
-    # Merge CLI overrides
-    if cli_overrides:
-        system_data = merge_cli_overrides(system_data, cli_overrides)
+    
+    # Note: CLI overrides are handled by Config.load_config() - not here
     
     # Parse into ReportSystemDefinition
     try:

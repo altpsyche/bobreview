@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 # Import via ThemeSystem for centralized theme access
-from ...theme_system import get_theme_system
+from ...themes import get_theme_system
 from ...themes import get_available_themes
 
 # Import generators
@@ -144,8 +144,8 @@ __all__ = ['{class_name}CsvParser']
     base_template = _read_template("pages/base.html.j2", name=name, safe_name=safe_name)
     (templates_dir / "base.html.j2").write_text(base_template, encoding='utf-8')
     
-    home_template = _read_template("pages/home.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "home.html.j2").write_text(home_template, encoding='utf-8')
+    home_template = _read_template("pages/overview.html.j2", name=name, safe_name=safe_name)
+    (templates_dir / "overview.html.j2").write_text(home_template, encoding='utf-8')
     
     # Create details page for multi-page example
     details_template = _read_template("pages/details.html.j2", name=name, safe_name=safe_name)

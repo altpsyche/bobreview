@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 from .utils import format_number
 from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
-from .theme_system import get_theme_css
+from .themes import get_theme_css
 from .plugin_system import get_extension_point
 
 

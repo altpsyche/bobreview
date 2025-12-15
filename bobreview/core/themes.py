@@ -663,3 +663,101 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
     g = int(hex_color[2:4], 16)
     b = int(hex_color[4:6], 16)
     return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+# =============================================================================
+# THEME SYSTEM (Unified API)
+# =============================================================================
+
+from typing import Union, Literal
+from pathlib import Path
+from markupsafe import Markup
+
+
+class ThemeSystem:
+    """Unified theme system - singleton for theme operations."""
+    _instance = None
+    
+    @classmethod
+    def get_instance(cls) -> 'ThemeSystem':
+        if cls._instance is None:
+            cls._instance = ThemeSystem()
+        return cls._instance
+    
+    def get_theme(self, theme_id: Optional[str] = None) -> Optional[ReportTheme]:
+        """Get a theme by ID."""
+        if not theme_id:
+            return DARK_THEME
+        return get_theme_by_id(theme_id)
+    
+    def resolve_theme(self, theme_id: str) -> Optional[ReportTheme]:
+        """Resolve a theme with inheritance."""
+        theme = self.get_theme(theme_id)
+        if theme:
+            return resolve_theme(theme)
+        return None
+    
+    def resolve_from_config(self, theme_config) -> Optional[ReportTheme]:
+        """Resolve theme from config (string only, no backward compat)."""
+        if theme_config is None:
+            return self.resolve_theme('dark')
+        if isinstance(theme_config, str):
+            return self.resolve_theme(theme_config)
+        if isinstance(theme_config, dict):
+            raise TypeError(
+                f"Theme config must be a string, not dict. "
+                f"Use flat format: theme='dark' instead of theme={{'preset': 'dark'}}"
+            )
+        return self.resolve_theme('dark')
+    
+    def get_css(self, theme_id: str, mode: Literal['embedded', 'linked'] = 'embedded', include_base: bool = True) -> Union[Markup, str]:
+        """Get CSS for a theme."""
+        from .html_utils import get_shared_css
+        
+        theme = self.resolve_theme(theme_id)
+        if not theme:
+            return ''
+        
+        if mode == 'embedded':
+            css_parts = [get_theme_css_variables(theme)]
+            if include_base:
+                css_parts.append('\n/* Base styles */\n')
+                css_parts.append(get_shared_css())
+            return Markup('\n'.join(css_parts))
+        else:
+            return 'static/theme.css'
+    
+    def get_theme_dict(self, theme_id: str) -> Dict[str, Any]:
+        """Get theme as dict for templates."""
+        theme = self.resolve_theme(theme_id)
+        return theme_to_dict(theme) if theme else {}
+    
+    def generate_theme_css_file(self, theme_id: str, output_path: Path) -> None:
+        """Generate theme.css file for linked mode."""
+        from .html_utils import get_shared_css
+        
+        theme = self.resolve_theme(theme_id)
+        if not theme:
+            return
+        
+        css = get_theme_css_variables(theme) + '\n' + get_shared_css()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(css)
+
+
+# Convenience functions
+def get_theme_system() -> ThemeSystem:
+    """Get the global ThemeSystem instance."""
+    return ThemeSystem.get_instance()
+
+
+def get_resolved_theme(theme_id: str) -> Optional[ReportTheme]:
+    """Get a resolved theme (with inheritance)."""
+    return get_theme_system().resolve_theme(theme_id)
+
+
+def get_theme_css(theme_id: Optional[str] = None, mode: Literal['embedded', 'linked'] = 'embedded', include_base: bool = True) -> Union[Markup, str]:
+    """Get CSS for a theme."""
+    if not theme_id:
+        theme_id = 'dark'
+    return get_theme_system().get_css(theme_id, mode=mode, include_base=include_base)

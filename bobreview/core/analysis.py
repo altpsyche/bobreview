@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Tuple, TYPE_CHECKING, Optional
 from scipy import stats
 
 if TYPE_CHECKING:
-    from .config import ReportConfig
+    from .config import Config
 
 
 def _calculate_confidence_interval(values: List[float], confidence: float = 0.95) -> Tuple[float, float]:

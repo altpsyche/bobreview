@@ -6,7 +6,7 @@ Responsible for calling plugin lifecycle hooks during report generation.
 
 from typing import Dict, Any, List, Optional
 from ..core.plugin_system import PluginLoader
-from ..core import ReportConfig
+from ..core import Config
 from ..core.plugin_utils import safe_plugin_call
 
 
@@ -43,25 +43,25 @@ class PluginLifecycleManager:
                     plugins.append(plugin_instance)
         return plugins
     
-    def call_report_start(self, context: Dict[str, Any], config: Optional[ReportConfig] = None) -> None:
+    def call_report_start(self, context: Dict[str, Any], config: Optional[Config] = None) -> None:
         """
         Call on_report_start hook on all loaded plugins.
         
         Parameters:
             context: Report context dictionary
-            config: Optional ReportConfig for logging
+            config: Optional Config for logging
         """
         plugins = self.get_loaded_plugins()
         for plugin in plugins:
             safe_plugin_call(plugin, 'on_report_start', context, config=config)
     
-    def call_report_complete(self, result: Dict[str, Any], config: Optional[ReportConfig] = None) -> None:
+    def call_report_complete(self, result: Dict[str, Any], config: Optional[Config] = None) -> None:
         """
         Call on_report_complete hook on all loaded plugins.
         
         Parameters:
             result: Report result dictionary
-            config: Optional ReportConfig for logging
+            config: Optional Config for logging
         """
         plugins = self.get_loaded_plugins()
         for plugin in plugins:

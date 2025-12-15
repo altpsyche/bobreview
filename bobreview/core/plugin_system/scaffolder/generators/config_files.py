@@ -37,7 +37,16 @@ def generate_manifest(
 
 
 def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark') -> Dict[str, Any]:
-    """Generate report system JSON with theme preset support."""
+    """
+    Generate report system JSON for plugin developers.
+    
+    This JSON defines CAPABILITIES that the plugin provides:
+    - Data source configuration (parser type, fields)
+    - LLM generators (prompts for AI-generated content)
+    - Theme preset
+    
+    Pages and components are defined by USERS in report_config.yaml.
+    """
     return {
         "schema_version": "1.0",
         "id": safe_name,
@@ -46,6 +55,10 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
         "description": f"Report system for {name}",
         "author": "Your Name",
         
+        # ─────────────────────────────────────────────────────────────────────
+        # DATA SOURCE
+        # Defines how data files are parsed
+        # ─────────────────────────────────────────────────────────────────────
         "data_source": {
             "type": f"{safe_name}_csv",
             "input_format": "csv",
@@ -56,106 +69,26 @@ def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark')
             }
         },
         
-        "llm_config": {
-            "provider": "openai",
-            "model": "gpt-4o",
-            "temperature": 0.7,
-            "max_tokens": 2000,
-            "chunk_size": 10
-        },
+        # ─────────────────────────────────────────────────────────────────────
+        # LLM CONFIGURATION (flat format)
+        # Settings for AI content generation (provider, model, temperature)
+        # Users define their own prompts in report_config.yaml
+        # ─────────────────────────────────────────────────────────────────────
+        "llm_provider": "openai",
+        "llm_model": "gpt-4o",
+        "llm_temperature": 0.7,
+        "llm_max_tokens": 2000,
+        "llm_chunk_size": 10,
         
-        "llm_generators": [
-            {
-                "id": "summary",
-                "name": "Summary",
-                "description": "Executive summary of the data analysis",
-                "prompt_template": f"Analyze this {name} data and provide a brief executive summary. Highlight key trends, outliers, and notable patterns.",
-                "data_table": {
-                    "columns": ["name", "score"],
-                    "sample_strategy": "all",
-                    "max_rows": 50
-                },
-                "returns": "string",
-                "enabled": True
-            },
-            {
-                "id": "recommendations",
-                "name": "Recommendations",
-                "description": "Actionable recommendations based on the data",
-                "prompt_template": f"Based on this {name} data, provide 3-5 actionable recommendations for improvement.",
-                "data_table": {
-                    "columns": ["name", "score"],
-                    "sample_strategy": "all",
-                    "max_rows": 50
-                },
-                "returns": "string",
-                "enabled": True
-            }
-        ],
+        # ─────────────────────────────────────────────────────────────────────
+        # THEME AND OUTPUT (flat format)
+        # Default theme preset (users can override in YAML or via --theme)
+        # ─────────────────────────────────────────────────────────────────────
+        "theme": color_theme,  # dark, light, ocean, purple, terminal, sunset
+        "output_filename": f"{safe_name}_report.html"
         
-        "theme": {
-            "preset": color_theme  # dark, ocean, purple, terminal, sunset
-        },
-        
-        # Pages define report structure
-        "pages": [
-            {
-                "id": "home",
-                "filename": "index.html",
-                "nav_label": "Overview",
-                "nav_order": 1,
-                "template": {
-                    "type": "jinja2",
-                    "name": f"{safe_name}/pages/home.html.j2"
-                },
-                "llm_content": ["summary", "recommendations"],
-                "charts": [
-                    {
-                        "id": "score_chart",
-                        "type": "bar",
-                        "title": "Scores Overview",
-                        "x_field": "name",
-                        "y_field": "score"
-                    },
-                    {
-                        "id": "trend_chart",
-                        "type": "line",
-                        "title": "Score Trend",
-                        "x_field": "name",
-                        "y_field": "score"
-                    }
-                ]
-            },
-            {
-                "id": "details",
-                "filename": "details.html",
-                "nav_label": "Details",
-                "nav_order": 2,
-                "template": {
-                    "type": "jinja2",
-                    "name": f"{safe_name}/pages/details.html.j2"
-                },
-                "charts": [
-                    {
-                        "id": "distribution_chart",
-                        "type": "histogram",
-                        "title": "Score Distribution",
-                        "y_field": "score"
-                    },
-                    {
-                        "id": "category_chart",
-                        "type": "doughnut",
-                        "title": "By Category",
-                        "x_field": "category",
-                        "y_field": "score"
-                    }
-                ]
-            }
-        ],
-        
-        "output": {
-            "default_filename": f"{safe_name}_report.html"
-        }
+        # NOTE: Pages are defined by USERS in report_config.yaml, not here.
+        # This file defines what's POSSIBLE; YAML defines what to USE.
     }
 
 
@@ -196,6 +129,24 @@ theme: "{color_theme}"
 version: "1.0"
 author: ""
 description: "Generated report for {name} data analysis"
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# PLUGIN CONFIG
+# ─────────────────────────────────────────────────────────────────────────────────
+#
+# Plugin-specific settings. These override the plugin's JSON defaults.
+# Access in templates via: {{{{ config.your_setting }}}}
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+
+config:
+  # Example plugin-specific settings (customize for your plugin):
+  # thresholds:
+  #   warning: 50
+  #   danger: 30
+  # labels:
+  #   header: "My Custom Report"
+  #   footer: "Generated by BobReview"
 
 # ─────────────────────────────────────────────────────────────────────────────────
 # PAGES
@@ -278,12 +229,14 @@ pages:
       #   y:     Field for Y-axis (e.g., score, value)
 
       - type: chart
+        id: score_chart
         chart: bar
         title: "Scores by Item"
         x: name
         y: score
 
       - type: chart
+        id: trend_chart
         chart: line
         title: "Score Trend"
         x: name
@@ -292,14 +245,45 @@ pages:
       # ── LLM CONTENT ─────────────────────────────────────────────────────────────
       # AI-generated insights using your configured LLM provider
       #
-      # AVAILABLE GENERATORS (defined in report_systems/{safe_name}.json):
-      #   summary         - Executive summary of the data
-      #   recommendations - Actionable recommendations
+      # Add as many LLM sections as you want - each with its own prompt!
       #
-      # To add more generators, edit report_systems/{safe_name}.json
+      # OPTIONS:
+      #   id:       Unique identifier (optional, auto-generated if omitted)
+      #   title:    Display title for the section
+      #   prompt:   Your prompt - be creative! The AI will analyze your data.
+      #   max_rows: Max data rows to include (default: 50)
+      #
+      # DATA FIELD REFERENCES:
+      #   Use {{{{field}}}} syntax to reference data fields in your prompt.
+      #   This auto-configures which columns are sent to the LLM.
+      #   Example: "Compare {{{{name}}}} scores: {{{{score}}}}"
 
       - type: llm
-        generator: summary
+        id: summary
+        title: "Executive Summary"
+        prompt: "Analyze the {{{{name}}}} and {{{{score}}}} data. Provide a brief executive summary highlighting key trends and outliers."
+
+      - type: llm
+        id: recommendations
+        title: "Recommendations"
+        prompt: "Based on this {name} data, provide 3-5 actionable recommendations for improvement."
+
+      # ── INLINE WIDGETS ────────────────────────────────────────────────────────────
+      # Create custom widgets with inline HTML templates
+      #
+      # OPTIONS:
+      #   id:       Widget identifier
+      #   title:    Widget title
+      #   template: HTML template with Jinja2 variables
+      #   config:   Template variables
+      #
+      # EXAMPLE:
+      #   - type: widget
+      #     id: custom_card
+      #     template: "<div class='custom-card'><h3>{{{{ title }}}}</h3><p>{{{{ value }}}}</p></div>"
+      #     config:
+      #       title: "Average"
+      #       value: "{{{{ stats.score.mean | round(2) }}}}"
 
   # ┌─────────────────────────────────────────────────────────────────────────────┐
   # │ DETAILS PAGE                                                                 │
@@ -311,12 +295,14 @@ pages:
     components:
       # ── HISTOGRAM ───────────────────────────────────────────────────────────────
       - type: chart
+        id: distribution_chart
         chart: histogram
         title: "Score Distribution"
         y: score
 
       # ── CATEGORY BREAKDOWN ──────────────────────────────────────────────────────
       - type: chart
+        id: category_chart
         chart: doughnut
         title: "By Category"
         x: category

@@ -59,7 +59,7 @@ class ReportPipeline:
             system_def: ReportSystemDefinition from JSON
             input_dir: Directory containing input files
             output_path: Output path for report
-            config: ReportConfig with settings
+            config: Config with settings
             
         Returns:
             Result dictionary with 'success', 'pages', 'stats', etc.
@@ -136,7 +136,7 @@ class ReportPipeline:
             return data_service.parse(
                 input_dir=input_dir,
                 data_source_config=system_def.data_source,
-                sample_size=config.execution.sample_size,
+                sample_size=config.sample_size,
                 sort_by=sort_by
             )
         else:
@@ -145,8 +145,8 @@ class ReportPipeline:
             factory = ParserFactory()
             parser = factory.create(system_def.data_source)
             data = parser.parse_directory(input_dir)
-            if config.execution.sample_size:
-                data = data[:config.execution.sample_size]
+            if config.sample_size:
+                data = data[:config.sample_size]
             return data
     
     def _analyze_data(
@@ -189,7 +189,7 @@ class ReportPipeline:
         config: Any
     ) -> Dict[str, str]:
         """Generate LLM content using LLMService."""
-        if config.execution.dry_run:
+        if config.dry_run:
             return {}
         
         if self.container.has('llm'):
@@ -205,7 +205,7 @@ class ReportPipeline:
                 data=data_points,  # Service uses 'data' param
                 stats=stats,
                 context=context,
-                dry_run=config.execution.dry_run
+                dry_run=config.dry_run
             )
         else:
             # No LLM service registered

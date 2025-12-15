@@ -1121,12 +1121,15 @@ Located in `engine/schema.py`.
 
 ### Basic Report Generation
 ```python
-from bobreview import ReportConfig
+from bobreview.core import Config
 from bobreview.engine import load_report_system, ReportSystemExecutor
 from pathlib import Path
 
-config = ReportConfig(title="My Report")
-config.llm.provider = "openai"
+config = Config(
+    title="My Report",
+    llm_provider="openai",
+    llm_model="gpt-4o"
+)
 
 system_def = load_report_system("my_system")
 executor = ReportSystemExecutor(system_def, config)

@@ -12,14 +12,14 @@ __author__ = "BobReview Contributors"
 __description__ = "Report generation framework with plugin support"
 
 # Import from new package structure
-from .core import ReportConfig
+from .core import Config
 from .cli import main as cli_main
 
 __all__ = [
     '__author__',
     '__description__',
     '__version__',
-    'ReportConfig',
+    'Config',
     'cli_main',
 ]
 

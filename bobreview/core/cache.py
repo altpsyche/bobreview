@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .config import ReportConfig
+    from .config import Config
 
 from .utils import log_warning, log_success, log_verbose, log_info
 
@@ -20,9 +20,9 @@ class LLMCache:
     
     cache_dir: Path
     enabled: bool
-    config: "Optional[ReportConfig]"
+    config: "Optional[Config]"
     
-    def __init__(self, cache_dir: Path, enabled: bool = True, config: "Optional[ReportConfig]" = None):
+    def __init__(self, cache_dir: Path, enabled: bool = True, config: "Optional[Config]" = None):
         """
         Initialize the LLMCache.
         
@@ -31,7 +31,7 @@ class LLMCache:
         Parameters:
             cache_dir (Path): Filesystem path where cache files will be stored.
             enabled (bool): If True, enables caching and creates `cache_dir` if missing.
-            config (Optional[ReportConfig]): Optional configuration used for logging and behavior; may be None.
+            config (Optional[Config]): Optional configuration used for logging and behavior; may be None.
         """
         self.cache_dir = cache_dir
         self.enabled = enabled
@@ -171,13 +171,13 @@ def get_cache() -> Optional[LLMCache]:
     return _cache_instance
 
 
-def init_cache(config: "ReportConfig"):
+def init_cache(config: "Config"):
     """
     Initialize the module-level LLM cache using values from `config`.
     
     Parameters:
-        config (ReportConfig): Configuration containing cache settings in `config.cache`; used to construct the LLMCache instance that will be returned by `get_cache()`.
+        config (Config): Configuration containing cache settings; used to construct the LLMCache instance that will be returned by `get_cache()`.
     """
     global _cache_instance
-    _cache_instance = LLMCache(config.cache.cache_dir, enabled=config.cache.use_cache, config=config)
+    _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
 

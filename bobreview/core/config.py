@@ -1,124 +1,137 @@
-#!/usr/bin/env python3
 """
-Configuration and data models for BobReview.
+Configuration for BobReview.
+
+Single unified Config class - the only config you need.
 """
 
-from typing import List
-
-# Import focused config classes
-from .config_classes import (
-    ReportConfig,
-    ThresholdConfig,
-    LLMConfig,
-    CacheConfig,
-    ExecutionConfig,
-    OutputConfig,
-)
-
-# Re-exports from models module
-__all__ = [
-    'ReportConfig',
-    'ThresholdConfig',
-    'LLMConfig',
-    'CacheConfig',
-    'ExecutionConfig',
-    'OutputConfig',
-    'validate_config',
-]
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional, List, Dict, Any
 
 
-def validate_config(config: ReportConfig) -> List[str]:
+@dataclass
+class Config:
     """
-    Validate a ReportConfig for logical consistency.
+    Unified configuration for report generation.
     
-    Performs generic validation of numeric thresholds, size limits, and LLM settings.
-    Threshold validation is generic - checks that numeric thresholds are non-negative
-    and that soft_cap <= hard_cap for any threshold pairs found.
-    
-    Checks performed:
-    - Generic threshold validation (non-negative values, soft_cap <= hard_cap pairs)
-    - outlier_sigma > 0
-    - mad_threshold > 0
-    - llm_chunk_size > 0
-    - llm_max_tokens > 0
-    - llm_combine_warning_threshold > 0
-    - sample_size, if provided, > 0
-    - llm_temperature is between 0 and 2 (inclusive)
-    - llm_provider is one of: "openai", "anthropic", "ollama"
-    
-    Parameters:
-        config (ReportConfig): Configuration instance to validate.
-    
-    Returns:
-        List[str]: List of error messages describing each violated constraint; empty if the configuration is valid.
+    All settings in one place. No merging needed.
     """
-    errors = []
-    thresholds = config.thresholds
-    llm = config.llm
-    execution = config.execution
+    # Report metadata
+    title: str = ""
     
-    # Generic threshold validation - check all numeric thresholds
-    threshold_dict = dict(thresholds) if isinstance(thresholds, dict) else {}
+    # LLM settings
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4o"
+    llm_api_key: Optional[str] = None
+    llm_api_key_env: Optional[str] = None  # Environment variable name for API key
+    llm_api_base: Optional[str] = None
+    llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000
+    llm_chunk_size: int = 10
+    llm_enable_cache: bool = True
     
-    # Find soft_cap/hard_cap pairs and validate ordering
-    soft_caps = {k: v for k, v in threshold_dict.items() if k.endswith('_soft_cap')}
-    for soft_key, soft_value in soft_caps.items():
-        if not isinstance(soft_value, (int, float)):
-            continue
+    # Theme and output
+    theme: str = "dark"
+    output_dir: str = "./output"
+    output_filename: str = "report.html"
+    embed_images: bool = True
+    linked_css: bool = False
+    
+    # Execution
+    verbose: bool = False
+    quiet: bool = False
+    dry_run: bool = False
+    sample_size: Optional[int] = None
+    
+    # Cache
+    use_cache: bool = True
+    cache_dir: Path = field(default_factory=lambda: Path(".bobreview_cache"))
+    
+    # Thresholds (plugin-specific, stored as dict)
+    thresholds: Dict[str, Any] = field(default_factory=dict)
+    
+    # Plugin extensions (from JSON + YAML override)
+    extensions: Dict[str, Any] = field(default_factory=dict)
+    
+    def validate(self) -> List[str]:
+        """Validate config. Returns list of errors."""
+        errors = []
+        if self.llm_temperature < 0 or self.llm_temperature > 2:
+            errors.append("llm_temperature must be 0-2")
+        if self.llm_max_tokens <= 0:
+            errors.append("llm_max_tokens must be > 0")
+        if self.llm_provider not in ['openai', 'anthropic', 'ollama']:
+            errors.append(f"Invalid llm_provider: {self.llm_provider}")
+        return errors
+
+
+def load_config(
+    cli_args: Optional[Dict[str, Any]] = None,
+    yaml_path: Optional[Path] = None,
+    json_data: Optional[Dict[str, Any]] = None
+) -> Config:
+    """
+    Load config with precedence: CLI > YAML > JSON > Defaults.
+    
+    This is the ONE place config is resolved.
+    """
+    config = Config()
+    
+    # Apply JSON defaults (plugin) - ALL FLAT FORMAT
+    if json_data:
+        if json_data.get('llm_provider'):
+            config.llm_provider = json_data['llm_provider']
+        if json_data.get('llm_model'):
+            config.llm_model = json_data['llm_model']
+        if json_data.get('llm_temperature') is not None:
+            config.llm_temperature = json_data['llm_temperature']
+        if json_data.get('llm_max_tokens'):
+            config.llm_max_tokens = json_data['llm_max_tokens']
         
-        # Find corresponding hard_cap
-        hard_key = soft_key.replace('_soft_cap', '_hard_cap')
-        if hard_key in threshold_dict:
-            hard_value = threshold_dict[hard_key]
-            if isinstance(hard_value, (int, float)):
-                if soft_value > hard_value:
-                    errors.append(f"{soft_key} ({soft_value}) must be <= {hard_key} ({hard_value})")
+        if json_data.get('theme'):
+            config.theme = json_data['theme']
         
-        # Check non-negative
-        if soft_value < 0:
-            errors.append(f"{soft_key} must be non-negative")
+        if json_data.get('extensions'):
+            config.extensions = json_data['extensions'].copy()
     
-    # Validate hard_caps are non-negative
-    hard_caps = {k: v for k, v in threshold_dict.items() if k.endswith('_hard_cap')}
-    for hard_key, hard_value in hard_caps.items():
-        if isinstance(hard_value, (int, float)) and hard_value < 0:
-            errors.append(f"{hard_key} must be non-negative")
+    # Apply YAML user config
+    if yaml_path and yaml_path.exists():
+        import yaml as yaml_lib
+        with open(yaml_path) as f:
+            yaml_data = yaml_lib.safe_load(f) or {}
+        
+        if yaml_data.get('theme'):
+            config.theme = yaml_data['theme']
+        if yaml_data.get('output_dir'):
+            config.output_dir = yaml_data['output_dir']
+        
+        # YAML config overrides JSON extensions
+        if yaml_data.get('config'):
+            for key, value in yaml_data['config'].items():
+                if isinstance(value, dict) and key in config.extensions:
+                    config.extensions[key] = {**config.extensions[key], **value}
+                else:
+                    config.extensions[key] = value
     
-    # Validate thresholds are non-negative
-    threshold_keys = {k: v for k, v in threshold_dict.items() if k.endswith('_threshold')}
-    for threshold_key, threshold_value in threshold_keys.items():
-        if isinstance(threshold_value, (int, float)) and threshold_value < 0:
-            errors.append(f"{threshold_key} must be non-negative")
+    # Apply CLI args (highest priority)
+    if cli_args:
+        if cli_args.get('theme'):
+            config.theme = cli_args['theme']
+        if cli_args.get('output'):
+            config.output_dir = cli_args['output']
+        if cli_args.get('verbose'):
+            config.verbose = True
+        if cli_args.get('quiet'):
+            config.quiet = True
+        if cli_args.get('dry_run'):
+            config.dry_run = True
+        if cli_args.get('sample'):
+            config.sample_size = cli_args['sample']
+        if cli_args.get('llm_provider'):
+            config.llm_provider = cli_args['llm_provider']
+        if cli_args.get('llm_model'):
+            config.llm_model = cli_args['llm_model']
+        if cli_args.get('llm_api_key'):
+            config.llm_api_key = cli_args['llm_api_key']
     
-    # Validate generic outlier thresholds (if present)
-    outlier_sigma = threshold_dict.get('outlier_sigma')
-    if outlier_sigma is not None and isinstance(outlier_sigma, (int, float)) and outlier_sigma <= 0:
-        errors.append("outlier_sigma must be > 0")
-    
-    mad_threshold = threshold_dict.get('mad_threshold')
-    if mad_threshold is not None and isinstance(mad_threshold, (int, float)) and mad_threshold <= 0:
-        errors.append("mad_threshold must be > 0")
-    
-    # Note: All threshold validation is now generic - no hardcoded field names
-    
-    if llm.chunk_size <= 0:
-        errors.append("llm_chunk_size must be > 0")
-    
-    if llm.max_tokens <= 0:
-        errors.append("llm_max_tokens must be > 0")
-    
-    if llm.combine_warning_threshold <= 0:
-        errors.append("llm_combine_warning_threshold must be > 0")
-    
-    if execution.sample_size is not None and execution.sample_size <= 0:
-        errors.append("sample_size must be > 0")
-    
-    if llm.temperature < 0 or llm.temperature > 2:
-        errors.append("llm_temperature must be between 0 and 2")
-    
-    # Validate provider
-    valid_providers = ['openai', 'anthropic', 'ollama']
-    if llm.provider not in valid_providers:
-        errors.append(f"llm_provider must be one of: {', '.join(valid_providers)}")
-    
-    return errors
+    return config

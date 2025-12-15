@@ -11,9 +11,8 @@ import random
 from pathlib import Path
 
 from . import __version__
-from .core import ReportConfig, validate_config, log_info, log_success, log_warning, log_error, log_verbose, format_number
+from .core import Config, log_info, log_success, log_warning, log_error, log_verbose, format_number
 from .core import init_cache, get_cache
-from .core.config import LLMConfig, CacheConfig, ExecutionConfig, OutputConfig
 
 # Import report systems framework
 from .engine import load_report_system, list_available_systems
@@ -695,15 +694,9 @@ Examples:
                                 choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
                                 help='Base color theme for templates (default: dark)')
     
-    # build command - build report from user config
-    build_parser = subparsers.add_parser('build', help='Build report from config file')
-    build_parser.add_argument('config', help='Path to report config YAML')
-    build_parser.add_argument('--output', '-o', type=str, default=None,
-                             help='Output directory (overrides config)')
-    build_parser.add_argument('--dry-run', action='store_true',
-                             help='Validate only, do not generate')
-    build_parser.add_argument('--plugin-dir', action='append', dest='plugin_dirs', default=[],
-                             help='Extra plugin directory')
+    
+    # build subcommand removed - use `bobreview --plugin <name> --dir <path>` instead
+    # All report generation now goes through --plugin which uses ReportBuilder
     
     # validate command - validate a report config
     validate_parser = subparsers.add_parser('validate', help='Validate report config file')
@@ -867,68 +860,12 @@ Examples:
     if args.command == 'doctor':
         return handle_doctor_command(extra_dirs=getattr(args, 'plugin_dirs', []))
     
-    # Handle build command
-    if args.command == 'build':
-        from .core.report_builder import get_report_builder
-        from .core.report_config import load_report_config, validate_report_config
-        
-        # Load plugins
-        _load_plugins(getattr(args, 'plugin_dirs', []), None)
-        
-        builder = get_report_builder()
-        
-        if RICH_AVAILABLE:
-            console.print(f"[bold]Building report from:[/bold] {args.config}")
-        else:
-            print(f"Building report from: {args.config}")
-        
-        try:
-            result = builder.build(
-                config_path=args.config,
-                output_dir=getattr(args, 'output', None),
-                dry_run=getattr(args, 'dry_run', False)
-            )
-            
-            if result['success']:
-                if RICH_AVAILABLE:
-                    console.print("[green]✓ Report built successfully[/green]")
-                    if result.get('dry_run'):
-                        console.print(f"[dim]Dry run - {len(result.get('pages', []))} pages validated[/dim]")
-                    else:
-                        console.print(f"[dim]Output: {result.get('output_dir')}[/dim]")
-                else:
-                    print("✓ Report built successfully")
-                    if result.get('dry_run'):
-                        print(f"Dry run - {len(result.get('pages', []))} pages validated")
-                    else:
-                        print(f"Output: {result.get('output_dir')}")
-                return 0
-            else:
-                if RICH_AVAILABLE:
-                    console.print("[red]✗ Build failed:[/red]")
-                    for err in result.get('errors', []):
-                        console.print(f"  [red]•[/red] {err}")
-                else:
-                    print("✗ Build failed:")
-                    for err in result.get('errors', []):
-                        print(f"  - {err}")
-                return 1
-        except FileNotFoundError as e:
-            if RICH_AVAILABLE:
-                console.print(f"[red]✗ Config file not found:[/red] {e}")
-            else:
-                print(f"✗ Config file not found: {e}")
-            return 1
-        except Exception as e:
-            if RICH_AVAILABLE:
-                console.print(f"[red]✗ Build error:[/red] {e}")
-            else:
-                print(f"✗ Build error: {e}")
-            return 1
+    
+    # build command removed - all report generation goes through --plugin
     
     # Handle validate command
     if args.command == 'validate':
-        from .core.report_config import load_user_report_config, validate_user_report_config
+        from .core.report_config import load_user_config, validate_user_config
         
         if RICH_AVAILABLE:
             console.print(f"[bold]Validating:[/bold] {args.config}")
@@ -936,8 +873,8 @@ Examples:
             print(f"Validating: {args.config}")
         
         try:
-            config = load_user_report_config(args.config)
-            errors = validate_user_report_config(config)
+            config = load_user_config(args.config)
+            errors = validate_user_config(config)
             
             if errors:
                 if RICH_AVAILABLE:
@@ -1015,45 +952,30 @@ Examples:
             f"Set {env_key} environment variable or use --llm-api-key"
         )
     
-    # Build configuration
-    # Note: Thresholds are defined in report system JSON files, not via CLI
-    # Title can come from parsed data (e.g., game.json), so default to None if not provided
-    config = ReportConfig(
-        title=args.title,  # None if not provided - will be extracted from parsed data if available
-        # Use default ThresholdConfig - thresholds come from report system JSON
-        llm=LLMConfig(
-            provider=args.llm_provider,
-            api_key=llm_api_key,
-            api_base=args.llm_api_base,
-            model=args.llm_model,
-            temperature=args.llm_temperature,
-            max_tokens=args.llm_max_tokens,
-            chunk_size=args.llm_chunk_size,
-            combine_warning_threshold=args.llm_combine_warning_threshold,
-            enable_cache=args.use_cache and not args.dry_run,
-        ),
-        cache=CacheConfig(
-            cache_dir=Path(args.cache_dir),
-            use_cache=args.use_cache and not args.dry_run,
-            clear_cache=args.clear_cache,
-        ),
-        execution=ExecutionConfig(
-            dry_run=args.dry_run,
-            sample_size=args.sample_size,
-            verbose=args.verbose,
-            quiet=args.quiet,
-            enable_recommendations=not args.no_recommendations,
-        ),
-        output=OutputConfig(
-            embed_images=args.embed_images,
-            linked_css=args.linked_css,
-            theme_id=args.theme_id or 'dark',  # Default to 'dark' if not specified
-            disabled_pages=args.disabled_pages,
-        )
+    # Build configuration using unified Config class
+    config = Config(
+        title=args.title or "",
+        llm_provider=args.llm_provider,
+        llm_api_key=llm_api_key,
+        llm_api_base=args.llm_api_base,
+        llm_model=args.llm_model,
+        llm_temperature=args.llm_temperature,
+        llm_max_tokens=args.llm_max_tokens,
+        llm_chunk_size=args.llm_chunk_size,
+        theme=args.theme_id or 'dark',
+        output_dir=str(args.output) if hasattr(args, 'output') and args.output else './output',
+        embed_images=args.embed_images,
+        linked_css=args.linked_css,
+        verbose=args.verbose,
+        quiet=args.quiet,
+        dry_run=args.dry_run,
+        sample_size=args.sample_size,
+        use_cache=args.use_cache and not args.dry_run,
+        cache_dir=Path(args.cache_dir),
     )
     
     # Validate configuration
-    validation_errors = validate_config(config)
+    validation_errors = config.validate()
     if validation_errors:
         log_error("Configuration validation failed:")
         for error in validation_errors:
@@ -1064,15 +986,15 @@ Examples:
     init_cache(config)
     
     # Clear cache if requested
-    if config.cache.clear_cache:
+    if args.clear_cache:
         cache = get_cache()
         if cache:
             cache.clear()
     
-    if config.execution.dry_run:
+    if config.dry_run:
         log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
     
-    log_verbose(f"LLM Provider: {config.llm.provider} (model: {config.llm.model})", config)
+    log_verbose(f"LLM Provider: {config.llm_provider} (model: {config.llm_model})", config)
     
     # IMPORTANT: Plugins must be loaded BEFORE template engine is first accessed
     # to ensure plugin templates are available
@@ -1140,29 +1062,42 @@ Examples:
                 args.plugin = matched_manifest.name
             
             if plugin_path:
-                # Find report systems in plugin
-                plugin_systems_dir = plugin_path / 'report_systems'
-                if plugin_systems_dir.exists():
-                    json_files = sorted(plugin_systems_dir.glob('*.json'))  # Sort for deterministic order
-                    if json_files:
-                        if len(json_files) == 1:
-                            # Only one system - auto-select it
-                            report_system_id = json_files[0].stem
-                            log_info(f"Using report system '{report_system_id}' from plugin '{args.plugin}'", config)
-                        else:
-                            # Multiple systems - require explicit selection
-                            system_names = [f.stem for f in json_files]
-                            log_error(
-                                f"Plugin '{args.plugin}' has {len(json_files)} report systems. "
-                                f"Please specify which one to use with --report-system.\n"
-                                f"Available systems: {', '.join(system_names)}"
-                            )
-                            return 1
+                # YAML config is required for report generation
+                yaml_config = plugin_path / 'report_config.yaml'
+                if yaml_config.exists():
+                    log_info(f"Using config: {yaml_config}", config)
+                    
+                    # Use ReportBuilder for YAML-based generation
+                    from .core.report_builder import get_report_builder
+                    builder = get_report_builder()
+                    
+                    # Build with CLI overrides
+                    result = builder.build(
+                        config_path=str(yaml_config),
+                        output_dir=str(Path(args.output).parent) if args.output else None,
+                        dry_run=config.dry_run,
+                        config=config,  # Pass CLI config for LLM, cache, etc.
+                        input_dir=args.dir,  # Pass data directory
+                        output_file=args.output  # Pass output filename
+                    )
+                    
+                    if result['success']:
+                        elapsed = time.time() - start_time
+                        log_success(f"Report generated in {elapsed:.1f}s: {result.get('output_path', args.output)}", config)
+                        return 0
                     else:
-                        log_error(f"Plugin '{args.plugin}' has no report systems")
+                        for err in result.get('errors', []):
+                            log_error(err)
                         return 1
                 else:
-                    log_error(f"Plugin '{args.plugin}' has no report_systems directory")
+                    # YAML config required but not found
+                    log_error(
+                        f"Plugin '{args.plugin}' is missing report_config.yaml\n\n"
+                        f"This file defines your report pages and components.\n"
+                        f"Expected location: {yaml_config}\n\n"
+                        f"To create one, run:\n"
+                        f"  bobreview plugins create {args.plugin} --output-dir {plugin_path.parent}"
+                    )
                     return 1
             else:
                 # Plugin not found - provide helpful error message
@@ -1184,67 +1119,15 @@ Examples:
                     log_error(f"Plugin '{args.plugin}' not found. No plugins are available.")
                 return 1
         
-        log_info(f"Loading report system: {report_system_id}", config)
-        
-        # Build CLI overrides for the JSON system
-        # Note: Thresholds are defined in report system JSON files, not overridden via CLI
-        cli_overrides = {
-            'llm_config': {
-                'provider': config.llm.provider,
-                'model': config.llm.model,
-                'temperature': config.llm.temperature,
-                'max_tokens': config.llm.max_tokens,
-                'chunk_size': config.llm.chunk_size,
-                'enable_cache': config.llm.enable_cache,
-            },
-            'output': {
-                'embed_images': config.output.embed_images,
-                'linked_css': config.output.linked_css,
-            },
-            'disabled_pages': config.output.disabled_pages
-        }
-        
-        # Only override theme if explicitly specified via --theme flag
-        # This allows JSON presets to be the default
-        if args.theme_id is not None:
-            cli_overrides['theme'] = {
-                'preset': args.theme_id
-            }
-        
-        # Load report system with CLI overrides, passing plugin name for prioritized search
-        system_def = load_report_system(report_system_id, cli_overrides=cli_overrides, plugin_name=args.plugin)
-        
-        # Create executor
-        executor = ReportSystemExecutor(system_def, config)
-        
-        # Execute
-        input_dir = Path(args.dir).resolve()
-        output_path = Path(args.output).resolve()
-        
-        if not input_dir.exists():
-            log_error(f"Directory not found: {input_dir}")
-            return 1
-        
-        if not input_dir.is_dir():
-            log_error(f"Path is not a directory: {input_dir}")
-            return 1
-        
-        executor.execute(input_dir, output_path)
-        
-        elapsed_time = time.time() - start_time
-        log_info(f"Completed in {elapsed_time:.1f}s", config)
-        
-        return 0
-        
     except FileNotFoundError as e:
         log_error(str(e))
         return 1
     except ValueError as e:
-        log_error(f"Report system validation failed: {e}")
+        log_error(f"Report generation failed: {e}")
         return 1
     except Exception as e:
-        log_error(f"Failed to execute report system: {e}")
-        if config.execution.verbose:
+        log_error(f"Failed to generate report: {e}")
+        if config.verbose:
             import traceback
             traceback.print_exc()
         return 1

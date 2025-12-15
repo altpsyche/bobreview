@@ -582,7 +582,7 @@ def analyze_{safe_name}_data(
     
     Parameters:
         data_points: List of parsed data points with 'score' field
-        config: Optional ReportConfig
+        config: Optional Config
         **kwargs: Additional args from AnalyticsService (metrics, metric_config)
     
     Returns:

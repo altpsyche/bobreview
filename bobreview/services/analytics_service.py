@@ -52,7 +52,7 @@ class AnalyticsService(BaseService):
             data: DataFrame or List[Dict] with data points to analyze
             metrics: List of metric field names
             metrics_config: Dict-like config with timestamp_field, identifier_field, threshold_mapping
-            report_config: ReportConfig instance (preferred, contains all thresholds)
+            report_config: Config instance (preferred, contains all thresholds)
             thresholds: Dict of thresholds (fallback if report_config not provided)
             
         Returns:
@@ -102,14 +102,13 @@ class AnalyticsService(BaseService):
             analyzer_func = registry.analyzers.get()  # Get default analyzer
             
             if analyzer_func:
-                from ..core.config import ReportConfig
+                from ..core.config import Config
                 
                 # Use provided config or build from thresholds
                 if report_config is not None:
                     config = report_config
                 elif thresholds:
-                    from ..core.config_classes import ThresholdConfig
-                    config = ReportConfig(thresholds=ThresholdConfig(**thresholds))
+                    config = Config(thresholds=thresholds)
                 else:
                     raise AnalyticsServiceError(
                         "Either report_config or thresholds must be provided"

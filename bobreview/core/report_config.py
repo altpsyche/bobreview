@@ -68,7 +68,7 @@ class UserPageConfig:
 
 
 @dataclass
-class UserReportConfig:
+class UserConfig:
     """
     User-defined report configuration (YAML).
     
@@ -94,13 +94,16 @@ class UserReportConfig:
     
     pages: List[UserPageConfig] = field(default_factory=list)
     
+    # Plugin-specific config (overrides JSON extensions)
+    config: Dict[str, Any] = field(default_factory=dict)
+    
     # Optional metadata
     version: str = "1.0"
     author: str = ""
     description: str = ""
 
 
-def load_user_report_config(config_path: Union[str, Path]) -> UserReportConfig:
+def load_user_config(config_path: Union[str, Path]) -> UserConfig:
     """
     Load a user report configuration from a YAML file.
     
@@ -108,7 +111,7 @@ def load_user_report_config(config_path: Union[str, Path]) -> UserReportConfig:
         config_path: Path to the YAML configuration file
         
     Returns:
-        Parsed UserReportConfig object
+        Parsed UserConfig object
         
     Raises:
         FileNotFoundError: If config file doesn't exist
@@ -137,25 +140,26 @@ def load_user_report_config(config_path: Union[str, Path]) -> UserReportConfig:
             components=page_data.get('components', [])
         ))
     
-    return UserReportConfig(
+    return UserConfig(
         name=data.get('name', 'Untitled Report'),
         plugin=data.get('plugin', ''),
         data_source=data.get('data_source', ''),
         theme=data.get('theme', 'dark'),
         output_dir=data.get('output_dir', './output'),
         pages=pages,
+        config=data.get('config', {}),  # Plugin-specific config
         version=data.get('version', '1.0'),
         author=data.get('author', ''),
         description=data.get('description', '')
     )
 
 
-def validate_user_report_config(config: UserReportConfig) -> List[str]:
+def validate_user_config(config: UserConfig) -> List[str]:
     """
     Validate a user report configuration.
     
     Parameters:
-        config: UserReportConfig to validate
+        config: UserConfig to validate
         
     Returns:
         List of validation errors (empty if valid)
@@ -190,18 +194,46 @@ def validate_user_report_config(config: UserReportConfig) -> List[str]:
         
         # Validate components
         for i, comp in enumerate(page.components):
-            if 'type' not in comp:
+            comp_type = comp.get('type', '')
+            
+            if not comp_type:
                 errors.append(f"Page '{page.id}' component {i} missing 'type'")
+                continue
+            
+            # Chart validation
+            if comp_type == 'chart':
+                chart_type = comp.get('chart', 'bar')
+                # Most charts need x and y fields
+                if chart_type in ['bar', 'line', 'scatter', 'doughnut']:
+                    if not comp.get('x'):
+                        errors.append(f"Page '{page.id}' chart '{comp.get('title', i)}' missing 'x' field")
+                    if not comp.get('y'):
+                        errors.append(f"Page '{page.id}' chart '{comp.get('title', i)}' missing 'y' field")
+                elif chart_type == 'histogram':
+                    # Histogram only needs y field
+                    if not comp.get('y'):
+                        errors.append(f"Page '{page.id}' histogram '{comp.get('title', i)}' missing 'y' field")
+            
+            # LLM validation
+            elif comp_type == 'llm':
+                # Must have either 'prompt' (inline) or 'generator' (reference)
+                if not comp.get('prompt') and not comp.get('generator'):
+                    errors.append(f"Page '{page.id}' LLM component {i} needs 'prompt' or 'generator'")
+            
+            # Widget validation  
+            elif comp_type == 'widget':
+                if not comp.get('widget'):
+                    errors.append(f"Page '{page.id}' widget {i} missing 'widget' type")
     
     return errors
 
 
-def save_user_report_config(config: UserReportConfig, output_path: Union[str, Path]) -> None:
+def save_user_config(config: UserConfig, output_path: Union[str, Path]) -> None:
     """
     Save a user report configuration to a YAML file.
     
     Parameters:
-        config: UserReportConfig to save
+        config: UserConfig to save
         output_path: Path to save the YAML file
     """
     path = Path(output_path)

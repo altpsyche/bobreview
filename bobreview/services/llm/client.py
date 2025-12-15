@@ -9,7 +9,7 @@ import os
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from ...core.config import ReportConfig
+    from ...core.config import Config
 
 from ...core.cache import get_cache
 from ...core.utils import log_verbose, log_warning
@@ -21,17 +21,17 @@ from .providers import get_provider, LLMProviderConfig
 def call_llm(
     prompt: str,
     data_table: Optional[str] = None,
-    config: "Optional[ReportConfig]" = None,
+    config: "Optional[Config]" = None,
     max_retries: int = 3,
 ) -> str:
     """
     Invoke the configured LLM provider for a prompt, optionally including tabular context, with caching, dry-run, and retry behavior.
     
-    If a data table is provided it will be appended to the prompt before calling the provider. If caching is available the function will attempt to return a cached response for the same prompt and configuration. If config.execution.dry_run is true a static placeholder HTML is returned instead of calling the provider.
+    If a data table is provided it will be appended to the prompt before calling the provider. If caching is available the function will attempt to return a cached response for the same prompt and configuration. If config.dry_run is true a static placeholder HTML is returned instead of calling the provider.
     
     Parameters:
         data_table (str, optional): Tabular context to append to the prompt.
-        config (ReportConfig): Report configuration containing LLM provider, model, credentials, and related settings.
+        config (Config): Report configuration containing LLM provider, model, credentials, and related settings.
         max_retries (int): Maximum number of retry attempts delegated to the provider; must be greater than zero.
     
     Returns:
@@ -41,13 +41,13 @@ def call_llm(
         ValueError: If `config` is not provided or `max_retries` is not positive.
     """
     if config is None:
-        raise ValueError("ReportConfig is required")
+        raise ValueError("Config is required")
     
     if max_retries <= 0:
         raise ValueError("max_retries must be positive")
     
     # Dry run mode
-    if config.execution.dry_run:
+    if config.dry_run:
         return "<p>Dry run mode - LLM analysis would appear here</p>"
     
     # Combine prompt with data table
@@ -64,27 +64,27 @@ Data Table:
         cached = cache.get(
             prompt, 
             data_table or "", 
-            config.llm.model,
-            config.llm.temperature,
-            config.llm.max_tokens,
-            config.llm.provider,
-            config.llm.api_base or ""
+            config.llm_model,
+            config.llm_temperature,
+            config.llm_max_tokens,
+            config.llm_provider,
+            config.llm_api_base or ""
         )
         if cached is not None:
             log_verbose("Using cached LLM response", config)
             return cached
     
     # Get provider and make call
-    provider = get_provider(config.llm.provider)
-    log_verbose(f"Calling LLM ({provider.name}: {config.llm.model})", config)
+    provider = get_provider(config.llm_provider)
+    log_verbose(f"Calling LLM ({provider.name}: {config.llm_model})", config)
     
     # Build provider config
     provider_config = LLMProviderConfig(
-        model=config.llm.model,
-        temperature=config.llm.temperature,
-        max_tokens=config.llm.max_tokens,
-        api_key=config.llm.api_key,
-        api_base=config.llm.api_base,
+        model=config.llm_model,
+        temperature=config.llm_temperature,
+        max_tokens=config.llm_max_tokens,
+        api_key=config.llm_api_key,
+        api_base=config.llm_api_base,
     )
     
     # Make the call
@@ -95,12 +95,12 @@ Data Table:
         cache.set(
             prompt,
             data_table or "",
-            config.llm.model,
-            config.llm.temperature,
-            config.llm.max_tokens,
+            config.llm_model,
+            config.llm_temperature,
+            config.llm_max_tokens,
             result,
-            config.llm.provider,
-            config.llm.api_base or ""
+            config.llm_provider,
+            config.llm_api_base or ""
         )
     
     return result
@@ -109,7 +109,7 @@ Data Table:
 def call_llm_chunked(
     prompt_base: str,
     data_points: List[Dict[str, Any]],
-    config: "ReportConfig",
+    config: "Config",
     chunk_size: Optional[int] = None,
     table_formatter: Callable[[List[Dict[str, Any]]], str] = format_data_table,
 ) -> str:
@@ -121,15 +121,15 @@ def call_llm_chunked(
     Parameters:
         prompt_base (str): Base prompt used for each chunk.
         data_points (List[Dict[str, Any]]): Data points to process.
-        config (ReportConfig): Report configuration containing LLM and chunking settings.
-        chunk_size (Optional[int]): Number of data points per chunk; if None, uses config.llm.chunk_size.
+        config (Config): Report configuration containing LLM and chunking settings.
+        chunk_size (Optional[int]): Number of data points per chunk; if None, uses config.llm_chunk_size.
         table_formatter (Callable[[List[Dict[str, Any]]], str]): Function that formats a list of data points into a table string.
     
     Returns:
         str: Unified LLM response combining analyses from all chunks.
     """
     if chunk_size is None:
-        chunk_size = config.llm.chunk_size
+        chunk_size = config.llm_chunk_size
     
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
@@ -157,7 +157,7 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
     while len(results) > 1:
         # Check for potential token limit issues
         total_length = sum(len(r) for r in results)
-        if total_length > config.llm.combine_warning_threshold:
+        if total_length > config.llm_combine_warning_threshold:
             log_warning(
                 f"Large content size ({total_length:,} chars) when combining {len(results)} chunks. "
                 f"This may approach token limits. Consider reducing chunk_size.",

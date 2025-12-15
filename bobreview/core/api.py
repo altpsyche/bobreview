@@ -19,7 +19,7 @@ from typing import Dict, List, Any, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..engine.schema import DataSourceConfig
-    from .config import ReportConfig
+    from .config import Config
     from .dataframe import DataFrame
 
 
@@ -221,7 +221,7 @@ class LLMGeneratorInterface(ABC):
         self,
         data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
-        config: 'ReportConfig',
+        config: 'Config',
         context: Dict[str, Any]
     ) -> Any:
         """
@@ -230,7 +230,7 @@ class LLMGeneratorInterface(ABC):
         Parameters:
             data: DataFrame or List[Dict] with parsed data points
             stats: Statistical analysis results
-            config: ReportConfig with LLM settings
+            config: Config with LLM settings
             context: Additional context
         
         Returns:
@@ -278,7 +278,7 @@ class ChartGeneratorInterface(ABC):
         self,
         data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
-        config: 'ReportConfig',
+        config: 'Config',
         chart_config: Dict[str, Any]
     ) -> str:
         """
@@ -287,7 +287,7 @@ class ChartGeneratorInterface(ABC):
         Parameters:
             data: DataFrame or List[Dict] with parsed data
             stats: Statistical analysis results
-            config: ReportConfig with settings
+            config: Config with settings
             chart_config: Chart configuration
         
         Returns:
@@ -335,7 +335,7 @@ class ContextBuilderInterface(ABC):
         self,
         data: Union[List[Dict[str, Any]], 'DataFrame'],
         stats: Dict[str, Any],
-        config: 'ReportConfig',
+        config: 'Config',
         base_context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -344,7 +344,7 @@ class ContextBuilderInterface(ABC):
         Parameters:
             data: DataFrame or List[Dict] with parsed data
             stats: Statistical analysis results
-            config: ReportConfig with settings
+            config: Config with settings
             base_context: Base context from framework
         
         Returns:

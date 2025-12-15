@@ -25,7 +25,7 @@ from .schema import PageConfig, Labels
 if TYPE_CHECKING:
     from ..core.template_engine import TemplateEngine
     from ..core.plugin_system import IExtensionPoint
-    from ..core.config import ReportConfig
+    from ..core.config import Config
     from .schema import ReportSystemDefinition
     from ..core.dataframe import DataFrame
 
@@ -43,7 +43,7 @@ class PageRenderer:
         self,
         template_engine: 'TemplateEngine',
         extension_point: Optional['IExtensionPoint'],
-        config: 'ReportConfig',
+        config: 'Config',
         system_def: 'ReportSystemDefinition'
     ):
         """
@@ -114,7 +114,7 @@ class PageRenderer:
         )
         
         # If using linked CSS, generate theme.css at runtime
-        if getattr(self.config.output, 'linked_css', False):
+        if getattr(self.config, 'linked_css', False):
             self._write_theme_css(output_dir, base_context.get('_theme_object'))
         
         # Generate each page
@@ -139,7 +139,7 @@ class PageRenderer:
         """Encode images as base64 data URIs if embedding is enabled."""
         image_data_uris = {}
         
-        if self.config.output.embed_images:
+        if self.config.embed_images:
             log_info("Embedding images as base64...", self.config)
             unique_images = set(
                 point.get('img', '') for point in data_points if 'img' in point
@@ -166,7 +166,7 @@ class PageRenderer:
     ) -> Dict[str, Any]:
         """Build the base context shared by all pages."""
         from datetime import datetime
-        from ..core.theme_system import get_theme_system
+        from ..core.themes import get_theme_system
         
         count = stats.get('count', len(data_points))
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
@@ -174,7 +174,7 @@ class PageRenderer:
         
         # Use unified ThemeSystem to resolve theme from config
         theme_system = get_theme_system()
-        resolved_theme = theme_system.resolve_from_config(self.system_def.theme)
+        resolved_theme = theme_system.resolve_from_config(self.config.theme)
         
         # Get theme ID for templates
         theme_name = resolved_theme.id if resolved_theme else 'dark'
@@ -220,7 +220,7 @@ class PageRenderer:
             '_llm_results': llm_results,
             
             # Output options (for template CSS switching)
-            'linked_css': self.config.output.linked_css if hasattr(self.config.output, 'linked_css') else False,
+            'linked_css': self.config.linked_css if hasattr(self.config, 'linked_css') else False,
         }
     
     def _write_theme_css(self, output_dir: Path, theme) -> None:
@@ -240,7 +240,7 @@ class PageRenderer:
         if not theme:
             return
         
-        from ..core.theme_system import get_theme_system
+        from ..core.themes import get_theme_system
         import shutil
         
         # Create static directory if needed
@@ -402,13 +402,8 @@ class PageRenderer:
             
             charts_dict = {}
             for chart_config in page_config.charts:
-                # Get theme ID from system definition's theme config
-                theme_id = None
-                if hasattr(self.system_def, 'theme') and self.system_def.theme:
-                    if hasattr(self.system_def.theme, 'preset'):
-                        theme_id = self.system_def.theme.preset
-                    elif isinstance(self.system_def.theme, str):
-                        theme_id = self.system_def.theme
+                # Get theme ID from config
+                theme_id = self.config.theme if hasattr(self, 'config') else 'dark'
                 
                 chart_config_dict = {
                     'id': chart_config.id,

@@ -24,11 +24,8 @@ Usage:
 from .schema import (
     ReportSystemDefinition,
     DataSourceConfig,
-    LLMConfig,
     LLMGeneratorConfig,
     PageConfig,
-    ThemeConfig,
-    OutputConfig,
     validate_report_system,
     parse_report_system_definition
 )
@@ -60,7 +57,6 @@ from .executor import (
     ReportSystemExecutor
 )
 
-from .config_merger import ConfigMerger
 from .service_validator import ServiceValidator
 from .plugin_lifecycle import PluginLifecycleManager
 from .page_renderer import PageRenderer
@@ -69,11 +65,8 @@ __all__ = [
     # Schema classes
     'ReportSystemDefinition',
     'DataSourceConfig',
-    'LLMConfig',
     'LLMGeneratorConfig',
     'PageConfig',
-    'ThemeConfig',
-    'OutputConfig',
     'validate_report_system',
     'parse_report_system_definition',
     
@@ -98,7 +91,6 @@ __all__ = [
     'PageRenderer',
     
     # Responsibility classes
-    'ConfigMerger',
     'ServiceValidator',
     'PluginLifecycleManager',
 ]

@@ -47,18 +47,7 @@ class DataSourceConfig:
 # Note: Domain-specific schema classes should be defined by plugins.
 
 
-@dataclass
-class LLMConfig:
-    """Configuration for LLM provider and settings."""
-    provider: str = 'openai'  # 'openai', 'anthropic', 'ollama'
-    model: str = 'gpt-4o'
-    temperature: float = 0.7
-    max_tokens: int = 2000
-    chunk_size: int = 10
-    enable_cache: bool = True
-    api_base: Optional[str] = None  # Custom API endpoint
-    api_key: Optional[str] = None  # API key for the selected provider
-    api_key_env: Optional[str] = None  # Environment variable for API key
+# LLMConfig removed - use flat fields in ReportSystemDefinition
 
 
 @dataclass
@@ -145,19 +134,7 @@ class PageConfig:
     card_description: str = ""
 
 
-@dataclass
-class ThemeConfig:
-    """Configuration for report theme."""
-    preset: str = 'dark'  # Theme ID to use (e.g., 'dark', 'ocean', 'purple')
-
-
-@dataclass
-class OutputConfig:
-    """Configuration for output generation."""
-    default_filename: str = 'report.html'
-    embed_images: bool = True
-    linked_css: bool = False
-
+# ThemeConfig and OutputConfig removed - use flat fields in ReportSystemDefinition
 
 @dataclass
 class ContentBlockConfig:
@@ -210,36 +187,38 @@ class Labels:
 
 @dataclass
 class ReportSystemDefinition:
-    """Complete report system definition from JSON."""
-    # Required fields (no defaults)
+    """
+    Report system structure from JSON.
+    
+    Contains ONLY structural data (pages, generators, data_source).
+    Config settings (llm_*, theme, etc.) come from Config class.
+    """
+    # Required metadata
     schema_version: str
     id: str
     name: str
     version: str
     description: str
     author: str
+    
+    # Structural data (what the report contains)
     data_source: DataSourceConfig
-    llm_config: LLMConfig
-    llm_generators: List[LLMGeneratorConfig]
-    pages: List[PageConfig]
-    # Optional fields with defaults
-    # Plugin-specific extensions (metrics, analytics config, etc.)
+    llm_generators: List[LLMGeneratorConfig] = field(default_factory=list)
+    pages: List[PageConfig] = field(default_factory=list)
+    
+    # Plugin extensions (passed to components)
     extensions: Dict[str, Any] = field(default_factory=dict)
     thresholds: Dict[str, Any] = field(default_factory=dict)
-    theme: ThemeConfig = field(default_factory=ThemeConfig)
-    output: OutputConfig = field(default_factory=OutputConfig)
     
-    # CMS-style labels - simple dict wrapper, templates use labels.get('key', 'default')
+    # Content/labels for templates
     labels: Labels = field(default_factory=lambda: Labels({}))
-    
-    # Content blocks for longer descriptive text (lists of ContentBlockConfig or strings)
     content_blocks: Dict[str, Any] = field(default_factory=dict)
     
     # Optional metadata
     tags: List[str] = field(default_factory=list)
     documentation_url: Optional[str] = None
     examples: List[str] = field(default_factory=list)
-    title: Optional[str] = None  # Custom report title (CLI takes priority over JSON, defaults to "Report")
+    title: Optional[str] = None
 
 
 def validate_report_system(data: Dict[str, Any]) -> List[str]:
@@ -254,9 +233,11 @@ def validate_report_system(data: Dict[str, Any]) -> List[str]:
     """
     errors = []
     
-    # Required top-level fields (metrics and thresholds are optional for non-analytics reports)
+    # Required top-level fields
+    # Note: 'pages' and 'llm_generators' are optional - defined by users in YAML
+    # Note: LLM settings are flat: llm_provider, llm_model, llm_temperature (optional)
     required_fields = ['schema_version', 'id', 'name', 'version', 'description', 
-                      'author', 'data_source', 'llm_config', 'llm_generators', 'pages']
+                      'author', 'data_source']
     
     for field_name in required_fields:
         if field_name not in data:
@@ -341,18 +322,16 @@ def validate_report_system(data: Dict[str, Any]) -> List[str]:
             if not isinstance(value, (int, float)):
                 errors.append(f"thresholds.{key} must be a number (got {type(value).__name__})")
     
-    # Validate LLM config
-    llm_config = data.get('llm_config', {})
-    if isinstance(llm_config, dict):
-        if 'temperature' in llm_config:
-            temp = llm_config['temperature']
-            if not isinstance(temp, (int, float)) or temp < 0 or temp > 2:
-                errors.append(f"llm_config.temperature must be between 0 and 2 (got {temp})")
-        
-        if 'chunk_size' in llm_config:
-            chunk = llm_config['chunk_size']
-            if not isinstance(chunk, int) or chunk <= 0:
-                errors.append(f"llm_config.chunk_size must be a positive integer (got {chunk})")
+    # Validate LLM config (flat format)
+    if 'llm_temperature' in data:
+        temp = data['llm_temperature']
+        if not isinstance(temp, (int, float)) or temp < 0 or temp > 2:
+            errors.append(f"llm_temperature must be between 0 and 2 (got {temp})")
+    
+    if 'llm_chunk_size' in data:
+        chunk = data['llm_chunk_size']
+        if not isinstance(chunk, int) or chunk <= 0:
+            errors.append(f"llm_chunk_size must be a positive integer (got {chunk})")
     
     return errors
 
@@ -403,38 +382,8 @@ def parse_data_source_config(data: Dict[str, Any]) -> DataSourceConfig:
 
 # Note: Domain-specific parsers should be defined by plugins.
 
-
-
-def parse_llm_config(data: Dict[str, Any]) -> LLMConfig:
-    """
-    Create an LLMConfig from a mapping of configuration values.
-    
-    Parameters:
-        data (dict): Mapping containing optional keys to configure the LLM:
-            - provider: provider identifier (default 'openai')
-            - model: model name (default 'gpt-4o')
-            - temperature: sampling temperature (default 0.7)
-            - max_tokens: maximum token limit (default 2000)
-            - chunk_size: chunk size for batching (default 10)
-            - enable_cache: whether to enable caching (default True)
-            - api_base: optional custom API base URL
-            - api_key: optional API key for the selected provider
-            - api_key_env: optional environment variable name holding the API key
-    
-    Returns:
-        LLMConfig: An LLMConfig populated from the provided mapping, using defaults for any missing fields.
-    """
-    return LLMConfig(
-        provider=data.get('provider', 'openai'),
-        model=data.get('model', 'gpt-4o'),
-        temperature=data.get('temperature', 0.7),
-        max_tokens=data.get('max_tokens', 2000),
-        chunk_size=data.get('chunk_size', 10),
-        enable_cache=data.get('enable_cache', True),
-        api_base=data.get('api_base'),
-        api_key=data.get('api_key'),
-        api_key_env=data.get('api_key_env')
-    )
+# parse_llm_config, parse_theme_config, parse_output_config removed
+# These values are now parsed as flat fields in parse_report_system_definition
 
 
 def parse_prompt_category_config(data: Dict[str, Any]) -> PromptCategoryConfig:
@@ -537,21 +486,6 @@ def parse_page_config(data: Dict[str, Any]) -> PageConfig:
     )
 
 
-def parse_theme_config(data: Dict[str, Any]) -> ThemeConfig:
-    """Parse theme configuration from JSON."""
-    theme_id = data.get('preset', 'dark')
-    return ThemeConfig(preset=theme_id)
-
-
-def parse_output_config(data: Dict[str, Any]) -> OutputConfig:
-    """Parse output configuration from JSON."""
-    return OutputConfig(
-        default_filename=data.get('default_filename', 'report.html'),
-        embed_images=data.get('embed_images', True),
-        linked_css=data.get('linked_css', False)
-    )
-
-
 def parse_label_config(data: Optional[Dict[str, Any]]) -> Labels:
     """
     Parse label configuration from JSON.
@@ -579,7 +513,7 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
     Parse complete report system definition from JSON.
     
     Parameters:
-        data: Parsed JSON data
+        data: Parsed JSON data (flat format)
     
     Returns:
         ReportSystemDefinition object
@@ -593,10 +527,11 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         error_msg = "Report system validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
         raise ValueError(error_msg)
     
-    # Parse all sections
-    llm_generators = [parse_llm_generator_config(g) for g in data['llm_generators']]
-    pages = [parse_page_config(p) for p in data['pages']]
+    # Parse all sections (pages and llm_generators are optional - defined in YAML)
+    llm_generators = [parse_llm_generator_config(g) for g in data.get('llm_generators', [])]
+    pages = [parse_page_config(p) for p in data.get('pages', [])]
     
+    # Only parse structural data - Config handles settings (llm_*, theme, output)
     return ReportSystemDefinition(
         schema_version=data['schema_version'],
         id=data['id'],
@@ -605,13 +540,10 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         description=data['description'],
         author=data['author'],
         data_source=parse_data_source_config(data['data_source']),
-        extensions=data.get('extensions', {}),
-        thresholds=data.get('thresholds', {}),
-        llm_config=parse_llm_config(data['llm_config']),
         llm_generators=llm_generators,
         pages=pages,
-        theme=parse_theme_config(data.get('theme', {})),
-        output=parse_output_config(data.get('output', {})),
+        extensions=data.get('extensions', {}),
+        thresholds=data.get('thresholds', {}),
         labels=parse_label_config(data.get('labels')),
         content_blocks=data.get('content_blocks', {}),
         tags=data.get('tags', []),
