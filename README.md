@@ -138,6 +138,7 @@ bobreview plugins create my-plugin --template minimal
 ```text
 my_plugin/
 ├── manifest.json           # Plugin metadata
+├── report_config.yaml      # User-editable report configuration
 ├── plugin.py               # Main plugin class (on_load registration)
 ├── parsers/
 │   └── csv_parser.py       # Data parser implementation
@@ -149,7 +150,8 @@ my_plugin/
 │   └── my_plugin/
 │       ├── pages/
 │       │   ├── base.html.j2    # Base template
-│       │   └── home.html.j2    # Homepage with LLM content
+│       │   ├── overview.html.j2 # Overview page with stats and charts
+│       │   └── details.html.j2  # Details page with tables
 │       └── static/
 │           ├── theme.css       # Color scheme (customize me!)
 │           └── plugin.css      # Layout and components
@@ -490,9 +492,9 @@ Report systems are JSON files that define your analysis pipeline:
   
   "pages": [
     {
-      "id": "home",
-      "filename": "index.html",
-      "template": { "type": "jinja2", "name": "my_plugin/pages/home.html.j2" },
+      "id": "overview",
+      "filename": "overview.html",
+      "template": { "type": "jinja2", "name": "my_plugin/pages/overview.html.j2" },
       "llm_content": ["summary"]
     }
   ]
@@ -541,8 +543,9 @@ bobreview/
 
 | Document | Description |
 |----------|-------------|
+| [User Configuration Guide](docs/USER_GUIDE.md) | Customize reports with YAML |
 | [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT_GUIDE.md) | Create custom plugins |
-| [Core API Reference](CORE_API.md) | Complete API documentation |
+| [Core API Reference](docs/CORE_API.md) | Complete API documentation |
 | [QUICKSTART.md](QUICKSTART.md) | Getting started tutorial |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 

@@ -74,9 +74,10 @@ BobReview uses **two separate configuration files** for different audiences:
 ## Plugin Structure
 
 ```
-bobreview/plugins/your_plugin/
+~/.bobreview/plugins/your_plugin/
 ├── __init__.py              # Package init, exports plugin class
 ├── manifest.json            # Plugin metadata and capabilities
+├── report_config.yaml       # User-editable report config (pages, charts, LLM)
 ├── plugin.py                # Main plugin class with registrations
 ├── parsers/
 │   ├── __init__.py
@@ -85,18 +86,19 @@ bobreview/plugins/your_plugin/
 ├── context_builder.py       # Template context preparation
 ├── chart_generator.py       # Chart.js code generator
 ├── report_systems/
-│   └── your_report.json     # Report configuration
+│   └── your_report.json     # Report system definition (plugin capabilities)
 ├── templates/
 │   ├── your_plugin/
 │   │   ├── pages/
 │   │   │   ├── base.html.j2
-│   │   │   ├── home.html.j2
-│   │   │   └── *.html.j2
+│   │   │   ├── overview.html.j2
+│   │   │   └── details.html.j2
 │   │   └── static/
 │   │       └── plugin.css
 │   └── components/
 │       └── macros.html.j2
 └── sample_data/
+    └── sample.csv           # Sample data to test with
 ```
 
 ---
@@ -231,13 +233,13 @@ def analyze_my_data(
     
     "pages": [
         {
-            "id": "home",
-            "filename": "index.html",
+            "id": "overview",
+            "filename": "overview.html",
             "nav_label": "Overview",
             "nav_order": 10,
             "template": {
                 "type": "jinja2",
-                "name": "my_plugin/pages/home.html.j2"
+                "name": "my_plugin/pages/overview.html.j2"
             },
             "data_requirements": {
                 "data_points": false,
@@ -509,7 +511,7 @@ class MyContextBuilder(ContextBuilderInterface):
 ### Step 9: Create Page Template
 
 ```jinja2
-{# templates/my_plugin/pages/home.html.j2 #}
+{# templates/my_plugin/pages/overview.html.j2 #}
 {% extends "my_plugin/pages/base.html.j2" %}
 {% from "components/macros.html.j2" import stat_card %}
 
@@ -597,7 +599,7 @@ class MyPlugin(BasePlugin):
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| `config` | object | ReportConfig with thresholds, title |
+| `config` | object | Config with thresholds, title |
 | `stats` | dict | Computed statistics from analyzer |
 | `data_points` | list | Raw parsed data points |
 | `images` | dict | Embedded images (base64) |

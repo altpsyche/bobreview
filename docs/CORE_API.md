@@ -10,7 +10,7 @@
 - [Core Module (`core/`)](#core-module)
   - [DataFrame](#dataframe)
   - [Interfaces (`api.py`)](#interfaces)
-  - [Configuration (`config.py`, `config_classes.py`)](#configuration)
+  - [Configuration (`config.py`)](#configuration)
   - [Report Configuration (`report_config.py`)](#report-configuration)
   - [Report Builder (`report_builder.py`)](#report-builder)
   - [Themes](#themes)
@@ -52,8 +52,7 @@
 bobreview/
 ├── core/                    # Foundational utilities and interfaces
 │   ├── api.py               # Plugin interfaces (DataParserInterface, etc.)
-│   ├── config.py            # ReportConfig composition
-│   ├── config_classes.py    # ThresholdConfig, LLMConfig, etc.
+│   ├── config.py            # Config class (flat configuration)
 │   ├── analysis.py          # Statistics calculations
 │   ├── cache.py             # LLMCache
 │   ├── utils.py             # Logging, formatting
@@ -148,7 +147,7 @@ class LLMGeneratorInterface(ABC):
         self,
         data: Union[List[Dict[str, Any]], DataFrame],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
-        config: ReportConfig,
+        config: Config,
         context: Dict[str, Any]
     ) -> Dict[str, Any]: ...
 ```
@@ -161,7 +160,7 @@ class ChartGeneratorInterface(ABC):
         self,
         data: Union[List[Dict[str, Any]], DataFrame],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
-        config: ReportConfig,
+        config: Config,
         chart_config: Dict[str, Any]
     ) -> str: ...
 ```
@@ -174,7 +173,7 @@ class PageGeneratorInterface(ABC):
         self,
         stats: Dict[str, Any],
         llm_content: Dict[str, Any],
-        config: ReportConfig,
+        config: Config,
         context: Dict[str, Any]
     ) -> str: ...
 ```
@@ -187,7 +186,7 @@ class ContextBuilderInterface(ABC):
         self,
         data: Union[List[Dict[str, Any]], DataFrame],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
-        config: ReportConfig,
+        config: Config,
         base_context: Dict[str, Any]
     ) -> Dict[str, Any]: ...
 ```
@@ -233,72 +232,61 @@ class ComponentInterface(ABC):
 
 ### Configuration
 
-Located in `core/config_classes.py`.
+Located in `core/config.py`. Single flat configuration class (nested classes were removed in v1.0.8).
 
-#### `ThresholdConfig`
-```python
-class ThresholdConfig(dict):
-    """Generic threshold storage. No hardcoded fields."""
-    def __init__(self, **kwargs): ...
-    # Access: config.thresholds['outlier_sigma']
-```
-
-#### `LLMConfig`
+#### `Config`
 ```python
 @dataclass
-class LLMConfig:
-    provider: str = "openai"      # 'openai', 'anthropic', 'ollama'
-    api_key: Optional[str] = None
-    api_base: Optional[str] = None
-    model: str = "gpt-4o"
-    temperature: float = 0.7
-    max_tokens: int = 2000
-    chunk_size: int = 10
-    combine_warning_threshold: int = 100000
-    enable_cache: bool = True
-```
-
-#### `CacheConfig`
-```python
-@dataclass
-class CacheConfig:
-    cache_dir: Path = Path(".bobreview_cache")
-    use_cache: bool = True
-    clear_cache: bool = False
-```
-
-#### `ExecutionConfig`
-```python
-@dataclass
-class ExecutionConfig:
-    dry_run: bool = False
-    sample_size: Optional[int] = None
-    verbose: bool = False
-    quiet: bool = False
-    enable_recommendations: bool = True
-```
-
-#### `OutputConfig`
-```python
-@dataclass
-class OutputConfig:
+class Config:
+    """
+    Unified flat configuration for report generation.
+    
+    All settings are flat fields - no nested classes.
+    This is the single source of truth for configuration.
+    """
+    # Identity
+    name: str = "BobReview Report"
+    version: str = "1.0.0"
+    author: str = ""
+    description: str = ""
+    
+    # Plugin & Theme
+    plugin: str = ""
+    theme: str = "dark"
+    
+    # LLM Settings (flat, not nested)
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4o"
+    llm_api_key: Optional[str] = None
+    llm_api_base: Optional[str] = None
+    llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000
+    llm_chunk_size: int = 10
+    
+    # Output Settings
+    output_dir: str = "./output"
+    output_filename: str = "report.html"
     embed_images: bool = True
     linked_css: bool = False
-    theme_id: str = 'dark'
-    disabled_pages: Optional[List[str]] = None
+    
+    # Execution Settings
+    verbose: bool = False
+    dry_run: bool = False
+    quiet: bool = False
+    
+    # Cache Settings
+    use_cache: bool = True
+    clear_cache: bool = False
+    cache_dir: str = ".bobreview_cache"
+    
+    # Thresholds (generic dict)
+    thresholds: Dict[str, Any] = field(default_factory=dict)
+
+# Loading utilities
+def load_config(config_path: Union[str, Path]) -> Config: ...
 ```
 
-#### `ReportConfig`
-```python
-@dataclass
-class ReportConfig:
-    title: Optional[str] = None
-    thresholds: ThresholdConfig = None  # Auto-initialized
-    llm: LLMConfig = None               # Auto-initialized
-    cache: CacheConfig = None           # Auto-initialized
-    execution: ExecutionConfig = None   # Auto-initialized
-    output: OutputConfig = None         # Auto-initialized
-```
+**Note:** The old nested classes (`LLMConfig`, `OutputConfig`, `CacheConfig`, `ExecutionConfig`) were removed in v1.0.8. All configuration is now flat.
 
 ---
 
@@ -308,7 +296,7 @@ Located in `core/report_config.py`. Schema for end-user YAML report composition.
 
 ```python
 @dataclass
-class UserReportConfig:
+class UserConfig:
     """User-defined report configuration (YAML)."""
     name: str
     plugin: str          # Plugin that provides components
@@ -328,9 +316,9 @@ class UserPageConfig:
     components: List[Dict[str, Any]] = field(default_factory=list)
 
 # Utility functions
-def load_user_report_config(config_path: Union[str, Path]) -> UserReportConfig: ...
-def validate_user_report_config(config: UserReportConfig) -> List[str]: ...
-def save_user_report_config(config: UserReportConfig, output_path: Union[str, Path]): ...
+def load_user_config(config_path: Union[str, Path]) -> UserConfig: ...
+def validate_user_config(config: UserConfig) -> List[str]: ...
+def save_user_config(config: UserConfig, output_path: Union[str, Path]): ...
 ```
 
 ---
@@ -675,6 +663,7 @@ bobreview plugins create my-plugin --output-dir ./plugins
 ```
 my_plugin/
 ├── manifest.json
+├── report_config.yaml        # User-editable report configuration
 ├── __init__.py
 ├── plugin.py
 ├── parsers/
@@ -686,7 +675,8 @@ my_plugin/
 │   └── my_plugin.json
 ├── templates/my_plugin/pages/
 │   ├── base.html.j2
-│   └── home.html.j2
+│   ├── overview.html.j2
+│   └── details.html.j2
 └── sample_data/
     └── sample.csv
 ```
@@ -1009,7 +999,7 @@ class ReportSystemExecutor:
     def __init__(
         self,
         system_def: ReportSystemDefinition,
-        config: ReportConfig,
+        config: Config,
         container: ServiceContainer = None,
         registry: PluginRegistry = None,
         template_engine: TemplateEngine = None,
