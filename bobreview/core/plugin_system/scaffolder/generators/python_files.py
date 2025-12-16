@@ -420,7 +420,7 @@ def generate_report(
     data_dir: str,
     output_dir: str,
     config_path: Optional[str] = None,
-    theme_id: str = "''' + safe_name + '''_midnight",
+    theme_id: Optional[str] = None,
     dry_run: bool = False
 ) -> Path:
     """
@@ -430,7 +430,7 @@ def generate_report(
         data_dir: Directory containing data files
         output_dir: Directory to write HTML output
         config_path: Path to report_config.yaml (defaults to plugin dir)
-        theme_id: Theme ID to use
+        theme_id: Theme ID to use (defaults to config's theme setting)
         dry_run: If True, skip LLM calls
     
     Returns:
