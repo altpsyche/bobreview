@@ -17,7 +17,7 @@ def generate_plugin_py(name: str, safe_name: str, class_name: str, template: str
         imports = f"""from pathlib import Path
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
 from .parsers.csv_parser import {class_name}CsvParser
-from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME"""
+from .theme import {safe_name.upper()}_MIDNIGHT, {safe_name.upper()}_AURORA, {safe_name.upper()}_SUNSET, {safe_name.upper()}_FROST"""
 
         
         registration = f'''        # Load report system definition
@@ -38,8 +38,10 @@ from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME"""
         # Register Themes (required - no built-in themes in core)
         # ─────────────────────────────────────────────────────────────────────
         
-        helper.add_theme({safe_name.upper()}_THEME)
-        helper.add_theme({safe_name.upper()}_DEEP_THEME)
+        helper.add_theme({safe_name.upper()}_MIDNIGHT)  # Default dark theme
+        helper.add_theme({safe_name.upper()}_AURORA)    # Purple/magenta
+        helper.add_theme({safe_name.upper()}_SUNSET)    # Warm amber
+        helper.add_theme({safe_name.upper()}_FROST)     # Light theme
         
         # NOTE: Pages are user-defined in report_config.yaml, not here.'''
 
@@ -110,8 +112,6 @@ Data Flow:
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import csv
-
-from bobreview.core.api import DataParserInterface
 
 
 class {class_name}CsvParser:
@@ -226,6 +226,159 @@ class {class_name}ContextBuilder:
 
 
 
+def generate_executor(name: str, safe_name: str, class_name: str) -> str:
+    """Generate executor.py with generate_report function for CLI integration."""
+    # Use string concatenation to avoid nested f-string complications
+    return '''"""
+Report Executor for ''' + name + ''' Plugin.
+
+Provides the generate_report() function that the CLI calls.
+This is the main entry point for report generation.
+
+Usage via CLI:
+    bobreview --plugin ''' + name + ''' --dir ./data --output ./output
+
+Usage via Python:
+    from plugins.''' + safe_name + ''' import generate_report
+    generate_report('data_dir', 'output_dir')
+"""
+
+from pathlib import Path
+from typing import Dict, Any, List
+
+from bobreview.core.themes import register_theme, get_theme_by_id, get_theme_css_variables
+from .theme import ''' + safe_name.upper() + '''_MIDNIGHT
+from .parsers.csv_parser import ''' + class_name + '''CsvParser
+from .chart_generator import ''' + class_name + '''ChartGenerator
+
+
+def generate_report(data_dir: str, output_dir: str, theme_id: str = "''' + safe_name + '''_midnight") -> Path:
+    """
+    Generate an HTML report from data files.
+    
+    Parameters:
+        data_dir: Directory containing data files (CSV)
+        output_dir: Directory to write HTML output
+        theme_id: Theme ID to use
+    
+    Returns:
+        Path to the generated index.html
+    """
+    data_path = Path(data_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Register theme
+    register_theme(''' + safe_name.upper() + '''_MIDNIGHT)
+    
+    # Parse data
+    parser = ''' + class_name + '''CsvParser()
+    data_points = parser.parse_directory(data_path)
+    
+    if not data_points:
+        raise ValueError(f"No data found in {data_dir}")
+    
+    # Calculate stats
+    scores = [d.get('score', 0) for d in data_points]
+    stats = {
+        'count': len(data_points),
+        'average': sum(scores) / len(scores) if scores else 0,
+        'min': min(scores) if scores else 0,
+        'max': max(scores) if scores else 0,
+    }
+    
+    # Get theme
+    theme = get_theme_by_id(theme_id) or ''' + safe_name.upper() + '''_MIDNIGHT
+    theme_css = get_theme_css_variables(theme)
+    font_link = f'<link href="{theme.font_url}" rel="stylesheet">' if theme.font_url else ''
+    
+    # Generate charts
+    chart_gen = ''' + class_name + '''ChartGenerator()
+    charts = {}
+    
+    charts['score_chart'] = chart_gen.generate_chart(data_points, stats, None, {
+        'id': 'score_chart', 'type': 'bar', 'title': 'Scores by Item',
+        'y_field': 'score', 'x_field': 'name', 'theme_id': theme_id
+    })
+    
+    charts['trend_chart'] = chart_gen.generate_chart(data_points, stats, None, {
+        'id': 'trend_chart', 'type': 'line', 'title': 'Score Trend',
+        'y_field': 'score', 'x_field': 'name', 'theme_id': theme_id
+    })
+    
+    # Category distribution
+    categories = {}
+    for d in data_points:
+        cat = d.get('category', 'Unknown')
+        categories[cat] = categories.get(cat, 0) + 1
+    cat_data = [{'name': k, 'score': v} for k, v in categories.items()]
+    
+    charts['category_chart'] = chart_gen.generate_chart(cat_data, stats, None, {
+        'id': 'category_chart', 'type': 'pie', 'title': 'Categories',
+        'y_field': 'score', 'x_field': 'name', 'theme_id': theme_id
+    })
+    
+    # Build HTML
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>''' + name + ''' Report</title>
+    {font_link}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+{theme_css}
+* {{ box-sizing: border-box; }}
+body {{ font-family: var(--font-family); background: var(--bg); color: var(--text-main); min-height: 100vh; margin: 0; padding: 2rem; }}
+.container {{ max-width: 1200px; margin: 0 auto; }}
+h1 {{ color: var(--accent); font-size: 2.5rem; }}
+.stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }}
+.stat-card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; text-align: center; }}
+.stat-value {{ color: var(--accent); font-size: 2rem; font-weight: 700; }}
+.stat-label {{ color: var(--text-soft); font-size: 0.85rem; text-transform: uppercase; }}
+.charts {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem; }}
+.card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; }}
+.card h2 {{ color: var(--accent); font-size: 1.2rem; margin: 0 0 1rem 0; }}
+.chart-container {{ position: relative; height: 300px; }}
+@media (max-width: 900px) {{ .charts {{ grid-template-columns: 1fr; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 2rem;">
+            <h1>''' + name + ''' Report</h1>
+            <p style="color: var(--text-soft);">Theme: {theme.name} | {stats['count']} items</p>
+        </header>
+        <div class="stats">
+            <div class="stat-card"><div class="stat-value">{stats['count']}</div><div class="stat-label">Total</div></div>
+            <div class="stat-card"><div class="stat-value">{stats['average']:.1f}</div><div class="stat-label">Average</div></div>
+            <div class="stat-card"><div class="stat-value">{stats['max']:.0f}</div><div class="stat-label">Max</div></div>
+            <div class="stat-card"><div class="stat-value">{stats['min']:.0f}</div><div class="stat-label">Min</div></div>
+        </div>
+        <div class="charts">
+            <div class="card"><h2>Scores</h2><div class="chart-container"><canvas id="score_chart"></canvas></div></div>
+            <div class="card"><h2>Trend</h2><div class="chart-container"><canvas id="trend_chart"></canvas></div></div>
+            <div class="card"><h2>Categories</h2><div class="chart-container"><canvas id="category_chart"></canvas></div></div>
+        </div>
+    </div>
+    <script>
+{charts['score_chart']}
+{charts['trend_chart']}
+{charts['category_chart']}
+    </script>
+</body>
+</html>"""
+    
+    # Write output
+    output_file = output_path / 'index.html'
+    output_file.write_text(html, encoding='utf-8')
+    
+    print(f"✓ Report generated: {output_file}")
+    return output_file
+'''
+
+
 def generate_chart_generator(name: str, class_name: str) -> str:
     """Generate chart generator file with theme support."""
     return '''"""
@@ -236,8 +389,7 @@ Generates Chart.js JavaScript code with theme-aware coloring.
 
 import json
 from typing import Dict, List, Any, Union
-from bobreview.core.api import ChartGeneratorInterface
-from bobreview.core.themes import get_theme_by_id, DARK_THEME
+from bobreview.core.themes import get_theme_by_id, ReportTheme
 
 
 def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
@@ -250,7 +402,7 @@ def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict
         return list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
 
 
-class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
+class ''' + class_name + '''ChartGenerator:
     """Generate Chart.js JavaScript code with theme support."""
     
     def generate_chart(
@@ -274,9 +426,12 @@ class ''' + class_name + '''ChartGenerator(ChartGeneratorInterface):
         y_field = chart_config.get('y_field', 'score')
         x_field = chart_config.get('x_field', 'name')
         
-        # Get theme from config
-        theme_id = chart_config.get('theme_id', 'terminal')
-        theme = get_theme_by_id(theme_id) or DARK_THEME
+        # Get theme from config - fallback to default ReportTheme if not found
+        theme_id = chart_config.get('theme_id')
+        theme = get_theme_by_id(theme_id) if theme_id else None
+        if not theme:
+            # Use default ReportTheme colors
+            theme = ReportTheme(id='default', name='Default')
         
         # Build data
         sorted_data = sorted(data_points, key=lambda x: x.get(y_field, 0), reverse=True)[:20]

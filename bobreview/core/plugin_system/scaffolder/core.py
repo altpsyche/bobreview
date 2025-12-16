@@ -25,6 +25,7 @@ from .generators import (
     generate_plugin_py,
     generate_csv_parser,
     generate_context_builder,
+    generate_executor,
     generate_chart_generator,
     generate_analysis_module,
     generate_theme_module,
@@ -61,6 +62,8 @@ def create_plugin(
     # color_theme is just a hint for generated theme styling
     # No validation needed - plugins create their own themes
 
+    # Ensure output_dir is a Path
+    output_dir = Path(output_dir) if isinstance(output_dir, str) else output_dir
     
     # Normalize name for directory and Python usage
     safe_name = name.replace('-', '_').replace(' ', '_')
@@ -82,8 +85,9 @@ Provides a report system for analyzing {name} data.
 """
 
 from .plugin import {class_name}Plugin
+from .executor import generate_report
 
-__all__ = ['{class_name}Plugin']
+__all__ = ['{class_name}Plugin', 'generate_report']
 '''
     (plugin_dir / "__init__.py").write_text(init_content, encoding='utf-8')
     
@@ -114,6 +118,10 @@ __all__ = ['{class_name}CsvParser']
         # Create chart_generator.py
         chart_content = generate_chart_generator(name, class_name)
         (plugin_dir / "chart_generator.py").write_text(chart_content, encoding='utf-8')
+        
+        # Create executor.py (for CLI integration)
+        executor_content = generate_executor(name, safe_name, class_name)
+        (plugin_dir / "executor.py").write_text(executor_content, encoding='utf-8')
         
         # Create widgets.py (custom UI components)
         widgets_content = generate_widgets_module(name, safe_name, class_name)

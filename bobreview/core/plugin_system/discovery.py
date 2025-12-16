@@ -73,6 +73,80 @@ class PluginDiscovery:
         return [Path(d).expanduser().resolve() for d in env_dirs.split(os.pathsep) if d]
     
     @staticmethod
+    def get_config_file() -> Path:
+        """Get path to user config file."""
+        return Path.home() / '.bobreview' / 'config.yaml'
+    
+    @staticmethod
+    def get_config_plugin_dirs() -> List[Path]:
+        """
+        Get plugin directories from user config file.
+        
+        Reads plugin_dirs from ~/.bobreview/config.yaml.
+        
+        Returns:
+            List of paths from config file
+        """
+        config_file = PluginDiscovery.get_config_file()
+        if not config_file.exists():
+            return []
+        
+        try:
+            import yaml
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f) or {}
+            
+            dirs = config.get('plugin_dirs', [])
+            if isinstance(dirs, list):
+                return [Path(d).expanduser().resolve() for d in dirs if d]
+        except Exception:
+            pass
+        return []
+    
+    @staticmethod
+    def add_plugin_dir_to_config(directory: Path) -> bool:
+        """
+        Add a plugin directory to the user config file.
+        
+        Parameters:
+            directory: Directory to add
+            
+        Returns:
+            True if added successfully
+        """
+        config_file = PluginDiscovery.get_config_file()
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Load existing config
+        config = {}
+        if config_file.exists():
+            try:
+                import yaml
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+            except Exception:
+                pass
+        
+        # Add directory if not already present
+        resolved = str(directory.expanduser().resolve())
+        dirs = config.get('plugin_dirs', [])
+        if not isinstance(dirs, list):
+            dirs = []
+        
+        if resolved not in dirs:
+            dirs.append(resolved)
+            config['plugin_dirs'] = dirs
+            
+            try:
+                import yaml
+                with open(config_file, 'w', encoding='utf-8') as f:
+                    yaml.safe_dump(config, f, default_flow_style=False)
+                return True
+            except Exception:
+                return False
+        return True  # Already present
+    
+    @staticmethod
     def get_plugin_dirs(
         extra_dirs: Optional[List[str]] = None,
         include_bundled: bool = True
@@ -113,10 +187,14 @@ class PluginDiscovery:
         for d in PluginDiscovery.get_env_plugin_dirs():
             add_dir(d)
         
-        # 3. User plugins
+        # 3. Config file directories
+        for d in PluginDiscovery.get_config_plugin_dirs():
+            add_dir(d)
+        
+        # 4. User plugins
         add_dir(PluginDiscovery.get_user_plugins_dir())
         
-        # 4. Local plugins
+        # 5. Local plugins
         add_dir(PluginDiscovery.get_local_plugins_dir())
         
         # 5. Bundled plugins

@@ -115,6 +115,19 @@ def handle_plugin_command(args):
             print(f"Created plugin: {args.name}")
             print(f"  Location: {created_path}")
             print(f"  Template: {args.template}")
+            
+            # Auto-register custom output directory
+            if args.output_dir:
+                user_plugins = PluginDiscovery.get_user_plugins_dir()
+                local_plugins = PluginDiscovery.get_local_plugins_dir()
+                
+                # Only register if it's not a default location
+                if output_dir != user_plugins and output_dir != local_plugins:
+                    if PluginDiscovery.add_plugin_dir_to_config(output_dir):
+                        print(f"  ✓ Registered {output_dir} for auto-discovery")
+                    else:
+                        print(f"  Note: Use --plugin-dir {output_dir} to include this location")
+            
             print()
             print("Next steps:")
             print(f"  1. Edit {created_path}/manifest.json")
@@ -303,14 +316,94 @@ Report generation requires plugin implementation.
     if args.command == 'plugins':
         return handle_plugin_command(args)
     
-    # Handle --plugin flag (placeholder for future)
+    # Handle --plugin flag - Execute plugin's report generation
     if args.plugin:
-        print("Note: Report generation is being refactored.")
-        print(f"Plugin: {args.plugin}")
-        print(f"Directory: {args.dir}")
-        print(f"Output: {args.output}")
-        print("\nPlugin execution not yet implemented in minimal CLI.")
-        print("Use 'bobreview plugins list' to see available plugins.")
+        # Initialize plugin system
+        dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=args.plugin_dirs)
+        loader = init_loader(dirs)
+        loader.discover()
+        
+        # Find and load the specified plugin
+        plugins = loader.get_discovered_plugins()
+        found = None
+        for p in plugins:
+            if p.name == args.plugin or p.name.replace('_', '-') == args.plugin:
+                found = p
+                break
+        
+        if not found:
+            log_error(f"Plugin '{args.plugin}' not found.")
+            print("\nAvailable plugins:")
+            for p in plugins:
+                print(f"  - {p.name}")
+            if not plugins:
+                print("  (none - use 'bobreview plugins create <name>' to create one)")
+            return 1
+        
+        # Load plugin if not already loaded
+        if not found.loaded:
+            try:
+                plugin_instance = loader.load(found.name)
+            except PluginLoadError as e:
+                log_error(f"Failed to load plugin '{found.name}': {e}")
+                return 1
+        else:
+            # Get already loaded plugin instance
+            plugin_instance = loader.get_loaded_plugin(found.name)
+        
+        if not plugin_instance:
+            log_error(f"Plugin '{found.name}' loaded but no instance available.")
+            return 1
+        
+        # Look for generate_report function in the plugin module
+        safe_name = found.name.replace('-', '_')
+        plugin_module = None
+        for mod_name in [f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
+            if mod_name in sys.modules:
+                plugin_module = sys.modules[mod_name]
+                break
+        
+        data_dir = Path(args.dir)
+        output_path = Path(args.output)
+        
+        # Method 1: Check if plugin module has generate_report function
+        if plugin_module and hasattr(plugin_module, 'generate_report'):
+            log_info(f"Running plugin: {found.name}")
+            log_info(f"Data directory: {data_dir}")
+            log_info(f"Output: {output_path}")
+            try:
+                result = plugin_module.generate_report(str(data_dir), str(output_path.parent))
+                log_success(f"Report generated: {result}")
+                return 0
+            except Exception as e:
+                log_error(f"Report generation failed: {e}")
+                if args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                return 1
+        
+        # Method 2: Check if plugin instance has generate_report method
+        if hasattr(plugin_instance, 'generate_report'):
+            log_info(f"Running plugin: {found.name}")
+            log_info(f"Data directory: {data_dir}")
+            log_info(f"Output: {output_path}")
+            try:
+                result = plugin_instance.generate_report(str(data_dir), str(output_path.parent))
+                log_success(f"Report generated: {result}")
+                return 0
+            except Exception as e:
+                log_error(f"Report generation failed: {e}")
+                if args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                return 1
+        
+        # No generate_report found
+        log_warning(f"Plugin '{found.name}' does not have a generate_report function.")
+        print("\nTo add report generation, implement one of:")
+        print(f"  1. A 'generate_report(data_dir, output_dir)' function in plugins/{found.name.replace('-', '_')}/__init__.py")
+        print(f"  2. A 'generate_report(data_dir, output_dir)' method in your plugin class")
+        print(f"\nSee the scaffolder-generated executor.py for an example.")
         return 1
     
     # Show help if no command
