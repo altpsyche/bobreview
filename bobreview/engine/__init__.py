@@ -1,24 +1,9 @@
 """
 Report systems framework for BobReview.
 
-This module provides a JSON-based configuration system for defining custom
-report generation pipelines. Each report system JSON defines:
-- Data source parsing
-- Metrics and analysis
-- LLM generators
-- Report pages
-- Thresholds and configuration
-
-Usage:
-    from bobreview.engine import load_report_system, list_available_systems, ReportSystemExecutor
-    
-    # List available systems
-    systems = list_available_systems()
-    
-    # Load and execute a system
-    system_def = load_report_system('png_data_points')
-    executor = ReportSystemExecutor(system_def, config)
-    executor.execute(input_dir, output_path)
+Plugin-First Architecture:
+- Core provides minimal schema and loader
+- Plugins provide all execution logic via ComponentRenderer
 """
 
 from .schema import (
@@ -41,25 +26,9 @@ from .loader import (
     get_user_report_systems_dir
 )
 
-from .data_parser_base import (
-    DataParser,
-    FilenamePatternParser
-)
-
-from .parser_factory import ParserFactory
-
-from .llm_generator_base import (
-    LLMGeneratorTemplate
-)
-
-
-from .executor import (
-    ReportSystemExecutor
-)
-
-from .service_validator import ServiceValidator
-from .plugin_lifecycle import PluginLifecycleManager
-from .page_renderer import PageRenderer
+# Removed: executor, page_renderer, service_validator, plugin_lifecycle,
+#          data_parser_base, parser_factory, llm_generator_base
+# Plugins provide execution logic via ComponentRenderer
 
 __all__ = [
     # Schema classes
@@ -79,19 +48,4 @@ __all__ = [
     'ensure_user_directory',
     'get_builtin_report_systems_dir',
     'get_user_report_systems_dir',
-    
-    # Base classes
-    'DataParser',
-    'FilenamePatternParser',
-    'ParserFactory',
-    'LLMGeneratorTemplate',
-    
-    # Executor and Renderer
-    'ReportSystemExecutor',
-    'PageRenderer',
-    
-    # Responsibility classes
-    'ServiceValidator',
-    'PluginLifecycleManager',
 ]
-

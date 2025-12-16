@@ -300,46 +300,10 @@ class TemplateEngine:
         
         self.env.globals['get_image_src'] = get_image_src
         
-        # Render component - access components via extension point
-        @pass_context
-        def render_component(context, component_id: str, props: Optional[Dict[str, Any]] = None, **kwargs) -> Markup:
-            """
-            Render a plugin-defined UI component.
-            
-            Usage in templates:
-                {{ render_component('stat_card', {'title': 'Total', 'value': 42}) }}
-                {{ render_component('gauge', value=85, max=100) }}
-            
-            Parameters:
-                component_id: Component type ID (e.g., 'stat_card', 'gauge')
-                props: Dictionary of component properties
-                **kwargs: Additional properties (merged with props)
-            
-            Returns:
-                Rendered HTML (Markup-safe)
-            
-            Note:
-                Plugin components are trusted to return safe HTML. This function
-                bypasses Jinja2 autoescaping by wrapping output in Markup, which
-                is appropriate for plugin-provided components that handle their
-                own sanitization. If untrusted plugins are supported in the future,
-                a sanitization layer should be added here.
-            """
-            
-            # Merge props with kwargs
-            all_props = dict(props or {})
-            all_props.update(kwargs)
-            
-            # Get registry via extension point
-            extension_point = get_extension_point()
-            registry = extension_point.get_registry()
-            
-            # Render the component with template context (config, labels, etc.)
-            # Plugin components are trusted to return safe HTML; bypass Jinja autoescape.
-            html = registry.components.render(component_id, all_props, context)  # noqa: S704
-            return Markup(html)
-        
-        self.env.globals['render_component'] = render_component
+        # render_component REMOVED - use Property Controls pattern instead
+        # Components now render via Jinja2 templates with validated props
+        # See docs/PROPERTY_CONTROLS_TRANSITION.md
+
     
     def render(
         self, 

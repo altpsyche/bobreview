@@ -17,11 +17,8 @@ def generate_plugin_py(name: str, safe_name: str, class_name: str, template: str
         imports = f"""from pathlib import Path
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
 from .parsers.csv_parser import {class_name}CsvParser
-from .context_builder import {class_name}ContextBuilder
-from .chart_generator import {class_name}ChartGenerator
-from .analysis import analyze_{safe_name}_data
-from .widgets import {class_name}StatCard
 from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME"""
+
         
         registration = f'''        # Load report system definition
         import json
@@ -34,38 +31,18 @@ from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME"""
             system_id="{safe_name}",
             system_def=system_def,
             parser_class={class_name}CsvParser,
-            analyzer_func=analyze_{safe_name}_data,
-            context_builder_class={class_name}ContextBuilder,
-            chart_generator_class={class_name}ChartGenerator,
             template_dir=Path(__file__).parent / "templates"
         )
         
         # ─────────────────────────────────────────────────────────────────────
-        # Register Components (users compose these in report_config.yaml)
+        # Register Themes (required - no built-in themes in core)
         # ─────────────────────────────────────────────────────────────────────
         
-        # Custom widget (reusable UI component)
-        helper.add_widget("{safe_name}_stat_card", {class_name}StatCard)
-        
-        # Custom chart type (gauge visualization)
-        helper.add_chart_type("{safe_name}_gauge", {{
-            "type": "doughnut",
-            "options": {{
-                "cutout": "70%",
-                "circumference": 180,
-                "rotation": 270
-            }},
-            "description": "Semi-circular gauge chart for progress/scores"
-        }})
-        
-        # Custom themes
         helper.add_theme({safe_name.upper()}_THEME)
         helper.add_theme({safe_name.upper()}_DEEP_THEME)
         
-        # Register default services
-        helper.register_default_services()
-        
         # NOTE: Pages are user-defined in report_config.yaml, not here.'''
+
     else:
         imports = f"""from pathlib import Path
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
@@ -83,12 +60,8 @@ from .analysis import analyze_{safe_name}_data"""
             system_id="{safe_name}",
             system_def=system_def,
             parser_class={class_name}CsvParser,
-            analyzer_func=analyze_{safe_name}_data,
             template_dir=Path(__file__).parent / "templates"
         )
-        
-        # Register default services
-        helper.register_default_services()
         
         # NOTE: Pages are user-defined in report_config.yaml, not here.'''
     
@@ -141,7 +114,7 @@ import csv
 from bobreview.core.api import DataParserInterface
 
 
-class {class_name}CsvParser(DataParserInterface):
+class {class_name}CsvParser:
     """
     Parse CSV files with name, score, and category columns.
     
@@ -203,7 +176,6 @@ Context Builder for {name} Plugin.
 """
 
 from typing import Dict, List, Any, Union
-from bobreview.core.api import ContextBuilderInterface
 
 
 def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
@@ -216,12 +188,12 @@ def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict
         return list(data) if hasattr(data, '__iter__') and not isinstance(data, str) else []
 
 
-class {class_name}ContextBuilder(ContextBuilderInterface):
+class {class_name}ContextBuilder:
     """Build template context for {name} reports."""
     
     def build_context(
         self,
-        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
+        data: Union[List[Dict[str, Any]], Any],
         stats: Dict[str, Any],
         config: Any,
         base_context: Dict[str, Any]
@@ -251,6 +223,7 @@ class {class_name}ContextBuilder(ContextBuilderInterface):
         
         return context
 '''
+
 
 
 def generate_chart_generator(name: str, class_name: str) -> str:
@@ -647,132 +620,265 @@ def analyze_{safe_name}_data(
 
 def generate_theme_module(name: str, safe_name: str, class_name: str) -> str:
     """
-    Generate theme.py with custom theme examples.
+    Generate theme.py with premium, production-ready themes.
     
-    Shows plugin developers how to create themes:
-    - Full standalone theme with fonts and all properties
-    - Theme extending ocean base with deeper colors
+    Includes 4 stunning themes:
+    - MIDNIGHT: Deep blue with electric cyan accents
+    - AURORA: Purple/magenta with northern lights feel
+    - SUNSET: Warm amber/orange gradients
+    - FROST: Clean icy light theme
     """
     return f'''"""
-Custom Themes for {name} Plugin.
+Premium Themes for {name} Plugin.
 
-This module demonstrates two approaches to theme creation:
+Four stunning themes with unique personalities:
 
-1. FULL THEME - Complete standalone theme with all properties including fonts
-2. OCEAN DEEP THEME - Extends ocean base with deeper, moodier colors
+1. MIDNIGHT - Deep blue with electric cyan accents (default)
+2. AURORA - Purple/magenta with northern lights glow
+3. SUNSET - Warm amber and orange gradients
+4. FROST - Clean, icy light theme
 
-Register themes in plugin.py:
-    from .theme import {safe_name.upper()}_THEME, {safe_name.upper()}_DEEP_THEME
-    helper.add_theme({safe_name.upper()}_THEME)
-    helper.add_theme({safe_name.upper()}_DEEP_THEME)
+Register in plugin.py:
+    from .theme import (
+        {safe_name.upper()}_MIDNIGHT,
+        {safe_name.upper()}_AURORA,
+        {safe_name.upper()}_SUNSET,
+        {safe_name.upper()}_FROST,
+    )
+    helper.add_theme({safe_name.upper()}_MIDNIGHT)
+    helper.add_theme({safe_name.upper()}_AURORA)
+    helper.add_theme({safe_name.upper()}_SUNSET)
+    helper.add_theme({safe_name.upper()}_FROST)
 """
 
-from bobreview.core.themes import ReportTheme, create_theme, hex_to_rgba
+from bobreview.core.themes import ReportTheme, hex_to_rgba
 
 
 # =============================================================================
-# FULL THEME - Complete standalone theme with fonts and everything
+# 🌙 MIDNIGHT THEME - Deep blue with electric cyan
 # =============================================================================
-#
-# Use ReportTheme directly when you want full control over every property.
-# This is ideal for a completely custom branded experience.
+# Perfect for: Technical reports, developer dashboards, code analysis
+# Font: JetBrains Mono + Inter - clean, technical, highly readable
 
-{safe_name.upper()}_THEME = ReportTheme(
-    id='{safe_name}_full',
-    name='{class_name} Theme',
+{safe_name.upper()}_MIDNIGHT = ReportTheme(
+    id='{safe_name}_midnight',
+    name='{class_name} Midnight',
     
-    # Backgrounds - deep navy gradient feel
-    bg='#0a0e14',
-    bg_elevated='#12171f',
-    bg_soft='#1a2028',
+    # Deep blue-black backgrounds
+    bg='#0a0f1a',
+    bg_elevated='#111827',
+    bg_soft='#1e293b',
     
-    # Accents - vibrant teal/cyan
-    accent='#00d4aa',
-    accent_soft=hex_to_rgba('#00d4aa', 0.15),
-    accent_strong='#00ffcc',
+    # Electric cyan accents
+    accent='#22d3ee',
+    accent_soft=hex_to_rgba('#22d3ee', 0.15),
+    accent_strong='#67e8f9',
     
-    # Text - high contrast for readability
-    text_main='#e8eaed',
-    text_soft='#9aa0a6',
+    # Cool gray text
+    text_main='#f1f5f9',
+    text_soft='#94a3b8',
     
-    # Status colors
-    ok='#34d399',            # Emerald green
-    ok_soft=hex_to_rgba('#34d399', 0.15),
-    warn='#fbbf24',          # Amber
-    warn_soft=hex_to_rgba('#fbbf24', 0.15),
-    danger='#f87171',        # Coral red
+    # Vibrant status colors
+    ok='#4ade80',
+    ok_soft=hex_to_rgba('#4ade80', 0.15),
+    warn='#facc15',
+    warn_soft=hex_to_rgba('#facc15', 0.15),
+    danger='#f87171',
     danger_soft=hex_to_rgba('#f87171', 0.15),
     
-    # Borders and effects
-    border_subtle='#282f3a',
-    shadow_soft='0 8px 32px rgba(0, 0, 0, 0.4)',
-    shadow_strong='0 16px 48px rgba(0, 0, 0, 0.6)',
+    # Sharp edges for technical feel
+    border_subtle='#334155',
+    shadow_soft='0 8px 32px rgba(0, 0, 0, 0.5)',
+    shadow_strong='0 20px 60px rgba(0, 0, 0, 0.7)',
+    radius_sm='4px',
+    radius_md='8px',
+    radius_lg='12px',
+    radius_xl='16px',
     
-    # Border radius
+    # JetBrains Mono + Inter - technical, clean
+    font_family='"Inter", "SF Pro Display", system-ui, sans-serif',
+    font_mono='"JetBrains Mono", "Fira Code", "SF Mono", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+    
+    chart_grid_opacity=0.35,
+)
+
+
+# =============================================================================
+# 🌌 AURORA THEME - Purple/magenta with northern lights glow
+# =============================================================================
+# Perfect for: Creative projects, marketing reports, analytics dashboards
+# Font: Space Grotesk + IBM Plex Mono - modern, geometric, stylish
+
+{safe_name.upper()}_AURORA = ReportTheme(
+    id='{safe_name}_aurora',
+    name='{class_name} Aurora',
+    
+    # Deep purple-black backgrounds
+    bg='#0c0a1d',
+    bg_elevated='#13102a',
+    bg_soft='#1e1839',
+    
+    # Vibrant magenta/pink accents
+    accent='#e879f9',
+    accent_soft=hex_to_rgba('#e879f9', 0.18),
+    accent_strong='#f0abfc',
+    
+    # Soft lavender text
+    text_main='#f5f3ff',
+    text_soft='#a5b4fc',
+    
+    # Colorful neon status colors
+    ok='#34d399',
+    ok_soft=hex_to_rgba('#34d399', 0.15),
+    warn='#fcd34d',
+    warn_soft=hex_to_rgba('#fcd34d', 0.15),
+    danger='#fb7185',
+    danger_soft=hex_to_rgba('#fb7185', 0.15),
+    
+    # Soft glow effects
+    border_subtle='#312e54',
+    shadow_soft='0 10px 40px rgba(139, 92, 246, 0.2)',
+    shadow_strong='0 25px 80px rgba(139, 92, 246, 0.35)',
+    radius_sm='6px',
+    radius_md='12px',
+    radius_lg='18px',
+    radius_xl='24px',
+    
+    # Space Grotesk + IBM Plex Mono - modern, geometric
+    font_family='"Space Grotesk", "Outfit", system-ui, sans-serif',
+    font_mono='"IBM Plex Mono", "Source Code Pro", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
+    
+    chart_grid_opacity=0.3,
+)
+
+
+# =============================================================================
+# 🌅 SUNSET THEME - Warm amber and orange gradients
+# =============================================================================
+# Perfect for: Business reports, executive dashboards, warm presentations
+# Font: DM Sans + JetBrains Mono - friendly, professional, approachable
+
+{safe_name.upper()}_SUNSET = ReportTheme(
+    id='{safe_name}_sunset',
+    name='{class_name} Sunset',
+    
+    # Warm dark backgrounds with red undertones
+    bg='#120c0c',
+    bg_elevated='#1a1212',
+    bg_soft='#271a1a',
+    
+    # Warm amber/orange accents
+    accent='#fb923c',
+    accent_soft=hex_to_rgba('#fb923c', 0.18),
+    accent_strong='#fdba74',
+    
+    # Warm cream text
+    text_main='#fef3e2',
+    text_soft='#d4a574',
+    
+    # Fire-inspired status colors
+    ok='#86efac',
+    ok_soft=hex_to_rgba('#86efac', 0.15),
+    warn='#fde047',
+    warn_soft=hex_to_rgba('#fde047', 0.15),
+    danger='#fca5a5',
+    danger_soft=hex_to_rgba('#fca5a5', 0.15),
+    
+    # Warm, cozy effects
+    border_subtle='#3d2a2a',
+    shadow_soft='0 12px 40px rgba(251, 146, 60, 0.15)',
+    shadow_strong='0 24px 70px rgba(251, 146, 60, 0.25)',
+    radius_sm='6px',
+    radius_md='10px',
+    radius_lg='16px',
+    radius_xl='24px',
+    
+    # DM Sans + JetBrains Mono - friendly, readable
+    font_family='"DM Sans", "Nunito", "Poppins", system-ui, sans-serif',
+    font_mono='"JetBrains Mono", "Fira Code", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+    
+    chart_grid_opacity=0.35,
+)
+
+
+# =============================================================================
+# ❄️ FROST THEME - Clean, icy light theme
+# =============================================================================
+# Perfect for: Print-friendly reports, light mode preference, formal docs
+# Font: Plus Jakarta Sans + Fira Code - elegant, modern, professional
+
+{safe_name.upper()}_FROST = ReportTheme(
+    id='{safe_name}_frost',
+    name='{class_name} Frost',
+    
+    # Clean icy backgrounds
+    bg='#f0f9ff',
+    bg_elevated='#ffffff',
+    bg_soft='#e0f2fe',
+    
+    # Cool blue accent
+    accent='#0284c7',
+    accent_soft=hex_to_rgba('#0284c7', 0.12),
+    accent_strong='#0ea5e9',
+    
+    # Dark slate text
+    text_main='#0f172a',
+    text_soft='#475569',
+    
+    # Clear, vivid status
+    ok='#16a34a',
+    ok_soft=hex_to_rgba('#16a34a', 0.1),
+    warn='#d97706',
+    warn_soft=hex_to_rgba('#d97706', 0.1),
+    danger='#dc2626',
+    danger_soft=hex_to_rgba('#dc2626', 0.1),
+    
+    # Subtle, clean effects
+    border_subtle='#bae6fd',
+    shadow_soft='0 4px 20px rgba(14, 165, 233, 0.08)',
+    shadow_strong='0 12px 40px rgba(14, 165, 233, 0.15)',
     radius_sm='4px',
     radius_md='8px',
     radius_lg='12px',
     radius_xl='20px',
     
-    # Fonts - distinctive typography (different from built-in themes)
-    # Space Grotesk: Modern geometric sans with character
-    # IBM Plex Mono: Clean technical monospace
-    font_family='"Space Grotesk", "Outfit", "Rubik", system-ui, sans-serif',
-    font_mono='"IBM Plex Mono", "Source Code Pro", "Cascadia Code", monospace',
+    # Plus Jakarta Sans + Fira Code - elegant, modern
+    font_family='"Plus Jakarta Sans", "Outfit", "Inter", system-ui, sans-serif',
+    font_mono='"Fira Code", "JetBrains Mono", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
     
-    # Google Fonts URL - templates use this to load the fonts dynamically
-    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
-    
-    # Chart styling
-    chart_grid_opacity=0.4,
+    chart_grid_opacity=0.25,
 )
 
 
 # =============================================================================
-# OCEAN DEEP THEME - Extends ocean base with deeper, moodier feel
+# DEFAULT THEME ALIAS
 # =============================================================================
-#
-# Use create_theme() when you want to extend a base theme and only override
-# specific properties. This is the simplest approach for quick customization.
+# Point to midnight as the default theme for this plugin
 
-{safe_name.upper()}_DEEP_THEME = create_theme(
-    id='{safe_name}_ocean_deep',
-    name='{class_name} Ocean Deep',
-    base='ocean',  # Inherit from ocean theme
-    
-    # Deeper backgrounds for a moodier atmosphere
-    bg='#060d1a',            # Darker navy, almost black
-    bg_elevated='#0c1628',   # Deep ocean blue
-    bg_soft='#132035',       # Midnight blue
-    
-    # Accent: keeping ocean's teal but slightly more saturated
-    accent='#5afaff',        # Brighter cyan
-    accent_soft=hex_to_rgba('#5afaff', 0.12),
-    
-    # Softer text for less harsh contrast
-    text_soft='#6b7a94',     # Muted ocean gray
-    
-    # Deeper border for that underwater feel
-    border_subtle='#1a2744',
-)
+{safe_name.upper()}_THEME = {safe_name.upper()}_MIDNIGHT
 
 
 # =============================================================================
-# USAGE NOTES
+# USAGE
 # =============================================================================
 #
 # 1. Register in plugin.py on_load():
-#        helper.add_theme({safe_name.upper()}_THEME)
-#        helper.add_theme({safe_name.upper()}_DEEP_THEME)
+#        helper.add_theme({safe_name.upper()}_MIDNIGHT)  # or any theme
 #
-# 2. Use in report_systems/*.json:
-#        "theme": {{ "preset": "{safe_name}_full" }}
-#    or:
-#        "theme": {{ "preset": "{safe_name}_ocean_deep" }}
+# 2. Use in executor/templates:
+#        theme_id='{safe_name}_midnight'  # or aurora, sunset, frost
 #
-# 3. Users can override via CLI:
-#        bobreview --plugin {name} --theme {safe_name}_ocean_deep
+# 3. Available themes:
+#        {safe_name}_midnight  - Deep blue + cyan (default)
+#        {safe_name}_aurora    - Purple + magenta
+#        {safe_name}_sunset    - Warm amber + orange
+#        {safe_name}_frost     - Clean light blue
 '''
+
 
 
 def generate_widgets_module(name: str, safe_name: str, class_name: str) -> str:
@@ -885,231 +991,157 @@ class {class_name}StatCard:
 
 def generate_component_module(name: str, safe_name: str, class_name: str) -> str:
     """
-    Generate components.py with ComponentInterface implementations.
+    Generate components.py with Property Controls pattern.
     
     Creates example components demonstrating:
-    - Sync component (StatCardComponent)
-    - Async component with data fetching (DataTableComponent)
-    - DataFrame integration for data-aware components
+    - @register_component decorator
+    - PropTypes schema definitions
+    - Component templates
     """
     return f'''"""
-UI Components for {name} plugin.
+Component Definitions for {name} plugin.
 
-Components implement ComponentInterface for reusable UI elements
-that templates can render via render_component().
+This module uses the Property Controls pattern where components
+define their accepted props using PropTypes. Core validates YAML
+against these schemas automatically.
 
-Data Flow:
-    Parser → List[Dict] → DataService → DataFrame → Components
-
-Usage in templates:
-    {{{{ render_component('stat_card', {{'title': 'Total', 'value': 42}}) }}}}
-    {{{{ render_component('data_table', {{'columns': ['name', 'value']}}) }}}}
+Usage in YAML:
+    components:
+      - type: {safe_name}_chart
+        id: my_chart
+        chart: bar
+        title: "Score Distribution"
+        
+      - type: {safe_name}_stat_card
+        id: total
+        label: "Total Items"
+        value: "{{{{ stats.count }}}}"
 """
 
-from typing import Dict, Any, List, Union
-from bobreview.core.api import ComponentInterface
-
-# Optional: Import DataFrame for type hints
-try:
-    from bobreview.core.dataframe import DataFrame
-except ImportError:
-    DataFrame = None
+from bobreview.core.components import register_component, PropTypes
 
 
-class {class_name}StatCardComponent(ComponentInterface):
+@register_component("{safe_name}_chart", plugin="{safe_name}")
+class {class_name}ChartComponent:
     """
-    A stat card component displaying a metric with optional trend indicator.
+    Chart visualization component.
     
-    Props:
-        title: Card title (required)
-        value: Main numeric value (required)
-        subtitle: Optional description text
-        trend: 'up', 'down', or None
-        status: 'ok', 'warn', 'danger' for border color
+    Renders data as bar, line, pie, or other chart types.
     """
     
-    @property
-    def component_type(self) -> str:
-        return '{safe_name}_stat_card'
+    props = {{
+        "id": PropTypes.string(required=True, description="Unique chart ID"),
+        "chart": PropTypes.choice(
+            ["bar", "line", "pie", "scatter", "histogram", "doughnut"],
+            default="bar",
+            description="Chart type"
+        ),
+        "title": PropTypes.string(default="", description="Chart title"),
+        "x": PropTypes.string(description="X-axis data field"),
+        "y": PropTypes.string(description="Y-axis data field"),
+        "animated": PropTypes.boolean(default=True, description="Enable animations"),
+        "height": PropTypes.number(default=300, description="Chart height (px)"),
+    }}
     
-    def render(self, props: Dict[str, Any], context: Dict[str, Any]) -> str:
-        title = props.get('title', '')
-        value = props.get('value', 0)
-        subtitle = props.get('subtitle', '')
-        trend = props.get('trend')
-        status = props.get('status', '')
-        
-        # Format value
-        if isinstance(value, float):
-            formatted = f"{{value:,.1f}}"
-        elif isinstance(value, int):
-            formatted = f"{{value:,}}"
-        else:
-            formatted = str(value)
-        
-        # Trend icon
-        trend_html = ''
-        if trend == 'up':
-            trend_html = '<span class="trend trend-up">↑</span>'
-        elif trend == 'down':
-            trend_html = '<span class="trend trend-down">↓</span>'
-        
-        # Status class
-        status_class = f' stat-card--{{status}}' if status else ''
-        
-        # Subtitle HTML (conditional)
-        subtitle_html = f'<div class="stat-card__subtitle">{{subtitle}}</div>' if subtitle else ''
-        
-        return f"""
-        <div class="stat-card{{status_class}}">
-            <div class="stat-card__title">{{title}}</div>
-            <div class="stat-card__value">{{formatted}}{{trend_html}}</div>
-            {{subtitle_html}}
-        </div>
-        """
-    
-    @staticmethod
-    def get_css() -> str:
-        """Return component CSS styles."""
-        return """
-        .stat-card {{
-            background: var(--bg-elevated);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            text-align: center;
-        }}
-        .stat-card__title {{
-            font-size: 0.875rem;
-            color: var(--text-soft);
-            margin-bottom: 0.5rem;
-        }}
-        .stat-card__value {{
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--text-main);
-        }}
-        .stat-card__subtitle {{
-            font-size: 0.75rem;
-            color: var(--text-soft);
-            margin-top: 0.25rem;
-        }}
-        .stat-card--ok {{ border-color: var(--ok); }}
-        .stat-card--warn {{ border-color: var(--warn); }}
-        .stat-card--danger {{ border-color: var(--danger); }}
-        .trend {{ margin-left: 0.25rem; }}
-        .trend-up {{ color: var(--ok); }}
-        .trend-down {{ color: var(--danger); }}
-        """
+    template = "{safe_name}/components/chart.html.j2"
 
 
-class {class_name}DataTableComponent(ComponentInterface):
+@register_component("{safe_name}_stat_card", plugin="{safe_name}")
+class {class_name}StatCardComponent:
     """
-    A data table component that renders DataFrame or List[Dict] data.
+    Stat card widget displaying a metric with label.
     
-    Props:
-        data: DataFrame or List[Dict] (required)
-        columns: List of column names to display (optional, defaults to all)
-        max_rows: Maximum rows to show (default: 10)
-        title: Optional table title
-    
-    This component demonstrates DataFrame integration.
+    Shows a prominent value with optional label, color, and status.
     """
     
-    @property
-    def component_type(self) -> str:
-        return '{safe_name}_data_table'
+    props = {{
+        "id": PropTypes.string(description="Optional card ID"),
+        "label": PropTypes.string(default="", description="Card label"),
+        "value": PropTypes.template(required=True, description="Value (Jinja2)"),
+        "color": PropTypes.color(description="Value color"),
+        "icon": PropTypes.string(description="FontAwesome icon"),
+        "variant": PropTypes.choice(
+            ["default", "ok", "warn", "danger", "info"],
+            default="default",
+            description="Visual variant"
+        ),
+    }}
     
-    @property
-    def is_async(self) -> bool:
-        # Set to True if fetching external data
-        return False
+    template = "{safe_name}/components/stat_card.html.j2"
+
+
+@register_component("{safe_name}_data_table", plugin="{safe_name}")
+class {class_name}DataTableComponent:
+    """
+    Data table component for tabular data display.
     
-    def render(self, props: Dict[str, Any], context: Dict[str, Any]) -> str:
-        data = props.get('data', [])
-        columns = props.get('columns')
-        max_rows = props.get('max_rows', 10)
-        title = props.get('title', '')
-        
-        # Convert DataFrame to list if needed
-        if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
-            # It's a DataFrame
-            rows = list(data)[:max_rows]
-            columns = columns or data.column_names
-        else:
-            # It's a list
-            rows = list(data)[:max_rows]
-            if rows and not columns:
-                columns = list(rows[0].keys())
-        
-        if not rows or not columns:
-            return '<div class="data-table--empty">No data available</div>'
-        
-        # Build HTML
-        header = ''.join(f'<th>{{col}}</th>' for col in columns)
-        body = ''
-        for row in rows:
-            cells = ''.join(f'<td>{{row.get(col, "")}}</td>' for col in columns)
-            body += f'<tr>{{cells}}</tr>'
-        
-        title_html = f'<caption>{{title}}</caption>' if title else ''
-        
-        return f"""
-        <table class="data-table">
-            {{title_html}}
-            <thead><tr>{{header}}</tr></thead>
-            <tbody>{{body}}</tbody>
-        </table>
-        """
+    Renders data with sortable columns and optional pagination.
+    """
     
-    @staticmethod
-    def get_css() -> str:
-        """Return component CSS styles."""
-        return """
-        .data-table {{
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--bg-elevated);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-        }}
-        .data-table caption {{
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            color: var(--text-main);
-        }}
-        .data-table th {{
-            background: var(--bg-soft);
-            padding: 0.75rem 1rem;
-            text-align: left;
-            font-weight: 500;
-            color: var(--text-soft);
-            font-size: 0.875rem;
-        }}
-        .data-table td {{
-            padding: 0.75rem 1rem;
-            border-top: 1px solid var(--border-subtle);
-            color: var(--text-main);
-        }}
-        .data-table--empty {{
-            padding: 2rem;
-            text-align: center;
-            color: var(--text-soft);
-        }}
-        """
+    props = {{
+        "id": PropTypes.string(description="Table ID"),
+        "title": PropTypes.string(default="", description="Table title"),
+        "columns": PropTypes.array(description="Column names"),
+        "sortable": PropTypes.boolean(default=True, description="Sortable columns"),
+        "paginated": PropTypes.boolean(default=False, description="Enable pagination"),
+        "page_size": PropTypes.number(default=25, description="Rows per page"),
+        "striped": PropTypes.boolean(default=True, description="Striped rows"),
+    }}
+    
+    template = "{safe_name}/components/data_table.html.j2"
+
+
+@register_component("{safe_name}_llm", plugin="{safe_name}")
+class {class_name}LLMComponent:
+    """
+    LLM-generated content component.
+    
+    Generates content using an LLM with the provided prompt template.
+    """
+    
+    props = {{
+        "id": PropTypes.string(required=True, description="Unique ID"),
+        "title": PropTypes.string(default="", description="Section title"),
+        "prompt": PropTypes.template(description="Prompt template (Jinja2)"),
+        "generator": PropTypes.string(description="Generator function"),
+        "temperature": PropTypes.number(default=0.7, min=0, max=2),
+    }}
+    
+    template = "{safe_name}/components/llm.html.j2"
+
+
+@register_component("{safe_name}_text", plugin="{safe_name}")
+class {class_name}TextComponent:
+    """
+    Static or templated text content.
+    """
+    
+    props = {{
+        "content": PropTypes.template(required=True, description="Content"),
+        "markdown": PropTypes.boolean(default=False, description="Render as Markdown"),
+        "class_name": PropTypes.string(default="", description="CSS class"),
+    }}
+    
+    template = "{safe_name}/components/text.html.j2"
 
 
 # =============================================================================
 # USAGE
 # =============================================================================
 #
-# 1. Register in plugin.py on_load():
-#        from .components import {class_name}StatCardComponent, {class_name}DataTableComponent
-#        helper.add_component('{safe_name}_stat_card', {class_name}StatCardComponent)
-#        helper.add_component('{safe_name}_data_table', {class_name}DataTableComponent)
+# 1. Components are auto-registered when this module is imported
+#    (via @register_component decorator)
 #
-# 2. Use in templates:
-#        {{{{ render_component('{safe_name}_stat_card', {{'title': 'Score', 'value': 85}}) }}}}
-#        {{{{ render_component('{safe_name}_data_table', {{'data': data, 'columns': ['name', 'value']}}) }}}}
+# 2. Import in plugin.py __init__():
+#        from . import components  # Triggers registration
+#
+# 3. Use in YAML config:
+#        components:
+#          - type: {safe_name}_chart
+#            id: score_chart
+#            chart: bar
+#            title: "Scores"
+#            x: name
+#            y: score
 '''
+

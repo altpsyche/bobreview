@@ -58,13 +58,9 @@ def create_plugin(
     Returns:
         Path to the created plugin directory
     """
-    # Validate and get theme via ThemeSystem
-    theme_system = get_theme_system()
-    theme = theme_system.get_theme(color_theme)
-    
-    if not theme:
-        available = ", ".join(get_available_themes())
-        raise ValueError(f"Unknown theme '{color_theme}'. Available: {available}")
+    # color_theme is just a hint for generated theme styling
+    # No validation needed - plugins create their own themes
+
     
     # Normalize name for directory and Python usage
     safe_name = name.replace('-', '_').replace(' ', '_')
@@ -123,7 +119,7 @@ __all__ = ['{class_name}CsvParser']
         widgets_content = generate_widgets_module(name, safe_name, class_name)
         (plugin_dir / "widgets.py").write_text(widgets_content, encoding='utf-8')
         
-        # Create components.py (ComponentInterface implementations)
+        # Create components.py (Property Controls pattern)
         components_content = generate_component_module(name, safe_name, class_name)
         (plugin_dir / "components.py").write_text(components_content, encoding='utf-8')
     

@@ -4,8 +4,8 @@ User Report Configuration Schema for YAML-based Report Composition.
 This module defines the schema for USER report configurations (YAML files).
 End users create reports by composing plugin-provided components.
 
-IMPORTANT: These classes are prefixed with "User" to distinguish from
-internal config classes in config_classes.py and engine/schema.py.
+Components are validated by ComponentProcessor against plugin-defined schemas.
+See core/components/ for the Property Controls pattern.
 """
 
 from pathlib import Path
@@ -14,46 +14,8 @@ from dataclasses import dataclass, field
 import yaml
 
 
-@dataclass
-class UserComponentConfig:
-    """Base configuration for a component in a user page."""
-    type: Literal["widget", "chart", "data_table", "llm", "custom"]
-    config: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class UserWidgetConfig(UserComponentConfig):
-    """Configuration for a widget component."""
-    type: Literal["widget"] = "widget"
-    widget: str = ""  # Widget ID from plugin registry
-    
-
-@dataclass  
-class UserChartConfig(UserComponentConfig):
-    """Configuration for a chart component."""
-    type: Literal["chart"] = "chart"
-    chart: str = "bar"  # Chart type: bar, line, scatter, histogram, gauge
-    title: str = ""
-    x: Optional[str] = None  # X-axis field
-    y: Optional[str] = None  # Y-axis field
-
-
-@dataclass
-class UserDataTableConfig(UserComponentConfig):
-    """Configuration for a data table component."""
-    type: Literal["data_table"] = "data_table"
-    columns: List[str] = field(default_factory=list)
-    sortable: bool = True
-    paginated: bool = False
-    page_size: int = 25
-
-
-@dataclass
-class UserLLMConfig(UserComponentConfig):
-    """Configuration for an LLM-generated content component."""
-    type: Literal["llm"] = "llm"
-    generator: str = ""  # LLM generator ID from plugin
-    prompt_override: Optional[str] = None
+# Note: Individual component configs (chart, widget, llm, data_table) are 
+# now defined by plugins via Property Controls. See core/components/.
 
 
 @dataclass
@@ -64,6 +26,7 @@ class UserPageConfig:
     layout: Literal["grid", "flex", "single-column"] = "single-column"
     nav_order: int = 0
     enabled: bool = True
+    # Components are Dict[str, Any] - validated by ComponentProcessor
     components: List[Dict[str, Any]] = field(default_factory=list)
 
 

@@ -129,6 +129,7 @@ class PageConfig:
     charts: List[ChartConfig] = field(default_factory=list)
     features: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
+    layout: str = "single-column"  # grid, flex, or single-column
     # Homepage card display
     card_icon: str = ""
     card_description: str = ""

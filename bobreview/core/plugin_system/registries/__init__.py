@@ -1,36 +1,30 @@
 """
 Focused registries for plugin components.
 
-Each registry handles a single type of component, following the
-Interface Segregation Principle.
+Plugin-First Architecture:
+- Most registries removed (plugins handle their own features)
+- Only infrastructure registries remain
 """
 
 from .theme_registry import ThemeRegistry
-from .widget_registry import WidgetRegistry
-from .data_parser_registry import DataParserRegistry
-from .llm_generator_registry import LLMGeneratorRegistry
-from .chart_type_registry import ChartTypeRegistry
-from .page_registry import PageRegistry
 from .service_registry import ServiceRegistry
 from .report_system_registry import ReportSystemRegistry
-from .chart_generator_registry import ChartGeneratorRegistry
-from .context_builder_registry import ContextBuilderRegistry
 from .template_path_registry import TemplatePathRegistry
-from .analyzer_registry import AnalyzerRegistry
-from .component_registry import ComponentRegistry
+from .data_parser_registry import DataParserRegistry
+
+# Removed registries (plugin features):
+# - WidgetRegistry -> Use ComponentRegistry from core.components
+# - LLMGeneratorRegistry -> Plugin handles
+# - ChartTypeRegistry -> Plugin handles
+# - ChartGeneratorRegistry -> Plugin handles
+# - ContextBuilderRegistry -> Plugin handles
+# - AnalyzerRegistry -> Plugin handles
+# - PageRegistry -> Plugin handles
 
 __all__ = [
     'ThemeRegistry',
-    'WidgetRegistry',
-    'DataParserRegistry',
-    'LLMGeneratorRegistry',
-    'ChartTypeRegistry',
-    'PageRegistry',
     'ServiceRegistry',
     'ReportSystemRegistry',
-    'ChartGeneratorRegistry',
-    'ContextBuilderRegistry',
     'TemplatePathRegistry',
-    'AnalyzerRegistry',
-    'ComponentRegistry',
+    'DataParserRegistry',
 ]
