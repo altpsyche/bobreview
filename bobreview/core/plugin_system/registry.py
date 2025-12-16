@@ -4,13 +4,13 @@ Plugin registry for managing plugin components.
 Plugin-First Architecture:
 - Most registries removed (plugins handle their own features)
 - Only infrastructure registries remain
+- Themes now owned entirely by plugins
 """
 
 from typing import TYPE_CHECKING, Dict, Optional
 import logging
 
 from .registries import (
-    ThemeRegistry,
     DataParserRegistry,
     ServiceRegistry,
     ReportSystemRegistry,
@@ -28,13 +28,12 @@ class PluginRegistry:
     Central registry for plugin infrastructure.
     
     Plugin-first design: Only infrastructure registries remain.
-    Domain-specific registries (widgets, charts, LLM, etc.) removed.
+    Domain-specific registries (widgets, charts, LLM, themes, etc.) removed.
     Plugins use ComponentRegistry from core.components for features.
     """
     
     def __init__(self):
         """Initialize infrastructure registries."""
-        self.themes = ThemeRegistry()
         self.data_parsers = DataParserRegistry()
         self.services = ServiceRegistry()
         self.report_systems = ReportSystemRegistry()
@@ -43,7 +42,7 @@ class PluginRegistry:
     def get_component_owner(self, component_key: str) -> str:
         """Get the plugin that registered a component."""
         for registry in [
-            self.themes, self.data_parsers, self.services,
+            self.data_parsers, self.services,
             self.report_systems, self.template_paths
         ]:
             owner = registry.get_component_owner(component_key)
@@ -54,7 +53,6 @@ class PluginRegistry:
     def unregister_plugin_components(self, plugin_name: str) -> int:
         """Unregister all components from a specific plugin."""
         total = 0
-        total += self.themes.unregister_plugin_components(plugin_name)
         total += self.data_parsers.unregister_plugin_components(plugin_name)
         total += self.services.unregister_plugin_components(plugin_name)
         total += self.report_systems.unregister_plugin_components(plugin_name)
@@ -66,7 +64,6 @@ class PluginRegistry:
     def get_stats(self) -> Dict[str, int]:
         """Get statistics about registered components."""
         return {
-            'themes': len(self.themes.get_all()),
             'data_parsers': len(self.data_parsers.get_all()),
             'services': len(self.services.get_all()),
             'report_systems': len(self.report_systems.get_all()),

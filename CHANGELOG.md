@@ -7,80 +7,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.8] - 2025-12-14
+## [1.0.8] - 2025-12-16
 
-### Unified Configuration & API Cleanup
+### Plugin-First Architecture Complete
 
-**Configuration Consolidation & API Standardization** — This release unifies the entire configuration system into a single flat `Config` class, standardizes all interface signatures, and removes backward compatibility shims for a cleaner, more maintainable codebase.
+This release completes the **Plugin-First Architecture** refactor. Core is now pure infrastructure while plugins provide all domain logic including report generation.
 
-> **MIGRATION GUIDE**: This release standardizes all API signatures, consolidates configuration, and removes backward compatibility shims. Follow this guide to update your plugins.
+> **MIGRATION GUIDE**: Plugins are now fully self-contained. Use `bobreview --plugin <name>` to execute plugins. The scaffolder generates complete, working plugins out of the box.
 
 ---
 
-### Configuration Consolidation (Breaking)
+### What's New
 
-**Files Deleted:**
-- `core/config_classes.py` → merged into `core/config.py`
-- `core/config_resolver.py` → merged into `core/config.py`
-- `core/config_utils.py` → removed (unused)
-- `core/theme_system.py` → merged into `core/themes.py`
-- `engine/config_merger.py` → removed (unused)
-- `engine/presets.py` → removed (unused)
-- `engine/loader.py::merge_cli_overrides()` → removed (60 lines)
+#### CLI Plugin Execution
 
-**CLI Unified (Breaking):**
-- Removed `build` subcommand - use `bobreview --plugin <name>` instead
-- Single entry point: `--plugin` builds from plugin's YAML config
-- All internal code now uses flat `Config` class
+Plugins can now be executed directly from the CLI:
 
-**Schema Simplified:**
-- `schema.py::LLMConfig` class → removed
-- `schema.py::ThemeConfig` class → removed  
-- `schema.py::OutputConfig` class → removed
-- `ReportSystemDefinition` → now only structural fields (no config duplication)
-
-**Internal API Unified (48+ fixes):**
-- All `config.llm.provider` → `config.llm_provider`
-- All `config.execution.dry_run` → `config.dry_run`
-- All `config.output.embed_images` → `config.embed_images`
-- All `config.cache.use_cache` → `config.use_cache`
-
-#### New Configuration Flow
-
-```text
-CLI Args → Config (flat) → ReportSystemExecutor
-     ↓
-YAML Config → Config.load_config() → Single source of truth
-     ↓
-JSON Plugin → ReportSystemDefinition (flat) → Same field names
+```bash
+bobreview --plugin my-plugin --dir ./data --output ./output
 ```
 
-#### JSON Format Change (Breaking)
+**How it works:**
+- CLI loads plugin via `loader.load(plugin_name)`
+- Looks for `generate_report(data_dir, output_dir)` in plugin module
+- Reports success or provides helpful error messages
 
-**Before (nested):**
-```json
-{
-  "llm_config": {"provider": "openai", "model": "gpt-4o"},
-  "theme": {"preset": "dark"},
-  "output": {"default_filename": "report.html"}
-}
+#### Scaffolder Generates Complete Plugins
+
+New plugins now include `executor.py` with a complete `generate_report()` function:
+
+```bash
+bobreview plugins create my-plugin
+# Creates:
+#   my_plugin/
+#   |-- executor.py          # Complete report generation
+#   |-- __init__.py          # Exports generate_report
+#   |-- chart_generator.py   # Theme-aware charts
+#   |-- theme.py             # 4 premium themes
+#   +-- ...
 ```
 
-**After (flat):**
-```json
-{
-  "llm_provider": "openai",
-  "llm_model": "gpt-4o", 
-  "theme": "dark",
-  "output_filename": "report.html"
-}
+#### Auto-Registration of Plugin Directories
+
+When using `-o <folder>` to create plugins, the folder is automatically registered:
+
+```bash
+bobreview plugins create my-plugin -o custom_output
+# Output: Registered custom_output for auto-discovery
 ```
 
-> **Note:** Parser accepts both formats for backward compatibility.
+**Config File:**
+```yaml
+# ~/.bobreview/config.yaml
+plugin_dirs:
+  - C:\path\to\custom_plugins
+```
+
+#### Premium Theme System
+
+Scaffolder generates 4 premium themes instead of basic dark/light:
+
+| Theme | Accent | Font |
+|-------|--------|------|
+| **Midnight** | Cyan #22d3ee | Space Grotesk |
+| **Aurora** | Magenta #e879f9 | Outfit |
+| **Sunset** | Amber #fb923c | Plus Jakarta Sans |
+| **Frost** | Blue #0284c7 | Inter |
+
+#### Simplified Theme API
+
+Removed unused theme inheritance for simpler codebase:
+
+- `ReportTheme.extends` -> removed  
+- `ReportTheme.overrides` -> removed
+- `resolve_theme()` -> removed
+- `base` parameter in `create_theme()` -> removed
+
+All themes are now standalone with explicit values.
+
+#### Plugin Discovery Enhancements
+
+**Discovery Priority:**
+1. CLI `--plugin-dir` (highest)
+2. Environment `BOBREVIEW_PLUGIN_DIRS`  
+3. Config file `~/.bobreview/config.yaml` (NEW)
+4. User plugins `~/.bobreview/plugins/`
+5. Local plugins `./plugins/`
+6. Bundled plugins (lowest)
+
+---
+
+### Breaking Changes
+
+| Category | Before | After |
+|----------|--------|-------|
+| CLI | `bobreview build` | `bobreview --plugin <name>` |
+| Plugin Execution | Core executor | Plugin `generate_report()` |
+| Theme Inheritance | `extends`, `base` | Standalone themes only |
+| Config | Nested classes | Flat `Config` class |
 
 #### Config Class Change
 
-**Before:** Multiple nested classes
+**Before:**
 ```python
 config = ReportConfig(
     llm=LLMConfig(provider="openai"),
@@ -88,7 +116,7 @@ config = ReportConfig(
 )
 ```
 
-**After:** Single flat class
+**After:**
 ```python
 config = Config(
     llm_provider="openai",
@@ -98,301 +126,117 @@ config = Config(
 
 ---
 
-### Breaking Changes Summary
-
-| Category | Old | New |
-|----------|-----|-----|
-| **Report config** | Pages in JSON | Pages in YAML (required) |
-| Interface params | `data_points: List[Dict]` | `data: Union[List[Dict], DataFrame]` |
-| Type alias | `LabelConfig` | `Labels` |
-| Theme function | `get_theme_css_block()` | `get_theme_css()` |
-| Theme vars | `theme.border`, `theme.success` | `theme.border_subtle`, `theme.ok` |
-| Analyzer registry | `get_analyzer_registry()` | `registry.analyzers` |
-
----
-
-### YAML Config Required for Plugins
-
-**This is a breaking change.** Plugins now require `report_config.yaml` to define pages and components.
-
-#### Architecture Change
-
-| Layer | File | Purpose |
-|-------|------|---------|
-| **Plugin Dev** | `report_systems/*.json` | Define capabilities (LLM generators, data source, theme) |
-| **User** | `report_config.yaml` | Define structure (pages, components) |
-
-#### Migration for Existing Plugins
-
-If your plugin only has JSON, create `report_config.yaml` in your plugin directory:
-
-```yaml
-name: "My Plugin Report"
-plugin: my_plugin
-version: "1.0.0"
-theme: dark
-
-pages:
-  - id: home
-    title: Overview
-    layout: default
-    nav_order: 1
-    components:
-      - type: llm
-        generator: summary
-      - type: chart
-        chart: bar
-        title: Scores
-        x: name
-        y: score
-```
-
-The `pages` array in JSON is now **ignored** - pages must be defined in YAML.
-
----
-
-### Interface Signature Changes
-
-All core interfaces now accept `Union[List[Dict], DataFrame]` as the `data` parameter:
-
-#### LLMGeneratorInterface.generate()
-
-```diff
--def generate(self, data_points: List[Dict], stats, config, context):
-+def generate(self, data: Union[List[Dict], DataFrame], stats, config, context):
-+    data_points = list(data)  # Convert internally if needed
-```
-
-#### ChartGeneratorInterface.generate_chart()
-
-```diff
--def generate_chart(self, data_points: List[Dict], stats, config, chart_config):
-+def generate_chart(self, data: Union[List[Dict], DataFrame], stats, config, chart_config):
-+    data_points = list(data)  # Convert internally if needed
-```
-
-#### ContextBuilderInterface.build_context()
-
-```diff
--def build_context(self, data_points: List[Dict], stats, config, base_context):
-+def build_context(self, data: Union[List[Dict], DataFrame], stats, config, base_context):
-+    data_points = list(data)  # Convert internally if needed
-```
-
----
-
-### Service Call Parameter Changes
-
-All service method calls must use `data=` instead of `data_points=`:
-
-#### AnalyticsService.analyze()
-
-```diff
--analytics.analyze(data_points=data, metrics=metrics, ...)
-+analytics.analyze(data=data, metrics=metrics, ...)
-```
-
-#### LLMService.generate_all()
-
-```diff
--llm_service.generate_all(data_points=data_points, stats=stats, ...)
-+llm_service.generate_all(data=data, stats=stats, ...)
-```
-
-#### PageRenderer calls
-
-```diff
-# _apply_context_builder
--builder.build_context(data_points=data_points, ...)
-+builder.build_context(data=data_points, ...)
-
-# _generate_charts  
--chart_generator.generate_chart(data_points=data_points, ...)
-+chart_generator.generate_chart(data=data_points, ...)
-```
-
----
-
-### Removed Functions & Aliases
-
-| Removed | Replacement | File |
-|---------|-------------|------|
-| `LabelConfig` | `Labels` | `engine/schema.py` |
-| `get_theme_css_block(theme)` | `get_theme_css(theme_id)` | `core/html_utils.py` |
-| `get_analyzer_registry()` | `registry.analyzers` | N/A |
-
----
-
-### Theme Variable Renames
-
-Update your Jinja2 templates:
-
-```diff
--{{ theme.border }}
-+{{ theme.border_subtle }}
-
--{{ theme.success }}
-+{{ theme.ok }}
-
--{{ theme.warning }}
-+{{ theme.warn }}
-```
-
----
-
-### Scaffolder Improvements
-
-New plugins now generate with complete features:
-
-| Feature | Description |
-|---------|-------------|
-| **Multiple Chart Types** | Bar, Line (gradient fill), Histogram, Doughnut (multi-color) |
-| **Pages Config** | Includes `filename`, `nav_label`, `nav_order`, `charts[]` |
-| **Template Config** | Uses `{"type": "jinja2", "name": "path"}` format |
-| **Analyzer Signature** | Accepts `**kwargs` for `metrics`, `metric_config` |
-
----
-
-### New Features
-
-#### DataFrame Support
-
-```python
-from bobreview.core.dataframe import DataFrame
-
-df = DataFrame.from_dicts([{'name': 'A', 'score': 95}])
-df.filter(lambda r: r['score'] > 90)
-df.sort_by('score', descending=True)
-```
-
-#### ComponentInterface
-
-```python
-from bobreview.core.api import ComponentInterface
-
-class StatCardComponent(ComponentInterface):
-    @property
-    def component_type(self) -> str:
-        return 'stat_card'
-    
-    def render(self, props, context) -> str:
-        return f'<div class="stat-card">{props["value"]}</div>'
-```
-
-#### Multiple Chart Types
-
-Chart generator now supports:
-- `bar` — Standard bar chart with theme colors
-- `line` — Line chart with gradient fill
-- `histogram` — Auto-binning histogram
-- `pie` / `doughnut` — Multi-color palette from theme
-
----
-
-### Bug Fixes
-
-| File | Issue | Fix |
-|------|-------|-----|
-| `executor.py` | `analyze_data()` used undefined `data_points` | Added `data_points = list(data)` |
-| `executor.py` | Service calls used `data_points=` | Changed to `data=` |
-| `page_renderer.py` | Interface calls used `data_points=` | Changed to `data=` |
-| `pipeline.py` | Service calls used `data_points=` | Changed to `data=` |
-| `config_files.py` | Missing `pages` in report_system.json | Added complete page structure |
-| `config_files.py` | Template as string | Changed to dict `{"type", "name"}` |
-| `config_files.py` | Missing `llm_content` in pages | Added `llm_content: ["summary", "recommendations"]` |
-| `python_files.py` | Analyzer missing `**kwargs` | Added `**kwargs` to signature |
-| `details.html.j2` | `charts` undefined error | Added `{% if charts is defined %}` |
-
----
-
-### Added
-
-- **ComponentInterface**: New interface for reusable UI components with `render()` and `render_async()`
-- **ComponentRegistry**: 14th registry with instance caching for component classes
-- **DataFrame class**: `core/dataframe.py` — filter, sort, select operations
-- **Multiple chart types**: Bar, Line (gradient), Histogram, Doughnut (multi-color)
-- **Chart generator methods**: `_generate_line_chart()`, `_generate_pie_chart()`
-- **Template helper**: `render_component()` function for Jinja2 templates
-- **ReportBuilder service** (`core/report_builder.py`): Builds reports from user YAML configs
-  - Converts `UserReportConfig` → `ReportSystemDefinition` → `ReportSystemExecutor`
-  - `get_report_builder()` global accessor
-  - `list_available_components()` for discovering plugin components
-- **UserReportConfig schema** (`core/report_config.py`): CMS-style YAML report composition
-  - `UserPageConfig`, `UserWidgetConfig`, `UserChartConfig`, `UserLLMConfig` dataclasses
-  - `load_user_report_config()`, `validate_user_report_config()`, `save_user_report_config()`
-- **Example config**: `examples/report_config.yaml` — Complete user report YAML example
-
-### Changed
-
-#### PluginHelper API Improvements
-
-- **Complete API Coverage**: All 12 registries now have dedicated helper methods:
-  - `helper.add_widget(id, class)` for UI widgets
-  - `helper.add_page(id, def)` for page definitions
-  - `helper.add_chart_type(id, config)` for chart configurations
-  - `helper.add_component(id, class)` for ComponentInterface implementations
-
-- **Unified Analyzer Registration**: `AnalyzerRegistry` is now part of `PluginRegistry`
-  - Use `helper.add_analyzer()` or `registry.analyzers`
-  - `AnalyzerRegistry` extends `BaseRegistry` for plugin ownership tracking
-
-- **Improved `setup_complete_report_system()`**: Now includes `analyzer_func` parameter
-  ```python
-  helper.setup_complete_report_system(
-      system_id="my_plugin",
-      system_def=system_def,
-      parser_class=MyParser,
-      analyzer_func=analyze_data,  # NEW
-      context_builder_class=MyContextBuilder,
-      chart_generator_class=MyChartGenerator,
-      template_dir=Path(__file__).parent / "templates"
-  )
-  ```
-
-#### Scaffolder Enhancements
-
-- Generated plugins now include 4 chart types (bar, line, histogram, doughnut)
-- Uses `helper.setup_complete_report_system()` for one-call component registration
-- All pages registered via `helper.add_page()` for consistency
-- Creates `widgets.py` with reusable StatCard component
-- Report system JSON now includes `pages[]` with complete structure
-- **Enhanced `report_config.yaml`** with comprehensive inline documentation:
-  - Component type reference (widget, chart, data_table, llm)
-  - Chart type options (bar, line, histogram, doughnut, scatter)
-  - Stat card configuration (status, trend, subtitle)
-  - Template variable reference (stats.score.mean, etc.)
-  - How-to-add-pages template
-
----
+### Files Added
+
+- `scaffolder/generators/python_files.py::generate_executor()` - Executor generator
+- `core/plugin_system/discovery.py::get_config_plugin_dirs()` - Config file support
+- `core/plugin_system/discovery.py::add_plugin_dir_to_config()` - Auto-registration
 
 ### Files Modified
 
-Core:
-- `bobreview/core/api.py` — Updated interface docstrings
-- `bobreview/core/config.py` — Removed compat comment
-- `bobreview/core/plugin_system/registry.py` — Updated docstring
-- `bobreview/core/plugin_system/manifest.py` — Updated format comment
+**Core:**
+- `core/api.py` - Simplified to minimal interfaces (93% reduction)
+- `core/config.py` - Flat Config class, removed nested classes
+- `core/themes.py` - Removed `extends`, `overrides`, `resolve_theme()`
+- `core/plugin_system/discovery.py` - Added config file plugin dirs
+- `core/plugin_system/plugin_helper.py` - Simplified (43% reduction)
 
-Engine:
-- `bobreview/engine/executor.py` — Fixed data param, DI comment
-- `bobreview/engine/page_renderer.py` — Fixed interface calls
+**CLI:**
+- `cli.py` - Implemented `--plugin` execution, auto-registration (74% reduction)
 
-Services:
-- `bobreview/services/analytics_service.py` — Fixed docstring example
-- `bobreview/services/chart_service.py` — Fixed docstring example
-- `bobreview/services/llm_service.py` — Fixed docstring example
-- `bobreview/services/pipeline.py` — Fixed service calls
-- `bobreview/services/data_service.py` — Updated method docstring
+**Scaffolder:**
+- `scaffolder/core.py` - Added executor.py creation, Path conversion
+- `scaffolder/generators/python_files.py` - Added `generate_executor()`, 4 premium themes
+- `scaffolder/generators/__init__.py` - Added `generate_executor` export
 
-Scaffolder:
-- `scaffolder/generators/config_files.py` — Added charts to pages
-- `scaffolder/generators/python_files.py` — Added line/pie/doughnut charts
-- `scaffolder/templates/pages/home.html.j2` — Added trend chart canvas
-- `scaffolder/templates/pages/details.html.j2` — Added category chart canvas
+### Files Deleted
 
-Docs:
-- `docs/CORE_API.md` — `LabelConfig` → `Labels`
-- `docs/PLUGIN_DEVELOPMENT_GUIDE.md` — Updated chart generator example
+The following were removed in Plugin-First Architecture:
+- `core/report_builder.py` (520 lines) - Plugins provide own executors
+- `engine/executor.py` - Replaced by plugin executor.py
+- `engine/page_renderer.py` - Replaced by plugin rendering  
+- `services/analytics_service.py` - Plugins provide analysis
+- `services/chart_service.py` - Plugins provide chart generation
+- `services/pipeline.py` - Removed (unused)
+- Plus 7 additional engine files
+
+---
+
+### Architecture Summary
+
+**Before (v1.0.7):**
+```
+Core -> Services -> Engine -> Report
+         ^
+         |
+      Plugins (register components)
+```
+
+**After (v1.0.8):**
+```
+Core (infrastructure only)
+         |
+         v  
+      Plugins (provide EVERYTHING)
+         |
+         v
+      generate_report() -> HTML
+```
+
+**Key Metrics:**
+- `api.py`: 486 lines -> 36 lines (93% reduction)
+- `cli.py`: 1157 lines -> ~300 lines (74% reduction)
+- `themes.py`: 764 lines -> **DELETED** (100% to plugins)
+- Built-in themes: 7 -> 0 (plugin-provided)
+
+---
+
+### Architecture Simplification (December 2025)
+
+Further simplified core architecture:
+
+#### Files Deleted (~680 lines)
+
+| File | Lines | Reason |
+|------|-------|--------|
+| `core/api.py` | 38 | Just comments, no code |
+| `core/plugin_system/interface.py` | 235 | Abstractions with only 1 implementation |
+| `core/themes.py` | 355 | Themes now fully plugin-owned |
+| `core/plugin_system/registries/theme_registry.py` | ~50 | No longer needed |
+
+#### Abstraction Reduction
+
+**Before:**
+```
+get_extension_point() → IExtensionPoint → ExtensionPointProvider → PluginRegistry
+```
+
+**After:**
+```
+get_registry() → PluginRegistry (direct)
+```
+
+#### Breaking Changes
+
+| Before | After |
+|--------|-------|
+| `from bobreview.core.themes import ReportTheme` | Plugins define their own themes |
+| `get_extension_point().get_theme()` | `get_registry().data_parsers.get()` |
+| `get_plugin_manager()` | `get_loader()` |
+| `helper.add_theme(theme)` | Plugins manage themes internally |
+
+#### Files Modified
+
+- `services/data_service.py` → Uses `get_registry().data_parsers.get()`
+- `core/template_engine.py` → Uses `get_registry().template_paths`
+- `engine/loader.py` → Uses `get_registry()` and `get_loader()`
+- `core/plugin_system/__init__.py` → Removed interface exports
+- `core/__init__.py` → Removed theme exports
+- `core/plugin_system/registry.py` → Removed ThemeRegistry
+- `core/plugin_system/plugin_helper.py` → Removed `add_theme()` method
+- `core/plugin_system/scaffolder/core.py` → Removed theme imports
+
+---
 
 ## [1.0.7] - 2025-12-12
 

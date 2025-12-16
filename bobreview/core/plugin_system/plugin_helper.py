@@ -2,8 +2,8 @@
 Plugin helper for simplified component registration.
 
 Plugin-First Architecture:
-- Minimal helper for theme and template registration
-- Most registrations removed (plugins handle own features)
+- Minimal helper for template and parser registration
+- Themes are now plugin-owned entirely - not managed by core
 """
 
 from pathlib import Path
@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type, Uni
 
 if TYPE_CHECKING:
     from .registry import PluginRegistry
-    from ..themes import ReportTheme
 
 
 class PluginHelper:
@@ -19,11 +18,10 @@ class PluginHelper:
     Simplified registration facade for plugin development.
     
     Plugin-First Architecture:
-    - Themes: Registered in core for resolution
     - Templates: Registered for discovery
     - Report Systems: Registered for loading
     - Data Parsers: Registered for parsing
-    - Other features: Plugins handle internally
+    - Themes: Plugins handle internally (not managed by core)
     
     Example:
         class MyPlugin(BasePlugin):
@@ -31,10 +29,6 @@ class PluginHelper:
             
             def on_load(self, registry):
                 helper = PluginHelper(registry, self.name)
-                
-                # Register theme (required - no built-in themes)
-                helper.add_theme(my_dark_theme)
-                helper.add_theme(my_light_theme)
                 
                 # Register templates
                 helper.add_templates(Path(__file__).parent / "templates")
@@ -53,38 +47,6 @@ class PluginHelper:
         """
         self.registry = registry
         self.plugin_name = plugin_name
-    
-    # -------------------------------------------------------------------------
-    # Themes (Required - plugins provide ALL themes)
-    # -------------------------------------------------------------------------
-    
-    def add_theme(self, theme: 'ReportTheme') -> None:
-        """
-        Register a theme.
-        
-        Plugin-First: Plugins MUST register themes, there are no built-in themes.
-        
-        Parameters:
-            theme: ReportTheme instance with unique id
-        
-        Example:
-            from bobreview.core.themes import create_theme
-            
-            MY_THEME = create_theme(
-                id='my_dark',
-                name='My Dark Theme',
-                accent='#ff6b35',
-                bg='#1a1a2e',
-            )
-            
-            helper.add_theme(MY_THEME)
-        """
-        # Register in plugin registry for ownership tracking
-        self.registry.themes.register(theme, plugin_name=self.plugin_name)
-        
-        # Also register in core theme system for resolution
-        from ..themes import register_theme
-        register_theme(theme)
     
     # -------------------------------------------------------------------------
     # Templates

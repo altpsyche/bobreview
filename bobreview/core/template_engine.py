@@ -23,9 +23,8 @@ if TYPE_CHECKING:
     from ..engine.schema import Labels
 
 from .utils import format_number
-from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon
-from .themes import get_theme_css
-from .plugin_system import get_extension_point
+from .html_utils import sanitize_llm_html, get_shared_css
+from .plugin_system import get_registry
 
 
 # Global template engine instance
@@ -69,9 +68,9 @@ class TemplateEngine:
         
         # Plugin-registered template paths (in priority order)
         # Lower priority number = higher priority (loaded first)
-        extension_point = get_extension_point()
+        registry = get_registry()
         # Get template paths with priority information
-        template_registrations = extension_point.get_template_paths()
+        template_registrations = registry.template_paths.get_all_registrations()
         # Already sorted by priority (lower number = higher priority)
         sorted_registrations = template_registrations
         for template_path, plugin_name, priority in sorted_registrations:
@@ -102,7 +101,7 @@ class TemplateEngine:
         """Register custom Jinja2 filters."""
         self.env.filters['format_number'] = format_number
         self.env.filters['sanitize'] = self._smart_sanitize
-        self.env.filters['trend_icon'] = get_trend_icon
+        # trend_icon filter removed - plugins define their own trend semantics
         self.env.filters['default_str'] = lambda x, d='': x if x else d
         self.env.filters['interpolate'] = self._interpolate
     

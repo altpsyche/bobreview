@@ -16,8 +16,7 @@ def generate_plugin_py(name: str, safe_name: str, class_name: str, template: str
     if template == 'full':
         imports = f"""from pathlib import Path
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
-from .parsers.csv_parser import {class_name}CsvParser
-from .theme import {safe_name.upper()}_MIDNIGHT, {safe_name.upper()}_AURORA, {safe_name.upper()}_SUNSET, {safe_name.upper()}_FROST"""
+from .parsers.csv_parser import {class_name}CsvParser"""
 
         
         registration = f'''        # Load report system definition
@@ -34,16 +33,8 @@ from .theme import {safe_name.upper()}_MIDNIGHT, {safe_name.upper()}_AURORA, {sa
             template_dir=Path(__file__).parent / "templates"
         )
         
-        # ─────────────────────────────────────────────────────────────────────
-        # Register Themes (required - no built-in themes in core)
-        # ─────────────────────────────────────────────────────────────────────
-        
-        helper.add_theme({safe_name.upper()}_MIDNIGHT)  # Default dark theme
-        helper.add_theme({safe_name.upper()}_AURORA)    # Purple/magenta
-        helper.add_theme({safe_name.upper()}_SUNSET)    # Warm amber
-        helper.add_theme({safe_name.upper()}_FROST)     # Light theme
-        
-        # NOTE: Pages are user-defined in report_config.yaml, not here.'''
+        # NOTE: Themes are defined in theme.py and used directly by templates.
+        # No core registration needed - themes are fully plugin-owned.'''
 
     else:
         imports = f"""from pathlib import Path
@@ -227,49 +218,239 @@ class {class_name}ContextBuilder:
 
 
 def generate_executor(name: str, safe_name: str, class_name: str) -> str:
-    """Generate executor.py with generate_report function for CLI integration."""
-    # Use string concatenation to avoid nested f-string complications
+    """Generate executor.py with YAML-driven report generation."""
     return '''"""
 Report Executor for ''' + name + ''' Plugin.
 
-Provides the generate_report() function that the CLI calls.
-This is the main entry point for report generation.
+YAML-Driven Report Generation:
+- Reads pages from report_config.yaml
+- Generates charts, stats, tables, and LLM content dynamically
+- Single HTML file with tabbed pages
 
-Usage via CLI:
+Usage:
     bobreview --plugin ''' + name + ''' --dir ./data --output ./output
-
-Usage via Python:
-    from plugins.''' + safe_name + ''' import generate_report
-    generate_report('data_dir', 'output_dir')
+    bobreview --plugin ''' + name + ''' --dir ./data --dry-run  # Skip LLM calls
 """
 
+import os
+import yaml
+import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
-from bobreview.core.themes import register_theme, get_theme_by_id, get_theme_css_variables
-from .theme import ''' + safe_name.upper() + '''_MIDNIGHT
+from .theme import ''' + safe_name.upper() + '''_MIDNIGHT, ''' + safe_name.upper() + '''_AURORA, ''' + safe_name.upper() + '''_SUNSET, ''' + safe_name.upper() + '''_FROST, get_theme_css_variables, ReportTheme
 from .parsers.csv_parser import ''' + class_name + '''CsvParser
 from .chart_generator import ''' + class_name + '''ChartGenerator
 
 
-def generate_report(data_dir: str, output_dir: str, theme_id: str = "''' + safe_name + '''_midnight") -> Path:
+# Theme mapping
+THEMES = {
+    "''' + safe_name + '''_midnight": ''' + safe_name.upper() + '''_MIDNIGHT,
+    "''' + safe_name + '''_aurora": ''' + safe_name.upper() + '''_AURORA,
+    "''' + safe_name + '''_sunset": ''' + safe_name.upper() + '''_SUNSET,
+    "''' + safe_name + '''_frost": ''' + safe_name.upper() + '''_FROST,
+    "midnight": ''' + safe_name.upper() + '''_MIDNIGHT,
+    "aurora": ''' + safe_name.upper() + '''_AURORA,
+    "sunset": ''' + safe_name.upper() + '''_SUNSET,
+    "frost": ''' + safe_name.upper() + '''_FROST,
+}
+
+
+def load_config(config_path: Path) -> Dict[str, Any]:
+    """Load report_config.yaml."""
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
+
+def calculate_stats(data_points: List[Dict]) -> Dict[str, Any]:
+    """Calculate stats for all numeric fields."""
+    if not data_points:
+        return {}
+    
+    stats = {}
+    # Find all numeric fields
+    for key in data_points[0].keys():
+        values = [d.get(key) for d in data_points if isinstance(d.get(key), (int, float))]
+        if values:
+            stats[key] = {
+                'mean': sum(values) / len(values),
+                'min': min(values),
+                'max': max(values),
+                'count': len(values),
+                'sum': sum(values),
+            }
+    return stats
+
+
+def generate_llm_content(
+    config: Dict[str, Any],
+    data_points: List[Dict],
+    stats: Dict[str, Any],
+    dry_run: bool = False
+) -> Dict[str, str]:
+    """Generate LLM content for all prompts in YAML config."""
+    llm_content = {}
+    
+    for page in config.get('pages', []):
+        for comp in page.get('components', []):
+            comp_type = comp.get('type', '')
+            if '_llm' in comp_type:
+                comp_id = comp.get('id', 'unknown')
+                prompt = comp.get('prompt', '')
+                
+                if dry_run:
+                    llm_content[comp_id] = f'<div class="llm-dry-run"><em>[LLM Placeholder: {comp.get("title", comp_id)}]</em><br><small>Prompt: {prompt[:100]}...</small></div>'
+                else:
+                    try:
+                        # Format prompt with data context
+                        data_summary = f"Data: {len(data_points)} items. Stats: {json.dumps(stats, default=str)[:500]}"
+                        full_prompt = f"{prompt}\\n\\nContext:\\n{data_summary}"
+                        
+                        from bobreview.services.llm.client import call_llm
+                        response = call_llm(full_prompt)
+                        llm_content[comp_id] = response or f'<em>No response for {comp_id}</em>'
+                    except Exception as e:
+                        llm_content[comp_id] = f'<div class="llm-error">LLM Error: {e}</div>'
+    
+    return llm_content
+
+
+def render_component(
+    comp: Dict[str, Any],
+    data_points: List[Dict],
+    stats: Dict[str, Any],
+    llm_content: Dict[str, str],
+    charts_js: List[str],
+    chart_gen: "''' + class_name + '''ChartGenerator",
+    theme: ReportTheme,
+    safe_name: str
+) -> str:
+    """Render a single component to HTML."""
+    comp_type = comp.get('type', '')
+    
+    # Stat Card
+    if '_stat_card' in comp_type:
+        label = comp.get('label', 'Stat')
+        value_template = comp.get('value', '0')
+        variant = comp.get('variant', 'default')
+        
+        # Simple template eval (supports data_points | length, stats.field.metric)
+        value = eval_template(value_template, data_points, stats)
+        
+        variant_class = {'ok': 'stat-ok', 'warn': 'stat-warn', 'danger': 'stat-danger', 'info': 'stat-info'}.get(variant, '')
+        return f'<div class="stat-card {variant_class}"><div class="stat-value">{value}</div><div class="stat-label">{label}</div></div>'
+    
+    # Chart
+    elif '_chart' in comp_type:
+        chart_id = comp.get('id', f'chart_{len(charts_js)}')
+        chart_type = comp.get('chart', 'bar')
+        title = comp.get('title', 'Chart')
+        x_field = comp.get('x', 'name')
+        y_field = comp.get('y', 'score')
+        
+        chart_config = {
+            'id': chart_id,
+            'type': chart_type,
+            'title': title,
+            'x_field': x_field,
+            'y_field': y_field,
+        }
+        js_code = chart_gen.generate_chart(data_points, stats, None, chart_config, theme)
+        charts_js.append(js_code)
+        
+        return f'<div class="chart-card"><h3>{title}</h3><div class="chart-container"><canvas id="{chart_id}"></canvas></div></div>'
+    
+    # LLM Content
+    elif '_llm' in comp_type:
+        comp_id = comp.get('id', 'unknown')
+        title = comp.get('title', 'AI Analysis')
+        content = llm_content.get(comp_id, '<em>No content</em>')
+        return f'<div class="llm-section"><h3>{title}</h3><div class="llm-content">{content}</div></div>'
+    
+    # Data Table
+    elif '_data_table' in comp_type:
+        title = comp.get('title', 'Data')
+        columns = comp.get('columns', ['name', 'score'])
+        page_size = comp.get('page_size', 10)
+        
+        # Build table HTML
+        headers = ''.join(f'<th>{col.title()}</th>' for col in columns)
+        rows = ''
+        for item in data_points[:page_size]:
+            cells = ''.join(f'<td>{item.get(col, "")}</td>' for col in columns)
+            rows += f'<tr>{cells}</tr>'
+        
+        table_html = f'<div class="table-section"><h3>{title}</h3>'
+        table_html += f'<table class="data-table"><thead><tr>{headers}</tr></thead>'
+        table_html += f'<tbody>{rows}</tbody></table>'
+        table_html += f'<p class="table-info">Showing {min(page_size, len(data_points))} of {len(data_points)} items</p></div>'
+        return table_html
+    
+    return f'<!-- Unknown component type: {comp_type} -->'
+
+
+def eval_template(template: str, data_points: List[Dict], stats: Dict[str, Any]) -> str:
+    """Simple template evaluation for stat card values."""
+    try:
+        # Handle common patterns
+        if 'data_points | length' in template or 'data_points|length' in template:
+            return str(len(data_points))
+        
+        # Handle stats.field.metric pattern
+        if 'stats.' in template:
+            import re
+            match = re.search(r'stats\\.([\\w]+)\\.([\\w]+)', template)
+            if match:
+                field, metric = match.groups()
+                value = stats.get(field, {}).get(metric, 0)
+                # Check for round filter
+                if '| round(' in template:
+                    round_match = re.search(r'\\| round\\((\\d+)\\)', template)
+                    if round_match:
+                        digits = int(round_match.group(1))
+                        return str(round(value, digits))
+                return str(int(value) if value == int(value) else round(value, 2))
+        
+        return template.replace('{{', '').replace('}}', '').strip()
+    except:
+        return template
+
+
+def generate_report(
+    data_dir: str,
+    output_dir: str,
+    config_path: Optional[str] = None,
+    theme_id: str = "''' + safe_name + '''_midnight",
+    dry_run: bool = False
+) -> Path:
     """
-    Generate an HTML report from data files.
+    Generate an HTML report from data files using YAML configuration.
     
     Parameters:
-        data_dir: Directory containing data files (CSV)
+        data_dir: Directory containing data files
         output_dir: Directory to write HTML output
+        config_path: Path to report_config.yaml (defaults to plugin dir)
         theme_id: Theme ID to use
+        dry_run: If True, skip LLM calls
     
     Returns:
         Path to the generated index.html
     """
+    plugin_dir = Path(__file__).parent
     data_path = Path(data_dir)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Register theme
-    register_theme(''' + safe_name.upper() + '''_MIDNIGHT)
+    # Load config
+    if config_path:
+        config = load_config(Path(config_path))
+    else:
+        config = load_config(plugin_dir / 'report_config.yaml')
+    
+    # Get theme
+    theme = THEMES.get(theme_id) or THEMES.get(config.get('theme', 'midnight')) or ''' + safe_name.upper() + '''_MIDNIGHT
+    theme_css = get_theme_css_variables(theme)
+    font_link = f'<link href="{theme.font_url}" rel="stylesheet">' if theme.font_url else ''
     
     # Parse data
     parser = ''' + class_name + '''CsvParser()
@@ -279,93 +460,133 @@ def generate_report(data_dir: str, output_dir: str, theme_id: str = "''' + safe_
         raise ValueError(f"No data found in {data_dir}")
     
     # Calculate stats
-    scores = [d.get('score', 0) for d in data_points]
-    stats = {
-        'count': len(data_points),
-        'average': sum(scores) / len(scores) if scores else 0,
-        'min': min(scores) if scores else 0,
-        'max': max(scores) if scores else 0,
-    }
+    stats = calculate_stats(data_points)
     
-    # Get theme
-    theme = get_theme_by_id(theme_id) or ''' + safe_name.upper() + '''_MIDNIGHT
-    theme_css = get_theme_css_variables(theme)
-    font_link = f'<link href="{theme.font_url}" rel="stylesheet">' if theme.font_url else ''
+    # Generate LLM content
+    llm_content = generate_llm_content(config, data_points, stats, dry_run)
     
-    # Generate charts
+    # Initialize chart generator
     chart_gen = ''' + class_name + '''ChartGenerator()
-    charts = {}
+    charts_js = []
     
-    charts['score_chart'] = chart_gen.generate_chart(data_points, stats, None, {
-        'id': 'score_chart', 'type': 'bar', 'title': 'Scores by Item',
-        'y_field': 'score', 'x_field': 'name', 'theme_id': theme_id
-    })
+    # Render pages
+    pages = config.get('pages', [])
+    nav_html = ''
+    pages_html = ''
     
-    charts['trend_chart'] = chart_gen.generate_chart(data_points, stats, None, {
-        'id': 'trend_chart', 'type': 'line', 'title': 'Score Trend',
-        'y_field': 'score', 'x_field': 'name', 'theme_id': theme_id
-    })
+    for i, page in enumerate(pages):
+        page_id = page.get('id', f'page_{i}')
+        page_title = page.get('title', f'Page {i+1}')
+        active_class = 'active' if i == 0 else ''
+        
+        # Navigation tab
+        nav_html += f'<button class="tab-btn {active_class}" onclick="showPage(\\'{page_id}\\')">{page_title}</button>'
+        
+        # Page content
+        components_html = ''
+        layout = page.get('layout', 'grid')
+        
+        for comp in page.get('components', []):
+            comp_html = render_component(
+                comp, data_points, stats, llm_content, charts_js, chart_gen, theme, "''' + safe_name + '''"
+            )
+            components_html += comp_html
+        
+        layout_class = {'grid': 'layout-grid', 'single-column': 'layout-single', 'flex': 'layout-flex'}.get(layout, 'layout-grid')
+        pages_html += f'<div id="{page_id}" class="page-content {active_class} {layout_class}">{components_html}</div>'
     
-    # Category distribution
-    categories = {}
-    for d in data_points:
-        cat = d.get('category', 'Unknown')
-        categories[cat] = categories.get(cat, 0) + 1
-    cat_data = [{'name': k, 'score': v} for k, v in categories.items()]
-    
-    charts['category_chart'] = chart_gen.generate_chart(cat_data, stats, None, {
-        'id': 'category_chart', 'type': 'pie', 'title': 'Categories',
-        'y_field': 'score', 'x_field': 'name', 'theme_id': theme_id
-    })
-    
-    # Build HTML
+    # Build final HTML
+    report_name = config.get('name', "''' + name + ''' Report")
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>''' + name + ''' Report</title>
+    <title>{report_name}</title>
     {font_link}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
 {theme_css}
-* {{ box-sizing: border-box; }}
-body {{ font-family: var(--font-family); background: var(--bg); color: var(--text-main); min-height: 100vh; margin: 0; padding: 2rem; }}
-.container {{ max-width: 1200px; margin: 0 auto; }}
-h1 {{ color: var(--accent); font-size: 2.5rem; }}
-.stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }}
-.stat-card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; text-align: center; }}
-.stat-value {{ color: var(--accent); font-size: 2rem; font-weight: 700; }}
-.stat-label {{ color: var(--text-soft); font-size: 0.85rem; text-transform: uppercase; }}
-.charts {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem; }}
-.card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; }}
-.card h2 {{ color: var(--accent); font-size: 1.2rem; margin: 0 0 1rem 0; }}
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ font-family: var(--font-family); background: var(--bg); color: var(--text-main); min-height: 100vh; }}
+.container {{ max-width: 1400px; margin: 0 auto; padding: 2rem; }}
+
+/* Header */
+header {{ text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); }}
+header h1 {{ color: var(--accent); font-size: 2.5rem; margin-bottom: 0.5rem; }}
+header p {{ color: var(--text-soft); }}
+
+/* Tabs */
+.tabs {{ display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }}
+.tab-btn {{ background: var(--bg-elevated); color: var(--text-soft); border: 1px solid var(--border-subtle); padding: 0.75rem 1.5rem; border-radius: var(--radius-md); cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }}
+.tab-btn:hover {{ background: var(--bg-soft); color: var(--text-main); }}
+.tab-btn.active {{ background: var(--accent); color: var(--bg); border-color: var(--accent); }}
+
+/* Pages */
+.page-content {{ display: none; }}
+.page-content.active {{ display: block; }}
+
+/* Layouts */
+.layout-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }}
+.layout-single {{ display: flex; flex-direction: column; gap: 1.5rem; }}
+.layout-flex {{ display: flex; flex-wrap: wrap; gap: 1.5rem; }}
+
+/* Stat Cards */
+.stat-card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; }}
+.stat-value {{ color: var(--accent); font-size: 2.5rem; font-weight: 700; }}
+.stat-label {{ color: var(--text-soft); font-size: 0.85rem; text-transform: uppercase; margin-top: 0.5rem; }}
+.stat-ok {{ border-left: 3px solid var(--ok); }}
+.stat-warn {{ border-left: 3px solid var(--warn); }}
+.stat-danger {{ border-left: 3px solid var(--danger); }}
+.stat-info {{ border-left: 3px solid var(--accent); }}
+
+/* Charts */
+.chart-card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; }}
+.chart-card h3 {{ color: var(--accent); font-size: 1.1rem; margin-bottom: 1rem; }}
 .chart-container {{ position: relative; height: 300px; }}
-@media (max-width: 900px) {{ .charts {{ grid-template-columns: 1fr; }} }}
+
+/* LLM Content */
+.llm-section {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; grid-column: 1 / -1; }}
+.llm-section h3 {{ color: var(--accent); font-size: 1.1rem; margin-bottom: 1rem; }}
+.llm-content {{ color: var(--text-main); line-height: 1.7; }}
+.llm-content p {{ margin-bottom: 0.75rem; }}
+.llm-content ul, .llm-content ol {{ margin: 0.75rem 0; padding-left: 1.5rem; }}
+.llm-content strong {{ color: var(--accent-strong); }}
+.llm-dry-run {{ color: var(--text-soft); font-style: italic; padding: 1rem; background: var(--bg-soft); border-radius: var(--radius-md); }}
+.llm-error {{ color: var(--danger); padding: 1rem; background: var(--danger-soft); border-radius: var(--radius-md); }}
+
+/* Tables */
+.table-section {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; grid-column: 1 / -1; overflow-x: auto; }}
+.table-section h3 {{ color: var(--accent); font-size: 1.1rem; margin-bottom: 1rem; }}
+.data-table {{ width: 100%; border-collapse: collapse; }}
+.data-table th {{ background: var(--bg-soft); color: var(--accent); text-align: left; padding: 0.75rem; font-weight: 600; }}
+.data-table td {{ padding: 0.75rem; border-bottom: 1px solid var(--border-subtle); }}
+.data-table tr:hover {{ background: var(--bg-soft); }}
+.table-info {{ color: var(--text-soft); font-size: 0.85rem; margin-top: 0.75rem; }}
+
+@media (max-width: 768px) {{
+    .layout-grid {{ grid-template-columns: 1fr; }}
+    .tabs {{ flex-direction: column; }}
+}}
     </style>
 </head>
 <body>
     <div class="container">
-        <header style="text-align: center; margin-bottom: 2rem;">
-            <h1>''' + name + ''' Report</h1>
-            <p style="color: var(--text-soft);">Theme: {theme.name} | {stats['count']} items</p>
+        <header>
+            <h1>{report_name}</h1>
+            <p>Theme: {theme.name} | {len(data_points)} items</p>
         </header>
-        <div class="stats">
-            <div class="stat-card"><div class="stat-value">{stats['count']}</div><div class="stat-label">Total</div></div>
-            <div class="stat-card"><div class="stat-value">{stats['average']:.1f}</div><div class="stat-label">Average</div></div>
-            <div class="stat-card"><div class="stat-value">{stats['max']:.0f}</div><div class="stat-label">Max</div></div>
-            <div class="stat-card"><div class="stat-value">{stats['min']:.0f}</div><div class="stat-label">Min</div></div>
-        </div>
-        <div class="charts">
-            <div class="card"><h2>Scores</h2><div class="chart-container"><canvas id="score_chart"></canvas></div></div>
-            <div class="card"><h2>Trend</h2><div class="chart-container"><canvas id="trend_chart"></canvas></div></div>
-            <div class="card"><h2>Categories</h2><div class="chart-container"><canvas id="category_chart"></canvas></div></div>
-        </div>
+        <nav class="tabs">{nav_html}</nav>
+        {pages_html}
     </div>
     <script>
-{charts['score_chart']}
-{charts['trend_chart']}
-{charts['category_chart']}
+function showPage(pageId) {{
+    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    event.target.classList.add('active');
+}}
+{''.join(charts_js)}
     </script>
 </body>
 </html>"""
@@ -374,7 +595,12 @@ h1 {{ color: var(--accent); font-size: 2.5rem; }}
     output_file = output_path / 'index.html'
     output_file.write_text(html, encoding='utf-8')
     
-    print(f"✓ Report generated: {output_file}")
+    mode_str = " (dry-run)" if dry_run else ""
+    print(f"✓ Report generated{mode_str}: {output_file}")
+    print(f"  Pages: {len(pages)}")
+    print(f"  Data points: {len(data_points)}")
+    print(f"  LLM sections: {len(llm_content)}")
+    
     return output_file
 '''
 
@@ -389,7 +615,7 @@ Generates Chart.js JavaScript code with theme-aware coloring.
 
 import json
 from typing import Dict, List, Any, Union
-from bobreview.core.themes import get_theme_by_id, ReportTheme
+from .theme import ReportTheme
 
 
 def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
@@ -410,10 +636,18 @@ class ''' + class_name + '''ChartGenerator:
         data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
         stats: Dict[str, Any],
         config: Any,
-        chart_config: Dict[str, Any]
+        chart_config: Dict[str, Any],
+        theme: ReportTheme = None
     ) -> str:
         """
         Generate Chart.js JavaScript code.
+        
+        Parameters:
+            data: Data points
+            stats: Statistics dict
+            config: Report config
+            chart_config: Chart configuration
+            theme: Theme object (required)
         
         Returns JavaScript code that creates the chart, NOT JSON config.
         """
@@ -426,11 +660,8 @@ class ''' + class_name + '''ChartGenerator:
         y_field = chart_config.get('y_field', 'score')
         x_field = chart_config.get('x_field', 'name')
         
-        # Get theme from config - fallback to default ReportTheme if not found
-        theme_id = chart_config.get('theme_id')
-        theme = get_theme_by_id(theme_id) if theme_id else None
+        # Use provided theme or create default
         if not theme:
-            # Use default ReportTheme colors
             theme = ReportTheme(id='default', name='Default')
         
         # Build data
@@ -793,20 +1024,126 @@ Four stunning themes with unique personalities:
 3. SUNSET - Warm amber and orange gradients
 4. FROST - Clean, icy light theme
 
-Register in plugin.py:
-    from .theme import (
-        {safe_name.upper()}_MIDNIGHT,
-        {safe_name.upper()}_AURORA,
-        {safe_name.upper()}_SUNSET,
-        {safe_name.upper()}_FROST,
-    )
-    helper.add_theme({safe_name.upper()}_MIDNIGHT)
-    helper.add_theme({safe_name.upper()}_AURORA)
-    helper.add_theme({safe_name.upper()}_SUNSET)
-    helper.add_theme({safe_name.upper()}_FROST)
+Themes are fully self-contained - no core imports needed.
 """
 
-from bobreview.core.themes import ReportTheme, hex_to_rgba
+from dataclasses import dataclass
+
+
+def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
+    """
+    Convert hex color to rgba string.
+    
+    Parameters:
+        hex_color: Hex color like '#ff6b35'
+        alpha: Transparency value 0.0 to 1.0
+    
+    Returns:
+        RGBA string like 'rgba(255, 107, 53, 0.15)'
+    """
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 3:
+        hex_color = ''.join(c * 2 for c in hex_color)
+    
+    try:
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return f'rgba({{r}}, {{g}}, {{b}}, {{alpha}})'
+    except (ValueError, IndexError):
+        return f'rgba(128, 128, 128, {{alpha}})'
+
+
+@dataclass
+class ReportTheme:
+    """
+    Theme definition for plugin reports.
+    
+    All themes are standalone - define every value explicitly.
+    """
+    id: str
+    name: str
+    
+    # Backgrounds
+    bg: str = '#070b10'
+    bg_elevated: str = '#0e141b'
+    bg_soft: str = '#151c26'
+    
+    # Accents
+    accent: str = '#4ea1ff'
+    accent_soft: str = 'rgba(78, 161, 255, 0.15)'
+    accent_strong: str = '#ffb347'
+    
+    # Text
+    text_main: str = '#f5f7fb'
+    text_soft: str = '#a8b3c5'
+    
+    # Status colors
+    danger: str = '#ff5c5c'
+    danger_soft: str = 'rgba(255, 92, 92, 0.15)'
+    warn: str = '#e6b35c'
+    warn_soft: str = 'rgba(230, 179, 92, 0.15)'
+    ok: str = '#4fd18b'
+    ok_soft: str = 'rgba(79, 209, 139, 0.15)'
+    
+    # Borders and effects
+    border_subtle: str = '#1e2835'
+    shadow_soft: str = '0 18px 45px rgba(0, 0, 0, 0.55)'
+    shadow_strong: str = '0 8px 32px rgba(0, 0, 0, 0.4)'
+    radius_sm: str = '4px'
+    radius_md: str = '8px'
+    radius_lg: str = '12px'
+    radius_xl: str = '16px'
+    
+    # Fonts
+    font_mono: str = '"SF Mono", Menlo, Consolas, monospace'
+    font_family: str = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    font_url: str = ''
+    
+    # Chart styling
+    chart_grid_opacity: float = 0.5
+
+
+def get_theme_css_variables(theme: ReportTheme) -> str:
+    """Generate CSS :root block with theme variables."""
+    return f""":root {{{{
+  /* Backgrounds */
+  --bg: {{theme.bg}};
+  --bg-elevated: {{theme.bg_elevated}};
+  --bg-soft: {{theme.bg_soft}};
+  
+  /* Accents */
+  --accent: {{theme.accent}};
+  --accent-soft: {{theme.accent_soft}};
+  --accent-strong: {{theme.accent_strong}};
+  
+  /* Text */
+  --text-main: {{theme.text_main}};
+  --text-soft: {{theme.text_soft}};
+  
+  /* Status Colors */
+  --ok: {{theme.ok}};
+  --ok-soft: {{theme.ok_soft}};
+  --warn: {{theme.warn}};
+  --warn-soft: {{theme.warn_soft}};
+  --danger: {{theme.danger}};
+  --danger-soft: {{theme.danger_soft}};
+  
+  /* Borders & Effects */
+  --border-subtle: {{theme.border_subtle}};
+  --shadow-soft: {{theme.shadow_soft}};
+  --shadow-strong: {{theme.shadow_strong}};
+  
+  /* Border Radius */
+  --radius-sm: {{theme.radius_sm}};
+  --radius-md: {{theme.radius_md}};
+  --radius-lg: {{theme.radius_lg}};
+  --radius-xl: {{theme.radius_xl}};
+  
+  /* Fonts */
+  --font-family: {{theme.font_family}};
+  --font-mono: {{theme.font_mono}};
+}}}}"""
 
 
 # =============================================================================
@@ -1021,11 +1358,11 @@ from bobreview.core.themes import ReportTheme, hex_to_rgba
 # USAGE
 # =============================================================================
 #
-# 1. Register in plugin.py on_load():
-#        helper.add_theme({safe_name.upper()}_MIDNIGHT)  # or any theme
+# 1. Import themes in your executor or templates:
+#        from .theme import {safe_name.upper()}_MIDNIGHT, get_theme_css_variables
 #
-# 2. Use in executor/templates:
-#        theme_id='{safe_name}_midnight'  # or aurora, sunset, frost
+# 2. Generate CSS variables:
+#        theme_css = get_theme_css_variables({safe_name.upper()}_MIDNIGHT)
 #
 # 3. Available themes:
 #        {safe_name}_midnight  - Deep blue + cyan (default)

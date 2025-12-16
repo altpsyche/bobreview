@@ -155,38 +155,13 @@ def validate_user_config(config: UserConfig) -> List[str]:
         if not page.title:
             errors.append(f"Page '{page.id}' is missing 'title'")
         
-        # Validate components
+        # Validate components - only structural validation here
+        # Component-specific validation is done by ComponentProcessor using plugin PropTypes
         for i, comp in enumerate(page.components):
             comp_type = comp.get('type', '')
             
             if not comp_type:
                 errors.append(f"Page '{page.id}' component {i} missing 'type'")
-                continue
-            
-            # Chart validation
-            if comp_type == 'chart':
-                chart_type = comp.get('chart', 'bar')
-                # Most charts need x and y fields
-                if chart_type in ['bar', 'line', 'scatter', 'doughnut']:
-                    if not comp.get('x'):
-                        errors.append(f"Page '{page.id}' chart '{comp.get('title', i)}' missing 'x' field")
-                    if not comp.get('y'):
-                        errors.append(f"Page '{page.id}' chart '{comp.get('title', i)}' missing 'y' field")
-                elif chart_type == 'histogram':
-                    # Histogram only needs y field
-                    if not comp.get('y'):
-                        errors.append(f"Page '{page.id}' histogram '{comp.get('title', i)}' missing 'y' field")
-            
-            # LLM validation
-            elif comp_type == 'llm':
-                # Must have either 'prompt' (inline) or 'generator' (reference)
-                if not comp.get('prompt') and not comp.get('generator'):
-                    errors.append(f"Page '{page.id}' LLM component {i} needs 'prompt' or 'generator'")
-            
-            # Widget validation  
-            elif comp_type == 'widget':
-                if not comp.get('widget'):
-                    errors.append(f"Page '{page.id}' widget {i} missing 'widget' type")
     
     return errors
 

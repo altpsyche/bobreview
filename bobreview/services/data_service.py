@@ -3,7 +3,7 @@ Data service for parsing and validating input data.
 
 This service handles all data ingestion tasks:
 - File discovery
-- Parsing using configured parsers (via ParserFactory)
+- Parsing using registered parsers from plugin registry
 - Validation against schema
 - Sampling and sorting
 
@@ -11,12 +11,13 @@ Data flows through DataFrame for universal format compatibility.
 """
 
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Type
 import random
 import logging
 
 from .base import BaseService, DataServiceError
 from ..core.dataframe import DataFrame
+from ..core.plugin_system import get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,8 @@ class DataService(BaseService):
     """
     Service for parsing input data files.
     
-    Uses ParserFactory to create parsers from the plugin registry.
-    This ensures all registered parsers (built-in and plugin) are available.
+    Uses plugin registry to get parsers based on data source type.
+    This ensures all registered parsers (plugin-provided) are available.
     
     Example:
         service = DataService()
@@ -45,8 +46,40 @@ class DataService(BaseService):
             config: Optional service configuration
         """
         super().__init__(config)
-        from ..engine.parser_factory import ParserFactory
-        self.factory = ParserFactory()  # Uses global extension point
+    
+    def _get_parser(self, data_source_config: Any):
+        """
+        Get a parser instance for the given data source config.
+        
+        Parameters:
+            data_source_config: DataSourceConfig with 'type' field
+            
+        Returns:
+            Parser instance
+            
+        Raises:
+            ValueError: If no parser found for the given type
+        """
+        parser_type = getattr(data_source_config, 'type', None)
+        if not parser_type:
+            raise ValueError("data_source_config must have a 'type' attribute")
+        
+        # Get parser class from registry
+        registry = get_registry()
+        parser_cls = registry.data_parsers.get(parser_type)
+        
+        if parser_cls is None:
+            raise ValueError(
+                f"No parser found for type '{parser_type}'. "
+                f"Ensure a plugin has registered a parser for this type."
+            )
+        
+        # Instantiate parser with config if it accepts it
+        try:
+            return parser_cls(data_source_config)
+        except TypeError:
+            # Parser doesn't take config in constructor
+            return parser_cls()
     
     def parse_dataframe(
         self,
@@ -68,7 +101,7 @@ class DataService(BaseService):
             DataFrame with parsed data
         """
         try:
-            parser = self.factory.create(data_source_config)
+            parser = self._get_parser(data_source_config)
             data_points = parser.parse_directory(input_dir)
             
             if not data_points:
@@ -198,7 +231,7 @@ class DataService(BaseService):
             List of file paths that match the parser criteria
         """
         try:
-            parser = self.factory.create(data_source_config)
+            parser = self._get_parser(data_source_config)
             return parser.discover_files(directory)
         except Exception as e:
             logger.warning(f"Failed to discover files in {directory}: {e}")

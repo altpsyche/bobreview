@@ -12,10 +12,74 @@ if TYPE_CHECKING:
     from ...core.config import Config
 
 from ...core.cache import get_cache
-from ...core.utils import log_verbose, log_warning
-from ...core.analysis import format_data_table
+from ...core.utils import log_verbose, log_warning, format_number
 
 from .providers import get_provider, LLMProviderConfig
+
+
+def format_data_table(
+    data_points: List[Dict[str, Any]], 
+    max_rows: Optional[int] = None,
+    fields: Optional[List[str]] = None,
+    field_labels: Optional[Dict[str, str]] = None
+) -> str:
+    """
+    Render a list of data points as a markdown table for LLM context.
+    
+    Parameters:
+        data_points: Sequence of data point dictionaries
+        max_rows: Maximum number of rows to include
+        fields: List of field names to include as columns
+        field_labels: Dict mapping field names to display labels
+    
+    Returns:
+        Markdown-formatted table or "No data available." if empty
+    """
+    total_samples = len(data_points)
+    display_points = data_points
+    if max_rows is not None:
+        display_points = data_points[:max_rows]
+    
+    if not display_points:
+        return "No data available."
+    
+    # Determine fields to display
+    if fields is None:
+        first_point = display_points[0]
+        fields = [k for k in first_point.keys() if not k.startswith('_')]
+    
+    if not fields:
+        return "No data available."
+    
+    # Get labels (default to field names)
+    if field_labels is None:
+        field_labels = {}
+    labels = {field: field_labels.get(field, field.replace('_', ' ').title()) for field in fields}
+    
+    # Create table header
+    header_row = "| Index | " + " | ".join(labels.values()) + " |\n"
+    separator_row = "|" + "|".join(["-------"] * (len(fields) + 1)) + "|\n"
+    table = header_row + separator_row
+    
+    # Add rows
+    for idx, point in enumerate(display_points):
+        row_values = [str(idx)]
+        for field in fields:
+            value = point.get(field, '')
+            if isinstance(value, (int, float)):
+                if isinstance(value, float) and value >= 1000:
+                    value = format_number(int(value), 0)
+                elif isinstance(value, int) and value >= 1000:
+                    value = format_number(value, 0)
+                else:
+                    value = str(value)
+            row_values.append(str(value))
+        table += "| " + " | ".join(row_values) + " |\n"
+    
+    if max_rows is not None and total_samples > max_rows:
+        table += f"\n(Showing first {max_rows} of {total_samples} total samples)"
+    
+    return table
 
 
 def call_llm(

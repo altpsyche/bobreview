@@ -16,9 +16,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-# Import via ThemeSystem for centralized theme access
-from ...themes import get_theme_system
-from ...themes import get_available_themes
+# Themes are now plugin-owned - no core imports needed
 
 # Import generators
 from .generators import (

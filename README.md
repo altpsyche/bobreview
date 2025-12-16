@@ -80,16 +80,18 @@ xdg-open report.html # Linux
 
 | Feature | Description |
 |---------|-------------|
-| **Plugin Scaffolding** | `bobreview plugins create` generates a complete plugin structure |
+| **Plugin Scaffolding** | `bobreview plugins create` generates complete, executable plugins |
+| **CLI Execution** | `bobreview --plugin <name>` runs plugins directly |
+| **Auto-Registration** | `-o <folder>` auto-registers directory for discovery |
 | **PluginHelper API** | Simple facade for registering parsers, themes, templates |
+| **Premium Themes** | Plugins define their own themes (no core themes) |
 | **YAML Report Config** | CMS-style report composition via `report_config.yaml` |
-| **Custom CSS Themes** | Separate `theme.css` and `plugin.css` for easy customization |
 | **Multi-LLM Support** | OpenAI, Anthropic Claude, local Ollama |
 | **JSON Report Systems** | Define analysis pipelines declaratively |
 | **Markdown → HTML** | LLM responses rendered with beautiful styling |
 | **Intelligent Caching** | Cache LLM responses to save costs |
 | **Standalone HTML** | Images embedded as base64 for easy sharing |
-| **Extensible Registry** | 14 registries for themes, parsers, generators, components |
+| **Simplified Core** | Only 4 registries (parsers, services, report_systems, templates) |
 
 ---
 
@@ -141,10 +143,12 @@ my_plugin/
 ├── manifest.json           # Plugin metadata
 ├── report_config.yaml      # User-editable report configuration
 ├── plugin.py               # Main plugin class (on_load registration)
+├── executor.py             # NEW! Report generation (generate_report function)
 ├── parsers/
 │   └── csv_parser.py       # Data parser implementation
 ├── context_builder.py      # Custom template context
 ├── chart_generator.py      # Chart.js configuration
+├── theme.py                # 4 premium themes (Midnight, Aurora, Sunset, Frost)
 ├── report_systems/
 │   └── my_plugin.json      # Report system definition
 ├── templates/
@@ -303,7 +307,7 @@ Use these in widget values with `{{ }}` syntax:
 
 ## Customizing Themes
 
-BobReview uses a **unified theme system** with 7 built-in themes. Themes support inheritance and can be customized via JSON or CLI.
+Themes are now **fully plugin-owned**. Each plugin defines its own themes - there are no built-in themes in core.
 
 
 ### Built-in Themes
@@ -334,65 +338,31 @@ Edit your `report_systems/<plugin>.json`:
 
 ### Creating Custom Plugin Themes
 
-There are two ways to create custom themes:
-
-#### Quick Start: Extend a Built-in Theme
-
-Use `create_theme` to quickly customize an existing theme:
+Since themes are plugin-owned, define themes directly in your plugin:
 
 ```python
-from bobreview.core.themes import create_theme, hex_to_rgba
+# In your plugin's theme.py
+from dataclasses import dataclass
 
-# Extend dark theme with custom colors
-MY_THEME = create_theme(
-    'neon', 'Neon Pink',
-    base='dark',                              # Inherit all dark theme values
-    accent='#ff2d95',                         # Override accent
-    accent_soft=hex_to_rgba('#ff2d95', 0.15), # Soft variant
-)
-```
+@dataclass
+class MyTheme:
+    id: str
+    name: str
+    bg: str = '#070b10'
+    accent: str = '#4ea1ff'
+    text_main: str = '#f5f7fb'
+    # ... add any properties your templates need
 
-#### Full Control: Define Every Property
-
-Use `ReportTheme` for complete control over all values:
-
-```python
-from bobreview.core.themes import ReportTheme
-
-# Complete theme from scratch
-MY_THEME = ReportTheme(
-    id='cyberpunk',
-    name='Cyberpunk',
-    bg='#0a0a0f',
-    bg_elevated='#13131a',
-    bg_soft='#1a1a24',
+MY_DARK = MyTheme(
+    id='my_dark',
+    name='My Dark Theme',
     accent='#ff2d95',
-    accent_soft='rgba(255, 45, 149, 0.15)',
-    accent_strong='#00f0ff',
-    text_main='#e4e4f0',
-    text_soft='#8888a0',
-    ok='#00ff88',
-    warn='#ffcc00',
-    danger='#ff3366',
-    border_subtle='#2a2a3a',
-    # ... all 20+ properties available
 )
 ```
 
-#### Register Your Theme
+Your templates can then use these theme values directly.
 
-```python
-from bobreview.core.plugin_system import BasePlugin, PluginHelper
-
-class MyPlugin(BasePlugin):
-    def on_load(self, registry):
-        helper = PluginHelper(registry, self.name)
-        helper.add_theme(MY_THEME)
-```
-
-Then use in JSON: `"theme": { "preset": "neon" }`
-
-**Via CLI** (override at runtime):
+**Via CLI** (if your plugin supports it):
 
 ```bash
 # Use built-in theme
@@ -512,10 +482,10 @@ bobreview/
 ├── core/
 │   ├── plugin_system/        # Plugin infrastructure
 │   │   ├── loader.py         # Plugin discovery & loading
-│   │   ├── registry.py       # Component registration
+│   │   ├── registry.py       # Component registration (4 registries)
 │   │   ├── plugin_helper.py  # PluginHelper facade
 │   │   ├── scaffolder/       # Plugin scaffolding
-│   │   └── registries/       # 14 focused registries (incl. ComponentRegistry)
+│   │   └── registries/       # Focused registries (parsers, services, etc.)
 │   ├── template_engine.py    # Jinja2 with custom filters
 │   ├── report_config.py      # User YAML config schema
 │   ├── report_builder.py     # ReportBuilder service
@@ -562,9 +532,10 @@ bobreview plugins list
 # Plugin locations (in priority order):
 # 1. --plugin-dir <path>
 # 2. $BOBREVIEW_PLUGIN_DIRS
-# 3. ~/.bobreview/plugins/
-# 4. ./plugins/
-# 5. Bundled plugins
+# 3. ~/.bobreview/config.yaml (auto-registered directories)
+# 4. ~/.bobreview/plugins/
+# 5. ./plugins/
+# 6. Bundled plugins
 ```
 
 ### API Key Not Found

@@ -110,25 +110,3 @@ def get_shared_css() -> str:
     css_path = Path(__file__).parent / "static" / "styles.css"
     return css_path.read_text(encoding='utf-8')
 
-
-
-def get_trend_icon(trend: str) -> str:
-    """
-    Get trend icon HTML/emoji.
-    
-    Parameters:
-        trend: 'improving', 'stable', or 'degrading'
-    
-    Returns:
-        FontAwesome icon name without 'fa-' prefix
-    
-    Example:
-        icon = get_trend_icon('improving')  # Returns: "arrow-down"
-    """
-    if trend == 'improving':
-        return 'arrow-down'
-    elif trend == 'degrading':
-        return 'arrow-up'
-    else:  # stable
-        return 'arrow-right'
-

@@ -249,6 +249,10 @@ Report generation requires plugin implementation.
         metavar='YAML_PATH',
         help='Path to custom report config YAML'
     )
+    parser.add_argument(
+        '--dry-run', action='store_true',
+        help='Skip LLM API calls (for testing)'
+    )
     
     # Discovery
     parser.add_argument(
@@ -371,8 +375,13 @@ Report generation requires plugin implementation.
             log_info(f"Running plugin: {found.name}")
             log_info(f"Data directory: {data_dir}")
             log_info(f"Output: {output_path}")
+            if args.dry_run:
+                log_info("Dry run mode - LLM calls will be skipped")
             try:
-                result = plugin_module.generate_report(str(data_dir), str(output_path.parent))
+                result = plugin_module.generate_report(
+                    str(data_dir), str(output_path.parent),
+                    dry_run=getattr(args, 'dry_run', False)
+                )
                 log_success(f"Report generated: {result}")
                 return 0
             except Exception as e:
@@ -387,8 +396,13 @@ Report generation requires plugin implementation.
             log_info(f"Running plugin: {found.name}")
             log_info(f"Data directory: {data_dir}")
             log_info(f"Output: {output_path}")
+            if args.dry_run:
+                log_info("Dry run mode - LLM calls will be skipped")
             try:
-                result = plugin_instance.generate_report(str(data_dir), str(output_path.parent))
+                result = plugin_instance.generate_report(
+                    str(data_dir), str(output_path.parent),
+                    dry_run=getattr(args, 'dry_run', False)
+                )
                 log_success(f"Report generated: {result}")
                 return 0
             except Exception as e:

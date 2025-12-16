@@ -49,99 +49,22 @@ class DataSourceConfig:
 
 # LLMConfig removed - use flat fields in ReportSystemDefinition
 
-
-@dataclass
-class PromptCategoryConfig:
-    """Configuration for a prompt category."""
-    id: str
-    title: str
-    focus: str
-    priority: int = 50
-
-
-@dataclass
-class DataTableConfig:
-    """Configuration for data table in LLM prompts."""
-    columns: List[str]
-    sample_strategy: str = 'mixed'  # 'mixed', 'random', 'sequential', 'critical'
-    samples: Optional[Dict[str, int]] = None  # {'critical': 1, 'high_load': 3, ...}
-    max_rows: int = 50
-
-
-@dataclass
-class LLMGeneratorConfig:
-    """Configuration for an LLM content generator."""
-    id: str
-    name: str
-    description: str
-    prompt_template: str
-    categories: List[PromptCategoryConfig] = field(default_factory=list)
-    data_table: Optional[DataTableConfig] = None
-    returns: str = 'string'  # 'string' or 'dict'
-    enabled: bool = True
-
-
-@dataclass
-class ChartConfig:
-    """Configuration for a chart on a page."""
-    id: str
-    type: str  # 'line', 'bar', 'scatter', 'histogram'
-    title: str
-    # Both optional with defaults - histograms only need y_field, bar charts need both
-    x_field: str = ''
-    y_field: str = ''
-    # Plugin-specific options go in the options dict (e.g., performance_zones)
-    options: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class TemplateConfig:
-    """Configuration for page template."""
-    type: str  # 'builtin', 'custom', 'inline'
-    name: Optional[str] = None
-    content: Optional[str] = None
-    variables: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class DataRequirements:
-    """What data a page needs to render."""
-    # All default to False - plugins opt-in to what they need
-    data_points: bool = False
-    images: bool = False
-    # Plugin-specific requirements go in extensions
-    extensions: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class PageConfig:
-    """Configuration for a report page."""
-    id: str
-    filename: str
-    nav_label: str
-    nav_order: int
-    template: TemplateConfig
-    llm_content: List[str] = field(default_factory=list)
-    # Maps template variable names to generator IDs
-    # e.g., {'review_text': 'review_text', 'exec_summary': 'executive_summary'}
-    llm_mappings: Dict[str, str] = field(default_factory=dict)
-    data_requirements: DataRequirements = field(default_factory=DataRequirements)
-    charts: List[ChartConfig] = field(default_factory=list)
-    features: Dict[str, Any] = field(default_factory=dict)
-    enabled: bool = True
-    layout: str = "single-column"  # grid, flex, or single-column
-    # Homepage card display
-    card_icon: str = ""
-    card_description: str = ""
-
-
-# ThemeConfig and OutputConfig removed - use flat fields in ReportSystemDefinition
-
-@dataclass
-class ContentBlockConfig:
-    """Configuration for a content block with title and description."""
-    title: str
-    description: str
+# ============================================================================
+# GENERIC DICT-BASED STRUCTURES (Plugin-First Architecture)
+# ============================================================================
+# Domain-specific structures (LLM generators, pages, charts) are now stored as
+# Dict[str, Any] instead of typed dataclasses. This gives plugins full
+# flexibility to define their own JSON structure.
+#
+# Core validation only requires: schema_version, id, data_source
+# All other fields pass through as generic dicts for plugin consumption.
+#
+# Previously typed as:
+#   - LLMGeneratorConfig, PromptCategoryConfig, DataTableConfig
+#   - PageConfig, ChartConfig, TemplateConfig, DataRequirements
+#
+# These are now just Dict[str, Any] - plugins access fields directly.
+# ============================================================================
 
 
 class Labels:
@@ -202,10 +125,10 @@ class ReportSystemDefinition:
     description: str
     author: str
     
-    # Structural data (what the report contains)
+    # Structural data (what the report contains) - generic dicts for plugin flexibility
     data_source: DataSourceConfig
-    llm_generators: List[LLMGeneratorConfig] = field(default_factory=list)
-    pages: List[PageConfig] = field(default_factory=list)
+    llm_generators: List[Dict[str, Any]] = field(default_factory=list)
+    pages: List[Dict[str, Any]] = field(default_factory=list)
     
     # Plugin extensions (passed to components)
     extensions: Dict[str, Any] = field(default_factory=dict)
@@ -263,76 +186,16 @@ def validate_report_system(data: Dict[str, Any]) -> List[str]:
     if 'input_format' not in data_source:
         errors.append("data_source.input_format is required")
     
-    # Note: metrics validation is now plugin responsibility
-    # Extensions are validated by plugins, not core
+    # Note: Domain-specific validation (llm_generators, pages, charts, thresholds)
+    # is now plugin responsibility via ComponentProcessor.
+    # Core only validates the minimal structural requirements above.
     
-    # Validate LLM generators
-    llm_generators = data.get('llm_generators', [])
-    if not isinstance(llm_generators, list):
+    # Optional: Validate llm_generators and pages are lists if present
+    if 'llm_generators' in data and not isinstance(data['llm_generators'], list):
         errors.append("llm_generators must be a list")
-    else:
-        generator_ids = set()
-        for i, gen in enumerate(llm_generators):
-            if not isinstance(gen, dict):
-                errors.append(f"llm_generators[{i}] must be an object")
-                continue
-            
-            gen_id = gen.get('id')
-            if not gen_id:
-                errors.append(f"llm_generators[{i}] missing required field 'id'")
-            elif gen_id in generator_ids:
-                errors.append(f"Duplicate LLM generator ID: {gen_id}")
-            else:
-                generator_ids.add(gen_id)
-            
-            if 'name' not in gen:
-                errors.append(f"llm_generators[{i}] ({gen_id}) missing required field 'name'")
-            if 'prompt_template' not in gen:
-                errors.append(f"llm_generators[{i}] ({gen_id}) missing required field 'prompt_template'")
     
-    # Validate pages
-    pages = data.get('pages', [])
-    if not isinstance(pages, list):
+    if 'pages' in data and not isinstance(data['pages'], list):
         errors.append("pages must be a list")
-    else:
-        page_ids = set()
-        for i, page in enumerate(pages):
-            if not isinstance(page, dict):
-                errors.append(f"pages[{i}] must be an object")
-                continue
-            
-            page_id = page.get('id')
-            if not page_id:
-                errors.append(f"pages[{i}] missing required field 'id'")
-            elif page_id in page_ids:
-                errors.append(f"Duplicate page ID: {page_id}")
-            else:
-                page_ids.add(page_id)
-            
-            required_page_fields = ['filename', 'nav_label', 'nav_order', 'template']
-            for field_name in required_page_fields:
-                if field_name not in page:
-                    errors.append(f"pages[{i}] ({page_id}) missing required field '{field_name}'")
-    
-    # Validate thresholds are numeric
-    thresholds = data.get('thresholds', {})
-    if not isinstance(thresholds, dict):
-        errors.append("thresholds must be an object")
-    else:
-        for key, value in thresholds.items():
-            if not isinstance(value, (int, float)):
-                errors.append(f"thresholds.{key} must be a number (got {type(value).__name__})")
-    
-    # Validate LLM config (flat format)
-    if 'llm_temperature' in data:
-        temp = data['llm_temperature']
-        if not isinstance(temp, (int, float)) or temp < 0 or temp > 2:
-            errors.append(f"llm_temperature must be between 0 and 2 (got {temp})")
-    
-    if 'llm_chunk_size' in data:
-        chunk = data['llm_chunk_size']
-        if not isinstance(chunk, int) or chunk <= 0:
-            errors.append(f"llm_chunk_size must be a positive integer (got {chunk})")
     
     return errors
 
@@ -381,110 +244,8 @@ def parse_data_source_config(data: Dict[str, Any]) -> DataSourceConfig:
         auth=data.get('auth')
     )
 
-# Note: Domain-specific parsers should be defined by plugins.
-
-# parse_llm_config, parse_theme_config, parse_output_config removed
-# These values are now parsed as flat fields in parse_report_system_definition
-
-
-def parse_prompt_category_config(data: Dict[str, Any]) -> PromptCategoryConfig:
-    """Parse prompt category configuration from JSON."""
-    return PromptCategoryConfig(
-        id=data['id'],
-        title=data['title'],
-        focus=data['focus'],
-        priority=data.get('priority', 50)
-    )
-
-
-def parse_data_table_config(data: Dict[str, Any]) -> DataTableConfig:
-    """Parse data table configuration from JSON."""
-    return DataTableConfig(
-        columns=data['columns'],
-        sample_strategy=data.get('sample_strategy', 'mixed'),
-        samples=data.get('samples'),
-        max_rows=data.get('max_rows', 50)
-    )
-
-
-def parse_llm_generator_config(data: Dict[str, Any]) -> LLMGeneratorConfig:
-    """Parse LLM generator configuration from JSON."""
-    categories = []
-    if 'categories' in data:
-        categories = [parse_prompt_category_config(c) for c in data['categories']]
-    
-    data_table = None
-    if 'data_table' in data:
-        data_table = parse_data_table_config(data['data_table'])
-    
-    return LLMGeneratorConfig(
-        id=data['id'],
-        name=data['name'],
-        description=data['description'],
-        prompt_template=data['prompt_template'],
-        categories=categories,
-        data_table=data_table,
-        returns=data.get('returns', 'string'),
-        enabled=data.get('enabled', True)
-    )
-
-
-def parse_chart_config(data: Dict[str, Any]) -> ChartConfig:
-    """Parse chart configuration from JSON."""
-    return ChartConfig(
-        id=data['id'],
-        type=data['type'],
-        title=data['title'],
-        x_field=data.get('x_field', ''),
-        y_field=data.get('y_field', ''),
-        options=data.get('options', {})
-    )
-
-
-def parse_template_config(data: Dict[str, Any]) -> TemplateConfig:
-    """Parse template configuration from JSON."""
-    return TemplateConfig(
-        type=data['type'],
-        name=data.get('name'),
-        content=data.get('content'),
-        variables=data.get('variables', {})
-    )
-
-
-def parse_data_requirements(data: Dict[str, Any]) -> DataRequirements:
-    """Parse data requirements from JSON."""
-    return DataRequirements(
-        data_points=data.get('data_points', False),
-        images=data.get('images', False),
-        extensions=data.get('extensions', {})
-    )
-
-
-def parse_page_config(data: Dict[str, Any]) -> PageConfig:
-    """Parse page configuration from JSON."""
-    charts = []
-    if 'charts' in data:
-        charts = [parse_chart_config(c) for c in data['charts']]
-    
-    data_requirements = DataRequirements()
-    if 'data_requirements' in data:
-        data_requirements = parse_data_requirements(data['data_requirements'])
-    
-    return PageConfig(
-        id=data['id'],
-        filename=data['filename'],
-        nav_label=data['nav_label'],
-        nav_order=data['nav_order'],
-        template=parse_template_config(data['template']),
-        llm_content=data.get('llm_content', []),
-        llm_mappings=data.get('llm_mappings', {}),
-        data_requirements=data_requirements,
-        charts=charts,
-        features=data.get('features', {}),
-        enabled=data.get('enabled', True),
-        card_icon=data.get('card_icon', ''),
-        card_description=data.get('card_description', '')
-    )
+# Note: Domain-specific parsers removed - plugins handle their own JSON structure
+# These are now just Dict[str, Any] pass-through
 
 
 def parse_label_config(data: Optional[Dict[str, Any]]) -> Labels:
@@ -513,6 +274,9 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
     """
     Parse complete report system definition from JSON.
     
+    Domain-specific structures (llm_generators, pages, charts) are passed through
+    as generic dicts for plugin consumption. Core only parses data_source.
+    
     Parameters:
         data: Parsed JSON data (flat format)
     
@@ -528,11 +292,7 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         error_msg = "Report system validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
         raise ValueError(error_msg)
     
-    # Parse all sections (pages and llm_generators are optional - defined in YAML)
-    llm_generators = [parse_llm_generator_config(g) for g in data.get('llm_generators', [])]
-    pages = [parse_page_config(p) for p in data.get('pages', [])]
-    
-    # Only parse structural data - Config handles settings (llm_*, theme, output)
+    # Pass through llm_generators and pages as generic dicts - plugins handle parsing
     return ReportSystemDefinition(
         schema_version=data['schema_version'],
         id=data['id'],
@@ -541,8 +301,8 @@ def parse_report_system_definition(data: Dict[str, Any]) -> ReportSystemDefiniti
         description=data['description'],
         author=data['author'],
         data_source=parse_data_source_config(data['data_source']),
-        llm_generators=llm_generators,
-        pages=pages,
+        llm_generators=data.get('llm_generators', []),  # Pass through as dicts
+        pages=data.get('pages', []),  # Pass through as dicts
         extensions=data.get('extensions', {}),
         thresholds=data.get('thresholds', {}),
         labels=parse_label_config(data.get('labels')),
