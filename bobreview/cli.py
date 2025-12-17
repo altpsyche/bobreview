@@ -362,7 +362,7 @@ Report generation requires plugin implementation.
         # Look for generate_report function in the plugin module
         safe_name = found.name.replace('-', '_')
         plugin_module = None
-        for mod_name in [f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
+        for mod_name in [f"bobreview.plugins.{safe_name}", f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
             if mod_name in sys.modules:
                 plugin_module = sys.modules[mod_name]
                 break
