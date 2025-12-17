@@ -9,234 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.8] - 2025-12-16
 
-### Plugin-First Architecture Complete
+### Plugin-First Architecture
 
-This release completes the **Plugin-First Architecture** refactor. Core is now pure infrastructure while plugins provide all domain logic including report generation.
+Core is now pure infrastructure. Plugins provide all domain logic including report generation.
 
-> **MIGRATION GUIDE**: Plugins are now fully self-contained. Use `bobreview --plugin <name>` to execute plugins. The scaffolder generates complete, working plugins out of the box.
+### New Features
 
----
-
-### What's New
-
-#### CLI Plugin Execution
-
-Plugins can now be executed directly from the CLI:
-
-```bash
-bobreview --plugin my-plugin --dir ./data --output ./output
-```
-
-**How it works:**
-- CLI loads plugin via `loader.load(plugin_name)`
-- Looks for `generate_report(data_dir, output_dir)` in plugin module
-- Reports success or provides helpful error messages
-
-#### Scaffolder Generates Complete Plugins
-
-New plugins now include `executor.py` with a complete `generate_report()` function:
-
-```bash
-bobreview plugins create my-plugin
-# Creates:
-#   my_plugin/
-#   |-- executor.py          # Complete report generation
-#   |-- __init__.py          # Exports generate_report
-#   |-- chart_generator.py   # Theme-aware charts
-#   |-- theme.py             # 4 premium themes
-#   +-- ...
-```
-
-#### Auto-Registration of Plugin Directories
-
-When using `-o <folder>` to create plugins, the folder is automatically registered:
-
-```bash
-bobreview plugins create my-plugin -o custom_output
-# Output: Registered custom_output for auto-discovery
-```
-
-**Config File:**
-```yaml
-# ~/.bobreview/config.yaml
-plugin_dirs:
-  - C:\path\to\custom_plugins
-```
-
-#### Premium Theme System
-
-Scaffolder generates 4 premium themes instead of basic dark/light:
-
-| Theme | Accent | Font |
-|-------|--------|------|
-| **Midnight** | Cyan #22d3ee | Space Grotesk |
-| **Aurora** | Magenta #e879f9 | Outfit |
-| **Sunset** | Amber #fb923c | Plus Jakarta Sans |
-| **Frost** | Blue #0284c7 | Inter |
-
-#### Simplified Theme API
-
-Removed unused theme inheritance for simpler codebase:
-
-- `ReportTheme.extends` -> removed  
-- `ReportTheme.overrides` -> removed
-- `resolve_theme()` -> removed
-- `base` parameter in `create_theme()` -> removed
-
-All themes are now standalone with explicit values.
-
-#### Plugin Discovery Enhancements
-
-**Discovery Priority:**
-1. CLI `--plugin-dir` (highest)
-2. Environment `BOBREVIEW_PLUGIN_DIRS`  
-3. Config file `~/.bobreview/config.yaml` (NEW)
-4. User plugins `~/.bobreview/plugins/`
-5. Local plugins `./plugins/`
-6. Bundled plugins (lowest)
-
+- **CLI Plugin Execution:** `bobreview --plugin my-plugin --dir ./data`
+- **Scaffolder creates complete plugins** with executor.py, 4 themes (Midnight, Aurora, Sunset, Frost), charts, sample data
+- **Auto-registration:** `-o <folder>` registers folder in `~/.bobreview/config.yaml`
+- **Discovery priority:** `--plugin-dir` > `$BOBREVIEW_PLUGIN_DIRS` > config file > `~/.bobreview/plugins/` > `./plugins/`
 ---
 
 ### Breaking Changes
 
-| Category | Before | After |
-|----------|--------|-------|
-| CLI | `bobreview build` | `bobreview --plugin <name>` |
-| Plugin Execution | Core executor | Plugin `generate_report()` |
-| Theme Inheritance | `extends`, `base` | Standalone themes only |
-| Config | Nested classes | Flat `Config` class |
-
-#### Config Class Change
-
-**Before:**
-```python
-config = ReportConfig(
-    llm=LLMConfig(provider="openai"),
-    output=OutputConfig(theme_id="dark")
-)
-```
-
-**After:**
-```python
-config = Config(
-    llm_provider="openai",
-    theme="dark"
-)
-```
-
----
-
-### Files Added
-
-- `scaffolder/generators/python_files.py::generate_executor()` - Executor generator
-- `core/plugin_system/discovery.py::get_config_plugin_dirs()` - Config file support
-- `core/plugin_system/discovery.py::add_plugin_dir_to_config()` - Auto-registration
-
-### Files Modified
-
-**Core:**
-- `core/api.py` - Simplified to minimal interfaces (93% reduction)
-- `core/config.py` - Flat Config class, removed nested classes
-- `core/themes.py` - Removed `extends`, `overrides`, `resolve_theme()`
-- `core/plugin_system/discovery.py` - Added config file plugin dirs
-- `core/plugin_system/plugin_helper.py` - Simplified (43% reduction)
-
-**CLI:**
-- `cli.py` - Implemented `--plugin` execution, auto-registration (74% reduction)
-
-**Scaffolder:**
-- `scaffolder/core.py` - Added executor.py creation, Path conversion
-- `scaffolder/generators/python_files.py` - Added `generate_executor()`, 4 premium themes
-- `scaffolder/generators/__init__.py` - Added `generate_executor` export
-
-### Files Deleted
-
-The following were removed in Plugin-First Architecture:
-- `core/report_builder.py` (520 lines) - Plugins provide own executors
-- `engine/executor.py` - Replaced by plugin executor.py
-- `engine/page_renderer.py` - Replaced by plugin rendering  
-- `services/analytics_service.py` - Plugins provide analysis
-- `services/chart_service.py` - Plugins provide chart generation
-- `services/pipeline.py` - Removed (unused)
-- Plus 7 additional engine files
-
----
-
-### Architecture Summary
-
-**Before (v1.0.7):**
-```
-Core -> Services -> Engine -> Report
-         ^
-         |
-      Plugins (register components)
-```
-
-**After (v1.0.8):**
-```
-Core (infrastructure only)
-         |
-         v  
-      Plugins (provide EVERYTHING)
-         |
-         v
-      generate_report() -> HTML
-```
-
-**Key Metrics:**
-- `api.py`: 486 lines -> 36 lines (93% reduction)
-- `cli.py`: 1157 lines -> ~300 lines (74% reduction)
-- `themes.py`: 764 lines -> **DELETED** (100% to plugins)
-- Built-in themes: 7 -> 0 (plugin-provided)
-
----
-
-### Architecture Simplification (December 2025)
-
-Further simplified core architecture:
-
-#### Files Deleted (~680 lines)
-
-| File | Lines | Reason |
-|------|-------|--------|
-| `core/api.py` | 38 | Just comments, no code |
-| `core/plugin_system/interface.py` | 235 | Abstractions with only 1 implementation |
-| `core/themes.py` | 355 | Themes now fully plugin-owned |
-| `core/plugin_system/registries/theme_registry.py` | ~50 | No longer needed |
-
-#### Abstraction Reduction
-
-**Before:**
-```
-get_extension_point() → IExtensionPoint → ExtensionPointProvider → PluginRegistry
-```
-
-**After:**
-```
-get_registry() → PluginRegistry (direct)
-```
-
-#### Breaking Changes
-
 | Before | After |
 |--------|-------|
-| `from bobreview.core.themes import ReportTheme` | Plugins define their own themes |
+| `bobreview build` | `bobreview --plugin <name>` |
+| Core executor | Plugin `generate_report()` |
+| `ReportConfig(llm=LLMConfig(...))` | `Config(llm_provider="openai")` |
+| `from bobreview.core.themes import ReportTheme` | Plugins define themes |
 | `get_extension_point().get_theme()` | `get_registry().data_parsers.get()` |
 | `get_plugin_manager()` | `get_loader()` |
 | `helper.add_theme(theme)` | Plugins manage themes internally |
+| `ReportTheme.extends`, `base` | Removed |
 
-#### Files Modified
+### Files Deleted
 
-- `services/data_service.py` → Uses `get_registry().data_parsers.get()`
-- `core/template_engine.py` → Uses `get_registry().template_paths`
-- `engine/loader.py` → Uses `get_registry()` and `get_loader()`
-- `core/plugin_system/__init__.py` → Removed interface exports
-- `core/__init__.py` → Removed theme exports
-- `core/plugin_system/registry.py` → Removed ThemeRegistry
-- `core/plugin_system/plugin_helper.py` → Removed `add_theme()` method
-- `core/plugin_system/scaffolder/core.py` → Removed theme imports
+`core/api.py`, `core/themes.py`, `core/report_builder.py`, `core/plugin_system/interface.py`, `engine/executor.py`, `engine/page_renderer.py`, `services/analytics_service.py`, `services/chart_service.py`, `services/pipeline.py`
 
----
+### Files Modified
+
+- `cli.py`: 1157 → 434 lines
+- `plugin_helper.py`: 332 → 162 lines, removed `add_theme()`
+- `data_service.py`: uses `get_registry().data_parsers.get()`
+- `template_engine.py`: uses `get_registry().template_paths`
+- `engine/loader.py`: uses `get_registry()` and `get_loader()`
 
 ## [1.0.7] - 2025-12-12
 
