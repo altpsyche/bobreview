@@ -40,7 +40,7 @@ def print_banner():
     title = Text()
     title.append("Bob", style="bold cyan")
     title.append("Review", style="bold white")
-    title.append(f" v{__version__}", style="dim")
+    title.append(f" v{__version__}", style="bold dim cyan")
     
     console.print()
     console.print(Panel(
@@ -50,6 +50,110 @@ def print_banner():
         border_style="cyan",
         padding=(0, 2),
     ))
+
+
+def print_rich_help():
+    """Print beautiful rich-formatted help instead of argparse default."""
+    if not RICH_AVAILABLE:
+        return False
+    
+    from rich.markdown import Markdown
+    
+    print_banner()
+    console.print()
+    
+    # Tool description
+    intro = Markdown("""
+Generate beautiful HTML reports from any data using **[BobReview]** and a **plugin-based architecture**.
+
+- **Plugin-First** - All features come from plugins  
+- **Extensible** - Create plugins for any data format
+- **Themeable** - Custom themes per plugin
+""")
+    console.print(intro)
+    console.print()
+    
+    # Quick start
+    console.print("[bold cyan]Quick Start[/bold cyan]")
+    console.print(
+        "  [dim]Create:[/dim]  "
+        "[cyan]bobreview[/cyan] [magenta]plugins[/magenta] [green]create[/green] [cyan]<name>[/cyan]"
+    )
+    console.print(
+        "  [dim]Use:[/dim]     "
+        "[cyan]bobreview[/cyan] --plugin [magenta]<name>[/magenta] --dir [cyan]<path>[/cyan]"
+    )
+    console.print()
+    
+    # Core options
+    core_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    core_table.add_column("Option", style="cyan", width=28)
+    core_table.add_column("Description")
+    core_table.add_row("--plugin <name>", "Plugin to use (required for reports)")
+    core_table.add_row("--dir <path>", "Data directory (default: current directory)")
+    core_table.add_row("--output <file>", "Output path (parent dir used, default: report.html)")
+    core_table.add_row("--config <file>", "Custom report config YAML file")
+    core_table.add_row("--dry-run", "Skip LLM API calls (for testing)")
+    console.print(Panel(core_table, title="[bold]Core Options[/bold]", border_style="dim"))
+    
+    # Discovery commands (including how to make a folder a plugin folder)
+    discover_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    discover_table.add_column("Option", style="cyan", width=28)
+    discover_table.add_column("Description")
+    discover_table.add_row("--list-plugins", "Show available plugins")
+    discover_table.add_row(
+        "--plugin-dir <dir>",
+        "Add custom directory to plugin search path (repeatable, e.g., ./plugins)"
+    )
+    console.print(Panel(discover_table, title="[bold]Discovery[/bold]", border_style="dim"))
+    
+    # Plugin management commands
+    plugin_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    plugin_table.add_column("Command", style="cyan", width=28)
+    plugin_table.add_column("Description")
+    plugin_table.add_row("plugins list", "Show installed plugins")
+    plugin_table.add_row("plugins list --verbose", "Show plugins with detailed info")
+    plugin_table.add_row("plugins create <name>", "Scaffold a new plugin")
+    plugin_table.add_row("plugins info <name>", "Show plugin details")
+    console.print(Panel(plugin_table, title="[bold]Plugin Management[/bold]", border_style="dim"))
+    
+    # Plugin create options
+    create_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    create_table.add_column("Option", style="cyan", width=28)
+    create_table.add_column("Description")
+    create_table.add_row("--output-dir, -o <dir>", "Where to create (default: ~/.bobreview/plugins/)")
+    create_table.add_row("--template, -t <type>", "Template: minimal or full (default: full)")
+    create_table.add_row("--theme <name>", "Base color theme (default: dark)")
+    console.print(Panel(create_table, title="[bold]Plugin Create Options[/bold]", border_style="dim"))
+    
+    # Output & debugging
+    output_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    output_table.add_column("Option", style="cyan", width=28)
+    output_table.add_column("Description")
+    output_table.add_row("--verbose, -v", "Enable verbose debug output")
+    output_table.add_row("--quiet, -q", "Errors only (suppress info/warnings)")
+    output_table.add_row("--version", "Show version and exit")
+    console.print(Panel(output_table, title="[bold]Output & Debugging[/bold]", border_style="dim"))
+    
+    # Examples (with colored commands and subcommands)
+    examples_text = """[dim]# List plugins[/dim]
+[cyan]bobreview[/cyan] [magenta]plugins[/magenta] list
+
+[dim]# Create a plugin[/dim]
+[cyan]bobreview[/cyan] [magenta]plugins[/magenta] [green]create[/green] my-plugin --template full
+
+[dim]# Generate report[/dim]
+[cyan]bobreview[/cyan] --plugin [magenta]my-plugin[/magenta] --dir [cyan]./data[/cyan] --output [cyan]./report.html[/cyan]
+
+[dim]# Dry run (skip LLM calls)[/dim]
+[cyan]bobreview[/cyan] --plugin [magenta]my-plugin[/magenta] --dir [cyan]./data[/cyan] --dry-run"""
+    console.print(Panel(examples_text, title="[bold yellow]Examples[/bold yellow]", border_style="dim"))
+    console.print()
+    
+    console.print("[dim]Full argparse help: bobreview --help --verbose[/dim]")
+    console.print()
+    
+    return True
 
 
 def handle_plugin_command(args):
@@ -207,6 +311,13 @@ def main():
     Returns:
         exit_code (int): 0 on success, 1 on failure.
     """
+    # Show rich help for --help (intercept before argparse)
+    if '--help' in sys.argv or '-h' in sys.argv:
+        # Check if --verbose is also passed for full argparse help
+        if '--verbose' not in sys.argv and '-v' not in sys.argv:
+            if print_rich_help():
+                return 0
+    
     parser = argparse.ArgumentParser(
         prog='bobreview',
         description='BobReview - Plugin-First Report Framework',
