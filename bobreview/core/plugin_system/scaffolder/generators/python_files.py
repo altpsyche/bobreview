@@ -307,7 +307,9 @@ def generate_llm_content(
                         full_prompt = f"{prompt}\\n\\nContext:\\n{data_summary}"
                         
                         from bobreview.services.llm.client import call_llm
-                        response = call_llm(full_prompt)
+                        from bobreview.core.config import Config
+                        llm_config = Config()
+                        response = call_llm(full_prompt, config=llm_config)
                         llm_content[comp_id] = response or f'<em>No response for {comp_id}</em>'
                     except Exception as e:
                         llm_content[comp_id] = f'<div class="llm-error">LLM Error: {e}</div>'
