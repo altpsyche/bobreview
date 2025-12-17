@@ -324,9 +324,16 @@ def generate_llm_content(
                         
                         from bobreview.services.llm.client import call_llm
                         from bobreview.core.config import Config
+                        from bobreview.core.cache import init_cache
+                        from bobreview.core.html_utils import sanitize_llm_html
                         llm_config = Config()
+                        init_cache(llm_config)
                         response = call_llm(full_prompt, config=llm_config)
-                        llm_content[comp_id] = response or f'<em>No response for {comp_id}</em>'
+                        # Convert markdown to HTML and sanitize
+                        if response:
+                            llm_content[comp_id] = sanitize_llm_html(response)
+                        else:
+                            llm_content[comp_id] = f'<em>No response for {comp_id}</em>'
                     except Exception as e:
                         llm_content[comp_id] = f'<div class="llm-error">LLM Error: {e}</div>'
     
@@ -1088,7 +1095,7 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
     except (ValueError, IndexError):
         # Invalid color, using gray fallback
         # In non-production contexts, consider logging the error or raising it
-        # for better debugging: raise ValueError(f"Invalid hex color: {hex_color}")
+        # for better debugging: raise ValueError(f"Invalid hex color: {{hex_color}}")
         return f'rgba(128, 128, 128, {{alpha}})'
 
 
