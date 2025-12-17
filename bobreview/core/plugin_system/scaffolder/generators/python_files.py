@@ -171,7 +171,8 @@ from typing import Dict, List, Any, Union
 
 def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
     """Convert DataFrame or other iterable to List[Dict]."""
-    if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+    # Check if it's a DataFrame (duck-typing with multiple attributes)
+    if hasattr(data, '__iter__') and hasattr(data, 'column_names') and hasattr(data, 'rows'):
         return list(data)
     elif isinstance(data, list):
         return data
@@ -414,7 +415,7 @@ def eval_template(template: str, data_points: List[Dict], stats: Dict[str, Any])
                 return str(int(value) if value == int(value) else round(value, 2))
         
         return template.replace('{{', '').replace('}}', '').strip()
-    except:
+    except Exception:
         return template
 
 

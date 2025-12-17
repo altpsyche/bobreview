@@ -69,7 +69,7 @@ def handle_plugin_command(args):
                 console.print("\n[dim]To create a plugin:[/dim] bobreview plugins create my-plugin")
             else:
                 print("No plugins found.")
-                print(f"\nPlugin directories searched:")
+                print("\nPlugin directories searched:")
                 for d in dirs:
                     print(f"  - {d}")
             return 0
@@ -131,7 +131,7 @@ def handle_plugin_command(args):
             print()
             print("Next steps:")
             print(f"  1. Edit {created_path}/manifest.json")
-            print(f"  2. Modify parsers for your data format")
+            print("  2. Modify parsers for your data format")
             print(f"  3. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
             return 0
         except Exception as e:
@@ -416,8 +416,8 @@ Report generation requires plugin implementation.
         log_warning(f"Plugin '{found.name}' does not have a generate_report function.")
         print("\nTo add report generation, implement one of:")
         print(f"  1. A 'generate_report(data_dir, output_dir)' function in plugins/{found.name.replace('-', '_')}/__init__.py")
-        print(f"  2. A 'generate_report(data_dir, output_dir)' method in your plugin class")
-        print(f"\nSee the scaffolder-generated executor.py for an example.")
+        print("  2. A 'generate_report(data_dir, output_dir)' method in your plugin class")
+        print("\nSee the scaffolder-generated executor.py for an example.")
         return 1
     
     # Show help if no command
