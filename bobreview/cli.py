@@ -75,14 +75,23 @@ def handle_plugin_command(args):
             return 0
         
         if RICH_AVAILABLE:
-            table = Table(title="Installed Plugins", box=box.ROUNDED, border_style="cyan")
+            title = "Installed Plugins"
+            if getattr(args, "verbose", False):
+                title = "Installed Plugins (detailed)"
+
+            table = Table(title=title, box=box.ROUNDED, border_style="cyan")
             table.add_column("Plugin", style="bold")
             table.add_column("Version", style="dim")
             table.add_column("Status", justify="center")
+            if getattr(args, "verbose", False):
+                table.add_column("Path", overflow="fold")
             
             for p in plugins:
                 status = "[green]loaded[/green]" if p.loaded else "[dim]available[/dim]"
-                table.add_row(p.name, p.version, status)
+                if getattr(args, "verbose", False):
+                    table.add_row(p.name, p.version, status, str(p.path))
+                else:
+                    table.add_row(p.name, p.version, status)
             
             console.print()
             console.print(table)
@@ -91,7 +100,10 @@ def handle_plugin_command(args):
             print("Installed plugins:\n")
             for p in plugins:
                 status = "loaded" if p.loaded else "available"
-                print(f"  {p.name} v{p.version} [{status}]")
+                line = f"  {p.name} v{p.version} [{status}]"
+                if getattr(args, "verbose", False):
+                    line += f" - {p.path}"
+                print(line)
         return 0
     
     elif args.plugin_command == 'create':
@@ -134,8 +146,11 @@ def handle_plugin_command(args):
             print("  2. Modify parsers for your data format")
             print(f"  3. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
             return 0
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             print(f"Error creating plugin: {e}")
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
             return 1
     
     elif args.plugin_command == 'info':
@@ -198,16 +213,22 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Plugin management
-  bobreview plugins list
-  bobreview plugins create my-plugin
-  bobreview plugins info my-plugin
+  Plugin management:
+    bobreview plugins list
+    bobreview plugins list --verbose
+    bobreview plugins create my-plugin
+    bobreview plugins info my-plugin
   
-  # Report generation (via plugin)
-  bobreview --plugin <plugin-name> --dir ./data
+  Report generation (via plugin):
+    bobreview --plugin <plugin-name> --dir ./data
+    bobreview --plugin <plugin-name> --dir ./data --dry-run
+    bobreview --plugin <plugin-name> --dir ./data --config ./report_config.yaml
 
-Note: This is a minimal CLI during architecture transition.
-Report generation requires plugin implementation.
+Notes:
+  - Use --verbose/-v for debug output.
+  - Use --quiet/-q for errors only (suppresses info/warnings).
+  - The --output path controls the output *directory*; plugins typically
+    write an 'index.html' file inside that directory.
         """
     )
     
@@ -216,11 +237,11 @@ Report generation requires plugin implementation.
     )
     parser.add_argument(
         '--verbose', '-v', action='store_true',
-        help='Show debug information'
+        help='Enable verbose debug output'
     )
     parser.add_argument(
         '--quiet', '-q', action='store_true',
-        help='Errors only'
+        help='Errors only (suppress info and warnings)'
     )
     
     # Plugin directories
@@ -242,7 +263,7 @@ Report generation requires plugin implementation.
     )
     parser.add_argument(
         '--output', type=str, default='report.html',
-        help='Output file path (default: report.html)'
+        help='Output path whose parent directory will be used for the report (HTML is usually written as index.html)'
     )
     parser.add_argument(
         '--config', '-c', type=str, default=None,
@@ -283,6 +304,12 @@ Report generation requires plugin implementation.
                                 help='Base color theme for templates (default: dark)')
     
     args = parser.parse_args()
+
+    # Build a simple Config object so logging respects --verbose/--quiet/--dry-run
+    cli_config = Config()
+    cli_config.verbose = bool(getattr(args, "verbose", False))
+    cli_config.quiet = bool(getattr(args, "quiet", False))
+    cli_config.dry_run = bool(getattr(args, "dry_run", False))
     
     # Handle --list-plugins
     if args.list_plugins:
@@ -369,51 +396,60 @@ Report generation requires plugin implementation.
         
         data_dir = Path(args.dir)
         output_path = Path(args.output)
+
+        # Basic validation for data directory
+        if not data_dir.exists() or not data_dir.is_dir():
+            log_error(f"Data directory does not exist or is not a directory: {data_dir}")
+            return 1
+        
+        def call_generate_report(generate_func, name_desc):
+            """Helper to call generate_report with consistent error handling."""
+            log_info(f"Running plugin: {found.name} ({name_desc})", config=cli_config)
+            log_info(f"Data directory: {data_dir}", config=cli_config)
+            # We log the full output path for user visibility, but pass the parent
+            # directory to the plugin's generate_report implementation.
+            log_info(f"Output: {output_path}", config=cli_config)
+            if args.dry_run:
+                log_info("Dry run mode - LLM calls will be skipped", config=cli_config)
+
+            # Build kwargs in a backwards-compatible way – only pass config_path
+            # when the user provided --config, to avoid surprising plugins that
+            # do not accept this parameter.
+            kwargs = {
+                "dry_run": getattr(args, "dry_run", False),
+            }
+            if getattr(args, "config", None):
+                kwargs["config_path"] = args.config
+
+            try:
+                result = generate_func(
+                    str(data_dir),
+                    str(output_path.parent),
+                    **kwargs,
+                )
+                log_success(f"Report generated: {result}", config=cli_config)
+                return True, 0
+            except (PluginLoadError, ValueError, OSError) as e:
+                log_error(f"Report generation failed: {e}")
+                if args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                return True, 1
         
         # Method 1: Check if plugin module has generate_report function
         if plugin_module and hasattr(plugin_module, 'generate_report'):
-            log_info(f"Running plugin: {found.name}")
-            log_info(f"Data directory: {data_dir}")
-            log_info(f"Output: {output_path}")
-            if args.dry_run:
-                log_info("Dry run mode - LLM calls will be skipped")
-            try:
-                result = plugin_module.generate_report(
-                    str(data_dir), str(output_path.parent),
-                    dry_run=getattr(args, 'dry_run', False)
-                )
-                log_success(f"Report generated: {result}")
-                return 0
-            except Exception as e:
-                log_error(f"Report generation failed: {e}")
-                if args.verbose:
-                    import traceback
-                    traceback.print_exc()
-                return 1
+            handled, code = call_generate_report(plugin_module.generate_report, "module-level")
+            if handled:
+                return code
         
         # Method 2: Check if plugin instance has generate_report method
         if hasattr(plugin_instance, 'generate_report'):
-            log_info(f"Running plugin: {found.name}")
-            log_info(f"Data directory: {data_dir}")
-            log_info(f"Output: {output_path}")
-            if args.dry_run:
-                log_info("Dry run mode - LLM calls will be skipped")
-            try:
-                result = plugin_instance.generate_report(
-                    str(data_dir), str(output_path.parent),
-                    dry_run=getattr(args, 'dry_run', False)
-                )
-                log_success(f"Report generated: {result}")
-                return 0
-            except Exception as e:
-                log_error(f"Report generation failed: {e}")
-                if args.verbose:
-                    import traceback
-                    traceback.print_exc()
-                return 1
+            handled, code = call_generate_report(plugin_instance.generate_report, "instance-level")
+            if handled:
+                return code
         
         # No generate_report found
-        log_warning(f"Plugin '{found.name}' does not have a generate_report function.")
+        log_warning(f"Plugin '{found.name}' does not have a generate_report function.", config=cli_config)
         print("\nTo add report generation, implement one of:")
         print(f"  1. A 'generate_report(data_dir, output_dir)' function in plugins/{found.name.replace('-', '_')}/__init__.py")
         print("  2. A 'generate_report(data_dir, output_dir)' method in your plugin class")

@@ -170,7 +170,22 @@ from typing import Dict, List, Any, Union
 
 
 def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
-    """Convert DataFrame or other iterable to List[Dict]."""
+    """
+    Convert DataFrame or other iterable to List[Dict].
+    
+    Uses duck-typing to detect DataFrame-like objects by checking for:
+    - __iter__: Iterable interface
+    - column_names: Column metadata (Polars, Pandas-like)
+    - rows: Row accessor (Polars, custom DataFrame implementations)
+    
+    Supported DataFrame libraries:
+    - Polars: Has column_names and rows attributes
+    - Pandas-like: Typically has column_names or columns attribute
+    - Custom DataFrame implementations matching this interface
+    
+    Note: This pragmatic approach may match unintended objects. For stricter
+    type checking, consider using isinstance() checks for known DataFrame types.
+    """
     # Check if it's a DataFrame (duck-typing with multiple attributes)
     if hasattr(data, '__iter__') and hasattr(data, 'column_names') and hasattr(data, 'rows'):
         return list(data)
@@ -393,7 +408,19 @@ def render_component(
 
 
 def eval_template(template: str, data_points: List[Dict], stats: Dict[str, Any]) -> str:
-    """Simple template evaluation for stat card values."""
+    """
+    Simple template evaluation for stat card values.
+    
+    Uses regex pattern matching instead of Python's eval() for security.
+    Supports limited patterns:
+    - data_points | length or data_points|length
+    - stats.field.metric (with optional | round(N) filter)
+    
+    WARNING: Do NOT extend this function to use eval() or exec() for template
+    expansion, as this would create a security vulnerability if user-provided
+    templates are processed. Always use safe pattern matching or a proper
+    template engine (like Jinja2) for dynamic content.
+    """
     try:
         # Handle common patterns
         if 'data_points | length' in template or 'data_points|length' in template:
@@ -439,6 +466,7 @@ def generate_report(
     Returns:
         Path to the generated index.html
     """
+    import html
     plugin_dir = Path(__file__).parent
     data_path = Path(data_dir)
     output_path = Path(output_dir)
@@ -480,10 +508,11 @@ def generate_report(
     for i, page in enumerate(pages):
         page_id = page.get('id', f'page_{i}')
         page_title = page.get('title', f'Page {i+1}')
+        page_title_escaped = html.escape(page_title)
         active_class = 'active' if i == 0 else ''
         
         # Navigation tab
-        nav_html += f'<button class="tab-btn {active_class}" onclick="showPage(\\'{page_id}\\')">{page_title}</button>'
+        nav_html += f'<button class="tab-btn {active_class}" onclick="showPage(\\'{page_id}\\', event)">{page_title_escaped}</button>'
         
         # Page content
         components_html = ''
@@ -500,12 +529,13 @@ def generate_report(
     
     # Build final HTML
     report_name = config.get('name', "''' + name + ''' Report")
+    report_name_escaped = html.escape(report_name)
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{report_name}</title>
+    <title>{report_name_escaped}</title>
     {font_link}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -576,18 +606,20 @@ header p {{ color: var(--text-soft); }}
 <body>
     <div class="container">
         <header>
-            <h1>{report_name}</h1>
+            <h1>{report_name_escaped}</h1>
             <p>Theme: {theme.name} | {len(data_points)} items</p>
         </header>
         <nav class="tabs">{nav_html}</nav>
         {pages_html}
     </div>
     <script>
-function showPage(pageId) {{
+function showPage(pageId, event) {{
     document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
-    event.target.classList.add('active');
+    if (event && event.target) {{
+        event.target.classList.add('active');
+    }}
 }}
 {''.join(charts_js)}
     </script>
@@ -623,7 +655,7 @@ from .theme import ReportTheme
 
 def _normalize_data_to_list(data: Union[List[Dict[str, Any]], Any]) -> List[Dict[str, Any]]:
     """Convert DataFrame or other iterable to List[Dict]."""
-    if hasattr(data, '__iter__') and hasattr(data, 'column_names'):
+    if hasattr(data, '__iter__') and hasattr(data, 'column_names') and hasattr(data, 'rows'):
         return list(data)
     elif isinstance(data, list):
         return data
@@ -1054,6 +1086,9 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.15) -> str:
         b = int(hex_color[4:6], 16)
         return f'rgba({{r}}, {{g}}, {{b}}, {{alpha}})'
     except (ValueError, IndexError):
+        # Invalid color, using gray fallback
+        # In non-production contexts, consider logging the error or raising it
+        # for better debugging: raise ValueError(f"Invalid hex color: {hex_color}")
         return f'rgba(128, 128, 128, {{alpha}})'
 
 
@@ -1423,13 +1458,14 @@ class {class_name}StatCard:
         elif trend == "down":
             trend_icon = '<span class="trend trend-down">↓</span>'
         
+        import html
         status_class = f"stat-card--{{status}}" if status != "neutral" else ""
         
         return f"""
         <div class="stat-card {{status_class}}">
-            <div class="stat-card__title">{{title}}</div>
-            <div class="stat-card__value">{{value}} {{trend_icon}}</div>
-            <div class="stat-card__subtitle">{{subtitle}}</div>
+            <div class="stat-card__title">{{html.escape(str(title))}}</div>
+            <div class="stat-card__value">{{html.escape(str(value))}} {{trend_icon}}</div>
+            <div class="stat-card__subtitle">{{html.escape(str(subtitle))}}</div>
         </div>
         """
     
