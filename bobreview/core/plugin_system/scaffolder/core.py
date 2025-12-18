@@ -108,6 +108,14 @@ __all__ = ['{class_name}CsvParser']
     parser_content = generate_csv_parser(name, class_name)
     (parsers_dir / "csv_parser.py").write_text(parser_content, encoding='utf-8')
     
+    # Create data_schema.yaml for user-defined data structure
+    data_schema = _read_template("data_schema.yaml", name=name, safe_name=safe_name)
+    (plugin_dir / "data_schema.yaml").write_text(data_schema, encoding='utf-8')
+    
+    # Create component_templates.yaml for YAML-based component templates
+    comp_templates = _read_template("component_templates.yaml", name=name, safe_name=safe_name)
+    (plugin_dir / "component_templates.yaml").write_text(comp_templates, encoding='utf-8')
+    
     if template == 'full':
         # Create context_builder.py
         context_content = generate_context_builder(name, class_name)

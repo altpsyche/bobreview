@@ -1,0 +1,141 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# COMPONENT TEMPLATES - Edit these to customize your report components
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Each component defined here can be used in report_config.yaml
+# Templates use Jinja2 syntax with full expression support
+#
+# Available context variables:
+#   - data_points: List of all data records
+#   - stats: Statistics dict (score.mean, score.max, etc.)
+#   - theme: Current theme object
+#   - count: Total number of data points
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# STAT CARD - Display a single statistic
+# ─────────────────────────────────────────────────────────────────────────────────
+{{safe_name}}_stat_card:
+  description: "Display a single statistic with label and value"
+  props:
+    label: { type: string, required: true, description: "Label text" }
+    value: { type: template, required: true, description: "Value (can be Jinja2 expression)" }
+    variant: { type: string, default: "default", description: "ok, warn, danger, info" }
+  template: |
+    <div class="stat-card stat-{{ variant | default('default') }}">
+      <div class="stat-value">{{ value }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# CHART - Render a Chart.js chart
+# ─────────────────────────────────────────────────────────────────────────────────
+{{safe_name}}_chart:
+  description: "Display a chart (bar, line, pie, doughnut)"
+  props:
+    id: { type: string, required: true, description: "Unique chart ID" }
+    chart: { type: string, default: "bar", description: "Chart type" }
+    title: { type: string, default: "Chart", description: "Chart title" }
+    x: { type: string, default: "name", description: "X-axis field" }
+    y: { type: string, default: "score", description: "Y-axis field" }
+  template: |
+    <div class="chart-card">
+      <h3>{{ title }}</h3>
+      <div class="chart-container">
+        <canvas id="{{ chart_id }}"></canvas>
+      </div>
+    </div>
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# LLM SECTION - AI-generated content
+# ─────────────────────────────────────────────────────────────────────────────────
+{{safe_name}}_llm:
+  description: "Display AI-generated content"
+  props:
+    id: { type: string, required: true, description: "Component ID for LLM content" }
+    title: { type: string, default: "AI Analysis", description: "Section title" }
+  template: |
+    <div class="llm-section">
+      <h3>{{ title }}</h3>
+      <div class="llm-content">{{ llm_content }}</div>
+    </div>
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# DATA TABLE - Display data in a table
+# ─────────────────────────────────────────────────────────────────────────────────
+{{safe_name}}_data_table:
+  description: "Display data in a table with columns"
+  props:
+    title: { type: string, default: "Data", description: "Table title" }
+    columns: { type: list, default: ["name", "score"], description: "Columns to display" }
+    page_size: { type: number, default: 10, description: "Rows per page" }
+  template: |
+    <div class="table-section">
+      <h3>{{ title }}</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            {% for col in columns %}
+              <th>{{ col | title }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in table_rows %}
+            <tr>
+              {% for col in columns %}
+                <td>{{ item[col] | default('') }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="table-info">Showing {{ table_rows | length }} of {{ count }} items</p>
+    </div>
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# STATS GRID - Display multiple statistics in a grid
+# ─────────────────────────────────────────────────────────────────────────────────
+{{safe_name}}_stats_grid:
+  description: "Display multiple stats in a responsive grid"
+  template: |
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">{{ count }}</div>
+        <div class="stat-label">Total Items</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ "%.1f" | format(stats.score.mean | default(0)) }}</div>
+        <div class="stat-label">Average Score</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.score.max | default(0) }}</div>
+        <div class="stat-label">Top Score</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.score.min | default(0) }}</div>
+        <div class="stat-label">Lowest Score</div>
+      </div>
+    </div>
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADD YOUR OWN COMPONENTS BELOW
+# ═══════════════════════════════════════════════════════════════════════════════
+# 
+# Example custom component:
+#
+# my_custom_card:
+#   props:
+#     title: { type: string }
+#     icon: { type: string, default: "star" }
+#   template: |
+#     <div class="custom-card">
+#       <i class="fas fa-{{ icon }}"></i>
+#       <h4>{{ title }}</h4>
+#       <p>{{ data_points | length }} items</p>
+#     </div>
+#   css: |
+#     .custom-card { padding: 1rem; border-radius: 8px; }
+#
+# ═══════════════════════════════════════════════════════════════════════════════

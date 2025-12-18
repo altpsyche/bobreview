@@ -92,28 +92,95 @@ class {class_name}Plugin(BasePlugin):
 
 
 def generate_csv_parser(name: str, class_name: str) -> str:
-    """Generate CSV parser file."""
+    """Generate CSV parser file that reads from data_schema.yaml."""
     return f'''"""
 CSV Parser for {name} Plugin.
 
+Schema-Driven Parsing:
+- Reads field definitions from data_schema.yaml
+- Supports string, number, date, category types
+- No code changes needed to parse different CSV formats
+
 Data Flow:
-    CSV → Parser.parse_directory() → List[Dict] → DataFrame
+    data_schema.yaml → Parser → CSV files → List[Dict]
 """
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from datetime import datetime
 import csv
+import yaml
+
+
+def load_schema(plugin_dir: Path) -> Dict[str, Any]:
+    """Load data schema from YAML file."""
+    schema_path = plugin_dir / 'data_schema.yaml'
+    if not schema_path.exists():
+        # Fallback to default schema
+        return {{
+            'fields': [
+                {{'name': 'name', 'type': 'string', 'required': True}},
+                {{'name': 'score', 'type': 'number', 'required': True}},
+                {{'name': 'category', 'type': 'category', 'required': False, 'default': 'General'}},
+            ]
+        }}
+    
+    with open(schema_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f) or {{'fields': []}}
+
+
+def convert_value(value: str, field_def: Dict[str, Any]) -> Any:
+    """Convert string value to appropriate type based on schema."""
+    if not value or not value.strip():
+        return field_def.get('default')
+    
+    value = value.strip()
+    field_type = field_def.get('type', 'string')
+    
+    try:
+        if field_type == 'number':
+            # Try int first, then float
+            if '.' in value:
+                return float(value)
+            return int(value)
+        
+        elif field_type == 'date':
+            fmt = field_def.get('format', '%Y-%m-%d')
+            return datetime.strptime(value, fmt).isoformat()
+        
+        elif field_type in ('string', 'category'):
+            return value
+        
+        else:
+            return value
+            
+    except (ValueError, TypeError):
+        return field_def.get('default')
 
 
 class {class_name}CsvParser:
     """
-    Parse CSV files with name, score, and category columns.
+    Schema-driven CSV parser.
     
-    Expected CSV format:
-        name,score,category
-        Item1,85,Backend
-        Item2,72,Frontend
+    Reads field definitions from data_schema.yaml and parses any CSV format.
+    Edit data_schema.yaml to change what columns are parsed - no code changes needed.
     """
+    
+    def __init__(self):
+        self._schema = None
+        self._plugin_dir = Path(__file__).parent.parent
+    
+    @property
+    def schema(self) -> Dict[str, Any]:
+        """Lazy-load schema."""
+        if self._schema is None:
+            self._schema = load_schema(self._plugin_dir)
+        return self._schema
+    
+    @property
+    def fields(self) -> List[Dict[str, Any]]:
+        """Get field definitions."""
+        return self.schema.get('fields', [])
     
     def parse_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
         """Parse a single CSV file (not used for multi-row CSVs)."""
@@ -126,37 +193,44 @@ class {class_name}CsvParser:
     def parse_directory(self, directory: Path) -> List[Dict[str, Any]]:
         """Parse all CSV files and return combined records."""
         data_points = []
+        errors = []
         
         for csv_file in self.discover_files(directory):
             try:
                 with open(csv_file, 'r', encoding='utf-8', newline='') as f:
                     reader = csv.DictReader(f)
-                    for row in reader:
-                        data_point = self._parse_row(row, csv_file.name)
+                    for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is 1)
+                        data_point = self._parse_row(row, csv_file.name, row_num)
                         if data_point:
                             data_points.append(data_point)
-            except (OSError, csv.Error):
+            except (OSError, csv.Error) as e:
+                errors.append(f"{{csv_file.name}}: {{e}}")
                 continue
+        
+        if errors:
+            print(f"Warning: {{len(errors)}} file(s) had errors")
         
         return data_points
     
-    def _parse_row(self, row: Dict[str, str], source_file: str) -> Optional[Dict[str, Any]]:
-        """Parse a single CSV row."""
-        try:
-            name = row.get('name', '').strip()
-            score_str = row.get('score', '').strip()
+    def _parse_row(self, row: Dict[str, str], source_file: str, row_num: int) -> Optional[Dict[str, Any]]:
+        """Parse a single CSV row based on schema."""
+        result = {{'_source': source_file, '_row': row_num}}
+        
+        for field_def in self.fields:
+            field_name = field_def.get('name')
+            if not field_name:
+                continue
             
-            if not name or not score_str:
-                return None
+            raw_value = row.get(field_name, '')
+            converted = convert_value(raw_value, field_def)
             
-            return {{
-                'name': name,
-                'score': float(score_str),
-                'category': row.get('category', 'General').strip(),
-                'source': source_file,
-            }}
-        except (ValueError, TypeError):
-            return None
+            # Check required fields
+            if field_def.get('required') and converted is None:
+                return None  # Skip row if required field is missing
+            
+            result[field_name] = converted
+        
+        return result
 '''
 
 
@@ -340,117 +414,237 @@ def generate_llm_content(
     return llm_content
 
 
-def render_component(
-    comp: Dict[str, Any],
-    data_points: List[Dict],
-    stats: Dict[str, Any],
-    llm_content: Dict[str, str],
-    charts_js: List[str],
-    chart_gen: "''' + class_name + '''ChartGenerator",
-    theme: ReportTheme,
-    safe_name: str
-) -> str:
-    """Render a single component to HTML."""
-    comp_type = comp.get('type', '')
+class TemplateLoader:
+    """Load component templates from YAML file."""
     
-    # Stat Card
-    if '_stat_card' in comp_type:
-        label = comp.get('label', 'Stat')
-        value_template = comp.get('value', '0')
-        variant = comp.get('variant', 'default')
-        
-        # Simple template eval (supports data_points | length, stats.field.metric)
-        value = eval_template(value_template, data_points, stats)
-        
-        variant_class = {'ok': 'stat-ok', 'warn': 'stat-warn', 'danger': 'stat-danger', 'info': 'stat-info'}.get(variant, '')
-        return f'<div class="stat-card {variant_class}"><div class="stat-value">{value}</div><div class="stat-label">{label}</div></div>'
+    def __init__(self, plugin_dir: Path):
+        self.templates_path = plugin_dir / 'component_templates.yaml'
+        self._cache: Dict[str, Any] = {}
+        self._load_templates()
     
-    # Chart
-    elif '_chart' in comp_type:
-        chart_id = comp.get('id', f'chart_{len(charts_js)}')
+    def _load_templates(self):
+        """Load all templates from YAML file."""
+        if not self.templates_path.exists():
+            return
+        try:
+            with open(self.templates_path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f) or {}
+                for comp_type, comp_def in data.items():
+                    if isinstance(comp_def, dict) and 'template' in comp_def:
+                        self._cache[comp_type] = comp_def
+        except Exception as e:
+            print(f"Warning: Failed to load component templates: {e}")
+    
+    def get(self, comp_type: str) -> Dict:
+        """Get template definition for a component type."""
+        return self._cache.get(comp_type, {})
+    
+    def has(self, comp_type: str) -> bool:
+        """Check if template exists."""
+        return comp_type in self._cache
+
+
+class ComponentRenderer:
+    """Render components using YAML templates."""
+    
+    def __init__(self, data_points: List[Dict], stats: Dict, llm_content: Dict,
+                 charts_js: List[str], chart_gen: "''' + class_name + '''ChartGenerator",
+                 theme: ReportTheme, safe_name: str, template_loader: TemplateLoader,
+                 custom_components: Dict[str, Any] = None):
+        self.data_points = data_points
+        self.stats = stats
+        self.llm_content = llm_content
+        self.charts_js = charts_js
+        self.chart_gen = chart_gen
+        self.theme = theme
+        self.safe_name = safe_name
+        self.templates = template_loader
+        self.custom_components = custom_components or {}
+        self.count = len(data_points)
+        
+        # Jinja2 environment
+        from jinja2 import Environment
+        self.env = Environment()
+        self.env.globals['len'] = len
+        self.env.globals['min'] = min
+        self.env.globals['max'] = max
+        self.env.globals['sum'] = sum
+        self.env.globals['round'] = round
+    
+    def _get_base_context(self) -> Dict[str, Any]:
+        """Base context for all templates."""
+        return {
+            'data_points': self.data_points,
+            'stats': self.stats,
+            'theme': self.theme,
+            'count': self.count,
+        }
+    
+    def _render_template(self, template_str: str, context: Dict) -> str:
+        """Render a Jinja2 template."""
+        try:
+            tpl = self.env.from_string(template_str)
+            return tpl.render(**context)
+        except Exception as e:
+            return f'<div class="error">Template error: {e}</div>'
+    
+    def render(self, comp: Dict) -> str:
+        """Render a component to HTML."""
+        comp_type = comp.get('type', '')
+        
+        # Check inline custom components first
+        if comp_type in self.custom_components:
+            return self._render_custom(comp_type, comp)
+        
+        # Check charts first (needs JS generation) - BEFORE YAML templates
+        if '_chart' in comp_type:
+            return self._render_chart(comp)
+        
+        # Check YAML templates
+        if self.templates.has(comp_type):
+            return self._render_yaml(comp_type, comp)
+        
+        return f'<!-- Unknown: {comp_type} -->'
+    
+    def _render_yaml(self, comp_type: str, comp: Dict) -> str:
+        """Render using YAML template."""
+        template_def = self.templates.get(comp_type)
+        template_str = template_def.get('template', '')
+        
+        # Build context - order matters! Prepared context should override raw props
+        context = self._get_base_context()
+        
+        # Add raw component props first
+        for key, value in comp.items():
+            if key != 'type':
+                # Eval Jinja expressions in values
+                if isinstance(value, str) and '{{' in value:
+                    context[key] = eval_template(value, self.data_points, self.stats)
+                else:
+                    context[key] = value
+        
+        # Add prepared context (overwrites raw props where needed)
+        context.update(self._prepare_context(comp_type, comp))
+        
+        return self._render_template(template_str, context)
+    
+    def _prepare_context(self, comp_type: str, comp: Dict) -> Dict[str, Any]:
+        """Prepare component-specific context."""
+        ctx = {}
+        
+        if '_stat_card' in comp_type:
+            value_template = comp.get('value', '0')
+            ctx['value'] = eval_template(value_template, self.data_points, self.stats)
+            ctx['variant'] = comp.get('variant', 'default')
+        
+        elif '_llm' in comp_type:
+            comp_id = comp.get('id', 'unknown')
+            ctx['llm_content'] = self.llm_content.get(comp_id, '<em>No content</em>')
+        
+        elif '_data_table' in comp_type:
+            columns = comp.get('columns', ['name', 'score'])
+            page_size = comp.get('page_size', 10)
+            ctx['columns'] = columns
+            ctx['table_rows'] = self.data_points[:page_size]
+        
+        return ctx
+    
+    def _render_chart(self, comp: Dict) -> str:
+        """Render chart component (needs JS)."""
+        chart_id = comp.get('id', f'chart_{len(self.charts_js)}')
         chart_type = comp.get('chart', 'bar')
         title = comp.get('title', 'Chart')
-        x_field = comp.get('x', 'name')
-        y_field = comp.get('y', 'score')
         
         chart_config = {
             'id': chart_id,
             'type': chart_type,
             'title': title,
-            'x_field': x_field,
-            'y_field': y_field,
+            'x_field': comp.get('x', 'name'),
+            'y_field': comp.get('y', 'score'),
         }
-        js_code = chart_gen.generate_chart(data_points, stats, None, chart_config, theme)
-        charts_js.append(js_code)
+        js = self.chart_gen.generate_chart(self.data_points, self.stats, None, chart_config, self.theme)
+        self.charts_js.append(js)
+        
+        # Use template if available
+        comp_type = f'{self.safe_name}_chart'
+        if self.templates.has(comp_type):
+            template_def = self.templates.get(comp_type)
+            context = self._get_base_context()
+            context['chart_id'] = chart_id
+            context['title'] = title
+            return self._render_template(template_def.get('template', ''), context)
         
         return f'<div class="chart-card"><h3>{title}</h3><div class="chart-container"><canvas id="{chart_id}"></canvas></div></div>'
     
-    # LLM Content
-    elif '_llm' in comp_type:
-        comp_id = comp.get('id', 'unknown')
-        title = comp.get('title', 'AI Analysis')
-        content = llm_content.get(comp_id, '<em>No content</em>')
-        return f'<div class="llm-section"><h3>{title}</h3><div class="llm-content">{content}</div></div>'
-    
-    # Data Table
-    elif '_data_table' in comp_type:
-        title = comp.get('title', 'Data')
-        columns = comp.get('columns', ['name', 'score'])
-        page_size = comp.get('page_size', 10)
+    def _render_custom(self, comp_type: str, comp: Dict) -> str:
+        """Render inline custom component."""
+        custom_def = self.custom_components[comp_type]
+        template_str = custom_def.get('template', '')
+        if not template_str:
+            return f'<!-- {comp_type} has no template -->'
         
-        # Build table HTML
-        headers = ''.join(f'<th>{col.title()}</th>' for col in columns)
-        rows = ''
-        for item in data_points[:page_size]:
-            cells = ''.join(f'<td>{item.get(col, "")}</td>' for col in columns)
-            rows += f'<tr>{cells}</tr>'
+        context = self._get_base_context()
+        for key, value in comp.items():
+            if key != 'type':
+                if isinstance(value, str) and '{{' in value:
+                    context[key] = eval_template(value, self.data_points, self.stats)
+                else:
+                    context[key] = value
         
-        table_html = f'<div class="table-section"><h3>{title}</h3>'
-        table_html += f'<table class="data-table"><thead><tr>{headers}</tr></thead>'
-        table_html += f'<tbody>{rows}</tbody></table>'
-        table_html += f'<p class="table-info">Showing {min(page_size, len(data_points))} of {len(data_points)} items</p></div>'
-        return table_html
-    
-    return f'<!-- Unknown component type: {comp_type} -->'
+        html = self._render_template(template_str, context)
+        css = custom_def.get('css', '')
+        if css:
+            html = f'<style>{css}</style>\\n{html}'
+        return html
 
 
 def eval_template(template: str, data_points: List[Dict], stats: Dict[str, Any]) -> str:
     """
-    Simple template evaluation for stat card values.
+    Render template using Jinja2 for full expression support.
     
-    Uses regex pattern matching instead of Python's eval() for security.
-    Supports limited patterns:
-    - data_points | length or data_points|length
-    - stats.field.metric (with optional | round(N) filter)
+    Supports all Jinja2 features:
+    - Filters: {{ value | round(2) }}, {{ items | sum(attribute='score') }}
+    - Conditionals: {{ 'Good' if score > 80 else 'Needs work' }}
+    - Math: {{ stats.score.mean * 100 }}%
+    - List operations: {{ data_points | length }}, {{ data_points | first }}
     
-    WARNING: Do NOT extend this function to use eval() or exec() for template
-    expansion, as this would create a security vulnerability if user-provided
-    templates are processed. Always use safe pattern matching or a proper
-    template engine (like Jinja2) for dynamic content.
+    Context variables available:
+    - data_points: List of all data records
+    - stats: Dictionary of statistics per field
+    - len: Python's len() function
     """
+    from jinja2 import Template, Environment
+    
     try:
-        # Handle common patterns
-        if 'data_points | length' in template or 'data_points|length' in template:
-            return str(len(data_points))
+        # Create Jinja2 environment with useful globals
+        env = Environment()
+        env.globals['len'] = len
+        env.globals['min'] = min
+        env.globals['max'] = max
+        env.globals['sum'] = sum
+        env.globals['abs'] = abs
+        env.globals['round'] = round
         
-        # Handle stats.field.metric pattern
-        if 'stats.' in template:
-            import re
-            match = re.search(r'stats\\.([\\w]+)\\.([\\w]+)', template)
-            if match:
-                field, metric = match.groups()
-                value = stats.get(field, {}).get(metric, 0)
-                # Check for round filter
-                if '| round(' in template:
-                    round_match = re.search(r'\\| round\\((\\d+)\\)', template)
-                    if round_match:
-                        digits = int(round_match.group(1))
-                        return str(round(value, digits))
-                return str(int(value) if value == int(value) else round(value, 2))
+        # Prepare context
+        context = {
+            'data_points': data_points,
+            'stats': stats,
+        }
         
+        # Handle template string - may or may not have {{ }}
+        tmpl_str = template.strip()
+        if not tmpl_str.startswith('{{'):
+            # Wrap in {{ }} if not already a Jinja expression
+            if '{{' not in tmpl_str:
+                return tmpl_str  # Plain text, return as-is
+        
+        tpl = env.from_string(tmpl_str)
+        result = tpl.render(**context)
+        return result
+        
+    except Exception as e:
+        # Fallback: return template as-is if rendering fails
         return template.replace('{{', '').replace('}}', '').strip()
-    except Exception:
-        return template
 
 
 def generate_report(
@@ -503,9 +697,19 @@ def generate_report(
     # Generate LLM content
     llm_content = generate_llm_content(config, data_points, stats, dry_run)
     
-    # Initialize chart generator
+    # Initialize chart generator and template loader
     chart_gen = ''' + class_name + '''ChartGenerator()
     charts_js = []
+    template_loader = TemplateLoader(plugin_dir)
+    
+    # Get custom components from config (if any)
+    custom_components = config.get('custom_components', {})
+    
+    # Create component renderer
+    renderer = ComponentRenderer(
+        data_points, stats, llm_content, charts_js, chart_gen,
+        theme, "''' + safe_name + '''", template_loader, custom_components
+    )
     
     # Render pages
     pages = config.get('pages', [])
@@ -526,9 +730,7 @@ def generate_report(
         layout = page.get('layout', 'grid')
         
         for comp in page.get('components', []):
-            comp_html = render_component(
-                comp, data_points, stats, llm_content, charts_js, chart_gen, theme, "''' + safe_name + '''"
-            )
+            comp_html = renderer.render(comp)
             components_html += comp_html
         
         layout_class = {'grid': 'layout-grid', 'single-column': 'layout-single', 'flex': 'layout-flex'}.get(layout, 'layout-grid')
@@ -548,65 +750,261 @@ def generate_report(
     <style>
 {theme_css}
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-body {{ font-family: var(--font-family); background: var(--bg); color: var(--text-main); min-height: 100vh; }}
-.container {{ max-width: 1400px; margin: 0 auto; padding: 2rem; }}
+body {{ 
+    font-family: var(--font-family); 
+    background: linear-gradient(135deg, var(--bg) 0%, var(--bg-soft) 50%, var(--bg) 100%);
+    background-attachment: fixed;
+    color: var(--text-main); 
+    min-height: 100vh;
+    line-height: 1.6;
+}}
+.container {{ max-width: 1400px; margin: 0 auto; padding: 2rem 3rem; }}
 
-/* Header */
-header {{ text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); }}
-header h1 {{ color: var(--accent); font-size: 2.5rem; margin-bottom: 0.5rem; }}
-header p {{ color: var(--text-soft); }}
+/* Header - Gradient Title */
+header {{ 
+    text-align: center; 
+    margin-bottom: 2.5rem; 
+    padding: 2rem 0;
+    position: relative;
+}}
+header::after {{
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}}
+header h1 {{ 
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.75rem; 
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+}}
+header p {{ color: var(--text-soft); font-size: 1rem; }}
 
-/* Tabs */
-.tabs {{ display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }}
-.tab-btn {{ background: var(--bg-elevated); color: var(--text-soft); border: 1px solid var(--border-subtle); padding: 0.75rem 1.5rem; border-radius: var(--radius-md); cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }}
-.tab-btn:hover {{ background: var(--bg-soft); color: var(--text-main); }}
-.tab-btn.active {{ background: var(--accent); color: var(--bg); border-color: var(--accent); }}
+/* Tabs - Pill Style */
+.tabs {{ 
+    display: flex; 
+    gap: 0.5rem; 
+    margin-bottom: 2.5rem; 
+    flex-wrap: wrap;
+    background: var(--bg-elevated);
+    padding: 0.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+}}
+.tab-btn {{ 
+    background: transparent; 
+    color: var(--text-soft); 
+    border: none; 
+    padding: 0.75rem 1.5rem; 
+    border-radius: var(--radius-md); 
+    cursor: pointer; 
+    font-size: 0.95rem; 
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}}
+.tab-btn:hover {{ 
+    background: var(--bg-soft); 
+    color: var(--text-main);
+}}
+.tab-btn.active {{ 
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%); 
+    color: var(--bg); 
+    box-shadow: 0 4px 15px rgba(34, 211, 238, 0.3);
+}}
 
-/* Pages */
-.page-content {{ display: none; }}
-.page-content.active {{ display: block; }}
+/* Layouts - defined first so page-content can override */
+.layout-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem; }}
+.layout-single {{ display: flex; flex-direction: column; gap: 1.75rem; }}
+.layout-flex {{ display: flex; flex-wrap: wrap; gap: 1.75rem; }}
 
-/* Layouts */
-.layout-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }}
-.layout-single {{ display: flex; flex-direction: column; gap: 1.5rem; }}
-.layout-flex {{ display: flex; flex-wrap: wrap; gap: 1.5rem; }}
+/* Pages - MUST come after layouts to override display property */
+.page-content {{ display: none !important; animation: fadeIn 0.4s ease; }}
+.page-content.active {{ display: block !important; }}
+.page-content.active.layout-grid {{ display: grid !important; }}
+.page-content.active.layout-single {{ display: flex !important; }}
+.page-content.active.layout-flex {{ display: flex !important; }}
+@keyframes fadeIn {{
+    from {{ opacity: 0; transform: translateY(10px); }}
+    to {{ opacity: 1; transform: translateY(0); }}
+}}
 
-/* Stat Cards */
-.stat-card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; text-align: center; }}
-.stat-value {{ color: var(--accent); font-size: 2.5rem; font-weight: 700; }}
-.stat-label {{ color: var(--text-soft); font-size: 0.85rem; text-transform: uppercase; margin-top: 0.5rem; }}
-.stat-ok {{ border-left: 3px solid var(--ok); }}
-.stat-warn {{ border-left: 3px solid var(--warn); }}
-.stat-danger {{ border-left: 3px solid var(--danger); }}
-.stat-info {{ border-left: 3px solid var(--accent); }}
+/* Stats Grid */
+.stats-grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+}}
 
-/* Charts */
-.chart-card {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; }}
-.chart-card h3 {{ color: var(--accent); font-size: 1.1rem; margin-bottom: 1rem; }}
+/* Stat Cards - Glass Effect */
+.stat-card {{ 
+    background: linear-gradient(135deg, var(--bg-elevated) 0%, rgba(30, 41, 59, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-subtle); 
+    border-radius: var(--radius-lg); 
+    padding: 1.75rem; 
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}}
+.stat-card::before {{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    opacity: 0;
+    transition: opacity 0.3s;
+}}
+.stat-card:hover {{ 
+    transform: translateY(-4px); 
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent);
+}}
+.stat-card:hover::before {{ opacity: 1; }}
+.stat-value {{ 
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.75rem; 
+    font-weight: 800;
+    line-height: 1;
+}}
+.stat-label {{ 
+    color: var(--text-soft); 
+    font-size: 0.8rem; 
+    text-transform: uppercase; 
+    letter-spacing: 0.1em;
+    margin-top: 0.75rem;
+    font-weight: 500;
+}}
+.stat-ok {{ border-left: 4px solid var(--ok); }}
+.stat-ok .stat-value {{ background: linear-gradient(135deg, var(--ok), #22c55e); -webkit-background-clip: text; }}
+.stat-warn {{ border-left: 4px solid var(--warn); }}
+.stat-warn .stat-value {{ background: linear-gradient(135deg, var(--warn), #fbbf24); -webkit-background-clip: text; }}
+.stat-danger {{ border-left: 4px solid var(--danger); }}
+.stat-danger .stat-value {{ background: linear-gradient(135deg, var(--danger), #ef4444); -webkit-background-clip: text; }}
+.stat-info {{ border-left: 4px solid var(--accent); }}
+
+/* Charts - Frosted Glass */
+.chart-card {{ 
+    background: linear-gradient(180deg, var(--bg-elevated) 0%, rgba(17, 24, 39, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-subtle); 
+    border-radius: var(--radius-lg); 
+    padding: 1.75rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}}
+.chart-card:hover {{
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    border-color: rgba(34, 211, 238, 0.3);
+}}
+.chart-card h3 {{ 
+    color: var(--text-main); 
+    font-size: 1.15rem; 
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}}
+.chart-card h3::before {{
+    content: '';
+    width: 4px;
+    height: 1.2em;
+    background: var(--accent);
+    border-radius: 2px;
+}}
 .chart-container {{ position: relative; height: 300px; }}
 
-/* LLM Content */
-.llm-section {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; grid-column: 1 / -1; }}
-.llm-section h3 {{ color: var(--accent); font-size: 1.1rem; margin-bottom: 1rem; }}
-.llm-content {{ color: var(--text-main); line-height: 1.7; }}
-.llm-content p {{ margin-bottom: 0.75rem; }}
-.llm-content ul, .llm-content ol {{ margin: 0.75rem 0; padding-left: 1.5rem; }}
+/* LLM Content - Premium Card */
+.llm-section {{ 
+    background: linear-gradient(135deg, var(--bg-elevated) 0%, rgba(30, 41, 59, 0.9) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-subtle); 
+    border-radius: var(--radius-lg); 
+    padding: 2rem;
+    grid-column: 1 / -1;
+    position: relative;
+    overflow: hidden;
+}}
+.llm-section::before {{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+}}
+.llm-section h3 {{ 
+    color: var(--accent); 
+    font-size: 1.2rem; 
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+}}
+.llm-content {{ color: var(--text-main); line-height: 1.8; }}
+.llm-content p {{ margin-bottom: 1rem; }}
+.llm-content ul, .llm-content ol {{ margin: 1rem 0; padding-left: 1.5rem; }}
 .llm-content strong {{ color: var(--accent-strong); }}
-.llm-dry-run {{ color: var(--text-soft); font-style: italic; padding: 1rem; background: var(--bg-soft); border-radius: var(--radius-md); }}
+.llm-dry-run {{ 
+    color: var(--text-soft); 
+    font-style: italic; 
+    padding: 1.25rem; 
+    background: linear-gradient(135deg, var(--bg-soft), rgba(30, 41, 59, 0.5));
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--accent);
+}}
 .llm-error {{ color: var(--danger); padding: 1rem; background: var(--danger-soft); border-radius: var(--radius-md); }}
 
-/* Tables */
-.table-section {{ background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; grid-column: 1 / -1; overflow-x: auto; }}
-.table-section h3 {{ color: var(--accent); font-size: 1.1rem; margin-bottom: 1rem; }}
+/* Tables - Clean Design */
+.table-section {{ 
+    background: var(--bg-elevated); 
+    border: 1px solid var(--border-subtle); 
+    border-radius: var(--radius-lg); 
+    padding: 1.75rem; 
+    grid-column: 1 / -1; 
+    overflow-x: auto;
+}}
+.table-section h3 {{ 
+    color: var(--accent); 
+    font-size: 1.15rem; 
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+}}
 .data-table {{ width: 100%; border-collapse: collapse; }}
-.data-table th {{ background: var(--bg-soft); color: var(--accent); text-align: left; padding: 0.75rem; font-weight: 600; }}
-.data-table td {{ padding: 0.75rem; border-bottom: 1px solid var(--border-subtle); }}
-.data-table tr:hover {{ background: var(--bg-soft); }}
-.table-info {{ color: var(--text-soft); font-size: 0.85rem; margin-top: 0.75rem; }}
+.data-table th {{ 
+    background: linear-gradient(180deg, var(--bg-soft), var(--bg-elevated));
+    color: var(--accent); 
+    text-align: left; 
+    padding: 1rem 1.25rem; 
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}}
+.data-table td {{ padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-subtle); }}
+.data-table tr:hover {{ background: rgba(34, 211, 238, 0.05); }}
+.table-info {{ color: var(--text-soft); font-size: 0.85rem; margin-top: 1rem; }}
 
 @media (max-width: 768px) {{
     .layout-grid {{ grid-template-columns: 1fr; }}
     .tabs {{ flex-direction: column; }}
+    .container {{ padding: 1rem; }}
+    header h1 {{ font-size: 2rem; }}
 }}
     </style>
 </head>

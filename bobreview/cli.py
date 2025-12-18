@@ -396,6 +396,11 @@ Notes:
     subparsers = parser.add_subparsers(dest='command', help='Commands')
     
     plugins_parser = subparsers.add_parser('plugins', help='Plugin management')
+    plugins_parser.add_argument(
+        '--plugin-dir', action='append', dest='plugin_dirs', default=[],
+        metavar='DIR',
+        help='Extra plugin search directory (repeatable)'
+    )
     plugins_subparsers = plugins_parser.add_subparsers(dest='plugin_command')
     
     plugins_list = plugins_subparsers.add_parser('list', help='Show installed plugins')
@@ -421,6 +426,14 @@ Notes:
     cli_config.verbose = bool(getattr(args, "verbose", False))
     cli_config.quiet = bool(getattr(args, "quiet", False))
     cli_config.dry_run = bool(getattr(args, "dry_run", False))
+    
+    # Auto-register any --plugin-dir paths to config for persistence
+    plugin_dirs = getattr(args, 'plugin_dirs', [])
+    for dir_path in plugin_dirs:
+        resolved = Path(dir_path).expanduser().resolve()
+        if resolved.exists() and resolved.is_dir():
+            if PluginDiscovery.add_plugin_dir_to_config(resolved):
+                log_verbose(f"Registered plugin directory: {resolved}", config=cli_config)
     
     # Handle --list-plugins
     if args.list_plugins:

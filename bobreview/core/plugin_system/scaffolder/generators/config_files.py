@@ -123,94 +123,136 @@ theme: "{color_theme}"
 
 pages:
   # ┌─────────────────────────────────────────────────────────────────────────────┐
-  # │ DASHBOARD                                                                    │
+  # │ OVERVIEW - Executive Dashboard                                               │
   # └─────────────────────────────────────────────────────────────────────────────┘
-  - id: dashboard
-    title: "Dashboard"
-    layout: grid
+  - id: overview
+    title: "Overview"
+    layout: single-column
     nav_order: 1
     components:
-      # ── STAT CARDS ────────────────────────────────────────────────────────────
-      - type: {safe_name}_stat_card
-        label: "Total Items"
-        value: "{{{{ data_points | length }}}}"
-        variant: info
-
-      - type: {safe_name}_stat_card
-        label: "Average Score"
-        value: "{{{{ stats.score.mean | round(1) }}}}"
-        variant: ok
-
-      - type: {safe_name}_stat_card
-        label: "Highest"
-        value: "{{{{ stats.score.max }}}}"
-        variant: ok
-
-      - type: {safe_name}_stat_card
-        label: "Lowest"
-        value: "{{{{ stats.score.min }}}}"
-        variant: warn
-
-      # ── CHARTS ────────────────────────────────────────────────────────────────
+      # ── HERO STATS SECTION ───────────────────────────────────────────────────
+      - type: {safe_name}_stats_grid
+        id: hero_stats
+        title: "Key Metrics"
+        
+      # ── PERFORMANCE OVERVIEW ─────────────────────────────────────────────────
       - type: {safe_name}_chart
-        id: scores_bar
+        id: main_chart
         chart: bar
-        title: "Scores by Item"
+        title: "Performance by Item"
         x: name
         y: score
         animated: true
 
+      # ── AI EXECUTIVE SUMMARY ─────────────────────────────────────────────────
+      - type: {safe_name}_llm
+        id: exec_summary
+        title: "Executive Summary"
+        prompt: "Analyze this {name} data with {{{{data_points | length}}}} items. Provide a 3-sentence executive summary highlighting the key insights, average performance ({{{{stats.score.mean | round(1)}}}}), and any notable patterns."
+
+      # ── TREND CHART ──────────────────────────────────────────────────────────
       - type: {safe_name}_chart
-        id: scores_line
+        id: trend_chart
         chart: line
         title: "Score Trend"
         x: name
         y: score
 
-      # ── AI SUMMARY ────────────────────────────────────────────────────────────
-      - type: {safe_name}_llm
-        id: summary
-        title: "AI Summary"
-        prompt: "Analyze the {{{{name}}}} and {{{{score}}}} data. Provide a brief executive summary."
-
   # ┌─────────────────────────────────────────────────────────────────────────────┐
-  # │ DETAILS                                                                      │
+  # │ ANALYTICS - Detailed Charts                                                  │
   # └─────────────────────────────────────────────────────────────────────────────┘
-  - id: details
-    title: "Details"
-    layout: single-column
+  - id: analytics
+    title: "Analytics"
+    layout: grid
     nav_order: 2
     components:
+      # ── DISTRIBUTION CHART ───────────────────────────────────────────────────
       - type: {safe_name}_chart
         id: distribution
         chart: histogram
         title: "Score Distribution"
         y: score
-
+        
+      # ── CATEGORY BREAKDOWN ───────────────────────────────────────────────────
       - type: {safe_name}_chart
-        id: categories
+        id: category_pie
         chart: doughnut
         title: "By Category"
         x: category
         y: score
 
-      # ── DATA TABLE ────────────────────────────────────────────────────────────
+      # ── SCATTER ANALYSIS ─────────────────────────────────────────────────────
+      - type: {safe_name}_chart
+        id: scatter
+        chart: scatter
+        title: "Score vs Position"
+        x: name
+        y: score
+
+      # ── CATEGORY BAR ─────────────────────────────────────────────────────────
+      - type: {safe_name}_chart
+        id: category_bar
+        chart: bar
+        title: "Average by Category"
+        x: category
+        y: score
+
+  # ┌─────────────────────────────────────────────────────────────────────────────┐
+  # │ DATA - Tables & Raw Data                                                     │
+  # └─────────────────────────────────────────────────────────────────────────────┘
+  - id: data
+    title: "Data"
+    layout: single-column
+    nav_order: 3
+    components:
+      # ── DATA TABLE ───────────────────────────────────────────────────────────
       - type: {safe_name}_data_table
-        id: all_data
-        title: "All Data"
+        id: full_data
+        title: "Complete Dataset"
         columns:
           - name
           - score
           - category
         sortable: true
         paginated: true
-        page_size: 10
+        page_size: 25
 
-      # ── RECOMMENDATIONS ───────────────────────────────────────────────────────
+      # ── DATA INSIGHTS ────────────────────────────────────────────────────────
+      - type: {safe_name}_llm
+        id: data_insights
+        title: "Data Analysis"
+        prompt: "Analyze this dataset with {{{{data_points | length}}}} records. The scores range from {{{{stats.score.min}}}} to {{{{stats.score.max}}}} with an average of {{{{stats.score.mean | round(1)}}}}. Provide 3-5 specific observations about data quality, outliers, or patterns."
+
+  # ┌─────────────────────────────────────────────────────────────────────────────┐
+  # │ INSIGHTS - AI Recommendations                                                │
+  # └─────────────────────────────────────────────────────────────────────────────┘
+  - id: insights
+    title: "Insights"
+    layout: single-column
+    nav_order: 4
+    components:
+      # ── TOP PERFORMERS ───────────────────────────────────────────────────────
+      - type: {safe_name}_stat_card
+        label: "Highest Score"
+        value: "{{{{ stats.score.max }}}}"
+        variant: ok
+        
+      - type: {safe_name}_stat_card
+        label: "Lowest Score"
+        value: "{{{{ stats.score.min }}}}"
+        variant: warn
+
+      # ── RECOMMENDATIONS ──────────────────────────────────────────────────────
       - type: {safe_name}_llm
         id: recommendations
         title: "Recommendations"
-        prompt: "Based on this {name} data, provide 3-5 actionable recommendations."
+        prompt: "Based on this {name} data analysis, provide 5 actionable recommendations. The top score is {{{{stats.score.max}}}}, lowest is {{{{stats.score.min}}}}, and average is {{{{stats.score.mean | round(1)}}}}. Format as a numbered list with specific, actionable items."
+
+      # ── NEXT STEPS ───────────────────────────────────────────────────────────
+      - type: {safe_name}_llm
+        id: next_steps
+        title: "Suggested Next Steps"
+        prompt: "Given the {name} analysis, suggest 3 immediate next steps the user should take. Be specific and prioritize by impact."
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # COMPONENT REFERENCE (Property Controls)
@@ -220,6 +262,10 @@ pages:
 #   label:   Card header text
 #   value:   Jinja2 template {{{{ stats.score.mean }}}}
 #   variant: default | ok | warn | danger | info
+#
+# {safe_name}_stats_grid:
+#   id:      Unique ID
+#   title:   Section title (optional)
 #
 # {safe_name}_chart:
 #   id:       Unique chart ID (required)
@@ -241,10 +287,6 @@ pages:
 #   id:     Unique ID (required)
 #   title:  Section title
 #   prompt: Your prompt with {{{{field}}}} references
-#
-# {safe_name}_text:
-#   content:  Text or Jinja2 template
-#   markdown: true | false
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 '''

@@ -1,0 +1,82 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# DATA SCHEMA - Define your CSV/data structure
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# This file defines the columns in your data files.
+# The parser will automatically read any columns you define here.
+#
+# QUICK START:
+#   1. Edit the fields below to match your CSV columns
+#   2. Put your CSV files in the sample_data/ directory
+#   3. Run: bobreview --plugin {{safe_name}} --dir ./sample_data
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# FIELDS
+# ─────────────────────────────────────────────────────────────────────────────────
+# Define each column in your CSV file
+#
+# Supported types:
+#   string   - Text values (default)
+#   number   - Numeric values (integers or decimals)
+#   date     - Date values (use 'format' to specify pattern)
+#   category - Text that represents a category (useful for grouping)
+#
+# Options:
+#   required: true/false - Is this column required? (default: false)
+#   default: value       - Default value if column is missing
+#   format: pattern      - For dates, e.g., "%Y-%m-%d"
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+
+fields:
+  - name: name
+    type: string
+    required: true
+    description: "Item name or identifier"
+
+  - name: score
+    type: number
+    required: true
+    description: "Numeric value to analyze"
+
+  - name: category
+    type: category
+    required: false
+    default: "General"
+    description: "Category for grouping"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXAMPLES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Example 1: Sales data
+# ─────────────────────
+# fields:
+#   - name: product
+#     type: string
+#     required: true
+#   - name: revenue
+#     type: number
+#     required: true
+#   - name: region
+#     type: category
+#   - name: sale_date
+#     type: date
+#     format: "%Y-%m-%d"
+#
+# Example 2: Survey results
+# ─────────────────────────
+# fields:
+#   - name: respondent_id
+#     type: string
+#     required: true
+#   - name: satisfaction
+#     type: number
+#   - name: department
+#     type: category
+#   - name: comments
+#     type: string
+#
+# ═══════════════════════════════════════════════════════════════════════════════
