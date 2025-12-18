@@ -1,20 +1,65 @@
 """
 Shared pytest fixtures and configuration for BobReview tests.
+
+NOTE: Themes are now plugin-owned (v1.0.8 Plugin-First Architecture).
+This conftest provides minimal stubs for legacy tests.
 """
 
 import pytest
 from pathlib import Path
+from dataclasses import dataclass
 
-from bobreview.core.themes import (
-    ReportTheme,
-    DARK_THEME,
-    LIGHT_THEME,
-    OCEAN_THEME,
-    PURPLE_THEME,
-    create_theme,
-)
-from bobreview.core.theme_system import ThemeSystem, get_theme_system
-from bobreview.engine.schema import ThemeConfig
+
+# =============================================================================
+# THEME STUBS (themes are now plugin-owned, not in core)
+# =============================================================================
+
+@dataclass
+class ReportTheme:
+    """Minimal stub for ReportTheme - full implementation is in plugins."""
+    id: str
+    name: str
+    accent: str = '#22d3ee'
+    bg: str = '#0a0f1a'
+    extends: str = ''
+    overrides: dict = None
+    
+    def __post_init__(self):
+        if self.overrides is None:
+            self.overrides = {}
+
+
+# Stub themes for legacy tests
+DARK_THEME = ReportTheme(id='dark', name='Dark')
+LIGHT_THEME = ReportTheme(id='light', name='Light', bg='#ffffff', accent='#0284c7')
+OCEAN_THEME = ReportTheme(id='ocean', name='Ocean', accent='#0ea5e9')
+PURPLE_THEME = ReportTheme(id='purple', name='Purple', accent='#a855f7')
+
+
+def create_theme(**kwargs) -> ReportTheme:
+    """Stub for create_theme - returns a ReportTheme with given kwargs."""
+    return ReportTheme(**kwargs)
+
+
+class ThemeSystem:
+    """Stub ThemeSystem - themes are now plugin-owned."""
+    _instance = None
+    
+    def get_theme(self, theme_id: str) -> ReportTheme:
+        return DARK_THEME
+
+
+def get_theme_system() -> ThemeSystem:
+    """Stub for get_theme_system."""
+    if ThemeSystem._instance is None:
+        ThemeSystem._instance = ThemeSystem()
+    return ThemeSystem._instance
+
+
+@dataclass 
+class ThemeConfig:
+    """Stub for ThemeConfig."""
+    preset: str = 'dark'
 
 
 # =============================================================================

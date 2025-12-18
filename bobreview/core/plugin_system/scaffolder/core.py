@@ -146,40 +146,13 @@ __all__ = ['{class_name}CsvParser']
         json.dumps(report_system, indent=4), encoding='utf-8'
     )
     
-    # Create templates directory
-    templates_dir = plugin_dir / "templates" / safe_name / "pages"
-    templates_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Read and interpolate template files
-    base_template = _read_template("pages/base.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "base.html.j2").write_text(base_template, encoding='utf-8')
-    
-    home_template = _read_template("pages/overview.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "overview.html.j2").write_text(home_template, encoding='utf-8')
-    
-    # Create details page for multi-page example
-    details_template = _read_template("pages/details.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "details.html.j2").write_text(details_template, encoding='utf-8')
-    
-    # Create summary page (for custom page registration demo)
-    if template == 'full':
-        summary_template = _generate_summary_template(name, safe_name)
-        (templates_dir / "summary.html.j2").write_text(summary_template, encoding='utf-8')
-    
-    # Create components directory with macros
-    components_dir = plugin_dir / "templates" / "components"
-    components_dir.mkdir(parents=True, exist_ok=True)
-    
-    macros_template = _read_template("components/macros.html.j2", name=name, safe_name=safe_name)
-    (components_dir / "macros.html.j2").write_text(macros_template, encoding='utf-8')
-    
-    # Create static CSS directory
+    # Create static CSS directory for plugin styles
     static_dir = plugin_dir / "templates" / safe_name / "static"
     static_dir.mkdir(parents=True, exist_ok=True)
     
-    # Note: theme.css is NOT generated here - it's generated dynamically at runtime
-    # based on the theme specified in the report system JSON or CLI --theme flag.
-    # This ensures theme changes are always reflected without regenerating plugin files.
+    # NOTE: Reports are built entirely from YAML config (report_config.yaml
+    # + component_templates.yaml). Theme CSS is generated dynamically at runtime.
+    
     
     # Generate plugin CSS (layout and components)
     plugin_css = _read_template("static/plugin.css", name=name, safe_name=safe_name)
@@ -244,52 +217,3 @@ def _read_template(relative_path: str, **kwargs) -> str:
         content = content.replace("{{" + key + "}}", value)
     
     return content
-
-
-def _generate_summary_template(name: str, safe_name: str) -> str:
-    """Generate summary.html.j2 template for custom page demo."""
-    return f'''{{% extends "{safe_name}/pages/base.html.j2" %}}
-
-{{% block title %}}{name} - Summary{{% endblock %}}
-
-{{% block content %}}
-<div class="summary-page">
-    <h1>Summary</h1>
-    <p class="page-intro">
-        This page demonstrates how users can compose reports using plugin components.
-        Pages are defined in <code>report_config.yaml</code>.
-    </p>
-    
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-card__title">Total Items</div>
-            <div class="stat-card__value">{{{{ data_points | length }}}}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card__title">Average Score</div>
-            <div class="stat-card__value">{{{{ "%.1f" | format(stats.score.mean | default(0)) }}}}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card__title">Top Score</div>
-            <div class="stat-card__value">{{{{ stats.score.max | default(0) }}}}</div>
-        </div>
-    </div>
-    
-    <div class="info-box">
-        <h3>Define Pages in YAML</h3>
-        <p>Users compose reports in <code>report_config.yaml</code>:</p>
-        <pre><code>pages:
-  - id: summary
-    title: "Summary"
-    components:
-      - type: widget
-        widget: {safe_name}_stat_card
-      - type: chart
-        chart: bar
-        x: name
-        y: score</code></pre>
-    </div>
-</div>
-{{% endblock %}}
-'''
-
