@@ -109,6 +109,30 @@ fields:
     default: "True Neutral"
     description: "Moral alignment (Lawful Good, Chaotic Evil, etc.)"
 
+  - name: race
+    type: category
+    required: false
+    default: "Human"
+    description: "Character race (Human, Elf, Dwarf, Halfling, etc.)"
+
+  - name: proficiencies
+    type: string
+    required: false
+    default: ""
+    description: "Skill proficiencies (Athletics, Perception, Stealth, etc.)"
+
+  - name: spells
+    type: string
+    required: false
+    default: ""
+    description: "Known spells for casters (Fireball, Cure Wounds, etc.)"
+
+  - name: languages
+    type: string
+    required: false
+    default: "Common"
+    description: "Languages spoken (Common, Elvish, Dwarvish, etc.)"
+
   # ─────────────────────────────────────────────────────────────────────────────
   # STORY & FEATURING
   # ─────────────────────────────────────────────────────────────────────────────

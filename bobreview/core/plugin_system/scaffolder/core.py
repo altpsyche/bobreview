@@ -172,28 +172,29 @@ __all__ = ['{class_name}CsvParser']
     sample_dir.mkdir(exist_ok=True)
     
     # ⚔️ D&D Character Roster - Adventurer's Guild Records ⚔️
-    # Extended stats: name, class, level, hp, str, dex, con, int, wis, cha, background, equipment, alignment, story, featured
-    sample_csv = """name,class,level,hp,str,dex,con,int,wis,cha,background,equipment,alignment,story,featured
-Thorin Ironforge,Fighter,12,98,18,12,16,10,13,14,Soldier,Warhammer +2 & Shield of Faith,Lawful Good,A veteran of the Goblin Wars seeking to reclaim his clan's lost fortress.,true
-Lyralei Moonwhisper,Ranger,10,72,14,18,14,12,16,10,Outlander,Longbow of Seeking & Cloak of Elvenkind,Neutral Good,Last survivor of a village destroyed by undead. Hunts the necromancer responsible.,true
-Grimtooth the Wise,Barbarian,14,145,20,14,18,8,12,10,Tribal Nomad,Greataxe of Fury & Belt of Giant Strength,Chaotic Neutral,Despite his name he solves most problems by hitting them. Hard.,false
-Elara Brightshield,Paladin,11,95,16,10,14,12,14,16,Noble,Holy Avenger & Plate of the Dawn,Lawful Good,Sworn to protect the innocent after witnessing a demon incursion as a child.,true
-Zephyr Shadowstep,Rogue,9,52,10,20,12,16,14,14,Criminal,Daggers of Venom & Boots of Elvenkind,Chaotic Good,Reformed thief who now steals only from the corrupt and evil.,false
-Morrigan Darkhollow,Warlock,8,61,10,14,14,16,12,18,Sage,Staff of the Pact & Tome of Shadows,Neutral Evil,Made a pact with an elder entity. The price is yet to be revealed.,false
-Aldric Stormcaller,Wizard,13,48,8,14,12,20,16,10,Scholar,Staff of Power & Robes of the Archmagi,True Neutral,Obsessed with understanding the nature of wild magic surges.,false
-Kira Flameheart,Sorcerer,10,68,12,14,14,12,10,18,Folk Hero,Ring of Fire Resistance & Wand of Fireballs,Chaotic Good,Her draconic bloodline awakened during a village fire she miraculously survived.,false
-Brother Marcus,Cleric,11,78,14,10,16,12,18,14,Acolyte,Mace of Disruption & Shield of Faith,Lawful Good,Healer and counselor who joined adventuring to spread his deity's light.,false
-Fennwick Tinkertop,Artificer,7,45,10,16,12,18,14,12,Guild Artisan,Mechanical Companion & Bag of Holding,Neutral Good,Builds wonderful contraptions. They explode only 40% of the time now.,false
-Ravenna Nightshade,Bard,9,55,10,16,12,14,12,18,Entertainer,Lute of Charming & Rapier of Dancing,Chaotic Neutral,Collects stories of legendary heroes. Plans to become one herself.,false
-Grok Skullcrusher,Barbarian,15,162,20,12,20,6,10,8,Outlander,Vorpal Greataxe & Cloak of Protection,Chaotic Neutral,The party's problem solver. Every problem looks like a skull to crush.,false
-Seraphina Dawnweaver,Cleric,12,82,12,10,14,14,18,16,Acolyte,Staff of Healing & Armor of Light,Lawful Good,Chosen by her goddess at birth. Marked with radiant sigils.,false
-Vex the Silent,Monk,10,64,12,18,14,12,16,10,Hermit,Bracers of Defense & Staff of Striking,True Neutral,Took a vow of silence. Communicates through gestures and written notes.,false
-Bramblewood,Druid,11,88,14,12,16,13,18,10,Outlander,Staff of the Woodlands & Ring of Animal Friendship,Neutral Good,A firbolg who tends to a sacred grove threatened by expanding civilization.,false
-Captain Flint,Fighter,8,76,16,14,16,12,10,14,Sailor,Cutlass +1 & Pistol of Warning,Neutral Evil,Former pirate captain seeking a legendary treasure map.,false
-Whisper,Rogue,6,38,10,18,10,14,14,12,Urchin,Cloak of Shadows & Dagger of Returning,Chaotic Good,A young kenku raised by thieves learning the difference between survival and greed.,false
-Azura Frostborn,Sorcerer,9,54,10,14,12,14,12,18,Noble,Staff of Frost & Ring of Warmth,Chaotic Neutral,Her ice magic manifested on her wedding day. The groom is still frozen.,false
+    # Extended stats with race, proficiencies, spells, languages for full D&D experience
+    sample_csv = """name,class,level,hp,str,dex,con,int,wis,cha,race,background,equipment,alignment,proficiencies,spells,languages,story,featured
+Thorin Ironforge,Fighter,12,98,18,12,16,10,13,14,Dwarf,Soldier,Warhammer +2 & Shield of Faith,Lawful Good,Athletics; Intimidation; History,None,Common; Dwarvish,A veteran of the Goblin Wars seeking to reclaim his clan's lost fortress.,true
+Lyralei Moonwhisper,Ranger,10,72,14,18,14,12,16,10,Elf,Outlander,Longbow of Seeking & Cloak of Elvenkind,Neutral Good,Survival; Perception; Stealth; Nature,Hunter's Mark; Pass Without Trace; Conjure Animals,Common; Elvish; Sylvan,Last survivor of a village destroyed by undead. Hunts the necromancer responsible.,true
+Grimtooth the Wise,Barbarian,14,145,20,14,18,8,12,10,Half-Orc,Tribal Nomad,Greataxe of Fury & Belt of Giant Strength,Chaotic Neutral,Athletics; Survival; Intimidation,None,Common; Orc,Despite his name he solves most problems by hitting them. Hard.,false
+Elara Brightshield,Paladin,11,95,16,10,14,12,14,16,Human,Noble,Holy Avenger & Plate of the Dawn,Lawful Good,Persuasion; Religion; Medicine,Divine Smite; Lay on Hands; Shield of Faith,Common; Celestial,Sworn to protect the innocent after witnessing a demon incursion as a child.,true
+Zephyr Shadowstep,Rogue,9,52,10,20,12,16,14,14,Halfling,Criminal,Daggers of Venom & Boots of Elvenkind,Chaotic Good,Stealth; Sleight of Hand; Deception; Thieves' Tools,None,Common; Thieves' Cant; Halfling,Reformed thief who now steals only from the corrupt and evil.,false
+Morrigan Darkhollow,Warlock,8,61,10,14,14,16,12,18,Tiefling,Sage,Staff of the Pact & Tome of Shadows,Neutral Evil,Arcana; Deception; Investigation,Eldritch Blast; Hex; Darkness; Hunger of Hadar,Common; Infernal; Deep Speech,Made a pact with an elder entity. The price is yet to be revealed.,false
+Aldric Stormcaller,Wizard,13,48,8,14,12,20,16,10,Human,Scholar,Staff of Power & Robes of the Archmagi,True Neutral,Arcana; History; Investigation,Fireball; Lightning Bolt; Counterspell; Teleport,Common; Draconic; Primordial,Obsessed with understanding the nature of wild magic surges.,false
+Kira Flameheart,Sorcerer,10,68,12,14,14,12,10,18,Human,Folk Hero,Ring of Fire Resistance & Wand of Fireballs,Chaotic Good,Persuasion; Intimidation,Fireball; Scorching Ray; Fly; Haste,Common; Draconic,Her draconic bloodline awakened during a village fire she miraculously survived.,false
+Brother Marcus,Cleric,11,78,14,10,16,12,18,14,Human,Acolyte,Mace of Disruption & Shield of Faith,Lawful Good,Medicine; Religion; Insight,Cure Wounds; Spirit Guardians; Revivify; Flame Strike,Common; Celestial,Healer and counselor who joined adventuring to spread his deity's light.,false
+Fennwick Tinkertop,Artificer,7,45,10,16,12,18,14,12,Gnome,Guild Artisan,Mechanical Companion & Bag of Holding,Neutral Good,Arcana; Investigation; Tinker's Tools,Mending; Faerie Fire; Heat Metal,Common; Gnomish,Builds wonderful contraptions. They explode only 40% of the time now.,false
+Ravenna Nightshade,Bard,9,55,10,16,12,14,12,18,Half-Elf,Entertainer,Lute of Charming & Rapier of Dancing,Chaotic Neutral,Performance; Persuasion; Deception,Vicious Mockery; Charm Person; Hypnotic Pattern,Common; Elvish; Undercommon,Collects stories of legendary heroes. Plans to become one herself.,false
+Grok Skullcrusher,Barbarian,15,162,20,12,20,6,10,8,Goliath,Outlander,Vorpal Greataxe & Cloak of Protection,Chaotic Neutral,Athletics; Survival,None,Common; Giant,The party's problem solver. Every problem looks like a skull to crush.,false
+Seraphina Dawnweaver,Cleric,12,82,12,10,14,14,18,16,Aasimar,Acolyte,Staff of Healing & Armor of Light,Lawful Good,Religion; Medicine; Persuasion,Healing Word; Mass Cure Wounds; Raise Dead; Holy Weapon,Common; Celestial,Chosen by her goddess at birth. Marked with radiant sigils.,false
+Vex the Silent,Monk,10,64,12,18,14,12,16,10,Human,Hermit,Bracers of Defense & Staff of Striking,True Neutral,Acrobatics; Stealth; Insight,None,Common; Elvish,Took a vow of silence. Communicates through gestures and written notes.,false
+Bramblewood,Druid,11,88,14,12,16,13,18,10,Firbolg,Outlander,Staff of the Woodlands & Ring of Animal Friendship,Neutral Good,Nature; Survival; Animal Handling,Speak with Animals; Call Lightning; Conjure Woodland Beings,Common; Druidic; Sylvan; Giant,A firbolg who tends to a sacred grove threatened by expanding civilization.,false
+Captain Flint,Fighter,8,76,16,14,16,12,10,14,Human,Sailor,Cutlass +1 & Pistol of Warning,Neutral Evil,Athletics; Perception; Navigator's Tools,None,Common; Aquan,Former pirate captain seeking a legendary treasure map.,false
+Whisper,Rogue,6,38,10,18,10,14,14,12,Kenku,Urchin,Cloak of Shadows & Dagger of Returning,Chaotic Good,Stealth; Sleight of Hand; Acrobatics,None,Common; Thieves' Cant,A young kenku raised by thieves learning the difference between survival and greed.,false
+Azura Frostborn,Sorcerer,9,54,10,14,12,14,12,18,Human,Noble,Staff of Frost & Ring of Warmth,Chaotic Neutral,Persuasion; Arcana,Ray of Frost; Ice Storm; Cone of Cold,Common; Primordial,Her ice magic manifested on her wedding day. The groom is still frozen.,false
 """
     (sample_dir / "sample.csv").write_text(sample_csv, encoding='utf-8')
+
     
     # Create user-facing report_config.yaml
     # This is the CMS-style config that end users edit to compose reports

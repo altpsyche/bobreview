@@ -71,6 +71,11 @@ data_source: "./sample_data/*.csv"
 output_dir: "./output"
 theme: "{color_theme}"
 
+# Adventure Theme - describe what kind of session you want!
+# The LLM will weave this theme into quests and story elements.
+adventure_theme: "A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons."
+
+
 pages:
   # ---------------------------------------------------------------------------
   # THE TAVERN - Where heroes gather
@@ -122,7 +127,7 @@ pages:
             variant: warn
             icon: "fa-chart-line"
 
-      # Guild Master speaks!
+      # Guild Master speaks! - references adventure theme
       - type: {safe_name}_llm
         id: guild_master
         title: "The Guild Master's Wisdom"
@@ -132,10 +137,12 @@ pages:
           
           PARTY: {{{{data_points | length}}}} adventurers | Avg Level {{{{stats.level.mean | round(1)}}}}
           
+          TONIGHT'S ADVENTURE THEME: {{{{ config.adventure_theme }}}}
+          
           Give a SHORT assessment in character:
-          1. Rate the party (Legendary/Seasoned/Promising/Green)
-          2. One strength you notice
-          3. One piece of gruff advice
+          1. Rate the party for THIS adventure (Ready/Promising/Needs Preparation)
+          2. One strength that will help with this theme
+          3. One piece of gruff advice specific to the challenge ahead
           
           Be gruff but wise. Keep it to 3-4 sentences total!
 
@@ -151,9 +158,26 @@ pages:
       # Hero banner - Combat readiness
       - type: {safe_name}_hero_banner
         title: "Combat Readiness"
-        subtitle: "Analyzing party strength and ability scores"
+        subtitle: "Analyzing party strength for the adventure ahead"
         icon: "fa-swords"
         variant: warn
+
+      # Tactical assessment FIRST - the story-relevant content
+      - type: {safe_name}_llm
+        id: tactician
+        title: "Tactical Assessment"
+        icon: "fa-chess"
+        prompt: |
+          Quick tactical party assessment for the adventure ahead:
+          
+          ADVENTURE THEME: {{{{ config.adventure_theme }}}}
+          
+          PARTY STATS:
+          - {{{{data_points | length}}}} members, HP {{{{stats.hp.min}}}}-{{{{stats.hp.max}}}}
+          - Avg STR: {{{{stats.str.mean | round(0)}}}}, DEX: {{{{stats.dex.mean | round(0)}}}}, CON: {{{{stats.con.mean | round(0)}}}}
+          
+          Rate combat readiness FOR THIS THEME and suggest appropriate challenge rating (CR).
+          2-3 sentences max!
 
       # Section divider
       - type: {safe_name}_divider
@@ -192,20 +216,11 @@ pages:
         current: "{{{{ stats.hp.mean | round(0) }}}}"
         variant: ok
 
-      # Section divider
+      # Section divider - charts are reference, not primary
       - type: {safe_name}_divider
-        label: "Combat Analysis"
+        label: "Reference Charts"
 
-      # HP chart
-      - type: {safe_name}_chart
-        id: hp_chart
-        chart: bar
-        title: "Hit Points Ranking"
-        x: name
-        y: hp
-        animated: true
-
-      # Class distribution chart
+      # Single chart - class distribution (useful for party balance)
       - type: {safe_name}_chart
         id: class_chart
         chart: doughnut
@@ -213,21 +228,8 @@ pages:
         x: class
         y: level
 
-      # Tactical assessment
-      - type: {safe_name}_llm
-        id: tactician
-        title: "Tactical Assessment"
-        icon: "fa-chess"
-        prompt: |
-          Quick tactical party assessment:
-          - {{{{data_points | length}}}} members, HP {{{{stats.hp.min}}}}-{{{{stats.hp.max}}}}
-          - Avg STR: {{{{stats.str.mean | round(0)}}}}, DEX: {{{{stats.dex.mean | round(0)}}}}, CON: {{{{stats.con.mean | round(0)}}}}
-          
-          Rate combat readiness and suggest a challenge rating (CR).
-          2-3 sentences max!
-
   # ---------------------------------------------------------------------------
-  # QUEST BOARD
+  # QUEST BOARD - The heart of tonight's adventure
   # ---------------------------------------------------------------------------
   - id: quests
     title: "Quest Board"
@@ -238,14 +240,42 @@ pages:
       # Hero banner
       - type: {safe_name}_hero_banner
         title: "Quest Board"
-        subtitle: "Available contracts and bounties for adventurers"
+        subtitle: "Choose your adventure wisely, heroes"
         icon: "fa-scroll"
+        variant: info
 
-      # Section divider
+      # Quest hooks FIRST - this is the main content!
+      - type: {safe_name}_llm
+        id: quest_hooks
+        title: "Available Quests"
+        icon: "fa-scroll"
+        prompt: |
+          Generate 3 quest hooks for a level {{{{stats.level.mean | round(0)}}}} party.
+          
+          ADVENTURE THEME: {{{{ config.adventure_theme }}}}
+          
+          PARTY MEMBERS:
+          {{% for hero in data_points[:5] %}}
+          - {{{{hero.name}}}} ({{{{hero.class}}}}){{{{': ' + hero.story[:80] + '...' if hero.story else ''}}}}
+          {{% endfor %}}
+          
+          Create quests that FIT THE THEME and tie into character backstories!
+          
+          Format:
+          **Quest 1: [NAME]** (Easy)
+          [1-2 sentence hook connected to the theme]
+          
+          **Quest 2: [NAME]** (Medium)
+          [1-2 sentence hook with personal stakes related to the theme]
+          
+          **Quest 3: [NAME]** (Hard/Epic)
+          [1-2 sentence hook - the climactic adventure matching the theme]
+
+      # Section divider - supporting info below
       - type: {safe_name}_divider
         label: "Party Composition"
 
-      # Stats row
+      # Stats row - quick reference
       - type: {safe_name}_stat_row
         items:
           - label: "Backgrounds"
@@ -256,43 +286,18 @@ pages:
             value: "{{{{ data_points | map(attribute='class') | unique | list | length }}}}"
             variant: ok
             icon: "fa-hat-wizard"
+          - label: "Alignments"
+            value: "{{{{ data_points | map(attribute='alignment') | unique | list | length }}}}"
+            variant: warn
+            icon: "fa-balance-scale"
 
-      # Charts in a row
-      - type: {safe_name}_chart
-        id: background_chart
-        chart: pie
-        title: "Backgrounds in Party"
-        x: background
-        y: level
-
+      # Single small chart - alignment is relevant for moral dilemmas
       - type: {safe_name}_chart
         id: align_chart
         chart: doughnut
         title: "Moral Alignment"
         x: alignment
         y: level
-
-      # Section divider
-      - type: {safe_name}_divider
-        label: "Available Quests"
-
-      # Quest hooks
-      - type: {safe_name}_llm
-        id: quest_hooks
-        title: "Available Quests"
-        icon: "fa-scroll"
-        prompt: |
-          Generate 3 quest hooks for a level {{{{stats.level.mean | round(0)}}}} party:
-          
-          Format:
-          **Quest 1: [NAME]** (Easy)
-          [1-2 sentence hook]
-          
-          **Quest 2: [NAME]** (Medium)
-          [1-2 sentence hook]
-          
-          **Quest 3: [NAME]** (Hard/Funny)
-          [1-2 sentence hook]
 
   # ---------------------------------------------------------------------------
   # STORY FORGE - LLM-enhanced session generator
@@ -324,26 +329,33 @@ pages:
       - type: {safe_name}_divider
         label: "Session Generator"
 
-      # LLM story enhancement
+      # LLM story enhancement - references quest_hooks output and theme
       - type: {safe_name}_llm
         id: session_generator
         title: "Tonight's Adventure"
         icon: "fa-dragon"
+        depends_on: [quest_hooks]  # Ensures quests are generated first
         prompt: |
-          You are a master Dungeon Master. Using the party's backstories, create a ONE-SHOT adventure outline.
+          You are a master Dungeon Master. Create a ONE-SHOT adventure outline.
+          
+          ADVENTURE THEME: {{{{ config.adventure_theme }}}}
           
           FEATURED HEROES:
           {{% for hero in data_points if hero.featured %}}
           - {{{{hero.name}}}} ({{{{hero.class}}}}): {{{{hero.story}}}}
           {{% endfor %}}
           
-          Create a compelling 2-3 paragraph adventure hook that:
-          1. Ties into at least 2 character backstories
-          2. Provides a clear objective
-          3. Hints at complications
-          4. Includes one moment where a specific character can shine
+          AVAILABLE QUESTS FROM THE GUILD BOARD:
+          {{{{ llm_outputs.quest_hooks }}}}
           
-          Make it dramatic and engaging for a tabletop session!
+          Create a compelling 2-3 paragraph adventure that:
+          1. Directly connects to the ADVENTURE THEME above
+          2. Uses one of the quest hooks as a starting point
+          3. Weaves in at least 2 character backstories
+          4. Includes a dramatic complication
+          5. Features a moment where a specific character can shine
+          
+          Make it feel like a cohesive story that fits the theme!
 
   # ---------------------------------------------------------------------------
   # GUILD REGISTRY - Full roster with all stats
@@ -411,10 +423,187 @@ pages:
         sortable: true
         paginated: false
 
+  # ---------------------------------------------------------------------------
+  # NPCs - Generated characters for the adventure
+  # ---------------------------------------------------------------------------
+  - id: npcs
+    title: "NPCs"
+    icon: "fa-users-between-lines"
+    layout: single-column
+    nav_order: 6
+    components:
+      # Hero banner
+      - type: {safe_name}_hero_banner
+        title: "Cast of Characters"
+        subtitle: "NPCs generated for tonight's adventure"
+        icon: "fa-masks-theater"
+        variant: info
+
+      # NPC Generator LLM
+      - type: {safe_name}_llm
+        id: npc_generator
+        title: "Key NPCs"
+        icon: "fa-user-secret"
+        prompt: |
+          Generate 4 NPCs for tonight's adventure.
+          
+          ADVENTURE THEME: {{{{ config.adventure_theme }}}}
+          
+          PARTY LEVEL: {{{{stats.level.mean | round(0)}}}}
+          
+          Create NPCs that fit the theme. For each NPC:
+          **[NAME]** - [ROLE] ([Friendly/Neutral/Hostile])
+          *Appearance:* [1 sentence]
+          *Personality:* [1-2 traits]
+          *Secret:* [What they're hiding]
+          *Hook:* [How they connect to the adventure]
+          
+          Include: 1 quest giver, 1 potential ally, 1 suspicious character, 1 villain or obstacle.
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Tavern Rumors"
+
+      # Tavern Rumors LLM
+      - type: {safe_name}_llm
+        id: tavern_rumors
+        title: "Whispers in the Tavern"
+        icon: "fa-comments"
+        prompt: |
+          Generate 5 tavern rumors that players might hear.
+          
+          ADVENTURE THEME: {{{{ config.adventure_theme }}}}
+          
+          Create rumors that build atmosphere and provide hooks:
+          - 2 rumors that are TRUE and directly relate to the adventure
+          - 2 rumors that are FALSE or misleading red herrings
+          - 1 rumor that's PARTIALLY TRUE with a twist
+          
+          Format each as:
+          **"[Rumor text]"** - [TRUE/FALSE/PARTIAL]
+          *Source:* [Who's spreading this]
+
+  # ---------------------------------------------------------------------------
+  # ENCOUNTERS - Combat and challenges
+  # ---------------------------------------------------------------------------
+  - id: encounters
+    title: "Encounters"
+    icon: "fa-skull-crossbones"
+    layout: single-column
+    nav_order: 7
+    components:
+      # Hero banner
+      - type: {safe_name}_hero_banner
+        title: "Encounters"
+        subtitle: "Combat and challenges for the session"
+        icon: "fa-dragon"
+        variant: danger
+
+      # Encounter Builder LLM
+      - type: {safe_name}_llm
+        id: encounter_builder
+        title: "Prepared Encounters"
+        icon: "fa-swords"
+        depends_on: [tactician, quest_hooks]
+        prompt: |
+          Generate 3 combat encounters for tonight's session.
+          
+          ADVENTURE THEME: {{{{ config.adventure_theme }}}}
+          PARTY: {{{{data_points | length}}}} characters, Avg Level {{{{stats.level.mean | round(0)}}}}
+          
+          TACTICAL ASSESSMENT:
+          {{{{ llm_outputs.tactician }}}}
+          
+          AVAILABLE QUESTS:
+          {{{{ llm_outputs.quest_hooks }}}}
+          
+          Create encounters that fit the quests:
+          
+          **Encounter 1: [Name]** (Easy, CR {{{{stats.level.mean | round(0) - 2}}}})
+          - Enemies: [What they face]
+          - Terrain: [Environment]
+          - Objective: [Beyond just combat]
+          
+          **Encounter 2: [Name]** (Medium, CR {{{{stats.level.mean | round(0)}}}})
+          - Enemies: [What they face]
+          - Terrain: [Environmental hazards]
+          - Twist: [Complication mid-fight]
+          
+          **Encounter 3: [Name]** (Hard/Boss, CR {{{{stats.level.mean | round(0) + 2}}}})
+          - Enemies: [Boss + minions]
+          - Lair Actions: [Special effects]
+          - Victory Condition: [How to win]
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Treasure & Rewards"
+
+      # Loot Generator LLM
+      - type: {safe_name}_llm
+        id: loot_generator
+        title: "Treasure Hoard"
+        icon: "fa-gem"
+        depends_on: [encounter_builder]
+        prompt: |
+          Generate loot appropriate for the encounters.
+          
+          PARTY LEVEL: {{{{stats.level.mean | round(0)}}}}
+          
+          ENCOUNTERS TO REWARD:
+          {{{{ llm_outputs.encounter_builder }}}}
+          
+          Create treasure that feels earned:
+          
+          **Easy Encounter Loot:**
+          - Gold: [Amount]gp
+          - Items: [1-2 useful items]
+          
+          **Medium Encounter Loot:**
+          - Gold: [Amount]gp
+          - Magic Item: [Uncommon item fitting the theme]
+          
+          **Boss Encounter Loot:**
+          - Gold: [Amount]gp
+          - Magic Item: [Rare item, named with backstory]
+          - Story Item: [Plot-relevant object]
+
+  # ---------------------------------------------------------------------------
+  # SESSION PREP - DM Reference Materials
+  # ---------------------------------------------------------------------------
+  - id: session_prep
+    title: "Session Prep"
+    icon: "fa-list-check"
+    layout: single-column
+    nav_order: 8
+    components:
+      # Hero banner
+      - type: {safe_name}_hero_banner
+        title: "Session Prep"
+        subtitle: "Quick reference materials for the DM"
+        icon: "fa-clipboard-list"
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Initiative Tracker"
+
+      # Initiative tracker
+      - type: {safe_name}_initiative_tracker
+        title: "Combat Initiative"
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Character Quick Reference"
+
+      # Quick reference cards
+      - type: {safe_name}_quick_cards
+        title: "Party Reference Cards"
+        featured_only: false
+
 # -----------------------------------------------------------------------------
 # COMPONENT REFERENCE
 # -----------------------------------------------------------------------------
 #
+
 # {safe_name}_featured_section:
 #   title:        Section header
 #   max_featured: Max characters to show (1-4)
@@ -440,10 +629,53 @@ pages:
 #   y: Y-axis field (level, hp, str, dex, etc.)
 #
 # {safe_name}_llm:
-#   prompt: Multi-line D&D themed prompt
+#   id:         Unique ID - used to reference output in other prompts
+#   prompt:     Multi-line prompt template with Jinja2 support
+#   depends_on: [id1, id2] - ensures these LLM components run first
+#   
+#   Use {{ llm_outputs.other_id }} in prompts to reference other LLM outputs.
+#   Example:
+#     - type: {safe_name}_llm
+#       id: quests
+#       prompt: "Generate quests..."
+#     
+#     - type: {safe_name}_llm
+#       id: adventure
+#       depends_on: [quests]
+#       prompt: |
+#         Based on these quests:
+#         {{ llm_outputs.quests }}
+#         Create an adventure...
 #
 # {safe_name}_data_table:
 #   columns: List of columns to show
 #
+# {safe_name}_initiative_tracker:
+#   title: Section header for initiative display
+#   (Automatically sorts party by DEX for turn order)
+#
+# {safe_name}_quick_cards:
+#   title:         Section header
+#   featured_only: Only show featured characters (default: false)
+#   (Shows character reference cards with stats, spells, equipment)
+#
+# {safe_name}_quote_box:
+#   quote:   The quote text
+#   speaker: Who said it
+#   title:   Optional title above quote
+#   icon:    FontAwesome icon (default: fa-comment-dots)
+#   variant: default | villain (red styling)
+#
+# {safe_name}_encounter_card:
+#   name:        Enemy name
+#   cr:          Challenge Rating
+#   ac:          Armor Class
+#   hp:          Hit Points
+#   description: Enemy description
+#   abilities:   Special abilities
+#   tactics:     Combat tactics
+#   icon:        FontAwesome icon (default: fa-skull)
+#
 # -----------------------------------------------------------------------------
 '''
+

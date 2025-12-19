@@ -76,13 +76,61 @@ def calculate_stats(data_points: List[Dict]) -> Dict[str, Any]:
     return stats
 
 
+def _topological_sort_llm(components: list) -> list:
+    """
+    Sort LLM components by depends_on for correct execution order.
+    
+    Components with no dependencies run first, then components that
+    depend on them, etc. This ensures llm_outputs[dep_id] is available
+    when a component references it.
+    """
+    by_id = {c.get('id', f'anon_{i}'): c for i, c in enumerate(components)}
+    visited = set()
+    result = []
+    
+    def visit(comp_id):
+        if comp_id in visited:
+            return
+        visited.add(comp_id)
+        comp = by_id.get(comp_id)
+        if comp:
+            # Visit dependencies first
+            for dep in comp.get('depends_on', []):
+                if dep in by_id:
+                    visit(dep)
+            result.append(comp)
+    
+    for comp_id in by_id:
+        visit(comp_id)
+    
+    return result
+
+
 def generate_llm_content(
     config: Dict[str, Any],
     data_points: List[Dict],
     stats: Dict[str, Any],
     dry_run: bool = False
 ) -> Dict[str, str]:
-    """Generate LLM content for all prompts in YAML config."""
+    """
+    Generate LLM content for all prompts in YAML config.
+    
+    Supports LLM chaining via:
+    - depends_on: [id1, id2] - ensures specified components run first
+    - llm_outputs.id - reference previous LLM output in prompt templates
+    
+    Example YAML:
+        - type: plugin_llm
+          id: quest_hooks
+          prompt: "Generate quests..."
+        
+        - type: plugin_llm
+          id: session_generator
+          depends_on: [quest_hooks]
+          prompt: |
+            Create adventure based on:
+            {{ llm_outputs.quest_hooks }}
+    """
     from jinja2 import Environment
     
     # Create Jinja2 environment for rendering prompts
@@ -93,47 +141,66 @@ def generate_llm_content(
     env.globals['sum'] = sum
     env.globals['round'] = round
     
-    llm_content = {}
-    
+    # Collect all LLM components from all pages
+    llm_components = []
     for page in config.get('pages', []):
         for comp in page.get('components', []):
             comp_type = comp.get('type', '')
             if '_llm' in comp_type:
-                comp_id = comp.get('id', 'unknown')
-                prompt_template = comp.get('prompt', '')
-                
-                # Render prompt with Jinja2 to process variables and for-loops
-                try:
-                    tpl = env.from_string(prompt_template)
-                    rendered_prompt = tpl.render(
-                        data_points=data_points,
-                        stats=stats,
-                    )
-                except Exception as e:
-                    rendered_prompt = f"[Template Error: {e}]\\n{prompt_template}"
-                
-                if dry_run:
-                    # Show more of the rendered prompt in dry-run mode
-                    preview = rendered_prompt[:200].replace('\\n', ' ')
-                    llm_content[comp_id] = f'<div class="llm-dry-run"><em>[LLM Placeholder: {comp.get("title", comp_id)}]</em><br><small>Prompt: {preview}...</small></div>'
+                llm_components.append(comp)
+    
+    # Sort by dependencies (topological order)
+    ordered = _topological_sort_llm(llm_components)
+    
+    llm_content = {}      # HTML-sanitized for display
+    llm_outputs = {}      # Raw text for chaining to other prompts
+    
+    for comp in ordered:
+        comp_id = comp.get('id', 'unknown')
+        prompt_template = comp.get('prompt', '')
+        
+        # Render prompt with Jinja2 - includes llm_outputs for chaining
+        try:
+            tpl = env.from_string(prompt_template)
+            rendered_prompt = tpl.render(
+                data_points=data_points,
+                stats=stats,
+                llm_outputs=llm_outputs,  # Previous LLM outputs available here
+                config=config,  # Full config including adventure_theme
+            )
+        except Exception as e:
+            rendered_prompt = f"[Template Error: {e}]\\n{prompt_template}"
+        
+        if dry_run:
+            # Show rendered prompt preview in dry-run mode
+            preview = rendered_prompt[:300].replace('\\n', ' ')
+            deps = comp.get('depends_on', [])
+            deps_info = f' (depends on: {", ".join(deps)})' if deps else ''
+            llm_content[comp_id] = f'<div class="llm-dry-run"><em>[LLM Placeholder: {comp.get("title", comp_id)}]{deps_info}</em><br><small>Prompt: {preview}...</small></div>'
+            llm_outputs[comp_id] = f'[Placeholder output for {comp_id}]'
+        else:
+            try:
+                from bobreview.services.llm.client import call_llm
+                from bobreview.core.config import Config
+                from bobreview.core.cache import init_cache
+                from bobreview.core.html_utils import sanitize_llm_html
+                llm_config = Config()
+                init_cache(llm_config)
+                response = call_llm(rendered_prompt, config=llm_config)
+                # Store raw response for chaining
+                if response:
+                    llm_outputs[comp_id] = response
+                    llm_content[comp_id] = sanitize_llm_html(response)
                 else:
-                    try:
-                        from bobreview.services.llm.client import call_llm
-                        from bobreview.core.config import Config
-                        from bobreview.core.cache import init_cache
-                        from bobreview.core.html_utils import sanitize_llm_html
-                        llm_config = Config()
-                        init_cache(llm_config)
-                        response = call_llm(rendered_prompt, config=llm_config)
-                        # Convert markdown to HTML and sanitize
-                        if response:
-                            llm_content[comp_id] = sanitize_llm_html(response)
-                        else:
-                            llm_content[comp_id] = f'<em>No response for {comp_id}</em>'
-                    except Exception as e:
-                        llm_content[comp_id] = f'<div class="llm-error">LLM Error: {e}</div>'
+                    llm_outputs[comp_id] = ''
+                    llm_content[comp_id] = f'<em>No response for {comp_id}</em>'
+            except Exception as e:
+                llm_outputs[comp_id] = f'[Error: {e}]'
+                llm_content[comp_id] = f'<div class="llm-error">LLM Error: {e}</div>'
     
     return llm_content
+
+
 
 
 class TemplateLoader:
@@ -239,12 +306,21 @@ class ComponentRenderer:
             return self._render_ability_scores(comp)
         if '_story_section' in comp_type:
             return self._render_story_section(comp)
+        if '_initiative_tracker' in comp_type:
+            return self._render_initiative_tracker(comp)
+        if '_quick_cards' in comp_type:
+            return self._render_quick_cards(comp)
+        if '_quote_box' in comp_type:
+            return self._render_quote_box(comp)
+        if '_encounter_card' in comp_type:
+            return self._render_encounter_card(comp)
         
         # Check YAML templates
         if self.templates.has(comp_type):
             return self._render_yaml(comp_type, comp)
         
         return f'<!-- Unknown: {comp_type} -->'
+
     
     def _render_stat_row(self, comp: Dict) -> str:
         """Render a row of stat cards side-by-side."""
@@ -495,6 +571,141 @@ class ComponentRenderer:
         
         return f'<div class="story-section"><h3 class="story-title">{title}</h3>{stories_html}</div>'
     
+    def _render_initiative_tracker(self, comp: Dict) -> str:
+        """Render an initiative tracker for combat encounters."""
+        title = comp.get('title', 'Initiative Order')
+        
+        # Sort characters by DEX for default initiative order
+        sorted_chars = sorted(self.data_points, key=lambda x: x.get('dex', 10), reverse=True)
+        
+        rows_html = ''
+        for i, char in enumerate(sorted_chars[:10], 1):
+            name = char.get('name', 'Unknown')
+            char_class = char.get('class', '')
+            hp = char.get('hp', 0)
+            dex = char.get('dex', 10)
+            rows_html += (
+                f'<tr class="initiative-row">'
+                f'<td class="init-order">{i}</td>'
+                f'<td class="init-name">{name}</td>'
+                f'<td class="init-class">{char_class}</td>'
+                f'<td class="init-hp"><i class="fa-solid fa-heart"></i> {hp}</td>'
+                f'<td class="init-dex">DEX {dex}</td>'
+                f'<td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td>'
+                f'</tr>'
+            )
+        
+        return (
+            f'<div class="initiative-tracker">'
+            f'<h3 class="initiative-title"><i class="fa-solid fa-dice-d20"></i> {title}</h3>'
+            f'<table class="initiative-table">'
+            f'<thead><tr><th>#</th><th>Name</th><th>Class</th><th>HP</th><th>Init</th><th>Notes</th></tr></thead>'
+            f'<tbody>{rows_html}</tbody>'
+            f'</table>'
+            f'</div>'
+        )
+    
+    def _render_quick_cards(self, comp: Dict) -> str:
+        """Render quick reference cards for each character."""
+        title = comp.get('title', 'Quick Reference Cards')
+        featured_only = comp.get('featured_only', False)
+        
+        if featured_only:
+            characters = [d for d in self.data_points if d.get('featured') in (True, 'true', 'True', 1, '1', 'yes', 'Yes')]
+        else:
+            characters = self.data_points[:8]  # Limit to 8 for display
+        
+        cards_html = ''
+        for char in characters:
+            name = char.get('name', 'Unknown')
+            race = char.get('race', 'Unknown')
+            char_class = char.get('class', 'Adventurer')
+            level = char.get('level', 1)
+            hp = char.get('hp', 0)
+            equipment = char.get('equipment', '')
+            proficiencies = char.get('proficiencies', '')
+            spells = char.get('spells', '')
+            languages = char.get('languages', 'Common')
+            
+            # Build ability scores mini-display
+            abilities_html = ''
+            for stat in ['str', 'dex', 'con', 'int', 'wis', 'cha']:
+                val = char.get(stat, 10)
+                mod = (val - 10) // 2
+                mod_str = f'+{mod}' if mod >= 0 else str(mod)
+                abilities_html += f'<span class="qc-stat"><b>{stat.upper()}</b> {val} ({mod_str})</span>'
+            
+            spells_html = f'<div class="qc-spells"><i class="fa-solid fa-wand-sparkles"></i> {spells}</div>' if spells and spells != 'None' else ''
+            
+            cards_html += (
+                f'<div class="quick-card">'
+                f'<div class="qc-header">'
+                f'<span class="qc-name">{name}</span>'
+                f'<span class="qc-race-class">{race} {char_class} {level}</span>'
+                f'</div>'
+                f'<div class="qc-hp"><i class="fa-solid fa-heart"></i> {hp} HP</div>'
+                f'<div class="qc-abilities">{abilities_html}</div>'
+                f'<div class="qc-proficiencies"><i class="fa-solid fa-star"></i> {proficiencies}</div>'
+                f'{spells_html}'
+                f'<div class="qc-languages"><i class="fa-solid fa-language"></i> {languages}</div>'
+                f'<div class="qc-equipment"><i class="fa-solid fa-swords"></i> {equipment}</div>'
+                f'</div>'
+            )
+        
+        return f'<div class="quick-cards-section"><h3 class="qc-title">{title}</h3><div class="quick-cards-grid">{cards_html}</div></div>'
+    
+    def _render_quote_box(self, comp: Dict) -> str:
+        """Render a dramatic quote box for NPC dialogue."""
+        quote = comp.get('quote', 'Your fate is sealed, adventurers...')
+        speaker = comp.get('speaker', 'Mysterious Figure')
+        title = comp.get('title', '')
+        icon = comp.get('icon', 'fa-comment-dots')
+        variant = comp.get('variant', 'default')
+        
+        title_html = f'<div class="quote-title">{title}</div>' if title else ''
+        
+        return (
+            f'<div class="quote-box quote-{variant}">'
+            f'{title_html}'
+            f'<div class="quote-icon"><i class="fa-solid {icon}"></i></div>'
+            f'<blockquote class="quote-text">"{quote}"</blockquote>'
+            f'<cite class="quote-speaker">— {speaker}</cite>'
+            f'</div>'
+        )
+    
+    def _render_encounter_card(self, comp: Dict) -> str:
+        """Render an encounter card with enemy stat block style."""
+        title = comp.get('title', 'Encounter')
+        name = comp.get('name', 'Mysterious Enemy')
+        cr = comp.get('cr', '???')
+        hp = comp.get('hp', '???')
+        ac = comp.get('ac', '???')
+        description = comp.get('description', 'A dangerous foe awaits...')
+        abilities = comp.get('abilities', '')
+        tactics = comp.get('tactics', '')
+        icon = comp.get('icon', 'fa-skull')
+        
+        abilities_html = f'<div class="enc-abilities"><b>Abilities:</b> {abilities}</div>' if abilities else ''
+        tactics_html = f'<div class="enc-tactics"><b>Tactics:</b> {tactics}</div>' if tactics else ''
+        
+        return (
+            f'<div class="encounter-card">'
+            f'<div class="enc-header">'
+            f'<i class="fa-solid {icon} enc-icon"></i>'
+            f'<span class="enc-name">{name}</span>'
+            f'<span class="enc-cr">CR {cr}</span>'
+            f'</div>'
+            f'<div class="enc-stats">'
+            f'<span class="enc-stat"><i class="fa-solid fa-shield"></i> AC {ac}</span>'
+            f'<span class="enc-stat"><i class="fa-solid fa-heart"></i> HP {hp}</span>'
+            f'</div>'
+            f'<div class="enc-description">{description}</div>'
+            f'{abilities_html}'
+            f'{tactics_html}'
+            f'</div>'
+        )
+    
+
     def _render_yaml(self, comp_type: str, comp: Dict) -> str:
         """Render using YAML template."""
         template_def = self.templates.get(comp_type)
@@ -1671,6 +1882,339 @@ header p {{
 }}
 
 /* ---------------------------------------------------------------------------
+   INITIATIVE TRACKER - Combat Turn Order
+   --------------------------------------------------------------------------- */
+.initiative-tracker {{
+    margin: 1.5rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border-radius: 16px;
+    border: 2px solid var(--accent);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}}
+.initiative-title {{
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--accent-soft);
+}}
+.initiative-title i {{
+    font-size: 1.75rem;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent-soft);
+}}
+.initiative-table {{
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}}
+.initiative-table th {{
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: var(--bg);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}}
+.initiative-table th:first-child {{ border-radius: 8px 0 0 0; }}
+.initiative-table th:last-child {{ border-radius: 0 8px 0 0; }}
+.initiative-row {{
+    border-bottom: 1px solid var(--border-subtle);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}}
+.initiative-row:nth-child(odd) {{ background: rgba(0, 0, 0, 0.1); }}
+.initiative-row:hover {{ background: var(--accent-soft); transform: scale(1.01); }}
+.initiative-row td {{ padding: 1rem; vertical-align: middle; }}
+.init-order {{
+    font-weight: 800;
+    font-size: 1.5rem;
+    width: 60px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}}
+.init-name {{ font-weight: 700; font-size: 1.05rem; color: var(--text-main); }}
+.init-class {{
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}}
+.init-hp {{ color: var(--ok); font-weight: 600; }}
+.init-hp i {{ margin-right: 0.4rem; }}
+.init-dex {{
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--accent-soft);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}}
+.init-input {{
+    background: var(--bg);
+    border: 2px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    color: var(--text-main);
+    width: 100%;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}}
+.init-input:focus {{
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}}
+
+/* ---------------------------------------------------------------------------
+   QUICK REFERENCE CARDS - Character Cards
+   --------------------------------------------------------------------------- */
+.quick-cards-section {{
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, transparent 100%);
+    border-radius: 16px;
+}}
+.qc-title {{
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}}
+.quick-cards-grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+}}
+.quick-card {{
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    position: relative;
+}}
+.quick-card::before {{
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong), var(--accent));
+}}
+.quick-card:hover {{
+    transform: translateY(-6px) scale(1.02);
+    border-color: var(--accent);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), 0 0 30px var(--accent-soft);
+}}
+.qc-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid var(--accent);
+}}
+.qc-name {{
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--accent-strong);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}}
+.qc-race-class {{
+    font-size: 0.7rem;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+}}
+.qc-hp {{
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ok);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-shadow: 0 0 20px var(--ok);
+}}
+.qc-abilities {{
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin: 0 1.25rem 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+}}
+.qc-stat {{
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}}
+.qc-stat:hover {{ background: var(--accent-soft); transform: translateY(-2px); }}
+.qc-stat b {{
+    display: block;
+    font-size: 0.6rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}}
+.qc-proficiencies,
+.qc-languages,
+.qc-equipment,
+.qc-spells {{
+    font-size: 0.85rem;
+    color: var(--text-main);
+    margin: 0 1.25rem 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border-left: 3px solid var(--border-subtle);
+    transition: all 0.2s ease;
+}}
+.qc-proficiencies:hover,
+.qc-languages:hover,
+.qc-equipment:hover,
+.qc-spells:hover {{ border-left-color: var(--accent); background: rgba(0, 0, 0, 0.2); }}
+.qc-proficiencies i,
+.qc-languages i,
+.qc-equipment i,
+.qc-spells i {{
+    color: var(--accent);
+    margin-right: 0.75rem;
+}}
+
+/* ---------------------------------------------------------------------------
+   QUOTE BOX - NPC Dialogue
+   --------------------------------------------------------------------------- */
+.quote-box {{
+    margin: 1.5rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border-radius: 12px;
+    border: 2px solid var(--border-subtle);
+    position: relative;
+    text-align: center;
+}}
+.quote-box::before {{
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}}
+.quote-icon {{
+    font-size: 2.5rem;
+    color: var(--accent);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}}
+.quote-text {{
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--text-main);
+    margin: 0 0 1rem 0;
+    line-height: 1.6;
+}}
+.quote-speaker {{
+    display: block;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 600;
+}}
+.quote-villain {{ border-color: var(--danger); }}
+.quote-villain::before {{ background: linear-gradient(90deg, transparent, var(--danger), transparent); }}
+.quote-villain .quote-icon,
+.quote-villain .quote-speaker {{ color: var(--danger); }}
+
+/* ---------------------------------------------------------------------------
+   ENCOUNTER CARD - Enemy Stat Block
+   --------------------------------------------------------------------------- */
+.encounter-card {{
+    margin: 1rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, rgba(139, 69, 69, 0.1) 0%, var(--bg-soft) 100%);
+    border: 2px solid var(--danger);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}}
+.enc-header {{
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--danger);
+}}
+.enc-icon {{ font-size: 1.5rem; color: var(--danger); }}
+.enc-name {{ flex: 1; font-size: 1.25rem; font-weight: 700; color: var(--text-main); }}
+.enc-cr {{
+    background: var(--danger);
+    color: var(--bg);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}}
+.enc-stats {{
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}}
+.enc-stat {{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+}}
+.enc-stat i {{ color: var(--danger); }}
+.enc-description {{
+    color: var(--text-main);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}}
+.enc-abilities,
+.enc-tactics {{
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid var(--danger);
+}}
+.enc-abilities b,
+.enc-tactics b {{ color: var(--danger); }}
+
+/* ---------------------------------------------------------------------------
    RESPONSIVE - Tavern on Small Devices
    --------------------------------------------------------------------------- */
 @media (max-width: 768px) {{
@@ -1680,8 +2224,11 @@ header p {{
     .container {{ padding: 1rem; }}
     header h1 {{ font-size: 1.75rem; letter-spacing: 0.1em; }}
     .stat-value {{ font-size: 2rem; }}
+    .quick-cards-grid {{ grid-template-columns: 1fr; }}
+    .qc-abilities {{ grid-template-columns: repeat(3, 1fr); }}
 }}
     </style>
+
 
 </head>
 <body>

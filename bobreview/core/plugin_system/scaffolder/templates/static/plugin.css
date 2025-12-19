@@ -913,3 +913,476 @@ tr:hover {
     font-family: var(--font-mono, monospace);
     letter-spacing: 0.02em;
 }
+
+/* ===========================================
+   INITIATIVE TRACKER - Combat Turn Order
+   =========================================== */
+.initiative-tracker {
+    margin: 1.5rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border-radius: 16px;
+    border: 2px solid var(--accent);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.initiative-title {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--accent-soft);
+}
+
+.initiative-title i {
+    font-size: 1.75rem;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent-soft);
+}
+
+.initiative-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.initiative-table th {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: var(--bg);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+
+.initiative-table th:first-child {
+    border-radius: 8px 0 0 0;
+}
+
+.initiative-table th:last-child {
+    border-radius: 0 8px 0 0;
+}
+
+.initiative-row {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+}
+
+.initiative-row:nth-child(odd) {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.initiative-row:hover {
+    background: var(--accent-soft);
+    transform: scale(1.01);
+}
+
+.initiative-row:last-child {
+    border-bottom: none;
+}
+
+.initiative-row td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.init-order {
+    font-weight: 800;
+    font-size: 1.5rem;
+    width: 60px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.init-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-main);
+}
+
+.init-class {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.init-hp {
+    color: var(--ok);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.init-hp i {
+    margin-right: 0.4rem;
+}
+
+.init-dex {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--accent-soft);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.init-input {
+    background: var(--bg);
+    border: 2px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    color: var(--text-main);
+    width: 100%;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.init-input::placeholder {
+    color: var(--text-soft);
+    opacity: 0.6;
+}
+
+.init-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+
+/* ===========================================
+   QUICK REFERENCE CARDS - Character Cards
+   =========================================== */
+.quick-cards-section {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, transparent 100%);
+    border-radius: 16px;
+}
+
+.qc-title {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.quick-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+}
+
+.quick-card {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Accent border top */
+.quick-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong), var(--accent));
+}
+
+.quick-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: var(--accent);
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.35),
+        0 0 30px var(--accent-soft);
+}
+
+.qc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid var(--accent);
+}
+
+.qc-name {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--accent-strong);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.qc-race-class {
+    font-size: 0.7rem;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.qc-hp {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ok);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-shadow: 0 0 20px var(--ok);
+}
+
+.qc-hp i {
+    font-size: 1.25rem;
+}
+
+.qc-abilities {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin: 0 1.25rem 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+}
+
+.qc-stat {
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.qc-stat:hover {
+    background: var(--accent-soft);
+    transform: translateY(-2px);
+}
+
+.qc-stat b {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.qc-proficiencies,
+.qc-languages,
+.qc-equipment,
+.qc-spells {
+    font-size: 0.85rem;
+    color: var(--text-main);
+    margin: 0 1.25rem 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border-left: 3px solid var(--border-subtle);
+    transition: all 0.2s ease;
+}
+
+.qc-proficiencies:hover,
+.qc-languages:hover,
+.qc-equipment:hover,
+.qc-spells:hover {
+    border-left-color: var(--accent);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.qc-proficiencies i,
+.qc-languages i,
+.qc-equipment i,
+.qc-spells i {
+    color: var(--accent);
+    margin-right: 0.75rem;
+    width: 16px;
+    text-align: center;
+}
+
+.qc-spells {
+    border-left: 3px solid var(--accent);
+}
+
+/* ===========================================
+   QUOTE BOX - NPC Dialogue
+   =========================================== */
+.quote-box {
+    margin: 1.5rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border-radius: 12px;
+    border: 2px solid var(--border-subtle);
+    position: relative;
+    text-align: center;
+}
+
+.quote-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.quote-title {
+    color: var(--accent);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+}
+
+.quote-icon {
+    font-size: 2.5rem;
+    color: var(--accent);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+.quote-text {
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--text-main);
+    margin: 0 0 1rem 0;
+    line-height: 1.6;
+}
+
+.quote-speaker {
+    display: block;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.quote-villain {
+    border-color: var(--danger);
+}
+
+.quote-villain::before {
+    background: linear-gradient(90deg, transparent, var(--danger), transparent);
+}
+
+.quote-villain .quote-icon,
+.quote-villain .quote-speaker {
+    color: var(--danger);
+}
+
+/* ===========================================
+   ENCOUNTER CARD - Enemy Stat Block
+   =========================================== */
+.encounter-card {
+    margin: 1rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, rgba(139, 69, 69, 0.1) 0%, var(--bg-soft) 100%);
+    border: 2px solid var(--danger);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.enc-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--danger);
+}
+
+.enc-icon {
+    font-size: 1.5rem;
+    color: var(--danger);
+}
+
+.enc-name {
+    flex: 1;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.enc-cr {
+    background: var(--danger);
+    color: var(--bg);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.enc-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.enc-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.enc-stat i {
+    color: var(--danger);
+}
+
+.enc-description {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.enc-abilities,
+.enc-tactics {
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid var(--danger);
+}
+
+.enc-abilities b,
+.enc-tactics b {
+    color: var(--danger);
+}
