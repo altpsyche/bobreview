@@ -295,9 +295,10 @@ class TestGenerateUserReportConfig:
     def test_has_multiple_pages(self):
         """Generated config should define multiple pages."""
         content = generate_user_report_config("test-plugin", "test_plugin")
-        assert "id: overview" in content
-        assert "id: analytics" in content
-        assert "id: data" in content
+        assert "id: tavern" in content
+        assert "id: armoury" in content
+        assert "id: quests" in content
+        assert "id: registry" in content
 
     def test_has_component_reference(self):
         """Generated config should have component reference section."""

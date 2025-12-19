@@ -539,3 +539,377 @@ tr:hover {
 .mb-3 {
     margin-bottom: 1.5rem;
 }
+
+/* ===========================================
+   FEATURED SECTION - Premium Hero Spotlight Cards
+   =========================================== */
+.featured-section {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+}
+
+.featured-title {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-shadow: 0 2px 8px var(--accent-soft);
+}
+
+.featured-title::before,
+.featured-title::after {
+    content: '★';
+    font-size: 1rem;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent);
+}
+
+.featured-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.featured-card {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+        linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Glowing accent border on top */
+.featured-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong), var(--accent));
+    box-shadow: 0 0 20px var(--accent-soft);
+}
+
+/* Decorative corner badge */
+.featured-card::after {
+    content: '★';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 1.25rem;
+    color: var(--accent);
+    text-shadow: 0 0 15px var(--accent);
+    opacity: 0.6;
+    transition: all 0.3s ease;
+}
+
+.featured-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: var(--accent);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.4),
+        0 0 30px var(--accent-soft),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.featured-card:hover::after {
+    opacity: 1;
+    transform: rotate(15deg) scale(1.2);
+}
+
+.featured-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.featured-name {
+    color: var(--accent-strong);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.02em;
+}
+
+.featured-class {
+    color: var(--bg);
+    font-size: 0.75rem;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 8px var(--accent-soft);
+}
+
+.featured-meta {
+    display: flex;
+    gap: 1.25rem;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.featured-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.featured-meta i {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.featured-abilities {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.ability-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.ability-badge:hover {
+    background: var(--accent-soft);
+    transform: translateY(-2px);
+}
+
+.ability-name {
+    font-size: 0.6rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
+}
+
+.ability-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.featured-equipment {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+}
+
+.featured-equipment i {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.featured-story {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-style: italic;
+    line-height: 1.7;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.15) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    position: relative;
+}
+
+.featured-story::before {
+    content: '"';
+    position: absolute;
+    top: 0.25rem;
+    left: 0.5rem;
+    font-size: 2rem;
+    color: var(--accent);
+    opacity: 0.3;
+    font-style: normal;
+}
+
+.no-featured {
+    color: var(--text-soft);
+    font-style: italic;
+    padding: 1rem;
+    background: var(--bg-soft);
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* ===========================================
+   ABILITY SCORES - D&D Big Six Display
+   =========================================== */
+.ability-scores-section {
+    margin: 1.5rem 0;
+}
+
+.ability-title {
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.ability-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .ability-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.ability-card {
+    position: relative;
+    padding: 1rem 0.5rem;
+}
+
+.ability-card .stat-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.ability-card .stat-value i {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.stat-range {
+    color: var(--text-soft);
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+}
+
+/* ===========================================
+   STORY SECTION - Character Backstories
+   =========================================== */
+.story-section {
+    margin: 1.5rem 0;
+}
+
+.story-title {
+    color: var(--accent);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.story-title::before {
+    content: '\f02d';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 0.9rem;
+}
+
+.story-card {
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 1px solid var(--border-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+
+.story-card:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+}
+
+.story-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.story-name {
+    color: var(--accent-strong);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.story-class {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    background: var(--bg);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.story-text {
+    color: var(--text-main);
+    font-style: italic;
+    line-height: 1.7;
+    margin: 0;
+}
+
+.no-stories {
+    color: var(--text-soft);
+    font-style: italic;
+    padding: 1rem;
+    background: var(--bg-soft);
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* ===========================================
+   SPOTLIGHT ENHANCEMENTS
+   =========================================== */
+.spotlight-abilities {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.02em;
+}

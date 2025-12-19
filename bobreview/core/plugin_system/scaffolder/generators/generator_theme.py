@@ -2,6 +2,7 @@
 Generator for theme.py file.
 
 Creates premium, production-ready themes:
+- DUNGEON: D&D fantasy parchment with gold accents (default)
 - MIDNIGHT: Deep blue with electric cyan accents
 - AURORA: Purple/magenta with northern lights feel
 - SUNSET: Warm amber/orange gradients
@@ -13,7 +14,8 @@ def generate_theme_module(name: str, safe_name: str, class_name: str) -> str:
     """
     Generate theme.py with premium, production-ready themes.
     
-    Includes 4 stunning themes:
+    Includes 5 stunning themes:
+    - DUNGEON: D&D fantasy parchment with gold accents (default)
     - MIDNIGHT: Deep blue with electric cyan accents
     - AURORA: Purple/magenta with northern lights feel
     - SUNSET: Warm amber/orange gradients
@@ -22,12 +24,13 @@ def generate_theme_module(name: str, safe_name: str, class_name: str) -> str:
     return f'''"""
 Premium Themes for {name} Plugin.
 
-Four stunning themes with unique personalities:
+Five stunning themes with unique personalities:
 
-1. MIDNIGHT - Deep blue with electric cyan accents (default)
-2. AURORA - Purple/magenta with northern lights glow
-3. SUNSET - Warm amber and orange gradients
-4. FROST - Clean, icy light theme
+1. DUNGEON - D&D fantasy parchment with gold accents (default)
+2. MIDNIGHT - Deep blue with electric cyan accents
+3. AURORA - Purple/magenta with northern lights glow
+4. SUNSET - Warm amber and orange gradients
+5. FROST - Clean, icy light theme
 
 Themes are fully self-contained - no core imports needed.
 """
@@ -155,30 +158,30 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
 
 
 # =============================================================================
-# 🌙 MIDNIGHT THEME - Deep blue with electric cyan
+# MIDNIGHT THEME - Arcane Tower / Wizard's Study
 # =============================================================================
-# Perfect for: Technical reports, developer dashboards, code analysis
-# Font: JetBrains Mono + Inter - clean, technical, highly readable
+# Perfect for: Magic-themed reports, arcane studies, mystical dashboards
+# Font: Cinzel + Cormorant Garamond - elegant, mystical, scholarly
 
 {safe_name.upper()}_MIDNIGHT = ReportTheme(
     id='{safe_name}_midnight',
     name='{class_name} Midnight',
     
-    # Deep blue-black backgrounds
+    # Deep arcane blue-black backgrounds
     bg='#0a0f1a',
     bg_elevated='#111827',
     bg_soft='#1e293b',
     
-    # Electric cyan accents
+    # Electric cyan accents - arcane energy
     accent='#22d3ee',
     accent_soft=hex_to_rgba('#22d3ee', 0.15),
     accent_strong='#67e8f9',
     
-    # Cool gray text
+    # Cool silvery text
     text_main='#f1f5f9',
     text_soft='#94a3b8',
     
-    # Vibrant status colors
+    # Magical status colors
     ok='#4ade80',
     ok_soft=hex_to_rgba('#4ade80', 0.15),
     warn='#facc15',
@@ -186,49 +189,97 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     danger='#f87171',
     danger_soft=hex_to_rgba('#f87171', 0.15),
     
-    # Sharp edges for technical feel
+    # Sharp mystical edges
     border_subtle='#334155',
     shadow_soft='0 8px 32px rgba(0, 0, 0, 0.5)',
     shadow_strong='0 20px 60px rgba(0, 0, 0, 0.7)',
-    radius_sm='4px',
-    radius_md='8px',
-    radius_lg='12px',
-    radius_xl='16px',
+    radius_sm='2px',
+    radius_md='4px',
+    radius_lg='6px',
+    radius_xl='8px',
     
-    # JetBrains Mono + Inter - technical, clean
-    font_family='"Inter", "SF Pro Display", system-ui, sans-serif',
-    font_mono='"JetBrains Mono", "Fira Code", "SF Mono", monospace',
-    font_url='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+    # Cinzel + Cormorant - elegant fantasy serif
+    font_family='"Cinzel", "Cormorant Garamond", "Palatino Linotype", serif',
+    font_mono='"Courier New", "Lucida Console", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap',
     
     chart_grid_opacity=0.35,
 )
 
+# =============================================================================
+# DUNGEON THEME - D&D Fantasy Parchment Style
+# =============================================================================
+# Perfect for: D&D character sheets, fantasy games, medieval/tavern aesthetic
+# Font: MedievalSharp + Cinzel - authentic medieval fantasy feel
+
+{safe_name.upper()}_DUNGEON = ReportTheme(
+    id='{safe_name}_dungeon',
+    name='{class_name} Dungeon',
+    
+    # Parchment/leather backgrounds - warm aged paper feel
+    bg='#1a1410',           # Dark burnt umber
+    bg_elevated='#2a221a',  # Aged leather brown  
+    bg_soft='#3d3326',      # Warm parchment shadow
+    
+    # Gold and crimson accents - royal fantasy colors
+    accent='#d4a439',       # Antique gold
+    accent_soft=hex_to_rgba('#d4a439', 0.2),
+    accent_strong='#f5d67a',  # Bright gold highlight
+    
+    # Parchment text - aged paper colors
+    text_main='#f4e8c1',    # Cream parchment
+    text_soft='#c4a35a',    # Faded ink
+    
+    # D&D-inspired status colors
+    ok='#5cb85c',           # Potion green
+    ok_soft=hex_to_rgba('#5cb85c', 0.2),
+    warn='#f0ad4e',         # Warning amber
+    warn_soft=hex_to_rgba('#f0ad4e', 0.2),
+    danger='#c9302c',       # Blood red
+    danger_soft=hex_to_rgba('#c9302c', 0.2),
+    
+    # Ornate frame borders
+    border_subtle='#5c4d3d',  # Weathered wood
+    shadow_soft='0 8px 32px rgba(0, 0, 0, 0.6)',
+    shadow_strong='0 20px 60px rgba(0, 0, 0, 0.8)',
+    radius_sm='2px',        # Sharp medieval corners
+    radius_md='4px',
+    radius_lg='6px',
+    radius_xl='8px',
+    
+    # MedievalSharp for titles, Cinzel for body - authentic fantasy
+    font_family='"Cinzel", "MedievalSharp", "Palatino Linotype", serif',
+    font_mono='"Courier New", "Lucida Console", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=MedievalSharp&display=swap',
+    
+    chart_grid_opacity=0.25,
+)
 
 # =============================================================================
-# 🌌 AURORA THEME - Purple/magenta with northern lights glow
+# AURORA THEME - Fey Court / Enchanted Forest
 # =============================================================================
-# Perfect for: Creative projects, marketing reports, analytics dashboards
-# Font: Space Grotesk + IBM Plex Mono - modern, geometric, stylish
+# Perfect for: Fey-themed reports, enchanted realms, mystical creatures
+# Font: Cinzel + Spectral - ethereal, magical, otherworldly
 
 {safe_name.upper()}_AURORA = ReportTheme(
     id='{safe_name}_aurora',
     name='{class_name} Aurora',
     
-    # Deep purple-black backgrounds
+    # Deep enchanted purple backgrounds
     bg='#0c0a1d',
     bg_elevated='#13102a',
     bg_soft='#1e1839',
     
-    # Vibrant magenta/pink accents
+    # Vibrant fey magenta/pink accents
     accent='#e879f9',
     accent_soft=hex_to_rgba('#e879f9', 0.18),
     accent_strong='#f0abfc',
     
-    # Soft lavender text
+    # Soft ethereal lavender text
     text_main='#f5f3ff',
     text_soft='#a5b4fc',
     
-    # Colorful neon status colors
+    # Enchanted status colors
     ok='#34d399',
     ok_soft=hex_to_rgba('#34d399', 0.15),
     warn='#fcd34d',
@@ -236,45 +287,45 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     danger='#fb7185',
     danger_soft=hex_to_rgba('#fb7185', 0.15),
     
-    # Soft glow effects
+    # Soft mystical glow effects
     border_subtle='#312e54',
     shadow_soft='0 10px 40px rgba(139, 92, 246, 0.2)',
     shadow_strong='0 25px 80px rgba(139, 92, 246, 0.35)',
-    radius_sm='6px',
-    radius_md='12px',
-    radius_lg='18px',
-    radius_xl='24px',
+    radius_sm='2px',
+    radius_md='4px',
+    radius_lg='6px',
+    radius_xl='8px',
     
-    # Space Grotesk + IBM Plex Mono - modern, geometric
-    font_family='"Space Grotesk", "Outfit", system-ui, sans-serif',
-    font_mono='"IBM Plex Mono", "Source Code Pro", monospace',
-    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
+    # Cinzel + Spectral - ethereal fantasy serif
+    font_family='"Cinzel", "Spectral", "Palatino Linotype", serif',
+    font_mono='"Courier New", "Lucida Console", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Spectral:wght@400;500;600&display=swap',
     
     chart_grid_opacity=0.3,
 )
 
 
 # =============================================================================
-# 🌅 SUNSET THEME - Warm amber and orange gradients
+# SUNSET THEME - Dragon's Lair / Infernal Realm
 # =============================================================================
-# Perfect for: Business reports, executive dashboards, warm presentations
-# Font: DM Sans + JetBrains Mono - friendly, professional, approachable
+# Perfect for: Dragon/fire themed reports, infernal realms, battle records
+# Font: Cinzel + EB Garamond - powerful, ancient, commanding
 
 {safe_name.upper()}_SUNSET = ReportTheme(
     id='{safe_name}_sunset',
     name='{class_name} Sunset',
     
-    # Warm dark backgrounds with red undertones
+    # Deep volcanic dark backgrounds
     bg='#120c0c',
     bg_elevated='#1a1212',
     bg_soft='#271a1a',
     
-    # Warm amber/orange accents
+    # Warm dragon fire amber/orange accents
     accent='#fb923c',
     accent_soft=hex_to_rgba('#fb923c', 0.18),
     accent_strong='#fdba74',
     
-    # Warm cream text
+    # Warm parchment-like text
     text_main='#fef3e2',
     text_soft='#d4a574',
     
@@ -286,49 +337,49 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     danger='#fca5a5',
     danger_soft=hex_to_rgba('#fca5a5', 0.15),
     
-    # Warm, cozy effects
+    # Bold, dramatic effects
     border_subtle='#3d2a2a',
     shadow_soft='0 12px 40px rgba(251, 146, 60, 0.15)',
     shadow_strong='0 24px 70px rgba(251, 146, 60, 0.25)',
-    radius_sm='6px',
-    radius_md='10px',
-    radius_lg='16px',
-    radius_xl='24px',
+    radius_sm='2px',
+    radius_md='4px',
+    radius_lg='6px',
+    radius_xl='8px',
     
-    # DM Sans + JetBrains Mono - friendly, readable
-    font_family='"DM Sans", "Nunito", "Poppins", system-ui, sans-serif',
-    font_mono='"JetBrains Mono", "Fira Code", monospace',
-    font_url='https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+    # Cinzel + EB Garamond - powerful fantasy serif
+    font_family='"Cinzel", "EB Garamond", "Palatino Linotype", serif',
+    font_mono='"Courier New", "Lucida Console", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=EB+Garamond:wght@400;500;600&display=swap',
     
     chart_grid_opacity=0.35,
 )
 
 
 # =============================================================================
-# ❄️ FROST THEME - Clean, icy light theme
+# FROST THEME - Celestial Temple / Divine Realm
 # =============================================================================
-# Perfect for: Print-friendly reports, light mode preference, formal docs
-# Font: Plus Jakarta Sans + Fira Code - elegant, modern, professional
+# Perfect for: Holy/divine themed reports, celestial realms, clerical records
+# Font: Cinzel + Lora - sacred, elegant, illuminated manuscript style
 
 {safe_name.upper()}_FROST = ReportTheme(
     id='{safe_name}_frost',
     name='{class_name} Frost',
     
-    # Clean icy backgrounds
+    # Clean celestial light backgrounds
     bg='#f0f9ff',
     bg_elevated='#ffffff',
     bg_soft='#e0f2fe',
     
-    # Cool blue accent
+    # Divine blue accent
     accent='#0284c7',
     accent_soft=hex_to_rgba('#0284c7', 0.12),
     accent_strong='#0ea5e9',
     
-    # Dark slate text
+    # Dark sacred text
     text_main='#0f172a',
     text_soft='#475569',
     
-    # Clear, vivid status
+    # Holy status colors
     ok='#16a34a',
     ok_soft=hex_to_rgba('#16a34a', 0.1),
     warn='#d97706',
@@ -336,19 +387,19 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
     danger='#dc2626',
     danger_soft=hex_to_rgba('#dc2626', 0.1),
     
-    # Subtle, clean effects
+    # Subtle, refined effects
     border_subtle='#bae6fd',
     shadow_soft='0 4px 20px rgba(14, 165, 233, 0.08)',
     shadow_strong='0 12px 40px rgba(14, 165, 233, 0.15)',
-    radius_sm='4px',
-    radius_md='8px',
-    radius_lg='12px',
-    radius_xl='20px',
+    radius_sm='2px',
+    radius_md='4px',
+    radius_lg='6px',
+    radius_xl='8px',
     
-    # Plus Jakarta Sans + Fira Code - elegant, modern
-    font_family='"Plus Jakarta Sans", "Outfit", "Inter", system-ui, sans-serif',
-    font_mono='"Fira Code", "JetBrains Mono", monospace',
-    font_url='https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
+    # Cinzel + Lora - elegant fantasy serif for light theme
+    font_family='"Cinzel", "Lora", "Palatino Linotype", serif',
+    font_mono='"Courier New", "Lucida Console", monospace',
+    font_url='https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:wght@400;500;600&display=swap',
     
     chart_grid_opacity=0.25,
 )
@@ -357,9 +408,9 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
 # =============================================================================
 # DEFAULT THEME ALIAS
 # =============================================================================
-# Point to midnight as the default theme for this plugin
+# Point to dungeon as the default theme for this plugin
 
-{safe_name.upper()}_THEME = {safe_name.upper()}_MIDNIGHT
+{safe_name.upper()}_THEME = {safe_name.upper()}_DUNGEON
 
 
 # =============================================================================
@@ -367,13 +418,14 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
 # =============================================================================
 #
 # 1. Import themes in your executor or templates:
-#        from .theme import {safe_name.upper()}_MIDNIGHT, get_theme_css_variables
+#        from .theme import {safe_name.upper()}_DUNGEON, get_theme_css_variables
 #
 # 2. Generate CSS variables:
-#        theme_css = get_theme_css_variables({safe_name.upper()}_MIDNIGHT)
+#        theme_css = get_theme_css_variables({safe_name.upper()}_DUNGEON)
 #
 # 3. Available themes:
-#        {safe_name}_midnight  - Deep blue + cyan (default)
+#        {safe_name}_dungeon   - D&D fantasy + gold (default)
+#        {safe_name}_midnight  - Deep blue + cyan
 #        {safe_name}_aurora    - Purple + magenta
 #        {safe_name}_sunset    - Warm amber + orange
 #        {safe_name}_frost     - Clean light blue

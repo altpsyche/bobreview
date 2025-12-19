@@ -22,6 +22,7 @@
 #   number   - Numeric values (integers or decimals)
 #   date     - Date values (use 'format' to specify pattern)
 #   category - Text that represents a category (useful for grouping)
+#   boolean  - True/false values (yes/no, true/false, 1/0)
 #
 # Options:
 #   required: true/false - Is this column required? (default: false)
@@ -31,21 +32,97 @@
 # ─────────────────────────────────────────────────────────────────────────────────
 
 fields:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # IDENTITY
+  # ─────────────────────────────────────────────────────────────────────────────
   - name: name
     type: string
     required: true
-    description: "Item name or identifier"
+    description: "Character name (e.g., Thorin Ironforge)"
 
-  - name: score
+  - name: class
+    type: category
+    required: true
+    description: "Character class (Fighter, Wizard, Rogue, etc.)"
+
+  - name: level
     type: number
     required: true
-    description: "Numeric value to analyze"
+    description: "Character level (1-20)"
 
-  - name: category
+  - name: hp
+    type: number
+    required: true
+    description: "Hit Points - how much damage you can take!"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ABILITY SCORES (The Big Six)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: str
+    type: number
+    required: true
+    description: "Strength - raw physical power"
+
+  - name: dex
+    type: number
+    required: true
+    description: "Dexterity - agility, reflexes, balance"
+
+  - name: con
+    type: number
+    required: true
+    description: "Constitution - health, stamina, vitality"
+
+  - name: int
+    type: number
+    required: true
+    description: "Intelligence - reasoning, memory, analysis"
+
+  - name: wis
+    type: number
+    required: true
+    description: "Wisdom - perception, insight, intuition"
+
+  - name: cha
+    type: number
+    required: true
+    description: "Charisma - force of personality, persuasion"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CHARACTER DETAILS
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: background
     type: category
     required: false
-    default: "General"
-    description: "Category for grouping"
+    default: "Adventurer"
+    description: "Character background (Soldier, Noble, Outlander, etc.)"
+
+  - name: equipment
+    type: string
+    required: false
+    default: "Standard adventuring gear"
+    description: "Notable equipment and weapons"
+
+  - name: alignment
+    type: category
+    required: false
+    default: "True Neutral"
+    description: "Moral alignment (Lawful Good, Chaotic Evil, etc.)"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # STORY & FEATURING
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: story
+    type: string
+    required: false
+    default: ""
+    description: "Character backstory or session notes for LLM enhancement"
+
+  - name: featured
+    type: boolean
+    required: false
+    default: false
+    description: "Whether to feature this character prominently (1-4 featured)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # EXAMPLES
@@ -80,3 +157,4 @@ fields:
 #     type: string
 #
 # ═══════════════════════════════════════════════════════════════════════════════
+

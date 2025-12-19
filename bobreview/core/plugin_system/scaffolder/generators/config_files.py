@@ -4,6 +4,7 @@ Configuration file generators for plugin scaffolding.
 Generates JSON/configuration structures:
 - manifest.json
 - report_system.json
+- report_config.yaml (user-facing)
 """
 
 from typing import Dict, Any, Literal
@@ -37,257 +38,412 @@ def generate_manifest(
 
 
 def generate_report_system(name: str, safe_name: str, color_theme: str = 'dark') -> Dict[str, Any]:
-    """
-    Generate report system JSON for plugin developers.
-    
-    This JSON defines CAPABILITIES that the plugin provides:
-    - Data source configuration (parser type, fields)
-    - LLM generators (prompts for AI-generated content)
-    - Theme preset
-    
-    Pages and components are defined by USERS in report_config.yaml.
-    """
+    """Generate report system JSON for plugin developers."""
     return {
         "schema_version": "1.0",
-        "id": safe_name,
-        "name": f"{name} Report",
-        "version": "1.0.0",
-        "description": f"Report system for {name}",
-        "author": "Your Name",
-        
-        # ─────────────────────────────────────────────────────────────────────
-        # DATA SOURCE
-        # Defines how data files are parsed
-        # ─────────────────────────────────────────────────────────────────────
+        "system_id": safe_name,
+        "name": f"{name} Adventurer's Guild",
         "data_source": {
-            "type": f"{safe_name}_csv",
-            "input_format": "csv",
-            "fields": {
-                "name": {"type": "string", "required": True},
-                "score": {"type": "float", "required": True},
-                "category": {"type": "string", "required": False}
-            }
+            "parser": f"{safe_name}_csv",
+            "fields": ["name", "class", "level", "hp", "str", "dex", "con", "int", "wis", "cha", "background", "equipment", "alignment", "story", "featured"]
         },
-        
-        # ─────────────────────────────────────────────────────────────────────
-        # LLM CONFIGURATION (flat format)
-        # Settings for AI content generation (provider, model, temperature)
-        # Users define their own prompts in report_config.yaml
-        # ─────────────────────────────────────────────────────────────────────
-        "llm_provider": "openai",
-        "llm_model": "gpt-4o",
-        "llm_temperature": 0.7,
-        "llm_max_tokens": 2000,
-        "llm_chunk_size": 10,
-        
-        # ─────────────────────────────────────────────────────────────────────
-        # THEME AND OUTPUT (flat format)
-        # Default theme preset (users can override in YAML or via --theme)
-        # ─────────────────────────────────────────────────────────────────────
-        "theme": color_theme,  # dark, light, ocean, purple, terminal, sunset
+        "generators": {
+            "party_analysis": {"type": "llm", "description": "Party composition analysis"},
+            "quest_generator": {"type": "llm", "description": "Generate adventure hooks"},
+        },
+        "theme": color_theme,
         "output_filename": f"{safe_name}_report.html"
-        
-        # NOTE: Pages are defined by USERS in report_config.yaml, not here.
-        # This file defines what's POSSIBLE; YAML defines what to USE.
     }
 
 
 def generate_user_report_config(name: str, safe_name: str, color_theme: str = 'dark') -> str:
     """
-    Generate a user-facing report_config.yaml for end users.
-    
-    Uses Property Controls pattern - components have typed props.
+    Generate a D&D character sheet style report.
+    Features: ability scores, featured characters, story section.
     """
-    return f'''# ═══════════════════════════════════════════════════════════════════════════════
-# {name.upper()} REPORT CONFIGURATION
-# ═══════════════════════════════════════════════════════════════════════════════
-#
-# Components use Property Controls - each has typed props validated automatically.
-#
-# QUICK START:
-#   1. Edit sections below to customize your report
-#   2. Run: bobreview --plugin {safe_name} --dir ./sample_data
-#   3. Open the generated HTML report
-#
-# ═══════════════════════════════════════════════════════════════════════════════
+    return f'''# -----------------------------------------------------------------------------
+#  {name.upper()} - ADVENTURER'S GUILD
+# -----------------------------------------------------------------------------
 
-name: "{name} Report"
+name: "{name} Adventurer's Guild"
 plugin: "{safe_name}"
 data_source: "./sample_data/*.csv"
 output_dir: "./output"
 theme: "{color_theme}"
 
-# ─────────────────────────────────────────────────────────────────────────────────
-# PAGES
-# ─────────────────────────────────────────────────────────────────────────────────
-
 pages:
-  # ┌─────────────────────────────────────────────────────────────────────────────┐
-  # │ OVERVIEW - Executive Dashboard                                               │
-  # └─────────────────────────────────────────────────────────────────────────────┘
-  - id: overview
-    title: "Overview"
+  # ---------------------------------------------------------------------------
+  # THE TAVERN - Where heroes gather
+  # ---------------------------------------------------------------------------
+  - id: tavern
+    title: "The Tavern"
+    icon: "fa-beer-mug-empty"
     layout: single-column
     nav_order: 1
     components:
-      # ── HERO STATS SECTION ───────────────────────────────────────────────────
-      - type: {safe_name}_stats_grid
-        id: hero_stats
-        title: "Key Metrics"
-        
-      # ── PERFORMANCE OVERVIEW ─────────────────────────────────────────────────
-      - type: {safe_name}_chart
-        id: main_chart
-        chart: bar
-        title: "Performance by Item"
-        x: name
-        y: score
-        animated: true
+      # Hero banner - Party status
+      - type: {safe_name}_hero_banner
+        title: "Welcome to the Guild"
+        subtitle: "{{{{ data_points | length }}}} adventurers ready for glory"
+        icon: "fa-shield"
+        variant: ok
 
-      # ── AI EXECUTIVE SUMMARY ─────────────────────────────────────────────────
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Featured Heroes"
+
+      # Featured section - showcase 1-4 highlighted characters
+      - type: {safe_name}_featured_section
+        title: "Heroes of Renown"
+        max_featured: 4
+        show_stats: true
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Party Statistics"
+
+      # Stats row - 4 cards side by side
+      - type: {safe_name}_stat_row
+        items:
+          - label: "Heroes"
+            value: "{{{{ data_points | length }}}}"
+            variant: info
+            icon: "fa-users"
+          - label: "Champion"
+            value: "Lvl {{{{ stats.level.max }}}}"
+            variant: ok
+            icon: "fa-crown"
+          - label: "Total HP"
+            value: "{{{{ stats.hp.sum }}}}"
+            variant: default
+            icon: "fa-heart"
+          - label: "Avg Level"
+            value: "{{{{ stats.level.mean | round(1) }}}}"
+            variant: warn
+            icon: "fa-chart-line"
+
+      # Guild Master speaks!
       - type: {safe_name}_llm
-        id: exec_summary
-        title: "Executive Summary"
-        prompt: "Analyze this {name} data with {{{{data_points | length}}}} items. Provide a 3-sentence executive summary highlighting the key insights, average performance ({{{{stats.score.mean | round(1)}}}}), and any notable patterns."
+        id: guild_master
+        title: "The Guild Master's Wisdom"
+        icon: "fa-scroll"
+        prompt: |
+          You are Greybeard, a legendary retired adventurer who now runs the guild.
+          
+          PARTY: {{{{data_points | length}}}} adventurers | Avg Level {{{{stats.level.mean | round(1)}}}}
+          
+          Give a SHORT assessment in character:
+          1. Rate the party (Legendary/Seasoned/Promising/Green)
+          2. One strength you notice
+          3. One piece of gruff advice
+          
+          Be gruff but wise. Keep it to 3-4 sentences total!
 
-      # ── TREND CHART ──────────────────────────────────────────────────────────
-      - type: {safe_name}_chart
-        id: trend_chart
-        chart: line
-        title: "Score Trend"
-        x: name
-        y: score
-
-  # ┌─────────────────────────────────────────────────────────────────────────────┐
-  # │ ANALYTICS - Detailed Charts                                                  │
-  # └─────────────────────────────────────────────────────────────────────────────┘
-  - id: analytics
-    title: "Analytics"
-    layout: grid
+  # ---------------------------------------------------------------------------
+  # THE ARMOURY - Combat stats & ability scores
+  # ---------------------------------------------------------------------------
+  - id: armoury
+    title: "The Armoury"
+    icon: "fa-shield-halved"
+    layout: single-column
     nav_order: 2
     components:
-      # ── DISTRIBUTION CHART ───────────────────────────────────────────────────
-      - type: {safe_name}_chart
-        id: distribution
-        chart: histogram
-        title: "Score Distribution"
-        y: score
-        
-      # ── CATEGORY BREAKDOWN ───────────────────────────────────────────────────
-      - type: {safe_name}_chart
-        id: category_pie
-        chart: doughnut
-        title: "By Category"
-        x: category
-        y: score
+      # Hero banner - Combat readiness
+      - type: {safe_name}_hero_banner
+        title: "Combat Readiness"
+        subtitle: "Analyzing party strength and ability scores"
+        icon: "fa-swords"
+        variant: warn
 
-      # ── SCATTER ANALYSIS ─────────────────────────────────────────────────────
-      - type: {safe_name}_chart
-        id: scatter
-        chart: scatter
-        title: "Score vs Position"
-        x: name
-        y: score
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Party Ability Scores"
 
-      # ── CATEGORY BAR ─────────────────────────────────────────────────────────
+      # Ability scores - The Big Six displayed as stat cards
+      - type: {safe_name}_ability_scores
+        title: "Average Party Stats"
+        show_average: true
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Hit Point Analysis"
+
+      # Stats row - 3 HP stats
+      - type: {safe_name}_stat_row
+        items:
+          - label: "Tank HP"
+            value: "{{{{ stats.hp.max }}}}"
+            variant: ok
+            icon: "fa-shield"
+          - label: "Lowest HP"
+            value: "{{{{ stats.hp.min }}}}"
+            variant: danger
+            icon: "fa-skull"
+          - label: "Average HP"
+            value: "{{{{ stats.hp.mean | round(0) }}}}"
+            variant: info
+            icon: "fa-heart-pulse"
+
+      # HP progress bar
+      - type: {safe_name}_progress_bar
+        label: "Party HP Range"
+        min: "{{{{ stats.hp.min }}}}"
+        max: "{{{{ stats.hp.max }}}}"
+        current: "{{{{ stats.hp.mean | round(0) }}}}"
+        variant: ok
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Combat Analysis"
+
+      # HP chart
       - type: {safe_name}_chart
-        id: category_bar
+        id: hp_chart
         chart: bar
-        title: "Average by Category"
-        x: category
-        y: score
+        title: "Hit Points Ranking"
+        x: name
+        y: hp
+        animated: true
 
-  # ┌─────────────────────────────────────────────────────────────────────────────┐
-  # │ DATA - Tables & Raw Data                                                     │
-  # └─────────────────────────────────────────────────────────────────────────────┘
-  - id: data
-    title: "Data"
+      # Class distribution chart
+      - type: {safe_name}_chart
+        id: class_chart
+        chart: doughnut
+        title: "Class Distribution"
+        x: class
+        y: level
+
+      # Tactical assessment
+      - type: {safe_name}_llm
+        id: tactician
+        title: "Tactical Assessment"
+        icon: "fa-chess"
+        prompt: |
+          Quick tactical party assessment:
+          - {{{{data_points | length}}}} members, HP {{{{stats.hp.min}}}}-{{{{stats.hp.max}}}}
+          - Avg STR: {{{{stats.str.mean | round(0)}}}}, DEX: {{{{stats.dex.mean | round(0)}}}}, CON: {{{{stats.con.mean | round(0)}}}}
+          
+          Rate combat readiness and suggest a challenge rating (CR).
+          2-3 sentences max!
+
+  # ---------------------------------------------------------------------------
+  # QUEST BOARD
+  # ---------------------------------------------------------------------------
+  - id: quests
+    title: "Quest Board"
+    icon: "fa-map"
     layout: single-column
     nav_order: 3
     components:
-      # ── DATA TABLE ───────────────────────────────────────────────────────────
-      - type: {safe_name}_data_table
-        id: full_data
-        title: "Complete Dataset"
-        columns:
-          - name
-          - score
-          - category
-        sortable: true
-        paginated: true
-        page_size: 25
+      # Hero banner
+      - type: {safe_name}_hero_banner
+        title: "Quest Board"
+        subtitle: "Available contracts and bounties for adventurers"
+        icon: "fa-scroll"
 
-      # ── DATA INSIGHTS ────────────────────────────────────────────────────────
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Party Composition"
+
+      # Stats row
+      - type: {safe_name}_stat_row
+        items:
+          - label: "Backgrounds"
+            value: "{{{{ data_points | map(attribute='background') | unique | list | length }}}}"
+            variant: info
+            icon: "fa-masks-theater"
+          - label: "Classes"
+            value: "{{{{ data_points | map(attribute='class') | unique | list | length }}}}"
+            variant: ok
+            icon: "fa-hat-wizard"
+
+      # Charts in a row
+      - type: {safe_name}_chart
+        id: background_chart
+        chart: pie
+        title: "Backgrounds in Party"
+        x: background
+        y: level
+
+      - type: {safe_name}_chart
+        id: align_chart
+        chart: doughnut
+        title: "Moral Alignment"
+        x: alignment
+        y: level
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Available Quests"
+
+      # Quest hooks
       - type: {safe_name}_llm
-        id: data_insights
-        title: "Data Analysis"
-        prompt: "Analyze this dataset with {{{{data_points | length}}}} records. The scores range from {{{{stats.score.min}}}} to {{{{stats.score.max}}}} with an average of {{{{stats.score.mean | round(1)}}}}. Provide 3-5 specific observations about data quality, outliers, or patterns."
+        id: quest_hooks
+        title: "Available Quests"
+        icon: "fa-scroll"
+        prompt: |
+          Generate 3 quest hooks for a level {{{{stats.level.mean | round(0)}}}} party:
+          
+          Format:
+          **Quest 1: [NAME]** (Easy)
+          [1-2 sentence hook]
+          
+          **Quest 2: [NAME]** (Medium)
+          [1-2 sentence hook]
+          
+          **Quest 3: [NAME]** (Hard/Funny)
+          [1-2 sentence hook]
 
-  # ┌─────────────────────────────────────────────────────────────────────────────┐
-  # │ INSIGHTS - AI Recommendations                                                │
-  # └─────────────────────────────────────────────────────────────────────────────┘
-  - id: insights
-    title: "Insights"
+  # ---------------------------------------------------------------------------
+  # STORY FORGE - LLM-enhanced session generator
+  # ---------------------------------------------------------------------------
+  - id: stories
+    title: "Story Forge"
+    icon: "fa-book-sparkles"
     layout: single-column
     nav_order: 4
     components:
-      # ── TOP PERFORMERS ───────────────────────────────────────────────────────
-      - type: {safe_name}_stat_card
-        label: "Highest Score"
-        value: "{{{{ stats.score.max }}}}"
-        variant: ok
-        
-      - type: {safe_name}_stat_card
-        label: "Lowest Score"
-        value: "{{{{ stats.score.min }}}}"
-        variant: warn
+      # Hero banner
+      - type: {safe_name}_hero_banner
+        title: "The Story Forge"
+        subtitle: "Transform character backstories into epic sessions"
+        icon: "fa-wand-magic-sparkles"
+        variant: info
 
-      # ── RECOMMENDATIONS ──────────────────────────────────────────────────────
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Character Stories"
+
+      # Story section - shows character stories and LLM enhancement
+      - type: {safe_name}_story_section
+        title: "Tales of the Party"
+        show_all: false
+        featured_only: true
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Session Generator"
+
+      # LLM story enhancement
       - type: {safe_name}_llm
-        id: recommendations
-        title: "Recommendations"
-        prompt: "Based on this {name} data analysis, provide 5 actionable recommendations. The top score is {{{{stats.score.max}}}}, lowest is {{{{stats.score.min}}}}, and average is {{{{stats.score.mean | round(1)}}}}. Format as a numbered list with specific, actionable items."
+        id: session_generator
+        title: "Tonight's Adventure"
+        icon: "fa-dragon"
+        prompt: |
+          You are a master Dungeon Master. Using the party's backstories, create a ONE-SHOT adventure outline.
+          
+          FEATURED HEROES:
+          {{% for hero in data_points if hero.featured %}}
+          - {{{{hero.name}}}} ({{{{hero.class}}}}): {{{{hero.story}}}}
+          {{% endfor %}}
+          
+          Create a compelling 2-3 paragraph adventure hook that:
+          1. Ties into at least 2 character backstories
+          2. Provides a clear objective
+          3. Hints at complications
+          4. Includes one moment where a specific character can shine
+          
+          Make it dramatic and engaging for a tabletop session!
 
-      # ── NEXT STEPS ───────────────────────────────────────────────────────────
-      - type: {safe_name}_llm
-        id: next_steps
-        title: "Suggested Next Steps"
-        prompt: "Given the {name} analysis, suggest 3 immediate next steps the user should take. Be specific and prioritize by impact."
+  # ---------------------------------------------------------------------------
+  # GUILD REGISTRY - Full roster with all stats
+  # ---------------------------------------------------------------------------
+  - id: registry
+    title: "Guild Registry"
+    icon: "fa-book"
+    layout: single-column
+    nav_order: 5
+    components:
+      # Hero banner
+      - type: {safe_name}_hero_banner
+        title: "Guild Registry"
+        subtitle: "Official record of registered adventurers"
+        icon: "fa-book-open"
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# COMPONENT REFERENCE (Property Controls)
-# ═══════════════════════════════════════════════════════════════════════════════
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Registry Overview"
+
+      # Stats row
+      - type: {safe_name}_stat_row
+        items:
+          - label: "Registered"
+            value: "{{{{ data_points | length }}}}"
+            variant: info
+            icon: "fa-users"
+          - label: "Highest Level"
+            value: "Lvl {{{{ stats.level.max }}}}"
+            variant: ok
+            icon: "fa-crown"
+          - label: "Total HP Pool"
+            value: "{{{{ stats.hp.sum }}}}"
+            variant: default
+            icon: "fa-heart"
+
+      # Member spotlight - Champion
+      - type: {safe_name}_member_spotlight
+        title: "Guild Champion"
+        field: level
+        mode: max
+        icon: "fa-crown"
+
+      # Section divider
+      - type: {safe_name}_divider
+        label: "Complete Roster"
+
+      # Full roster table with all stats
+      - type: {safe_name}_data_table
+        id: roster
+        title: "Complete Adventurer Roster"
+        columns:
+          - name
+          - class
+          - level
+          - hp
+          - str
+          - dex
+          - con
+          - int
+          - wis
+          - cha
+          - background
+          - equipment
+        sortable: true
+        paginated: false
+
+# -----------------------------------------------------------------------------
+# COMPONENT REFERENCE
+# -----------------------------------------------------------------------------
+#
+# {safe_name}_featured_section:
+#   title:        Section header
+#   max_featured: Max characters to show (1-4)
+#   show_stats:   Display ability scores on cards
+#
+# {safe_name}_ability_scores:
+#   title:        Section header
+#   show_average: Show party average for each stat
+#
+# {safe_name}_story_section:
+#   title:         Section header
+#   show_all:      Show all character stories
+#   featured_only: Only show featured character stories
 #
 # {safe_name}_stat_card:
 #   label:   Card header text
-#   value:   Jinja2 template {{{{ stats.score.mean }}}}
+#   value:   Jinja2 template {{{{ stats.level.mean }}}}
 #   variant: default | ok | warn | danger | info
 #
-# {safe_name}_stats_grid:
-#   id:      Unique ID
-#   title:   Section title (optional)
-#
 # {safe_name}_chart:
-#   id:       Unique chart ID (required)
-#   chart:    bar | line | pie | doughnut | histogram | scatter
-#   title:    Chart title
-#   x:        X-axis field
-#   y:        Y-axis field
-#   animated: true | false
-#
-# {safe_name}_data_table:
-#   id:        Table ID
-#   title:     Table title
-#   columns:   List of column names
-#   sortable:  true | false
-#   paginated: true | false
-#   page_size: Rows per page
+#   chart: bar | line | pie | doughnut | histogram
+#   x: X-axis field (name, class, background)
+#   y: Y-axis field (level, hp, str, dex, etc.)
 #
 # {safe_name}_llm:
-#   id:     Unique ID (required)
-#   title:  Section title
-#   prompt: Your prompt with {{{{field}}}} references
+#   prompt: Multi-line D&D themed prompt
 #
-# ═══════════════════════════════════════════════════════════════════════════════
+# {safe_name}_data_table:
+#   columns: List of columns to show
+#
+# -----------------------------------------------------------------------------
 '''
-
