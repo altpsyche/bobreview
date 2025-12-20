@@ -143,12 +143,15 @@ bobreview plugins create my-plugin
 
 ```python
 # parsers/my_parser.py
-from bobreview.core.api import DataParserInterface
 from typing import List, Dict, Any
 from pathlib import Path
 
-class MyCsvParser(DataParserInterface):
-    """Parse data from CSV files."""
+class MyCsvParser:
+    """Parse data from CSV files.
+    
+    In v1.0.8 Plugin-First Architecture, parsers are standalone classes.
+    They must implement parse_file() and discover_files() methods.
+    """
     
     def parse_file(self, file_path: Path) -> Dict[str, Any]:
         """Parse a single CSV file."""
@@ -280,81 +283,70 @@ def analyze_my_data(
 }
 ```
 
-### Step 5a: Create Custom Themes (Optional)
+### Step 5: Create Custom Themes
 
-Plugins can define custom themes. The scaffolder generates two examples when using `bobreview plugins create --template full`:
+Plugins define their own themes in `theme.py`. The scaffolder generates theme examples when using `bobreview plugins create --template full`.
 
-**Approach 1: Full Standalone Theme** (complete control with fonts, radii, shadows)
+> [!NOTE]
+> In v1.0.8, themes are plugin-owned. The `ReportTheme` dataclass and helper functions are defined locally in each plugin's `theme.py`.
+
+**Define your theme:**
 
 ```python
 # theme.py
-from bobreview.core.themes import ReportTheme, hex_to_rgba
+from dataclasses import dataclass
 
+def hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """Convert hex color to rgba string."""
+    hex_color = hex_color.lstrip('#')
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+@dataclass
+class ReportTheme:
+    id: str
+    name: str
+    bg: str = '#0a0e14'
+    bg_elevated: str = '#12171f'
+    bg_soft: str = '#1a2028'
+    accent: str = '#00d4aa'
+    accent_soft: str = 'rgba(0, 212, 170, 0.15)'
+    accent_strong: str = '#00ffcc'
+    text_main: str = '#e8eaed'
+    text_soft: str = '#9aa0a6'
+    ok: str = '#34d399'
+    ok_soft: str = 'rgba(52, 211, 153, 0.15)'
+    warn: str = '#fbbf24'
+    warn_soft: str = 'rgba(251, 191, 36, 0.15)'
+    danger: str = '#f87171'
+    danger_soft: str = 'rgba(248, 113, 113, 0.15)'
+    font_family: str = 'system-ui, sans-serif'
+    font_mono: str = 'monospace'
+    font_url: str = ''
+
+# Define your themes
 MY_PLUGIN_THEME = ReportTheme(
-    id='my_plugin_full',
-    name='My Plugin Theme',
-    
-    # Backgrounds
-    bg='#0a0e14',
-    bg_elevated='#12171f',
-    bg_soft='#1a2028',
-    
-    # Accents
+    id='my_plugin_dark',
+    name='My Plugin Dark',
     accent='#00d4aa',
     accent_soft=hex_to_rgba('#00d4aa', 0.15),
-    accent_strong='#00ffcc',
-    
-    # Text
-    text_main='#e8eaed',
-    text_soft='#9aa0a6',
-    
-    # Status colors
-    ok='#34d399',
-    ok_soft=hex_to_rgba('#34d399', 0.15),
-    warn='#fbbf24',
-    warn_soft=hex_to_rgba('#fbbf24', 0.15),
-    danger='#f87171',
-    danger_soft=hex_to_rgba('#f87171', 0.15),
-    
-    # Fonts (Google Fonts URL enables dynamic loading)
-    font_family='"Space Grotesk", system-ui, sans-serif',
-    font_mono='"IBM Plex Mono", monospace',
-    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
-)
-```
-
-**Approach 2: Extend a Base Theme** (quick customization)
-
-```python
-from bobreview.core.themes import create_theme, hex_to_rgba
-
-MY_PLUGIN_DEEP_THEME = create_theme(
-    id='my_plugin_ocean_deep',
-    name='My Plugin Ocean Deep',
-    base='ocean',  # Inherit from ocean theme
-    
-    # Only override what you need
-    bg='#060d1a',
-    bg_elevated='#0c1628',
-    accent='#5afaff',
-    accent_soft=hex_to_rgba('#5afaff', 0.12),
 )
 ```
 
 **Register in plugin.py:**
 
 ```python
-from .theme import MY_PLUGIN_THEME, MY_PLUGIN_DEEP_THEME
+from .theme import MY_PLUGIN_THEME
 
 def on_load(self, registry):
     helper = PluginHelper(registry, self.name)
     helper.add_theme(MY_PLUGIN_THEME)
-    helper.add_theme(MY_PLUGIN_DEEP_THEME)
 ```
 
-**Available base themes:** `dark`, `light`, `ocean`, `purple`, `terminal`, `sunset`
+**Available scaffold themes:** Midnight, Aurora, Sunset, Frost
 
 | Property | Description |
+|----------|-------------|
 |----------|-------------|
 | `accent` | Primary accent (buttons, links) |
 | `accent_soft` | Translucent accent for backgrounds |
@@ -369,33 +361,34 @@ def on_load(self, registry):
 
 ### Step 6: Create Chart Generator
 
-
 ```python
 # chart_generator.py
 import json
-from typing import Dict, List, Any, Union
-from bobreview.core.api import ChartGeneratorInterface
-from bobreview.core.themes import get_theme_by_id, DARK_THEME
+from typing import Dict, List, Any
+from .theme import MIDNIGHT_THEME  # Import your plugin's theme
 
-class MyChartGenerator(ChartGeneratorInterface):
+class MyChartGenerator:
+    """Chart generator for your plugin.
+    
+    In v1.0.8, chart generators are standalone classes.
+    They must implement generate_chart() that returns JavaScript code.
+    """
     
     def generate_chart(
         self,
-        data: Union[List[Dict[str, Any]], "DataFrame"],  # DataFrame or List[Dict]
+        data: List[Dict[str, Any]],
         stats: Dict[str, Any],
         config: Any,
         chart_config: Dict[str, Any]
     ) -> str:
-        # Convert to list for internal use
-        # Note: hasattr(data, '__iter__') will be True for both List and DataFrame
-        # DataFrame iteration yields dicts via __iter__
         data_points = list(data)
         
         chart_id = chart_config.get('id', 'chart')
         title = chart_config.get('title', 'Chart')
         y_field = chart_config.get('y_field', 'value')
         
-        theme = get_theme_by_id('terminal') or DARK_THEME
+        # Use your plugin's theme
+        theme = MIDNIGHT_THEME
         
         labels = [p.get('name', f'#{i}') for i, p in enumerate(data_points)]
         values = [p.get(y_field, 0) for p in data_points]
@@ -437,20 +430,23 @@ class MyChartGenerator(ChartGeneratorInterface):
 
 ```python
 # context_builder.py
-from typing import Dict, Any, List, Union
-from bobreview.core.api import ContextBuilderInterface
+from typing import Dict, Any, List
 
-class MyContextBuilder(ContextBuilderInterface):
+class MyContextBuilder:
+    """Context builder for your plugin.
+    
+    In v1.0.8, context builders are standalone classes.
+    They must implement build_context() that returns template context dict.
+    """
     
     def build_context(
         self,
-        data: Union[List[Dict[str, Any]], Any],  # DataFrame or List[Dict]
+        data: List[Dict[str, Any]],
         stats: Dict[str, Any],
         config: Any,
         base_context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        # Convert to list for internal use
-        data_points = list(data) if hasattr(data, '__iter__') else data
+        data_points = list(data)
         
         critical = None
         if data_points:

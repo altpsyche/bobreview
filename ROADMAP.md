@@ -454,6 +454,11 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
   - Dynamic font loading with font_url
   - CLI --theme accepts any theme (built-in or plugin)
   - No bundled plugins - create with scaffolder
+- v1.0.8 - Plugin-First Architecture
+  - Core is pure infrastructure, plugins provide all domain logic
+  - Removed: core/themes.py, core/api.py, service files
+  - Flat Config class (no nested classes)
+  - CLI: `bobreview --plugin <name> --dir <data>`
 - Core architecture complete
 - Modular architecture with registry patterns
 - JSON-based report system definitions
@@ -501,6 +506,6 @@ Contributions are welcome. Consider:
 
 ---
 
-Last updated: December 15, 2025
+Last updated: December 20, 2025
 Current version: 1.0.8
 Next milestone: v2.0 - Enterprise Release

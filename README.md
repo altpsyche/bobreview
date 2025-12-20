@@ -109,6 +109,8 @@ Using `bobreview plugins create -o <folder>` auto registers the folder.
 
 ## Scaffolded Plugin Contents
 
+The scaffolder creates a working demo plugin with D&D-themed sample data:
+
 | File | Purpose |
 |------|---------|
 | `manifest.json` | Metadata |
@@ -116,10 +118,10 @@ Using `bobreview plugins create -o <folder>` auto registers the folder.
 | `executor.py` | Report generation |
 | `parsers/csv_parser.py` | Data parsing |
 | `chart_generator.py` | Charts |
-| `theme.py` | Themes (Midnight, Aurora, Sunset, Frost) |
+| `theme.py` | 5 themes (Dungeon, Midnight, Aurora, Sunset, Frost) |
 | `templates/` | Jinja2 templates |
 | `report_systems/*.json` | Pipeline config |
-| `sample_data/` | Test data |
+| `sample_data/sample.csv` | D&D character roster |
 
 ## Documentation
 
@@ -127,7 +129,7 @@ Using `bobreview plugins create -o <folder>` auto registers the folder.
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | Getting started |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
-| [docs/ARCHITECTURE_REFACTOR.md](docs/ARCHITECTURE_REFACTOR.md) | Architecture |
+| [docs/PLUGIN_DEVELOPMENT_GUIDE.md](docs/PLUGIN_DEVELOPMENT_GUIDE.md) | Plugin development |
 
 ## Troubleshooting
 

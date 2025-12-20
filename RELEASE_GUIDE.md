@@ -2,39 +2,29 @@
 
 ## Extensible Report Generation Framework
 
-Version 1.0.8 - Standardized APIs & DataFrame Support
+Version 1.0.8 - Plugin-First Architecture
 
 ### What's New in v1.0.8
 
+- **Plugin-First Architecture**:
+  - Core is pure infrastructure - plugins provide all domain logic
+  - CLI: `bobreview --plugin <name> --dir <data>`
+  - Removed: core themes, executor, analytics/chart services
+  - Plugins own themes, report generation, charts
+
 - **Unified Configuration System**:
   - Single flat `Config` class replaces nested config classes
-  - YAML configuration support (`report_config.yaml`) for plugins
   - CLI arguments unified into single entry point
 
-- **DataFrame Support**:
-  - New `DataFrame` class for universal data format
-  - All interfaces now accept `Union[List[Dict], DataFrame]`
-  - Filter, sort, and select operations on DataFrames
-
-- **Component Interface**:
-  - New `ComponentInterface` for reusable UI components
-  - Component registry with instance caching
-  - Support for widgets, charts, and custom components
-
-- **Multiple Chart Types**:
-  - Bar, Line (gradient fill), Histogram, Doughnut charts
-  - Chart generator supports multiple chart configurations
-
-- **Plugin Scaffolding CLI**:
-  - `bobreview plugins create my-plugin` - Generate complete plugin skeleton
-  - `--template minimal|full` - Choose template complexity
-  - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+- **D&D-Themed Plugin Scaffolding**:
+  - `bobreview plugins create my-plugin` - Generate demo plugin
+  - Sample data: Character roster with stats, classes, races, spells
+  - 5 built-in themes: Midnight, Aurora, Sunset, Frost, Dungeon
 
 - **Breaking Changes**:
   - Flat config format (no nested `llm_config`, `theme`, etc.)
-  - YAML config required for plugins (pages defined in YAML, not JSON)
-  - Interface signatures changed to accept DataFrame
-  - Theme variable renames (`border` → `border_subtle`, `success` → `ok`)
+  - Themes now plugin-owned (not in core)
+  - `bobreview build` → `bobreview --plugin <name>`
 
 - All v1.0.7 features preserved
 

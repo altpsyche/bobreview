@@ -16,7 +16,9 @@ Core is now pure infrastructure. Plugins provide all domain logic including repo
 ### New Features
 
 - **CLI Plugin Execution:** `bobreview --plugin my-plugin --dir ./data`
-- **Scaffolder creates complete plugins** with executor.py, 4 themes (Midnight, Aurora, Sunset, Frost), charts, sample data
+- **D&D-Themed Scaffolder:** Creates demo plugins with character roster sample data
+  - 5 built-in themes: Midnight, Aurora, Sunset, Frost, Dungeon
+  - Sample data includes stats, classes, races, spells, equipment
 - **Auto-registration:** `-o <folder>` registers folder in `~/.bobreview/config.yaml`
 - **Discovery priority:** `--plugin-dir` > `$BOBREVIEW_PLUGIN_DIRS` > config file > `~/.bobreview/plugins/` > `./plugins/`
 ---
