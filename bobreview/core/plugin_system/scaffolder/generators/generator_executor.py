@@ -400,7 +400,7 @@ class ComponentRenderer:
         mode = comp.get('mode', 'max')  # max or min
         
         if not self.data_points:
-            return '<div class="member-spotlight">No members</div>'
+            return '<div class="spotlight-card">No members</div>'
         
         # Find member by max/min
         if mode == 'max':
@@ -423,18 +423,17 @@ class ComponentRenderer:
         ability_str = ' | '.join(abilities)
         
         return (
-            f'<div class="member-spotlight">'
-            f'<div class="spotlight-badge"><i class="fa-solid {icon}"></i></div>'
-            f'<div class="spotlight-content">'
-            f'<h3 class="spotlight-title">{title}</h3>'
+            f'<div class="spotlight-card">'
+            f'<div class="spotlight-icon"><i class="fa-solid {icon}"></i></div>'
+            f'<div class="spotlight-title">{title}</div>'
             f'<div class="spotlight-name">{name}</div>'
-            f'<div class="spotlight-details">{char_class} • {background}</div>'
+            f'<div class="spotlight-meta">{char_class} • {background}</div>'
             f'<div class="spotlight-stats">'
             f'<span class="spotlight-stat"><i class="fa-solid fa-star"></i> Lvl {level}</span>'
             f'<span class="spotlight-stat"><i class="fa-solid fa-heart"></i> {hp} HP</span>'
             f'</div>'
             f'<div class="spotlight-abilities">{ability_str}</div>'
-            f'</div></div>'
+            f'</div>'
         )
     
     def _render_featured_section(self, comp: Dict) -> str:
@@ -743,9 +742,13 @@ class ComponentRenderer:
         
         elif '_data_table' in comp_type:
             columns = comp.get('columns', ['name', 'score'])
-            page_size = comp.get('page_size', 10)
+            # Show all rows by default, or use page_size if explicitly set
+            page_size = comp.get('page_size')
+            if page_size is None or page_size <= 0:
+                ctx['table_rows'] = self.data_points  # Show ALL rows
+            else:
+                ctx['table_rows'] = self.data_points[:page_size]
             ctx['columns'] = columns
-            ctx['table_rows'] = self.data_points[:page_size]
         
         return ctx
     

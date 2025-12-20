@@ -529,6 +529,24 @@ header p {
     color: var(--accent);
 }
 
+.spotlight-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px dashed var(--border-subtle);
+}
+
+.spotlight-abilities {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-subtle);
+    letter-spacing: 0.05em;
+}
+
 /* ===========================================
    CHARTS - Parchment Scroll Style
    =========================================== */
@@ -700,7 +718,8 @@ tr:hover td:first-child {
 /* ===========================================
    STAT ROW - Guild Stat Cards
    =========================================== */
-.stat-row {
+.stat-row,
+.stats-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
@@ -1522,6 +1541,184 @@ tr:hover td:first-child {
 .enc-abilities b,
 .enc-tactics b {
     color: var(--danger);
+}
+
+/* ===========================================
+   MEMBER SPOTLIGHT - Guild Champion Card
+   =========================================== */
+.member-spotlight {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--accent);
+    border-left: 5px solid var(--accent-strong);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    position: relative;
+    box-shadow: var(--shadow-soft);
+    grid-column: 1 / -1;
+}
+
+.member-spotlight::before {
+    content: '★ GUILD CHAMPION ★';
+    position: absolute;
+    top: -0.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    color: var(--accent-strong);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 0.25rem 1rem;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-sm);
+}
+
+.spotlight-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.spotlight-badge i {
+    font-size: 1.5rem;
+    color: var(--bg);
+}
+
+.spotlight-content {
+    flex: 1;
+}
+
+.spotlight-title {
+    color: var(--accent-strong);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.spotlight-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
+.spotlight-details {
+    color: var(--text-soft);
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.spotlight-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.spotlight-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.15);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-md);
+}
+
+.spotlight-stat i {
+    color: var(--accent);
+}
+
+.spotlight-abilities {
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* ===========================================
+   STATS ROW - Side-by-Side Layout
+   =========================================== */
+.stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    grid-column: 1 / -1;
+}
+
+.stats-row .stat-card {
+    flex: 1 1 150px;
+    min-width: 120px;
+}
+
+/* ===========================================
+   DATA TABLE - Complete Roster
+   =========================================== */
+.table-section {
+    grid-column: 1 / -1;
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+
+.table-section h3 {
+    color: var(--accent);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table thead {
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+}
+
+.data-table th {
+    padding: 1rem;
+    text-align: left;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--accent);
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 0.85rem 1rem;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.data-table tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.1);
 }
 
 /* ===========================================
