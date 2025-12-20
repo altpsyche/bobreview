@@ -123,6 +123,14 @@ The scaffolder creates a working demo plugin with D&D-themed sample data:
 | `report_systems/*.json` | Pipeline config |
 | `sample_data/sample.csv` | D&D character roster |
 
+### Scaffolder Demo
+
+The generated plugin creates a Guild Registry report with character stats, ability scores, and party analysis:
+
+![The Tavern - Character Roster](docs/images/dnd_report_home.png)
+
+![The Armoury - Combat Readiness](docs/images/dnd_report_armoury.png)
+
 ## Documentation
 
 | Document | Description |
