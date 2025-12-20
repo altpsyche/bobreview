@@ -90,6 +90,15 @@ header::after {
     transform: translateX(-50%) rotate(180deg);
 }
 
+/* Hide decorative Font Awesome glyphs from screen readers */
+@media speech {
+
+    header::before,
+    header::after {
+        content: none;
+    }
+}
+
 header h1 {
     color: var(--accent-strong);
     font-size: 2.5rem;
@@ -172,7 +181,7 @@ header p {
 
 .tab-btn.active {
     background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
-    color: var(--bg);
+    color: var(--text-contrast, #ffffff);
     border-color: var(--accent-strong);
     box-shadow:
         0 4px 20px var(--accent-soft),
@@ -327,6 +336,15 @@ header p {
 .hero-banner::after {
     top: -0.75rem;
     right: 1.5rem;
+}
+
+/* Hide decorative sword emojis from screen readers */
+@media speech {
+
+    .hero-banner::before,
+    .hero-banner::after {
+        content: none;
+    }
 }
 
 .hero-icon {
@@ -761,6 +779,15 @@ tr:hover td:first-child {
     text-shadow: 0 0 10px var(--accent);
 }
 
+/* Hide decorative stars from screen readers */
+@media speech {
+
+    .featured-title::before,
+    .featured-title::after {
+        content: none;
+    }
+}
+
 .featured-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -819,6 +846,13 @@ tr:hover td:first-child {
     transform: rotate(15deg) scale(1.2);
 }
 
+/* Hide decorative star from screen readers */
+@media speech {
+    .featured-card::after {
+        content: none;
+    }
+}
+
 .featured-header {
     display: flex;
     justify-content: space-between;
@@ -838,7 +872,7 @@ tr:hover td:first-child {
 }
 
 .featured-class {
-    color: var(--bg);
+    color: var(--text-contrast, #ffffff);
     font-size: 0.75rem;
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
     padding: 0.35rem 0.75rem;
@@ -1045,6 +1079,13 @@ tr:hover td:first-child {
     font-size: 1rem;
 }
 
+/* Hide decorative book emoji from screen readers */
+@media speech {
+    .story-title::before {
+        content: none;
+    }
+}
+
 .story-card {
     background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
     border: 1px solid var(--border-subtle);
@@ -1151,7 +1192,7 @@ tr:hover td:first-child {
 
 .initiative-table th {
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-    color: var(--bg);
+    color: var(--text-contrast, #ffffff);
     padding: 1rem;
     text-align: left;
     font-size: 0.75rem;
@@ -1318,7 +1359,7 @@ tr:hover td:first-child {
 
 .qc-race-class {
     font-size: 0.7rem;
-    color: var(--bg);
+    color: var(--text-contrast, #ffffff);
     background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
     padding: 0.35rem 0.75rem;
     border-radius: 20px;
@@ -1492,7 +1533,7 @@ tr:hover td:first-child {
 
 .enc-cr {
     background: var(--danger);
-    color: var(--bg);
+    color: var(--text-contrast, #ffffff);
     padding: 0.35rem 0.75rem;
     border-radius: 20px;
     font-size: 0.8rem;

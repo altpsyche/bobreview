@@ -83,22 +83,33 @@ def _topological_sort_llm(components: list) -> list:
     Components with no dependencies run first, then components that
     depend on them, etc. This ensures llm_outputs[dep_id] is available
     when a component references it.
+    
+    Raises ValueError if circular dependencies are detected.
     """
     by_id = {c.get('id', f'anon_{i}'): c for i, c in enumerate(components)}
-    visited = set()
+    visited = set()      # Fully processed nodes
+    in_progress = set()  # Currently being visited (for cycle detection)
     result = []
     
-    def visit(comp_id):
+    def visit(comp_id, path=None):
+        if path is None:
+            path = []
         if comp_id in visited:
             return
-        visited.add(comp_id)
+        if comp_id in in_progress:
+            cycle = ' -> '.join(path + [comp_id])
+            raise ValueError(f"Circular dependency detected: {cycle}")
+        
+        in_progress.add(comp_id)
         comp = by_id.get(comp_id)
         if comp:
             # Visit dependencies first
             for dep in comp.get('depends_on', []):
                 if dep in by_id:
-                    visit(dep)
+                    visit(dep, path + [comp_id])
             result.append(comp)
+        in_progress.remove(comp_id)
+        visited.add(comp_id)
     
     for comp_id in by_id:
         visit(comp_id)
@@ -132,9 +143,11 @@ def generate_llm_content(
             {{ llm_outputs.quest_hooks }}
     """
     from jinja2 import Environment
+    from markupsafe import Markup
+    import html as html_module
     
-    # Create Jinja2 environment for rendering prompts
-    env = Environment()
+    # Create Jinja2 environment for rendering prompts with autoescape
+    env = Environment(autoescape=True)
     env.globals['len'] = len
     env.globals['min'] = min
     env.globals['max'] = max
@@ -172,11 +185,13 @@ def generate_llm_content(
             rendered_prompt = f"[Template Error: {e}]\\n{prompt_template}"
         
         if dry_run:
-            # Show rendered prompt preview in dry-run mode
-            preview = rendered_prompt[:300].replace('\\n', ' ')
+            # Show rendered prompt preview in dry-run mode (escaped for safety)
+            preview = html_module.escape(rendered_prompt[:300].replace('\\n', ' '))
             deps = comp.get('depends_on', [])
             deps_info = f' (depends on: {", ".join(deps)})' if deps else ''
-            llm_content[comp_id] = f'<div class="llm-dry-run"><em>[LLM Placeholder: {comp.get("title", comp_id)}]{deps_info}</em><br><small>Prompt: {preview}...</small></div>'
+            title_escaped = html_module.escape(comp.get("title", comp_id))
+            # Mark as safe since we constructed this HTML ourselves
+            llm_content[comp_id] = Markup(f'<div class="llm-dry-run"><em>[LLM Placeholder: {title_escaped}]{deps_info}</em><br><small>Prompt: {preview}...</small></div>')
             llm_outputs[comp_id] = f'[Placeholder output for {comp_id}]'
         else:
             try:
@@ -190,13 +205,15 @@ def generate_llm_content(
                 # Store raw response for chaining
                 if response:
                     llm_outputs[comp_id] = response
-                    llm_content[comp_id] = sanitize_llm_html(response)
+                    # Mark sanitized HTML as safe to prevent double-escaping
+                    llm_content[comp_id] = Markup(sanitize_llm_html(response))
                 else:
                     llm_outputs[comp_id] = ''
-                    llm_content[comp_id] = f'<em>No response for {comp_id}</em>'
+                    llm_content[comp_id] = Markup(f'<em>No response for {comp_id}</em>')
             except Exception as e:
                 llm_outputs[comp_id] = f'[Error: {e}]'
-                llm_content[comp_id] = f'<div class="llm-error">LLM Error: {e}</div>'
+                error_escaped = html_module.escape(str(e))
+                llm_content[comp_id] = Markup(f'<div class="llm-error">LLM Error: {error_escaped}</div>')
     
     return llm_content
 
@@ -251,9 +268,9 @@ class ComponentRenderer:
         self.custom_components = custom_components or {}
         self.count = len(data_points)
         
-        # Jinja2 environment
+        # Jinja2 environment with autoescape for HTML safety
         from jinja2 import Environment
-        self.env = Environment()
+        self.env = Environment(autoescape=True)
         self.env.globals['len'] = len
         self.env.globals['min'] = min
         self.env.globals['max'] = max
@@ -395,6 +412,7 @@ class ComponentRenderer:
     
     def _render_member_spotlight(self, comp: Dict) -> str:
         """Render a featured member spotlight card."""
+        import html as html_module
         title = comp.get('title', 'Champion')
         field = comp.get('field', 'level')
         mode = comp.get('mode', 'max')  # max or min
@@ -408,9 +426,10 @@ class ComponentRenderer:
         else:
             member = min(self.data_points, key=lambda x: x.get(field, 0))
         
-        name = member.get('name', 'Unknown')
-        background = member.get('background', '')
-        char_class = member.get('class', '')
+        # Escape all user-sourced content
+        name = html_module.escape(str(member.get('name', 'Unknown')))
+        background = html_module.escape(str(member.get('background', '')))
+        char_class = html_module.escape(str(member.get('class', '')))
         level = member.get('level', 1)
         hp = member.get('hp', 0)
         icon = comp.get('icon', 'fa-crown')
@@ -425,7 +444,7 @@ class ComponentRenderer:
         return (
             f'<div class="spotlight-card">'
             f'<div class="spotlight-icon"><i class="fa-solid {icon}"></i></div>'
-            f'<div class="spotlight-title">{title}</div>'
+            f'<div class="spotlight-title">{html_module.escape(title)}</div>'
             f'<div class="spotlight-name">{name}</div>'
             f'<div class="spotlight-meta">{char_class} • {background}</div>'
             f'<div class="spotlight-stats">'
@@ -438,6 +457,7 @@ class ComponentRenderer:
     
     def _render_featured_section(self, comp: Dict) -> str:
         """Render a featured characters section with 1-4 highlighted heroes."""
+        import html as html_module
         title = comp.get('title', 'Featured Heroes')
         max_featured = comp.get('max_featured', 4)
         show_stats = comp.get('show_stats', True)
@@ -453,13 +473,14 @@ class ComponentRenderer:
         
         cards_html = ''
         for hero in featured:
-            name = hero.get('name', 'Unknown')
-            char_class = hero.get('class', 'Adventurer')
+            # Escape all user-sourced content
+            name = html_module.escape(str(hero.get('name', 'Unknown')))
+            char_class = html_module.escape(str(hero.get('class', 'Adventurer')))
             level = hero.get('level', 1)
             hp = hero.get('hp', 0)
-            background = hero.get('background', '')
-            equipment = hero.get('equipment', '')
-            story = hero.get('story', '')
+            background = html_module.escape(str(hero.get('background', '')))
+            equipment = html_module.escape(str(hero.get('equipment', '')))
+            story = html_module.escape(str(hero.get('story', '')))
             
             # Ability scores display
             stats_html = ''
@@ -489,7 +510,7 @@ class ComponentRenderer:
                 f'</div>'
             )
         
-        return f'<div class="featured-section"><h3 class="featured-title">{title}</h3><div class="featured-grid">{cards_html}</div></div>'
+        return f'<div class="featured-section"><h3 class="featured-title">{html_module.escape(title)}</h3><div class="featured-grid">{cards_html}</div></div>'
     
     def _render_ability_scores(self, comp: Dict) -> str:
         """Render party ability score averages as stat cards."""
@@ -536,6 +557,7 @@ class ComponentRenderer:
     
     def _render_story_section(self, comp: Dict) -> str:
         """Render character stories section."""
+        import html as html_module
         title = comp.get('title', 'Character Stories')
         show_all = comp.get('show_all', False)
         featured_only = comp.get('featured_only', True)
@@ -554,9 +576,10 @@ class ComponentRenderer:
         
         stories_html = ''
         for char in characters:
-            name = char.get('name', 'Unknown')
-            char_class = char.get('class', 'Adventurer')
-            story = char.get('story', '')
+            # Escape all user-sourced content
+            name = html_module.escape(str(char.get('name', 'Unknown')))
+            char_class = html_module.escape(str(char.get('class', 'Adventurer')))
+            story = html_module.escape(str(char.get('story', '')))
             
             stories_html += (
                 f'<div class="story-card">'
@@ -568,10 +591,11 @@ class ComponentRenderer:
                 f'</div>'
             )
         
-        return f'<div class="story-section"><h3 class="story-title">{title}</h3>{stories_html}</div>'
+        return f'<div class="story-section"><h3 class="story-title">{html_module.escape(title)}</h3>{stories_html}</div>'
     
     def _render_initiative_tracker(self, comp: Dict) -> str:
         """Render an initiative tracker for combat encounters."""
+        import html as html_module
         title = comp.get('title', 'Initiative Order')
         
         # Sort characters by DEX for default initiative order
@@ -579,8 +603,9 @@ class ComponentRenderer:
         
         rows_html = ''
         for i, char in enumerate(sorted_chars[:10], 1):
-            name = char.get('name', 'Unknown')
-            char_class = char.get('class', '')
+            # Escape all user-sourced content
+            name = html_module.escape(str(char.get('name', 'Unknown')))
+            char_class = html_module.escape(str(char.get('class', '')))
             hp = char.get('hp', 0)
             dex = char.get('dex', 10)
             rows_html += (
@@ -596,7 +621,7 @@ class ComponentRenderer:
         
         return (
             f'<div class="initiative-tracker">'
-            f'<h3 class="initiative-title"><i class="fa-solid fa-dice-d20"></i> {title}</h3>'
+            f'<h3 class="initiative-title"><i class="fa-solid fa-dice-d20"></i> {html_module.escape(title)}</h3>'
             f'<table class="initiative-table">'
             f'<thead><tr><th>#</th><th>Name</th><th>Class</th><th>HP</th><th>Init</th><th>Notes</th></tr></thead>'
             f'<tbody>{rows_html}</tbody>'
@@ -655,9 +680,11 @@ class ComponentRenderer:
     
     def _render_quote_box(self, comp: Dict) -> str:
         """Render a dramatic quote box for NPC dialogue."""
-        quote = comp.get('quote', 'Your fate is sealed, adventurers...')
-        speaker = comp.get('speaker', 'Mysterious Figure')
-        title = comp.get('title', '')
+        import html as html_module
+        # Escape config-sourced values
+        quote = html_module.escape(str(comp.get('quote', 'Your fate is sealed, adventurers...')))
+        speaker = html_module.escape(str(comp.get('speaker', 'Mysterious Figure')))
+        title = html_module.escape(str(comp.get('title', '')))
         icon = comp.get('icon', 'fa-comment-dots')
         variant = comp.get('variant', 'default')
         
@@ -674,14 +701,16 @@ class ComponentRenderer:
     
     def _render_encounter_card(self, comp: Dict) -> str:
         """Render an encounter card with enemy stat block style."""
-        title = comp.get('title', 'Encounter')
-        name = comp.get('name', 'Mysterious Enemy')
-        cr = comp.get('cr', '???')
-        hp = comp.get('hp', '???')
-        ac = comp.get('ac', '???')
-        description = comp.get('description', 'A dangerous foe awaits...')
-        abilities = comp.get('abilities', '')
-        tactics = comp.get('tactics', '')
+        import html as html_module
+        # Escape config-sourced values
+        title = html_module.escape(str(comp.get('title', 'Encounter')))
+        name = html_module.escape(str(comp.get('name', 'Mysterious Enemy')))
+        cr = html_module.escape(str(comp.get('cr', '???')))
+        hp = html_module.escape(str(comp.get('hp', '???')))
+        ac = html_module.escape(str(comp.get('ac', '???')))
+        description = html_module.escape(str(comp.get('description', 'A dangerous foe awaits...')))
+        abilities = html_module.escape(str(comp.get('abilities', '')))
+        tactics = html_module.escape(str(comp.get('tactics', '')))
         icon = comp.get('icon', 'fa-skull')
         
         abilities_html = f'<div class="enc-abilities"><b>Abilities:</b> {abilities}</div>' if abilities else ''
@@ -819,8 +848,8 @@ def eval_template(template: str, data_points: List[Dict], stats: Dict[str, Any])
     from jinja2 import Template, Environment
     
     try:
-        # Create Jinja2 environment with useful globals
-        env = Environment()
+        # Create Jinja2 environment with autoescape and useful globals
+        env = Environment(autoescape=True)
         env.globals['len'] = len
         env.globals['min'] = min
         env.globals['max'] = max
@@ -929,12 +958,13 @@ def generate_report(
     
     for i, page in enumerate(pages):
         page_id = page.get('id', f'page_{i}')
+        page_id_escaped = html.escape(page_id)  # Escape for HTML attributes
         page_title = page.get('title', f'Page {i+1}')
         page_title_escaped = html.escape(page_title)
         active_class = 'active' if i == 0 else ''
         
-        # Navigation tab
-        nav_html += f'<button class="tab-btn {active_class}" onclick="showPage(\\'{page_id}\\', event)">{page_title_escaped}</button>'
+        # Navigation tab - use escaped values in onclick and content
+        nav_html += f'<button class="tab-btn {active_class}" onclick="showPage(\\'{page_id_escaped}\\', event)">{page_title_escaped}</button>'
         
         # Page content
         components_html = ''
@@ -945,12 +975,12 @@ def generate_report(
             components_html += comp_html
         
         layout_class = {'grid': 'layout-grid', 'single-column': 'layout-single', 'flex': 'layout-flex'}.get(layout, 'layout-grid')
-        pages_html += f'<div id="{page_id}" class="page-content {active_class} {layout_class}">{components_html}</div>'
+        pages_html += f'<div id="{page_id_escaped}" class="page-content {active_class} {layout_class}">{components_html}</div>'
     
     # Build final HTML
     report_name = config.get('name', "''' + name + ''' Report")
     report_name_escaped = html.escape(report_name)
-    html = f"""<!DOCTYPE html>
+    html_output = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -990,7 +1020,7 @@ function showPage(pageId, event) {{
     
     # Write output
     output_file = output_path / 'index.html'
-    output_file.write_text(html, encoding='utf-8')
+    output_file.write_text(html_output, encoding='utf-8')
     
     mode_str = " (dry-run)" if dry_run else ""
     print(f"✓ Report generated{mode_str}: {output_file}")
