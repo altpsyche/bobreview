@@ -2,38 +2,31 @@
 
 ## Extensible Report Generation Framework
 
-Version 1.0.7 - Plugin System
+Version 1.0.8 - Plugin-First Architecture
 
-### What's New in v1.0.7
+### What's New in v1.0.8
 
-- **PluginHelper Facade** (`core/plugin_system/plugin_helper.py`):
-  - Simplified registration API: `add_data_parser()`, `add_theme()`, `add_templates()`
-  - One-call setup: `setup_complete_report_system()`
+- **Plugin-First Architecture**:
+  - Core is pure infrastructure - plugins provide all domain logic
+  - CLI: `bobreview --plugin <name> --dir <data>`
+  - Removed: core themes, executor, analytics/chart services
+  - Plugins own themes, report generation, charts
 
-- **Plugin Scaffolding CLI**:
-  - `bobreview plugins create my-plugin` - Generate complete plugin skeleton
-  - `--template minimal|full` - Choose template complexity
-  - Generates: manifest.json, plugin.py, parsers, templates, report_systems, sample_data
+- **Unified Configuration System**:
+  - Single flat `Config` class replaces nested config classes
+  - CLI arguments unified into single entry point
 
-- **PageRenderer Class** (`engine/page_renderer.py`):
-  - ~300 lines extracted from executor.py for better modularity
+- **D&D-Themed Plugin Scaffolding**:
+  - `bobreview plugins create my-plugin` - Generate demo plugin
+  - Sample data: Character roster with stats, classes, races, spells
+  - 5 built-in themes: Midnight, Aurora, Sunset, Frost, Dungeon
 
-- **Preset Factory Functions** (`engine/presets.py`):
-  - `create_simple_report_system()`, `create_csv_report_system()`
+- **Breaking Changes**:
+  - Flat config format (no nested `llm_config`, `theme`, etc.)
+  - Themes now plugin-owned (not in core)
+  - `bobreview build` → `bobreview --plugin <name>`
 
-- **Plugin Scaffolder**: `bobreview plugins create my-plugin` creates complete plugin skeleton
-
-- **Critical Fixes**:
-  - Fixed bare `except:` clauses in `engine/loader.py`
-  - Removed dead code (`PageGeneratorInterface`, `PageGeneratorTemplate`)
-
-- **Plugin System**: Fully modular plugin architecture with SOLID and DRY principles
-  - **Focused Registries**: PluginRegistry split into 12 focused registries
-  - **Focused Config Classes**: ReportConfig split into 5 focused config classes
-  - **Dependency Injection**: No global singletons
-  - **Single Responsibility**: Executor split into focused classes
-
-- All v1.0.6 features preserved
+- All v1.0.7 features preserved
 
 ---
 
@@ -102,7 +95,7 @@ bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama
 bobreview --version
 ```
 
-You should see: `bobreview 1.0.7`
+You should see: `bobreview 1.0.8`
 
 ---
 
@@ -339,7 +332,7 @@ bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
 bobreview --version      # Check version
 
 # Test installation
-python -c "from bobreview.core import ReportConfig; print('OK')"
+python -c "from bobreview.core.config import Config; print('OK')"
 ```
 
 ---
@@ -351,9 +344,9 @@ python -c "from bobreview.core import ReportConfig; print('OK')"
 - **Full Documentation:** See `README.md` in the installation folder
 - **Quick Start:** See `QUICKSTART.md` for more examples
 - **Detailed Install Guide:** See `INSTALL.md` for advanced setup
-- **Release Notes:** See `docs/V1.0.7_RELEASE_NOTES.md` for v1.0.7 details
+- **Release Notes:** See `CHANGELOG.md` for v1.0.8 migration guide and details
 
 ---
 
-**BobReview v1.0.7** - Extensible report generation framework  
+**BobReview v1.0.8** - Extensible report generation framework  
 MIT License | Focused Architecture - SOLID & DRY Principles

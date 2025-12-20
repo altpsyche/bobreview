@@ -29,7 +29,7 @@ def safe_plugin_call(
         plugin: Plugin instance
         method_name: Name of the method to call
         *args: Positional arguments to pass to the method
-        config: Optional ReportConfig for logging (uses log_warning if provided)
+        config: Optional Config for logging (uses log_warning if provided)
         **kwargs: Keyword arguments to pass to the method
     
     Returns:
@@ -66,7 +66,7 @@ def call_plugin_lifecycle_hooks(
         plugins: List of plugin instances
         hook_name: Name of the hook method (e.g., 'on_report_start')
         context: Context dictionary to pass to the hook
-        config: Optional ReportConfig for logging
+        config: Optional Config for logging
     """
     for plugin in plugins:
         safe_plugin_call(plugin, hook_name, context, config=config)

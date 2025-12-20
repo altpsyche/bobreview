@@ -1,36 +1,23 @@
 #!/usr/bin/env python3
 """
 Command-line interface for BobReview.
+
+Plugin-First Architecture:
+- Core provides minimal infrastructure
+- Plugins provide all features
+- This CLI is a minimal skeleton for plugin management
 """
 
 import argparse
-import os
 import sys
-import time
-import random
 from pathlib import Path
 
 from . import __version__
-from .core import ReportConfig, validate_config, log_info, log_success, log_warning, log_error, log_verbose, format_number
-from .core import init_cache, get_cache
-from .core.config import LLMConfig, CacheConfig, ExecutionConfig, OutputConfig
-
-# Import report systems framework
-from .engine import load_report_system, list_available_systems
-from .engine.executor import ReportSystemExecutor
-
-# Import provider listing
-from .services.llm.providers import list_providers, get_provider_info
-
-# Import plugin system
+from .core import Config, log_info, log_success, log_warning, log_error, log_verbose
 from .core.plugin_system import get_loader, init_loader, PluginDiscovery, PluginManifest, PluginLoadError
-
-# Import template engine
-from .core.template_engine import reset_template_engine
 
 # Import rich for beautiful CLI output
 try:
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
     from rich.console import Console
     from rich.panel import Panel
     from rich.table import Table
@@ -53,12 +40,12 @@ def print_banner():
     title = Text()
     title.append("Bob", style="bold cyan")
     title.append("Review", style="bold white")
-    title.append(f" v{__version__}", style="dim")
+    title.append(f" v{__version__}", style="bold dim cyan")
     
     console.print()
     console.print(Panel(
         title,
-        subtitle="[dim]Extensible Report Generation Framework[/dim]",
+        subtitle="[dim]Plugin-First Report Framework[/dim]",
         box=box.ROUNDED,
         border_style="cyan",
         padding=(0, 2),
@@ -77,182 +64,100 @@ def print_rich_help():
     
     # Tool description
     intro = Markdown("""
-Generate beautiful HTML reports from any data using **LLM-powered analysis**.
+Generate beautiful HTML reports from any data using **[BobReview]** and a **plugin-based architecture**.
 
-- **Extensible** - Create plugins for any data format  
-- **Themeable** - 7 built-in themes or create your own
-- **Multi-LLM** - OpenAI, Anthropic Claude, or local Ollama
+- **Plugin-First** - All features come from plugins  
+- **Extensible** - Create plugins for any data format
+- **Themeable** - Custom themes per plugin
 """)
     console.print(intro)
     console.print()
     
     # Quick start
     console.print("[bold cyan]Quick Start[/bold cyan]")
-    console.print("  [dim]Create:[/dim]  bobreview plugins create [cyan]<name>[/cyan]")
-    console.print("  [dim]Use:[/dim]     bobreview --plugin [cyan]<name>[/cyan] --dir [cyan]<path>[/cyan]")
+    console.print(
+        "  [dim]Create:[/dim]  "
+        "[cyan]bobreview[/cyan] [magenta]plugins[/magenta] [green]create[/green] [cyan]<name>[/cyan]"
+    )
+    console.print(
+        "  [dim]Use:[/dim]     "
+        "[cyan]bobreview[/cyan] --plugin [magenta]<name>[/magenta] --dir [cyan]<path>[/cyan]"
+    )
     console.print()
     
     # Core options
     core_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
-    core_table.add_column("Option", style="cyan", width=25)
+    core_table.add_column("Option", style="cyan", width=28)
     core_table.add_column("Description")
-    core_table.add_row("--plugin <name>", "Plugin to use (required)")
-    core_table.add_row("--dir <path>", "Data directory (default: .)")
-    core_table.add_row("--output <file>", "Output file (default: report.html)")
-    core_table.add_row("--title <text>", "Custom report title")
-    core_table.add_row("--theme <id>", "Color theme (use --list-themes)")
+    core_table.add_row("--plugin <name>", "Plugin to use (required for reports)")
+    core_table.add_row("--dir <path>", "Data directory (default: current directory)")
+    core_table.add_row("--output <file>", "Output path (parent dir used, default: report.html)")
+    core_table.add_row("--config <file>", "Custom report config YAML file")
+    core_table.add_row("--dry-run", "Skip LLM API calls (for testing)")
     console.print(Panel(core_table, title="[bold]Core Options[/bold]", border_style="dim"))
     
-    # LLM options
-    llm_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
-    llm_table.add_column("Option", style="cyan", width=25)
-    llm_table.add_column("Description")
-    llm_table.add_row("--llm-provider <name>", "openai, anthropic, or ollama")
-    llm_table.add_row("--llm-model <model>", "Model name (provider default)")
-    llm_table.add_row("--llm-api-key <key>", "API key (or use env vars)")
-    llm_table.add_row("--llm-temperature <n>", "Creativity 0.0-2.0 (default: 0.7)")
-    llm_table.add_row("--dry-run", "Skip LLM calls (placeholder content)")
-    console.print(Panel(llm_table, title="[bold]LLM Options[/bold]", border_style="dim"))
-    
-    # Discovery commands
+    # Discovery commands (including how to make a folder a plugin folder)
     discover_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
-    discover_table.add_column("Option", style="cyan", width=25)
+    discover_table.add_column("Option", style="cyan", width=28)
     discover_table.add_column("Description")
     discover_table.add_row("--list-plugins", "Show available plugins")
-    discover_table.add_row("--list-themes", "Show available themes")
-    discover_table.add_row("--list-providers", "Show available LLM providers")
-    discover_table.add_row("--list-report-systems", "Show available report systems")
+    discover_table.add_row(
+        "--plugin-dir <dir>",
+        "Add custom directory to plugin search path (repeatable, e.g., ./plugins)"
+    )
     console.print(Panel(discover_table, title="[bold]Discovery[/bold]", border_style="dim"))
     
-    # Plugin management
+    # Plugin management commands
     plugin_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
-    plugin_table.add_column("Command", style="cyan", width=25)
+    plugin_table.add_column("Command", style="cyan", width=28)
     plugin_table.add_column("Description")
-    plugin_table.add_row("plugins create <name>", "Scaffold a new plugin")
     plugin_table.add_row("plugins list", "Show installed plugins")
+    plugin_table.add_row("plugins list --verbose", "Show plugins with detailed info")
+    plugin_table.add_row("plugins create <name>", "Scaffold a new plugin")
     plugin_table.add_row("plugins info <name>", "Show plugin details")
     console.print(Panel(plugin_table, title="[bold]Plugin Management[/bold]", border_style="dim"))
     
-    # Other options
-    console.print("[dim]Other: --verbose, --quiet, --no-cache, --sample <n>, --version[/dim]")
+    # Plugin create options
+    create_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    create_table.add_column("Option", style="cyan", width=28)
+    create_table.add_column("Description")
+    create_table.add_row("--output-dir, -o <dir>", "Where to create (default: ~/.bobreview/plugins/)")
+    create_table.add_row("--template, -t <type>", "Template: minimal or full (default: full)")
+    create_table.add_row("--theme <name>", "Base color theme (default: dark)")
+    console.print(Panel(create_table, title="[bold]Plugin Create Options[/bold]", border_style="dim"))
+    
+    # Output & debugging
+    output_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    output_table.add_column("Option", style="cyan", width=28)
+    output_table.add_column("Description")
+    output_table.add_row("--verbose, -v", "Enable verbose debug output")
+    output_table.add_row("--quiet, -q", "Errors only (suppress info/warnings)")
+    output_table.add_row("--version", "Show version and exit")
+    console.print(Panel(output_table, title="[bold]Output & Debugging[/bold]", border_style="dim"))
+    
+    # Examples (with colored commands and subcommands)
+    examples_text = """[dim]# List plugins[/dim]
+[cyan]bobreview[/cyan] [magenta]plugins[/magenta] list
+
+[dim]# Create a plugin[/dim]
+[cyan]bobreview[/cyan] [magenta]plugins[/magenta] [green]create[/green] my-plugin --template full
+
+[dim]# Generate report[/dim]
+[cyan]bobreview[/cyan] --plugin [magenta]my-plugin[/magenta] --dir [cyan]./data[/cyan] --output [cyan]./report.html[/cyan]
+
+[dim]# Dry run (skip LLM calls)[/dim]
+[cyan]bobreview[/cyan] --plugin [magenta]my-plugin[/magenta] --dir [cyan]./data[/cyan] --dry-run"""
+    console.print(Panel(examples_text, title="[bold yellow]Examples[/bold yellow]", border_style="dim"))
     console.print()
-    console.print("[dim]Full help: bobreview --help --verbose[/dim]")
+    
+    console.print("[dim]Full argparse help: bobreview --help --verbose[/dim]")
     console.print()
     
     return True
 
 
-def handle_doctor_command(extra_dirs=None):
-    """Run diagnostic checks on BobReview setup."""
-    if RICH_AVAILABLE:
-        from rich.markdown import Markdown
-        
-        print_banner()
-        console.print()
-        console.print("[bold]System Check[/bold]")
-        console.print()
-        
-        checks = []
-        all_ok = True
-        
-        # Python version
-        import sys
-        py_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-        py_ok = sys.version_info >= (3, 10)
-        checks.append(("Python", py_version, py_ok, "3.10+ required" if not py_ok else ""))
-        
-        # Rich library
-        checks.append(("Rich library", "installed", True, ""))
-        
-        # API Keys
-        openai_key = os.environ.get('OPENAI_API_KEY', '')
-        anthropic_key = os.environ.get('ANTHROPIC_API_KEY', '')
-        
-        if openai_key:
-            checks.append(("OpenAI API Key", f"...{openai_key[-4:]}", True, ""))
-        else:
-            checks.append(("OpenAI API Key", "not set", False, "Set OPENAI_API_KEY env var"))
-        
-        if anthropic_key:
-            checks.append(("Anthropic API Key", f"...{anthropic_key[-4:]}", True, ""))
-        else:
-            checks.append(("Anthropic API Key", "not set", False, "Set ANTHROPIC_API_KEY env var"))
-        
-        # Plugin directories
-        plugin_dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=extra_dirs)
-        existing_dirs = [d for d in plugin_dirs if Path(d).exists()]
-        checks.append(("Plugin directories", f"{len(existing_dirs)} found", len(existing_dirs) > 0, ""))
-        
-        # Plugins
-        loader = init_loader(plugin_dirs)
-        plugins = loader.discover()
-        checks.append(("Plugins discovered", str(len(plugins)), True, ""))
-        
-        # Display results
-        table = Table(box=box.ROUNDED, border_style="cyan", show_header=False)
-        table.add_column("Check", style="bold", width=20)
-        table.add_column("Status", width=20)
-        table.add_column("Result", justify="center", width=8)
-        table.add_column("Note", style="dim")
-        
-        for check, status, ok, note in checks:
-            result = "[green]OK[/green]" if ok else "[yellow]--[/yellow]"
-            if not ok:
-                all_ok = False
-            table.add_row(check, status, result, note)
-        
-        console.print(table)
-        console.print()
-        
-        if all_ok:
-            console.print("[green]All checks passed![/green]")
-        else:
-            console.print("[yellow]Some checks need attention.[/yellow]")
-            console.print("[dim]Note: API keys are optional if using --dry-run or Ollama.[/dim]")
-        
-        console.print()
-        return 0
-    else:
-        print("Doctor requires 'rich' library: pip install rich")
-        return 1
-
-
-def _load_plugins(extra_dirs, config):
-    """
-    Load plugins from discovered directories.
-    
-    Uses PluginDiscovery to find plugins from:
-    1. CLI --plugin-dirs
-    2. BOBREVIEW_PLUGIN_DIRS environment variable
-    3. ~/.bobreview/plugins/
-    4. ./plugins/
-    5. Bundled plugins (shipped with package)
-    """
-    dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=extra_dirs)
-    
-    if not dirs:
-        log_verbose("No plugin directories configured", config)
-        return
-    
-    loader = init_loader(dirs)
-    discovered = loader.discover()
-    
-    if discovered:
-        log_verbose(f"Discovered {len(discovered)} plugins (will load on-demand)", config)
-        
-        # Don't load all plugins upfront - let load_report_system() lazy-load
-        # only the plugin needed for the requested report system.
-        # This improves startup time and prevents errors from broken plugins
-        # that aren't actually needed.
-
-
-# Removed _load_core_plugin() - built-in plugins are now discovered and loaded
-# through the unified plugin discovery mechanism in _load_plugins()
-
-
 def handle_plugin_command(args):
     """Handle plugin subcommands."""
-    # Initialize loader with discovered directories (respecting --plugin-dirs)
     dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=getattr(args, 'plugin_dirs', []))
     loader = init_loader(dirs)
     loader.discover()
@@ -265,29 +170,30 @@ def handle_plugin_command(args):
                 console.print(f"\n[dim]Plugin directories searched:[/dim]")
                 for d in dirs:
                     console.print(f"  [cyan]•[/cyan] {d}")
-                console.print("\n[dim]To add plugins:[/dim] bobreview plugins create my-plugin")
+                console.print("\n[dim]To create a plugin:[/dim] bobreview plugins create my-plugin")
             else:
                 print("No plugins found.")
-                print(f"\nPlugin directories searched:")
+                print("\nPlugin directories searched:")
                 for d in dirs:
                     print(f"  - {d}")
-                print("\nTo add plugins, place them in ~/.bobreview/plugins/")
             return 0
         
         if RICH_AVAILABLE:
-            table = Table(title="Installed Plugins", box=box.ROUNDED, border_style="cyan")
+            title = "Installed Plugins"
+            if getattr(args, "verbose", False):
+                title = "Installed Plugins (detailed)"
+
+            table = Table(title=title, box=box.ROUNDED, border_style="cyan")
             table.add_column("Plugin", style="bold")
             table.add_column("Version", style="dim")
             table.add_column("Status", justify="center")
-            if args.verbose:
-                table.add_column("Author")
-                table.add_column("Components")
+            if getattr(args, "verbose", False):
+                table.add_column("Path", overflow="fold")
             
             for p in plugins:
-                status = "[green]✓ loaded[/green]" if p.loaded else "[dim]○ available[/dim]"
-                if args.verbose:
-                    provides_str = ", ".join(f"{k}:{len(v)}" for k, v in p.provides.items()) if p.provides else ""
-                    table.add_row(p.name, p.version, status, p.author or "", provides_str)
+                status = "[green]loaded[/green]" if p.loaded else "[dim]available[/dim]"
+                if getattr(args, "verbose", False):
+                    table.add_row(p.name, p.version, status, str(p.path))
                 else:
                     table.add_row(p.name, p.version, status)
             
@@ -297,76 +203,59 @@ def handle_plugin_command(args):
         else:
             print("Installed plugins:\n")
             for p in plugins:
-                status = "✓ loaded" if p.loaded else "○ available"
-                print(f"  {p.name} v{p.version} [{status}]")
-                if args.verbose:
-                    print(f"    Author: {p.author}")
-                    print(f"    {p.description}")
-                    if p.provides:
-                        provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
-                        print(f"    Provides: {provides_str}")
-                    print()
+                status = "loaded" if p.loaded else "available"
+                line = f"  {p.name} v{p.version} [{status}]"
+                if getattr(args, "verbose", False):
+                    line += f" - {p.path}"
+                print(line)
         return 0
     
-    elif args.plugin_command == 'install':
-        plugin_path = Path(args.path).expanduser().resolve()
+    elif args.plugin_command == 'create':
+        from .core.plugin_system.scaffolder.core import create_plugin
         
-        if not plugin_path.exists():
-            print(f"Error: Path does not exist: {plugin_path}")
+        if args.output_dir:
+            output_dir = Path(args.output_dir).expanduser().resolve()
+        else:
+            output_dir = Path.home() / ".bobreview" / "plugins"
+        
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        plugin_dir = output_dir / args.name.replace('-', '_')
+        if plugin_dir.exists():
+            print(f"Error: Plugin directory already exists: {plugin_dir}")
             return 1
         
-        manifest_path = plugin_path / "manifest.json"
-        if not manifest_path.exists():
-            print(f"Error: No manifest.json found in {plugin_path}")
+        try:
+            color_theme = getattr(args, 'theme', 'dark')
+            created_path = create_plugin(args.name, output_dir, args.template, color_theme)
+            print(f"Created plugin: {args.name}")
+            print(f"  Location: {created_path}")
+            print(f"  Template: {args.template}")
+            
+            # Auto-register custom output directory
+            if args.output_dir:
+                user_plugins = PluginDiscovery.get_user_plugins_dir()
+                local_plugins = PluginDiscovery.get_local_plugins_dir()
+                
+                # Only register if it's not a default location
+                if output_dir != user_plugins and output_dir != local_plugins:
+                    if PluginDiscovery.add_plugin_dir_to_config(output_dir):
+                        print(f"  ✓ Registered {output_dir} for auto-discovery")
+                    else:
+                        print(f"  Note: Use --plugin-dir {output_dir} to include this location")
+            
+            print()
+            print("Next steps:")
+            print(f"  1. Edit {created_path}/manifest.json")
+            print("  2. Modify parsers for your data format")
+            print(f"  3. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
+            return 0
+        except (OSError, ValueError, RuntimeError) as e:
+            print(f"Error creating plugin: {e}")
+            if args.verbose:
+                import traceback
+                traceback.print_exc()
             return 1
-        
-        # Copy to user plugin directory
-        user_plugins = Path.home() / ".bobreview" / "plugins"
-        user_plugins.mkdir(parents=True, exist_ok=True)
-        
-        import shutil
-        dest = user_plugins / plugin_path.name
-        if dest.exists():
-            print(f"Plugin already installed at: {dest}")
-            print("Use 'bob plugins uninstall' first to reinstall.")
-            return 1
-        
-        shutil.copytree(plugin_path, dest)
-        print(f"✓ Installed plugin to: {dest}")
-        
-        # Reload and show info
-        loader.add_plugin_dir(user_plugins)
-        loader.discover()
-        
-        manifest = PluginManifest.from_file(manifest_path)
-        print(f"  Name: {manifest.name} v{manifest.version}")
-        print(f"  Author: {manifest.author}")
-        return 0
-    
-    elif args.plugin_command == 'uninstall':
-        user_plugins = (Path.home() / ".bobreview" / "plugins").resolve()
-        
-        # Find the plugin
-        found = None
-        for p in loader.get_discovered_plugins():
-            if p.name == args.name and p.path:
-                found = Path(p.path).expanduser().resolve()
-                break
-        
-        if not found:
-            print(f"Error: Plugin not found: {args.name}")
-            return 1
-        
-        # Only allow uninstalling from user directory
-        # Use resolved paths to prevent path traversal via .. components
-        if not found.is_relative_to(user_plugins):
-            print(f"Cannot uninstall built-in plugin: {args.name}")
-            return 1
-        
-        import shutil
-        shutil.rmtree(found)
-        print(f"✓ Uninstalled plugin: {args.name}")
-        return 0
     
     elif args.plugin_command == 'info':
         plugins = loader.get_discovered_plugins()
@@ -377,30 +266,17 @@ def handle_plugin_command(args):
                 break
         
         if not found:
-            if RICH_AVAILABLE:
-                console.print(f"[red]✗[/red] Plugin not found: {args.name}")
-            else:
-                print(f"Plugin not found: {args.name}")
+            print(f"Plugin not found: {args.name}")
             return 1
         
         if RICH_AVAILABLE:
-            # Build info content
             info_lines = []
             info_lines.append(f"[bold]Version:[/bold] {found.version}")
             info_lines.append(f"[bold]Author:[/bold] {found.author or 'Unknown'}")
             info_lines.append(f"[bold]Description:[/bold] {found.description or 'No description'}")
             info_lines.append(f"[bold]Path:[/bold] {found.path}")
-            status = "[green]✓ loaded[/green]" if found.loaded else "[dim]○ not loaded[/dim]"
+            status = "[green]loaded[/green]" if found.loaded else "[dim]not loaded[/dim]"
             info_lines.append(f"[bold]Status:[/bold] {status}")
-            
-            if found.dependencies:
-                info_lines.append(f"[bold]Dependencies:[/bold] {', '.join(found.dependencies)}")
-            
-            if found.provides:
-                provides_lines = []
-                for ext_type, items in found.provides.items():
-                    provides_lines.append(f"  {ext_type}: {', '.join(items)}")
-                info_lines.append(f"[bold]Provides:[/bold]\n" + "\n".join(provides_lines))
             
             console.print()
             console.print(Panel(
@@ -417,58 +293,20 @@ def handle_plugin_command(args):
             print(f"  Description: {found.description}")
             print(f"  Path: {found.path}")
             print(f"  Status: {'loaded' if found.loaded else 'not loaded'}")
-            if found.dependencies:
-                print(f"  Dependencies: {', '.join(found.dependencies)}")
-            if found.provides:
-                print("  Provides:")
-                for ext_type, items in found.provides.items():
-                    print(f"    {ext_type}: {', '.join(items)}")
         return 0
     
-    elif args.plugin_command == 'create':
-        from .core.plugin_system.scaffolder.core import create_plugin
-        
-        # Determine output directory
-        if args.output_dir:
-            output_dir = Path(args.output_dir).expanduser().resolve()
-        else:
-            output_dir = Path.home() / ".bobreview" / "plugins"
-        
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Check if plugin already exists
-        plugin_dir = output_dir / args.name.replace('-', '_')
-        if plugin_dir.exists():
-            print(f"Error: Plugin directory already exists: {plugin_dir}")
-            return 1
-        
-        # Create the plugin
-        try:
-            color_theme = getattr(args, 'theme', 'dark')
-            created_path = create_plugin(args.name, output_dir, args.template, color_theme)
-            print(f"✓ Created plugin: {args.name}")
-            print(f"  Location: {created_path}")
-            print(f"  Template: {args.template}")
-            print(f"  Theme: {color_theme}")
-            print()
-            print("Next steps:")
-            print(f"  1. Edit {created_path}/manifest.json to update author and description")
-            print(f"  2. Modify parsers/csv_parser.py for your data format")
-            print(f"  3. Change theme in report_systems/{args.name.replace('-', '_')}.json (theme.preset)")
-            print(f"  4. Test with: bobreview --plugin {args.name} --dir {created_path}/sample_data")
-            return 0
-        except Exception as e:
-            print(f"Error creating plugin: {e}")
-            return 1
-    
     else:
-        print("Usage: bob plugins <list|install|uninstall|info|create>")
+        print("Usage: bobreview plugins <list|create|info>")
         return 1
 
 
 def main():
     """
-    Parse CLI arguments and generate reports using plugins.
+    Parse CLI arguments and manage plugins.
+    
+    Plugin-First Architecture:
+    - Core CLI is minimal - just plugin management
+    - Report generation will be handled by plugins
     
     Returns:
         exit_code (int): 0 on success, 1 on failure.
@@ -479,207 +317,94 @@ def main():
         if '--verbose' not in sys.argv and '-v' not in sys.argv:
             if print_rich_help():
                 return 0
+    
     parser = argparse.ArgumentParser(
         prog='bobreview',
-        description='BobReview - Extensible Report Generation Framework',
+        description='BobReview - Plugin-First Report Framework',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Basic usage with plugin (required)
-  bobreview --plugin <plugin-name> --dir ./screenshots
+  Plugin management:
+    bobreview plugins list
+    bobreview plugins list --verbose
+    bobreview plugins create my-plugin
+    bobreview plugins info my-plugin
+  
+  Report generation (via plugin):
+    bobreview --plugin <plugin-name> --dir ./data
+    bobreview --plugin <plugin-name> --dir ./data --dry-run
+    bobreview --plugin <plugin-name> --dir ./data --config ./report_config.yaml
 
-  # Use Anthropic Claude
-  bobreview --plugin <plugin-name> --dir ./screenshots --llm-provider anthropic --llm-model claude-3-sonnet-20240229
-
-  # Use local Ollama
-  bobreview --plugin <plugin-name> --dir ./screenshots --llm-provider ollama --llm-model llama2
-
-  # Custom title
-  bobreview --plugin <plugin-name> --dir ./screenshots --title "My Analysis"
-
-  # Explicit report system from plugin (required if plugin has multiple systems)
-  bobreview --plugin <plugin-name> --report-system <system-id> --dir ./screenshots
-
-  # Dry run to test without calling LLM
-  bobreview --plugin <plugin-name> --dir ./screenshots --dry-run
-
-  # List available plugins and report systems
-  bobreview plugins list
-  bobreview --list-plugins
-  bobreview --list-report-systems
-
-  # Create a new plugin from template
-  bobreview plugins create my-plugin
-  bobreview plugins create my-plugin --template minimal
-
-  # List available LLM providers
-  bobreview --list-providers
+Notes:
+  - Use --verbose/-v for debug output.
+  - Use --quiet/-q for errors only (suppresses info/warnings).
+  - The --output path controls the output *directory*; plugins typically
+    write an 'index.html' file inside that directory.
         """
     )
+    
     parser.add_argument(
         '--version', action='version', version=f'%(prog)s {__version__}'
     )
     parser.add_argument(
-        '--dir', type=str, default='.',
-        help='Directory containing data files to analyze (default: current directory)'
-    )
-    parser.add_argument(
-        '--output', type=str, default='report.html',
-        help='Output file path for generated report (default: report.html)'
-    )
-    parser.add_argument(
-        '--title', type=str, default=None,
-        help='Custom report title'
-    )
-    
-    parser.add_argument(
-        '--no-recommendations', action='store_true',
-        help='Skip LLM recommendations section'
-    )
-    
-    # LLM Provider arguments (unified)
-    parser.add_argument(
-        '--llm-provider', type=str, default='openai',
-        choices=['openai', 'anthropic', 'ollama'],
-        help='LLM provider (default: openai)'
-    )
-    parser.add_argument(
-        '--llm-api-key', type=str, default=None,
-        help='API key (or use OPENAI_API_KEY / ANTHROPIC_API_KEY env vars)'
-    )
-    parser.add_argument(
-        '--llm-api-base', type=str, default=None,
-        help='Custom API endpoint (for Ollama: http://localhost:11434)'
-    )
-    parser.add_argument(
-        '--llm-model', type=str, default=None,
-        help='Model name (defaults: gpt-4o, claude-3-5-sonnet, llama2)'
-    )
-    parser.add_argument(
-        '--llm-temperature', type=float, default=0.7,
-        help='Creativity (0.0-2.0, default: 0.7)'
-    )
-    parser.add_argument(
-        '--llm-max-tokens', type=int, default=2000,
-        help='Max response tokens (default: 2000)'
-    )
-    parser.add_argument(
-        '--llm-chunk-size', type=int, default=10,
-        help='Number of data samples to send per LLM call (default: 10)'
-    )
-    parser.add_argument(
-        '--llm-combine-warning-threshold', type=int, default=100000,
-        help='Character count threshold for warning when combining chunks (default: 100000)'
-    )
-    parser.add_argument(
-        '--list-providers', action='store_true',
-        help='Show available LLM providers'
-    )
-    
-    # Caching options
-    parser.add_argument(
-        '--cache-dir', type=str, default='.bobreview_cache',
-        help='Cache directory (default: .bobreview_cache)'
-    )
-    parser.add_argument(
-        '--use-cache', action='store_true', default=True,
-        help='Enable response caching (default)'
-    )
-    parser.add_argument(
-        '--no-cache', action='store_false', dest='use_cache',
-        help='Disable caching, always call LLM'
-    )
-    parser.add_argument(
-        '--clear-cache', action='store_true',
-        help='Clear cache before running'
-    )
-    
-    # Execution options
-    parser.add_argument(
-        '--dry-run', action='store_true',
-        help='Skip LLM calls (placeholder content)'
-    )
-    parser.add_argument(
-        '--sample', type=int, default=None, dest='sample_size',
-        help='Process only N random samples'
-    )
-    
-    # Output options
-    parser.add_argument(
         '--verbose', '-v', action='store_true',
-        help='Show debug information'
+        help='Enable verbose debug output'
     )
     parser.add_argument(
         '--quiet', '-q', action='store_true',
-        help='Errors only'
+        help='Errors only (suppress info and warnings)'
     )
+    
+    # Plugin directories
     parser.add_argument(
-        '--no-embed-images', action='store_false', dest='embed_images', default=True,
-        help='Link to images instead of embedding'
+        '--plugin-dir', action='append', dest='plugin_dirs', default=[],
+        metavar='DIR',
+        help='Extra plugin search directory (repeatable)'
     )
-    parser.add_argument(
-        '--linked-css', action='store_true', default=False,
-        help='Link to CSS instead of embedding'
-    )
-    parser.add_argument(
-        '--theme', type=str, default=None, dest='theme_id',
-        # Note: No choices restriction - plugins can register custom themes
-        # Built-in: dark, light, high_contrast, ocean, purple, terminal, sunset
-        # Plugin themes are validated at runtime after plugins are loaded
-        help='Color theme (dark, ocean, purple, terminal, sunset, light, high_contrast)'
-    )
-    parser.add_argument(
-        '--disable-page', action='append', dest='disabled_pages', default=[],
-        metavar='PAGE_ID',
-        help='Exclude page by ID (repeatable)'
-    )
-    # Plugin and report system selection
+    
+    # Plugin selection (for future)
     parser.add_argument(
         '--plugin', type=str, required=False,
         metavar='PLUGIN_NAME',
         help='Plugin to use (see --list-plugins)'
     )
     parser.add_argument(
-        '--report-system', type=str, default=None,
-        metavar='SYSTEM',
-        help='Report system ID (required if plugin has multiple)'
+        '--dir', type=str, default='.',
+        help='Data directory (default: current directory)'
     )
     parser.add_argument(
-        '--list-report-systems', action='store_true',
-        help='Show available report systems'
+        '--output', type=str, default='report.html',
+        help='Output path whose parent directory will be used for the report (HTML is usually written as index.html)'
     )
+    parser.add_argument(
+        '--config', '-c', type=str, default=None,
+        metavar='YAML_PATH',
+        help='Path to custom report config YAML'
+    )
+    parser.add_argument(
+        '--dry-run', action='store_true',
+        help='Skip LLM API calls (for testing)'
+    )
+    
+    # Discovery
     parser.add_argument(
         '--list-plugins', action='store_true',
         help='Show available plugins'
     )
-    parser.add_argument(
-        '--list-themes', action='store_true',
-        help='Show available color themes'
-    )
     
-    # Plugin arguments
-    parser.add_argument(
+    # Plugin subcommands
+    subparsers = parser.add_subparsers(dest='command', help='Commands')
+    
+    plugins_parser = subparsers.add_parser('plugins', help='Plugin management')
+    plugins_parser.add_argument(
         '--plugin-dir', action='append', dest='plugin_dirs', default=[],
         metavar='DIR',
         help='Extra plugin search directory (repeatable)'
     )
-    # NOTE: --no-plugins was removed - plugins are now mandatory for report generation
-    
-    # Plugin subcommands
-    subparsers = parser.add_subparsers(dest='command', help='Plugin management commands')
-    
-    # bob plugins list
-    plugins_parser = subparsers.add_parser('plugins', help='Plugin management')
     plugins_subparsers = plugins_parser.add_subparsers(dest='plugin_command')
     
     plugins_list = plugins_subparsers.add_parser('list', help='Show installed plugins')
     plugins_list.add_argument('--verbose', '-v', action='store_true', help='Include details')
-    
-    plugins_install = plugins_subparsers.add_parser('install', help='Install a plugin from path')
-    plugins_install.add_argument('path', help='Plugin directory path')
-    
-    plugins_uninstall = plugins_subparsers.add_parser('uninstall', help='Remove a plugin')
-    plugins_uninstall.add_argument('name', help='Plugin name')
     
     plugins_info = plugins_subparsers.add_parser('info', help='Show plugin info')
     plugins_info.add_argument('name', help='Plugin name')
@@ -692,110 +417,44 @@ Examples:
                                 choices=['minimal', 'full'],
                                 help='minimal = basic, full = all features (default)')
     plugins_create.add_argument('--theme', type=str, default='dark',
-                                choices=['dark', 'light', 'high_contrast', 'ocean', 'purple', 'terminal', 'sunset'],
                                 help='Base color theme for templates (default: dark)')
     
-    # doctor command
-    doctor_parser = subparsers.add_parser('doctor', help='Check system setup')
-    
-    # Parse args
     args = parser.parse_args()
+
+    # Build a simple Config object so logging respects --verbose/--quiet/--dry-run
+    cli_config = Config()
+    cli_config.verbose = bool(getattr(args, "verbose", False))
+    cli_config.quiet = bool(getattr(args, "quiet", False))
+    cli_config.dry_run = bool(getattr(args, "dry_run", False))
     
-    # Handle --list-providers
-    if args.list_providers:
-        if RICH_AVAILABLE:
-            table = Table(title="LLM Providers", box=box.ROUNDED, border_style="cyan")
-            table.add_column("Provider", style="bold")
-            table.add_column("Default Model")
-            table.add_column("API Key", justify="center")
-            
-            for provider_name in list_providers():
-                info = get_provider_info(provider_name)
-                key_status = f"[yellow]{info['env_key_name']}[/yellow]" if info['requires_api_key'] else "[green]Not required[/green]"
-                table.add_row(provider_name, info['default_model'], key_status)
-            
-            console.print()
-            console.print(table)
-            console.print()
-        else:
-            print("Available LLM providers:\n")
-            for provider_name in list_providers():
-                info = get_provider_info(provider_name)
-                key_info = f"(requires {info['env_key_name']})" if info['requires_api_key'] else "(no API key needed)"
-                print(f"  {provider_name}")
-                print(f"    Default model: {info['default_model']}")
-                print(f"    {key_info}")
-                print()
-        return 0
-    
-    # Handle --list-report-systems
-    if args.list_report_systems:
-        systems = list_available_systems()
-        if not systems:
-            if RICH_AVAILABLE:
-                console.print("[dim]No report systems found.[/dim]")
-            else:
-                print("No report systems found.")
-            return 0
-        
-        if RICH_AVAILABLE:
-            table = Table(title="Report Systems", box=box.ROUNDED, border_style="cyan")
-            table.add_column("ID", style="bold")
-            table.add_column("Version", style="dim")
-            table.add_column("Source", justify="center")
-            table.add_column("Description")
-            
-            for system in systems:
-                source_label = "[green]built-in[/green]" if system['source'] == 'builtin' else "[yellow]plugin[/yellow]"
-                table.add_row(system['id'], system['version'], source_label, system['description'] or "")
-            
-            console.print()
-            console.print(table)
-            console.print()
-        else:
-            print("Available report systems:\n")
-            for system in systems:
-                source_label = "built-in" if system['source'] == 'builtin' else "custom"
-                print(f"  {system['id']} ({source_label}) - v{system['version']}")
-                print(f"    {system['description']}")
-                print(f"    Path: {system['path']}")
-                print()
-        return 0
+    # Auto-register any --plugin-dir paths to config for persistence
+    plugin_dirs = getattr(args, 'plugin_dirs', [])
+    for dir_path in plugin_dirs:
+        resolved = Path(dir_path).expanduser().resolve()
+        if resolved.exists() and resolved.is_dir():
+            if PluginDiscovery.add_plugin_dir_to_config(resolved):
+                log_verbose(f"Registered plugin directory: {resolved}", config=cli_config)
     
     # Handle --list-plugins
     if args.list_plugins:
-        dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=getattr(args, 'plugin_dirs', []))
+        dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=args.plugin_dirs)
         loader = init_loader(dirs)
         loader.discover()
         plugins = loader.get_discovered_plugins()
         
         if not plugins:
-            if RICH_AVAILABLE:
-                console.print("[dim]No plugins found.[/dim]")
-                console.print(f"\n[dim]Plugin directories searched:[/dim]")
-                for d in dirs:
-                    console.print(f"  [cyan]•[/cyan] {d}")
-                console.print("\n[dim]To add plugins:[/dim] bobreview plugins create my-plugin")
-            else:
-                print("No plugins found.")
-                print(f"\nPlugin directories searched:")
-                for d in dirs:
-                    print(f"  - {d}")
-                print("\nTo add plugins, place them in ~/.bobreview/plugins/")
+            print("No plugins found.")
+            print("\nTo create a plugin: bobreview plugins create my-plugin")
             return 0
         
         if RICH_AVAILABLE:
             table = Table(title="Available Plugins", box=box.ROUNDED, border_style="cyan")
             table.add_column("Plugin", style="bold")
             table.add_column("Version", style="dim")
-            table.add_column("Status", justify="center")
-            table.add_column("Author")
-            table.add_column("Components")
+            table.add_column("Description")
             
             for p in plugins:
-                status = "[green]✓ loaded[/green]" if p.loaded else "[dim]○ available[/dim]"
-                provides_str = ", ".join(f"{k}:{len(v)}" for k, v in p.provides.items()) if p.provides else ""
-                table.add_row(p.name, p.version, status, p.author or "", provides_str)
+                table.add_row(p.name, p.version, p.description or "")
             
             console.print()
             console.print(table)
@@ -803,328 +462,132 @@ Examples:
         else:
             print("Available plugins:\n")
             for p in plugins:
-                status = "✓ loaded" if p.loaded else "○ available"
-                print(f"  {p.name} v{p.version} [{status}]")
+                print(f"  {p.name} v{p.version}")
                 if p.description:
                     print(f"    {p.description}")
-                if p.author:
-                    print(f"    Author: {p.author}")
-                if p.provides:
-                    provides_str = ", ".join(f"{k}: {len(v)}" for k, v in p.provides.items())
-                    print(f"    Provides: {provides_str}")
-                print()
         return 0
     
-    # Handle --list-themes
-    if args.list_themes:
-        from .core.themes import BUILTIN_THEMES
-        
-        if RICH_AVAILABLE:
-            table = Table(title="Available Themes", box=box.ROUNDED, border_style="cyan")
-            table.add_column("Theme ID", style="bold")
-            table.add_column("Name")
-            table.add_column("Style")
-            
-            for theme in BUILTIN_THEMES:
-                # Simple style indicator
-                style_type = "dark" if "dark" in theme.id or theme.id in ["ocean", "purple", "terminal", "sunset"] else "light"
-                if theme.id == "high_contrast":
-                    style_type = "high contrast"
-                table.add_row(theme.id, theme.name, style_type)
-            
-            console.print()
-            console.print(table)
-            console.print("\n[dim]Use --theme <id> to apply a theme[/dim]")
-            console.print()
-        else:
-            print("Available themes:\n")
-            for theme in BUILTIN_THEMES:
-                print(f"  {theme.id} - {theme.name}")
-            print("\nUse --theme <id> to apply a theme")
-        return 0
-    
-    # Handle plugin commands
+    # Handle plugin subcommands
     if args.command == 'plugins':
         return handle_plugin_command(args)
     
-    # Handle doctor command
-    if args.command == 'doctor':
-        return handle_doctor_command(extra_dirs=getattr(args, 'plugin_dirs', []))
-    
-    # Validate that --plugin is provided if not using list commands
-    if not args.plugin and not (args.list_plugins or args.list_report_systems or args.list_providers or args.list_themes):
-        parser.error("--plugin is required (unless using a --list-* command)")
-    
-    # Handle quiet + verbose conflict
-    if args.quiet and args.verbose:
-        parser.error("Cannot use both --quiet and --verbose")
-    
-    start_time = time.time()
-    
-    # Get default model based on provider if not specified
-    if args.llm_model is None:
-        default_models = {
-            'openai': 'gpt-4o',
-            'anthropic': 'claude-3-5-sonnet-20241022',
-            'ollama': 'llama2'
-        }
-        args.llm_model = default_models.get(args.llm_provider, 'gpt-4o')
-    
-    # Get API key from environment if not provided
-    env_key_names = {
-        'openai': 'OPENAI_API_KEY',
-        'anthropic': 'ANTHROPIC_API_KEY',
-        'ollama': None  # Ollama doesn't need API key
-    }
-    
-    llm_api_key = args.llm_api_key
-    if not llm_api_key and args.llm_provider != 'ollama':
-        env_key = env_key_names.get(args.llm_provider)
-        if env_key:
-            llm_api_key = os.getenv(env_key)
-    
-    # Check for API key (unless dry run or Ollama)
-    if not llm_api_key and not args.dry_run and args.llm_provider != 'ollama':
-        env_key = env_key_names.get(args.llm_provider, 'API_KEY')
-        parser.error(
-            f"API key required for {args.llm_provider}. "
-            f"Set {env_key} environment variable or use --llm-api-key"
-        )
-    
-    # Build configuration
-    # Note: Thresholds are defined in report system JSON files, not via CLI
-    # Title can come from parsed data (e.g., game.json), so default to None if not provided
-    config = ReportConfig(
-        title=args.title,  # None if not provided - will be extracted from parsed data if available
-        # Use default ThresholdConfig - thresholds come from report system JSON
-        llm=LLMConfig(
-            provider=args.llm_provider,
-            api_key=llm_api_key,
-            api_base=args.llm_api_base,
-            model=args.llm_model,
-            temperature=args.llm_temperature,
-            max_tokens=args.llm_max_tokens,
-            chunk_size=args.llm_chunk_size,
-            combine_warning_threshold=args.llm_combine_warning_threshold,
-            enable_cache=args.use_cache and not args.dry_run,
-        ),
-        cache=CacheConfig(
-            cache_dir=Path(args.cache_dir),
-            use_cache=args.use_cache and not args.dry_run,
-            clear_cache=args.clear_cache,
-        ),
-        execution=ExecutionConfig(
-            dry_run=args.dry_run,
-            sample_size=args.sample_size,
-            verbose=args.verbose,
-            quiet=args.quiet,
-            enable_recommendations=not args.no_recommendations,
-        ),
-        output=OutputConfig(
-            embed_images=args.embed_images,
-            linked_css=args.linked_css,
-            theme_id=args.theme_id or 'dark',  # Default to 'dark' if not specified
-            disabled_pages=args.disabled_pages,
-        )
-    )
-    
-    # Validate configuration
-    validation_errors = validate_config(config)
-    if validation_errors:
-        log_error("Configuration validation failed:")
-        for error in validation_errors:
-            log_error(f"  - {error}")
-        return 1
-    
-    # Initialize cache
-    init_cache(config)
-    
-    # Clear cache if requested
-    if config.cache.clear_cache:
-        cache = get_cache()
-        if cache:
-            cache.clear()
-    
-    if config.execution.dry_run:
-        log_warning("Running in DRY RUN mode - LLM calls will be skipped", config)
-    
-    log_verbose(f"LLM Provider: {config.llm.provider} (model: {config.llm.model})", config)
-    
-    # IMPORTANT: Plugins must be loaded BEFORE template engine is first accessed
-    # to ensure plugin templates are available
-    _load_plugins(args.plugin_dirs, config)
-    
-    # Refresh template engine to pick up plugin templates
-    reset_template_engine()
-    
-    # Use the JSON-based report system framework
-    try:
-        # Plugin is required - determine which report system to use
-        if args.report_system:
-            # Explicit system specified - ensure the plugin is loaded first
-            report_system_id = args.report_system
-            plugin_manager = get_loader()
-            if not plugin_manager.get_discovered_plugins():
-                plugin_manager.discover()
-            matched_manifest = None
-            plugin_name_normalized = args.plugin.lower().replace('-', '_').replace(' ', '')
-            for manifest in plugin_manager.get_discovered_plugins():
-                manifest_name_normalized = manifest.name.lower().replace('-', '_').replace(' ', '')
-                if manifest.name == args.plugin or manifest_name_normalized == plugin_name_normalized:
-                    matched_manifest = manifest
-                    break
-            if matched_manifest and not plugin_manager.is_loaded(matched_manifest.name):
-                try:
-                    plugin_manager.load(matched_manifest.name)
-                    log_info(f"Loaded plugin: {matched_manifest.name}", config)
-                except PluginLoadError as e:
-                    log_warning(f"Failed to load plugin '{matched_manifest.name}': {e}", config)
-                args.plugin = matched_manifest.name
-        else:
-            # No explicit system - auto-select if only one, require selection if multiple
-            plugin_manager = get_loader()
-            
-            # Ensure plugins are discovered (if not already)
-            if not plugin_manager.get_discovered_plugins():
-                plugin_manager.discover()
-            
-            plugin_path = None
-            matched_manifest = None
-            plugin_name_normalized = args.plugin.lower().replace('-', '_').replace(' ', '')
-            for manifest in plugin_manager.get_discovered_plugins():
-                manifest_name_normalized = manifest.name.lower().replace('-', '_').replace(' ', '')
-                # Exact match
-                if manifest.name == args.plugin:
-                    plugin_path = Path(manifest.path) if manifest.path else None
-                    matched_manifest = manifest
-                    break
-                # Normalized match (case-insensitive, dash/underscore agnostic)
-                elif manifest_name_normalized == plugin_name_normalized:
-                    plugin_path = Path(manifest.path) if manifest.path else None
-                    matched_manifest = manifest
-                    break
-            
-            # Load the plugin if found
-            if matched_manifest:
-                if not plugin_manager.is_loaded(matched_manifest.name):
-                    try:
-                        plugin_manager.load(matched_manifest.name)
-                        log_info(f"Loaded plugin: {matched_manifest.name}", config)
-                    except PluginLoadError as e:
-                        log_warning(f"Failed to load plugin '{matched_manifest.name}': {e}", config)
-                # Update args.plugin to the actual plugin name for consistency
-                args.plugin = matched_manifest.name
-            
-            if plugin_path:
-                # Find report systems in plugin
-                plugin_systems_dir = plugin_path / 'report_systems'
-                if plugin_systems_dir.exists():
-                    json_files = sorted(plugin_systems_dir.glob('*.json'))  # Sort for deterministic order
-                    if json_files:
-                        if len(json_files) == 1:
-                            # Only one system - auto-select it
-                            report_system_id = json_files[0].stem
-                            log_info(f"Using report system '{report_system_id}' from plugin '{args.plugin}'", config)
-                        else:
-                            # Multiple systems - require explicit selection
-                            system_names = [f.stem for f in json_files]
-                            log_error(
-                                f"Plugin '{args.plugin}' has {len(json_files)} report systems. "
-                                f"Please specify which one to use with --report-system.\n"
-                                f"Available systems: {', '.join(system_names)}"
-                            )
-                            return 1
-                    else:
-                        log_error(f"Plugin '{args.plugin}' has no report systems")
-                        return 1
-                else:
-                    log_error(f"Plugin '{args.plugin}' has no report_systems directory")
-                    return 1
-            else:
-                # Plugin not found - provide helpful error message
-                available_plugins = [m.name for m in plugin_manager.get_discovered_plugins()]
-                if available_plugins:
-                    # Check if user included version number
-                    plugin_name_clean = args.plugin.split()[0] if ' ' in args.plugin else args.plugin
-                    suggestions = [p for p in available_plugins 
-                                 if plugin_name_clean.lower() in p.lower() or p.lower() in plugin_name_clean.lower()]
-                    error_msg = f"Plugin '{args.plugin}' not found.\n"
-                    if ' ' in args.plugin or 'v' in args.plugin.lower():
-                        error_msg += "Note: Do not include version numbers in the plugin name. "
-                        error_msg += f"Use just the plugin name (e.g., '{plugin_name_clean}').\n"
-                    error_msg += f"Available plugins: {', '.join(available_plugins)}"
-                    if suggestions:
-                        error_msg += f"\nDid you mean: {', '.join(suggestions)}?"
-                    log_error(error_msg)
-                else:
-                    log_error(f"Plugin '{args.plugin}' not found. No plugins are available.")
+    # Handle --plugin flag - Execute plugin's report generation
+    if args.plugin:
+        # Initialize plugin system
+        dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=args.plugin_dirs)
+        loader = init_loader(dirs)
+        loader.discover()
+        
+        # Find and load the specified plugin
+        plugins = loader.get_discovered_plugins()
+        found = None
+        for p in plugins:
+            if p.name == args.plugin or p.name.replace('_', '-') == args.plugin:
+                found = p
+                break
+        
+        if not found:
+            log_error(f"Plugin '{args.plugin}' not found.")
+            print("\nAvailable plugins:")
+            for p in plugins:
+                print(f"  - {p.name}")
+            if not plugins:
+                print("  (none - use 'bobreview plugins create <name>' to create one)")
+            return 1
+        
+        # Load plugin if not already loaded
+        if not found.loaded:
+            try:
+                plugin_instance = loader.load(found.name)
+            except PluginLoadError as e:
+                log_error(f"Failed to load plugin '{found.name}': {e}")
                 return 1
+        else:
+            # Get already loaded plugin instance
+            plugin_instance = loader.get_loaded_plugin(found.name)
         
-        log_info(f"Loading report system: {report_system_id}", config)
+        if not plugin_instance:
+            log_error(f"Plugin '{found.name}' loaded but no instance available.")
+            return 1
         
-        # Build CLI overrides for the JSON system
-        # Note: Thresholds are defined in report system JSON files, not overridden via CLI
-        cli_overrides = {
-            'llm_config': {
-                'provider': config.llm.provider,
-                'model': config.llm.model,
-                'temperature': config.llm.temperature,
-                'max_tokens': config.llm.max_tokens,
-                'chunk_size': config.llm.chunk_size,
-                'enable_cache': config.llm.enable_cache,
-            },
-            'output': {
-                'embed_images': config.output.embed_images,
-                'linked_css': config.output.linked_css,
-            },
-            'disabled_pages': config.output.disabled_pages
-        }
+        # Look for generate_report function in the plugin module
+        safe_name = found.name.replace('-', '_')
+        plugin_module = None
+        for mod_name in [f"bobreview.plugins.{safe_name}", f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
+            if mod_name in sys.modules:
+                plugin_module = sys.modules[mod_name]
+                break
         
-        # Only override theme if explicitly specified via --theme flag
-        # This allows JSON presets to be the default
-        if args.theme_id is not None:
-            cli_overrides['theme'] = {
-                'preset': args.theme_id
+        data_dir = Path(args.dir)
+        output_path = Path(args.output)
+
+        # Basic validation for data directory
+        if not data_dir.exists() or not data_dir.is_dir():
+            log_error(f"Data directory does not exist or is not a directory: {data_dir}")
+            return 1
+        
+        def call_generate_report(generate_func, name_desc):
+            """Helper to call generate_report with consistent error handling."""
+            log_info(f"Running plugin: {found.name} ({name_desc})", config=cli_config)
+            log_info(f"Data directory: {data_dir}", config=cli_config)
+            # We log the full output path for user visibility, but pass the parent
+            # directory to the plugin's generate_report implementation.
+            log_info(f"Output: {output_path}", config=cli_config)
+            if args.dry_run:
+                log_info("Dry run mode - LLM calls will be skipped", config=cli_config)
+
+            # Build kwargs in a backwards-compatible way – only pass config_path
+            # when the user provided --config, to avoid surprising plugins that
+            # do not accept this parameter.
+            kwargs = {
+                "dry_run": getattr(args, "dry_run", False),
             }
+            if getattr(args, "config", None):
+                kwargs["config_path"] = args.config
+
+            try:
+                result = generate_func(
+                    str(data_dir),
+                    str(output_path.parent),
+                    **kwargs,
+                )
+                log_success(f"Report generated: {result}", config=cli_config)
+                return True, 0
+            except (PluginLoadError, ValueError, OSError) as e:
+                log_error(f"Report generation failed: {e}")
+                if args.verbose:
+                    import traceback
+                    traceback.print_exc()
+                return True, 1
         
-        # Load report system with CLI overrides, passing plugin name for prioritized search
-        system_def = load_report_system(report_system_id, cli_overrides=cli_overrides, plugin_name=args.plugin)
+        # Method 1: Check if plugin module has generate_report function
+        if plugin_module and hasattr(plugin_module, 'generate_report'):
+            handled, code = call_generate_report(plugin_module.generate_report, "module-level")
+            if handled:
+                return code
         
-        # Create executor
-        executor = ReportSystemExecutor(system_def, config)
+        # Method 2: Check if plugin instance has generate_report method
+        if hasattr(plugin_instance, 'generate_report'):
+            handled, code = call_generate_report(plugin_instance.generate_report, "instance-level")
+            if handled:
+                return code
         
-        # Execute
-        input_dir = Path(args.dir).resolve()
-        output_path = Path(args.output).resolve()
-        
-        if not input_dir.exists():
-            log_error(f"Directory not found: {input_dir}")
-            return 1
-        
-        if not input_dir.is_dir():
-            log_error(f"Path is not a directory: {input_dir}")
-            return 1
-        
-        executor.execute(input_dir, output_path)
-        
-        elapsed_time = time.time() - start_time
-        log_info(f"Completed in {elapsed_time:.1f}s", config)
-        
+        # No generate_report found
+        log_warning(f"Plugin '{found.name}' does not have a generate_report function.", config=cli_config)
+        print("\nTo add report generation, implement one of:")
+        print(f"  1. A 'generate_report(data_dir, output_dir)' function in plugins/{found.name.replace('-', '_')}/__init__.py")
+        print("  2. A 'generate_report(data_dir, output_dir)' method in your plugin class")
+        print("\nSee the scaffolder-generated executor.py for an example.")
+        return 1
+    
+    # Show help if no command
+    if not args.command:
+        print_banner()
+        parser.print_help()
         return 0
-        
-    except FileNotFoundError as e:
-        log_error(str(e))
-        return 1
-    except ValueError as e:
-        log_error(f"Report system validation failed: {e}")
-        return 1
-    except Exception as e:
-        log_error(f"Failed to execute report system: {e}")
-        if config.execution.verbose:
-            import traceback
-            traceback.print_exc()
-        return 1
+    
+    return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

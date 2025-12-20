@@ -305,7 +305,7 @@ bobreview --help
 bobreview --version
 
 # Test installation
-python -c "from bobreview.core import ReportConfig; print('Installation verified')"
+python -c "from bobreview.core.config import Config; print('Installation verified')"
 ```
 
 ---
@@ -352,25 +352,20 @@ bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
 Use the scaffolding command to generate a new plugin:
 
 ```bash
-# Create a full-featured plugin
+# Create a full-featured plugin with D&D demo
 bobreview plugins create my-plugin
-
-# Create a minimal plugin
-bobreview plugins create my-plugin --template minimal
 
 # Specify output directory
 bobreview plugins create my-plugin --output-dir ./my-plugins
 ```
 
-This generates a complete plugin with:
+This generates a demo plugin with D&D-themed sample data:
 - `manifest.json` - Plugin metadata
-- `plugin.py` - Main plugin class using PluginHelper
+- `plugin.py` - Main plugin class
 - `parsers/csv_parser.py` - Data parser
-- `context_builder.py` - Template context enrichment
-- `chart_generator.py` - Chart.js configuration
-- `report_systems/` - Report system JSON
-- `templates/` - Jinja2 templates
-- `sample_data/` - Example data for testing
+- `chart_generator.py` - Chart.js charts
+- `theme.py` - 5 themes (Midnight, Aurora, Sunset, Frost, Dungeon)
+- `sample_data/sample.csv` - Character roster with stats, classes, races, spells
 
 ---
 
@@ -379,11 +374,11 @@ This generates a complete plugin with:
 - Read [README.md](README.md) for complete documentation
 - Check [INSTALL.md](INSTALL.md) for advanced installation
 - Review [ROADMAP.md](ROADMAP.md) for upcoming features
-- See [CHANGELOG.md](CHANGELOG.md) for v1.0.7 changes
+- See [CHANGELOG.md](CHANGELOG.md) for v1.0.8 changes
 - Try different configurations and explore options
 
 ---
 
-**BobReview v1.0.7** - Plugin System  
+**BobReview v1.0.8** - Plugin-First Architecture  
 Extensible report generation framework.
 

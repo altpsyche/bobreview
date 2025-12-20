@@ -75,11 +75,10 @@ class PluginManifest:
         if missing:
             raise ValueError(f"Missing required fields in manifest: {missing}")
         
-        # Handle provides - can be either a list (legacy format) or a dict
+        # Handle provides - can be either a list or a dict
         provides_raw = data.get('provides', {})
         if isinstance(provides_raw, list):
-            # Convert list format ["widgets", "themes"] to dict format {"widgets": [], "themes": []}
-            # Legacy format: just lists the extension point types without specific items
+            # List format ["widgets", "themes"] converted to dict format
             provides = {item: [] for item in provides_raw}
         elif isinstance(provides_raw, dict):
             provides = provides_raw

@@ -1,0 +1,184 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# DATA SCHEMA - Define your CSV/data structure
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# This file defines the columns in your data files.
+# The parser will automatically read any columns you define here.
+#
+# QUICK START:
+#   1. Edit the fields below to match your CSV columns
+#   2. Put your CSV files in the sample_data/ directory
+#   3. Run: bobreview --plugin {{safe_name}} --dir ./sample_data
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# FIELDS
+# ─────────────────────────────────────────────────────────────────────────────────
+# Define each column in your CSV file
+#
+# Supported types:
+#   string   - Text values (default)
+#   number   - Numeric values (integers or decimals)
+#   date     - Date values (use 'format' to specify pattern)
+#   category - Text that represents a category (useful for grouping)
+#   boolean  - True/false values (yes/no, true/false, 1/0)
+#
+# Options:
+#   required: true/false - Is this column required? (default: false)
+#   default: value       - Default value if column is missing
+#   format: pattern      - For dates, e.g., "%Y-%m-%d"
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+
+fields:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # IDENTITY
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: name
+    type: string
+    required: true
+    description: "Character name (e.g., Thorin Ironforge)"
+
+  - name: class
+    type: category
+    required: true
+    description: "Character class (Fighter, Wizard, Rogue, etc.)"
+
+  - name: level
+    type: number
+    required: true
+    description: "Character level (1-20)"
+
+  - name: hp
+    type: number
+    required: true
+    description: "Hit Points - how much damage you can take!"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ABILITY SCORES (The Big Six)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: str
+    type: number
+    required: true
+    description: "Strength - raw physical power"
+
+  - name: dex
+    type: number
+    required: true
+    description: "Dexterity - agility, reflexes, balance"
+
+  - name: con
+    type: number
+    required: true
+    description: "Constitution - health, stamina, vitality"
+
+  - name: int
+    type: number
+    required: true
+    description: "Intelligence - reasoning, memory, analysis"
+
+  - name: wis
+    type: number
+    required: true
+    description: "Wisdom - perception, insight, intuition"
+
+  - name: cha
+    type: number
+    required: true
+    description: "Charisma - force of personality, persuasion"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CHARACTER DETAILS
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: background
+    type: category
+    required: false
+    default: "Adventurer"
+    description: "Character background (Soldier, Noble, Outlander, etc.)"
+
+  - name: equipment
+    type: string
+    required: false
+    default: "Standard adventuring gear"
+    description: "Notable equipment and weapons"
+
+  - name: alignment
+    type: category
+    required: false
+    default: "True Neutral"
+    description: "Moral alignment (Lawful Good, Chaotic Evil, etc.)"
+
+  - name: race
+    type: category
+    required: false
+    default: "Human"
+    description: "Character race (Human, Elf, Dwarf, Halfling, etc.)"
+
+  - name: proficiencies
+    type: string
+    required: false
+    default: ""
+    description: "Skill proficiencies (Athletics, Perception, Stealth, etc.)"
+
+  - name: spells
+    type: string
+    required: false
+    default: ""
+    description: "Known spells for casters (Fireball, Cure Wounds, etc.)"
+
+  - name: languages
+    type: string
+    required: false
+    default: "Common"
+    description: "Languages spoken (Common, Elvish, Dwarvish, etc.)"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # STORY & FEATURING
+  # ─────────────────────────────────────────────────────────────────────────────
+  - name: story
+    type: string
+    required: false
+    default: ""
+    description: "Character backstory or session notes for LLM enhancement"
+
+  - name: featured
+    type: boolean
+    required: false
+    default: false
+    description: "Whether to feature this character prominently (1-4 featured)"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXAMPLES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Example 1: Sales data
+# ─────────────────────
+# fields:
+#   - name: product
+#     type: string
+#     required: true
+#   - name: revenue
+#     type: number
+#     required: true
+#   - name: region
+#     type: category
+#   - name: sale_date
+#     type: date
+#     format: "%Y-%m-%d"
+#
+# Example 2: Survey results
+# ─────────────────────────
+# fields:
+#   - name: respondent_id
+#     type: string
+#     required: true
+#   - name: satisfaction
+#     type: number
+#   - name: department
+#     type: category
+#   - name: comments
+#     type: string
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+

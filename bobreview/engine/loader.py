@@ -4,8 +4,10 @@ Report system loader for discovering and loading JSON report system definitions.
 This module handles:
 - Loading report systems from built-in and user directories
 - Discovering available report systems
-- Merging JSON definitions with CLI overrides
 - Caching loaded definitions
+
+Note: CLI overrides are now handled by Config.load_config(), not in this loader.
+The cli_overrides parameter only influences the cache key for caching purposes.
 """
 
 import copy
@@ -15,7 +17,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from .schema import ReportSystemDefinition, parse_report_system_definition
-from ..core.plugin_system import get_extension_point, get_plugin_manager
+from ..core.plugin_system import get_registry, get_loader
 
 
 # Cache for loaded report systems
@@ -84,7 +86,7 @@ def discover_report_systems() -> List[Dict[str, Any]]:
     
     # First, discover report systems from plugin directories (without loading plugins)
     # Check plugin directories for report_systems/ subdirectories
-    plugin_manager = get_plugin_manager()
+    plugin_manager = get_loader()
     # Get discovered plugin manifests (not loaded plugins)
     manifests = plugin_manager.get_discovered_plugins() if hasattr(plugin_manager, 'get_discovered_plugins') else []
     if not manifests:
@@ -107,8 +109,8 @@ def discover_report_systems() -> List[Dict[str, Any]]:
                         systems.append(system)
     
     # Also check plugin registry for report systems from already-loaded plugins
-    extension_point = get_extension_point()
-    for name, system_def in extension_point.get_all_report_systems().items():
+    registry = get_registry()
+    for name, system_def in registry.report_systems.get_all().items():
         # Don't duplicate if already discovered from filesystem
         if not any(s['id'] == (system_def.get('id', name) if isinstance(system_def, dict) else getattr(system_def, 'id', name)) for s in systems):
             systems.append({
@@ -174,7 +176,7 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
     
     # If plugin_name is specified, try that plugin first
     if plugin_name:
-        plugin_manager = get_plugin_manager()
+        plugin_manager = get_loader()
         if not plugin_manager.get_discovered_plugins():
             plugin_manager.discover()
         
@@ -188,7 +190,7 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
                 break
     
     # Try in plugin directories (check filesystem without loading plugins)
-    plugin_manager = get_plugin_manager()
+    plugin_manager = get_loader()
     manifests = plugin_manager.get_discovered_plugins() if hasattr(plugin_manager, 'get_discovered_plugins') else []
     if not manifests:
         # Try discovering if not done yet
@@ -242,67 +244,8 @@ def load_report_system_json(path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
-def merge_cli_overrides(
-    system_data: Dict[str, Any],
-    cli_overrides: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """
-    Merge CLI argument overrides into report system definition.
-    
-    CLI arguments can override certain fields from the JSON, such as:
-    - thresholds (draw_hard_cap, tri_hard_cap, etc.)
-    - llm_config (model, temperature, etc.)
-    - output settings (embed_images, linked_css, etc.)
-    
-    Parameters:
-        system_data: Base report system data from JSON
-        cli_overrides: Dictionary of CLI override values
-    
-    Returns:
-        Merged report system data
-    """
-    if not cli_overrides:
-        return system_data
-    
-    # Create a deep copy to avoid modifying original (including nested dicts)
-    merged = copy.deepcopy(system_data)
-    
-    # Merge thresholds
-    if 'thresholds' in cli_overrides:
-        if 'thresholds' not in merged:
-            merged['thresholds'] = {}
-        merged['thresholds'].update(cli_overrides['thresholds'])
-    
-    # Merge LLM config
-    if 'llm_config' in cli_overrides:
-        if 'llm_config' not in merged:
-            merged['llm_config'] = {}
-        merged['llm_config'].update(cli_overrides['llm_config'])
-    
-    # Merge output config
-    if 'output' in cli_overrides:
-        if 'output' not in merged:
-            merged['output'] = {}
-        merged['output'].update(cli_overrides['output'])
-    
-    # Merge theme
-    if 'theme' in cli_overrides:
-        if 'theme' not in merged:
-            merged['theme'] = {}
-        merged['theme'].update(cli_overrides['theme'])
-    
-    # Handle page disabling
-    if 'disabled_pages' in cli_overrides:
-        disabled_ids = cli_overrides['disabled_pages']
-        if 'pages' in merged:
-            for page in merged['pages']:
-                if page.get('id') in disabled_ids:
-                    page['enabled'] = False
-        # Remove CLI-only key from merged dict
-        merged.pop('disabled_pages', None)
-    
-    return merged
 
+# merge_cli_overrides removed - Config.load_config() handles all merging
 
 def load_report_system(
     id_or_path: str,
@@ -324,9 +267,13 @@ def load_report_system(
     
     Parameters:
         id_or_path: Report system ID or path to JSON file
-        cli_overrides: Optional CLI argument overrides
+        cli_overrides: Optional CLI argument overrides (only used for cache key generation)
         use_cache: Whether to use cached definitions
         plugin_name: Optional plugin name to prioritize search in
+    
+    Note:
+        CLI overrides are applied via Config.load_config(), not in this function.
+        The cli_overrides parameter here only affects cache key generation.
     
     Returns:
         ReportSystemDefinition object
@@ -352,24 +299,24 @@ def load_report_system(
     found_plugin_name = None
     
     # First, check plugin registry for the system
-    extension_point = get_extension_point()
-    plugin_system = extension_point.get_report_system(id_or_path)
+    registry = get_registry()
+    plugin_system = registry.report_systems.get(id_or_path)
     if plugin_system is not None:
         system_data = copy.deepcopy(plugin_system)
         source_description = f"plugin:{id_or_path}"
         
         # Find which plugin provides this report system
         component_key = f"report_system:{id_or_path}"
-        found_plugin_name = extension_point.get_component_owner(component_key)
+        found_plugin_name = registry.get_component_owner(component_key)
         
         # Auto-load the plugin if not already loaded
         if found_plugin_name:
-            plugin_manager = get_plugin_manager()
-            if not plugin_manager.is_loaded(found_plugin_name):
+            loader = get_loader()
+            if not loader.is_loaded(found_plugin_name):
                 _logger = logging.getLogger(__name__)
                 _logger.info(f"Auto-loading required plugin: {found_plugin_name}")
                 try:
-                    plugin_manager.load(found_plugin_name)
+                    loader.load(found_plugin_name)
                 except Exception as e:
                     _logger.warning(
                         f"Failed to auto-load plugin '{found_plugin_name}' for report system '{id_or_path}': {e}"
@@ -396,9 +343,8 @@ def load_report_system(
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in report system file {json_path}: {e}") from e
     
-    # Merge CLI overrides
-    if cli_overrides:
-        system_data = merge_cli_overrides(system_data, cli_overrides)
+    
+    # Note: CLI overrides are handled by Config.load_config() - not here
     
     # Parse into ReportSystemDefinition
     try:

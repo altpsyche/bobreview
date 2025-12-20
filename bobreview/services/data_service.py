@@ -3,17 +3,21 @@ Data service for parsing and validating input data.
 
 This service handles all data ingestion tasks:
 - File discovery
-- Parsing using configured parsers (via ParserFactory)
+- Parsing using registered parsers from plugin registry
 - Validation against schema
 - Sampling and sorting
+
+Data flows through DataFrame for universal format compatibility.
 """
 
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, Type
 import random
 import logging
 
 from .base import BaseService, DataServiceError
+from ..core.dataframe import DataFrame
+from ..core.plugin_system import get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +26,8 @@ class DataService(BaseService):
     """
     Service for parsing input data files.
     
-    Uses ParserFactory to create parsers from the plugin registry.
-    This ensures all registered parsers (built-in and plugin) are available.
+    Uses plugin registry to get parsers based on data source type.
+    This ensures all registered parsers (plugin-provided) are available.
     
     Example:
         service = DataService()
@@ -42,8 +46,101 @@ class DataService(BaseService):
             config: Optional service configuration
         """
         super().__init__(config)
-        from ..engine.parser_factory import ParserFactory
-        self.factory = ParserFactory()  # Uses global extension point
+    
+    def _get_parser(self, data_source_config: Any):
+        """
+        Get a parser instance for the given data source config.
+        
+        Parameters:
+            data_source_config: DataSourceConfig with 'type' field
+            
+        Returns:
+            Parser instance
+            
+        Raises:
+            ValueError: If no parser found for the given type
+        """
+        parser_type = getattr(data_source_config, 'type', None)
+        if not parser_type:
+            raise ValueError("data_source_config must have a 'type' attribute")
+        
+        # Get parser class from registry
+        registry = get_registry()
+        parser_cls = registry.data_parsers.get(parser_type)
+        
+        if parser_cls is None:
+            raise ValueError(
+                f"No parser found for type '{parser_type}'. "
+                f"Ensure a plugin has registered a parser for this type."
+            )
+        
+        # Instantiate parser with config if it accepts it
+        try:
+            return parser_cls(data_source_config)
+        except TypeError:
+            # Parser doesn't take config in constructor
+            return parser_cls()
+    
+    def parse_dataframe(
+        self,
+        input_dir: Path,
+        data_source_config: Any,
+        sample_size: Optional[int] = None,
+        sort_by: Optional[str] = None
+    ) -> DataFrame:
+        """
+        Parse data and return as DataFrame (preferred method).
+        
+        Parameters:
+            input_dir: Directory containing input files
+            data_source_config: DataSourceConfig from report system
+            sample_size: Optional limit on number of data points
+            sort_by: Optional field to sort by
+            
+        Returns:
+            DataFrame with parsed data
+        """
+        try:
+            parser = self._get_parser(data_source_config)
+            data_points = parser.parse_directory(input_dir)
+            
+            if not data_points:
+                logger.warning(f"No data points found in {input_dir}")
+                return DataFrame(source=str(input_dir))
+            
+            logger.info(f"Parsed {len(data_points)} data points from {input_dir}")
+            
+            df = DataFrame.from_dicts(
+                data_points,
+                source=str(input_dir),
+                plugin=getattr(data_source_config, 'type', None)
+            )
+            
+            if sample_size and sample_size < len(df):
+                # Create new DataFrame with sampled rows instead of mutating
+                # Note: This performs sequential truncation (first N rows), not random sampling.
+                # This approach is deterministic and reproducible, which is preferable for debugging.
+                # If random sampling is needed, use random.sample() on row indices instead.
+                sampled_df = DataFrame(
+                    columns=df.columns.copy(),
+                    rows=df.rows[:sample_size],
+                    metadata=df.metadata.copy(),
+                    source=df.source,
+                    plugin=df.plugin
+                )
+                df = sampled_df
+                logger.debug(f"Sampled down to {sample_size} points")
+            
+            if sort_by and len(df) > 0 and sort_by in df.column_names:
+                df = df.sort_by(sort_by)
+                logger.debug(f"Sorted by {sort_by}")
+            
+            return df
+            
+        except ValueError as e:
+            raise DataServiceError(str(e)) from e
+        except Exception as e:
+            raise DataServiceError(f"Failed to parse data: {e}") from e
     
     def parse(
         self,
@@ -53,54 +150,13 @@ class DataService(BaseService):
         sort_by: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Parse data from input directory.
+        Parse data and return as list of dicts.
         
-        Parameters:
-            input_dir: Directory containing input files
-            data_source_config: DataSourceConfig from report system
-            sample_size: Optional limit on number of data points
-            sort_by: Optional field to sort by
-            
         Returns:
             List of parsed data points
-            
-        Raises:
-            DataServiceError: If parsing fails
         """
-        try:
-            # Create parser instance using factory
-            parser = self.factory.create(data_source_config)
-            
-            # Parse directory
-            data_points = parser.parse_directory(input_dir)
-            
-            if not data_points:
-                logger.warning(f"No data points found in {input_dir}")
-                return []
-            
-            logger.info(f"Parsed {len(data_points)} data points from {input_dir}")
-            
-            # Apply sampling if requested
-            if sample_size and sample_size < len(data_points):
-                # Preserve order by taking first N points
-                data_points = data_points[:sample_size]
-                logger.debug(f"Sampled down to {sample_size} points")
-            
-            # Sort if requested
-            if sort_by and data_points:
-                # Only sort if all points have the field
-                if all(sort_by in point for point in data_points):
-                    data_points.sort(key=lambda x: x[sort_by])
-                    logger.debug(f"Sorted by {sort_by}")
-                else:
-                    logger.warning(f"Cannot sort: field '{sort_by}' missing in some points")
-            
-            return data_points
-            
-        except ValueError as e:
-            raise DataServiceError(str(e)) from e
-        except Exception as e:
-            raise DataServiceError(f"Failed to parse data: {e}") from e
+        df = self.parse_dataframe(input_dir, data_source_config, sample_size, sort_by)
+        return df.to_dicts()
     
     def validate(
         self,
@@ -175,7 +231,7 @@ class DataService(BaseService):
             List of file paths that match the parser criteria
         """
         try:
-            parser = self.factory.create(data_source_config)
+            parser = self._get_parser(data_source_config)
             return parser.discover_files(directory)
         except Exception as e:
             logger.warning(f"Failed to discover files in {directory}: {e}")

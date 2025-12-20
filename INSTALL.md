@@ -121,7 +121,7 @@ bobreview --help
 
 ### Test Import
 ```bash
-python -c "from bobreview import ReportConfig; print('Installation successful')"
+python -c "from bobreview.core.config import Config; print('Installation successful')"
 ```
 
 ### Dry Run Test
@@ -465,14 +465,13 @@ bobreview --plugin <plugin-name> --dir . --sample 5
 
 ```python
 # test_bobreview.py
-from bobreview import ReportConfig
-from pathlib import Path
+from bobreview.core.config import Config
 
 # Test import
 print("Imports successful")
 
 # Test config
-config = ReportConfig(title="Test")
+config = Config()
 print("Config works")
 
 print("\nInstallation verified")

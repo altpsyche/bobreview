@@ -1,31 +1,9 @@
 """
 BobReview Services Package.
 
-This package provides modular services for the report generation pipeline.
-Services can be independently tested, replaced by plugins, and reused.
-
-Services:
-    - DataService: Parse and validate input data
-    - AnalyticsService: Calculate statistics
-    - ChartService: Generate Chart.js configurations
-    - LLMService: Generate AI content
-    - ReportPipeline: Orchestrate all services
-
-Quick Start:
-    from bobreview.services import get_container, DataService, AnalyticsService
-
-    # Register services
-    container = get_container()
-    container.register('data', DataService())
-    container.register('analytics', AnalyticsService())
-
-    # Use services
-    data = container.get('data').parse(input_dir, data_source_config)
-    stats = container.get('analytics').analyze(data, metrics, metrics_config)
-
-Plugin Replacement:
-    # Plugins can replace core services
-    container.replace('analytics', MyCustomAnalyticsService())
+Plugin-First Architecture:
+- Services are minimal infrastructure only
+- Domain-specific services moved to plugins
 """
 
 from .container import (
@@ -45,10 +23,9 @@ from .base import (
 )
 
 from .data_service import DataService
-from .analytics_service import AnalyticsService
-from .chart_service import ChartService
-from .llm_service import LLMService
-from .pipeline import ReportPipeline, create_default_pipeline
+
+# Removed: AnalyticsService, ChartService, LLMService, ReportPipeline
+# Plugins provide domain-specific services
 
 __all__ = [
     # Container
@@ -65,13 +42,6 @@ __all__ = [
     'LLMServiceError',
     'RenderServiceError',
     
-    # Services
+    # Services (minimal)
     'DataService',
-    'AnalyticsService',
-    'ChartService',
-    'LLMService',
-    
-    # Pipeline
-    'ReportPipeline',
-    'create_default_pipeline',
 ]

@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2025-12-16
+
+### Plugin-First Architecture
+
+Core is now pure infrastructure. Plugins provide all domain logic including report generation.
+
+### New Features
+
+- **CLI Plugin Execution:** `bobreview --plugin my-plugin --dir ./data`
+- **D&D-Themed Scaffolder:** Creates demo plugins with character roster sample data
+  - 5 built-in themes: Midnight, Aurora, Sunset, Frost, Dungeon
+  - Sample data includes stats, classes, races, spells, equipment
+- **Auto-registration:** `-o <folder>` registers folder in `~/.bobreview/config.yaml`
+- **Discovery priority:** `--plugin-dir` > `$BOBREVIEW_PLUGIN_DIRS` > config file > `~/.bobreview/plugins/` > `./plugins/`
+---
+
+### Breaking Changes
+
+| Before | After |
+|--------|-------|
+| `bobreview build` | `bobreview --plugin <name>` |
+| Core executor | Plugin `generate_report()` |
+| `ReportConfig(llm=LLMConfig(...))` | `Config(llm_provider="openai")` |
+| `from bobreview.core.themes import ReportTheme` | Plugins define themes |
+| `get_extension_point().get_theme()` | `get_registry().data_parsers.get()` |
+| `get_plugin_manager()` | `get_loader()` |
+| `helper.add_theme(theme)` | Plugins manage themes internally |
+| `ReportTheme.extends`, `base` | Removed |
+
+### Files Deleted
+
+`core/api.py`, `core/themes.py`, `core/report_builder.py`, `core/plugin_system/interface.py`, `engine/executor.py`, `engine/page_renderer.py`, `services/analytics_service.py`, `services/chart_service.py`, `services/pipeline.py`
+
+### Files Modified
+
+- `cli.py`: 1157 → 434 lines
+- `plugin_helper.py`: 332 → 162 lines, removed `add_theme()`
+- `data_service.py`: uses `get_registry().data_parsers.get()`
+- `template_engine.py`: uses `get_registry().template_paths`
+- `engine/loader.py`: uses `get_registry()` and `get_loader()`
+
 ## [1.0.7] - 2025-12-12
 
 ### Introducing Plugins
@@ -868,6 +909,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.8]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.4...v1.0.5

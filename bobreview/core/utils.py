@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .config import ReportConfig
+    from .config import Config
 
 # Try to import rich for beautiful CLI output
 try:
@@ -33,9 +33,9 @@ except ImportError:
     err_console = None
 
 
-def log_info(message: str, config: "Optional[ReportConfig]" = None):
+def log_info(message: str, config: "Optional[Config]" = None):
     """Log an informational message to stdout."""
-    if config and config.execution.quiet:
+    if config and config.quiet:
         return
     if RICH_AVAILABLE:
         console.print(f"[info]●[/info] {message}")
@@ -43,9 +43,9 @@ def log_info(message: str, config: "Optional[ReportConfig]" = None):
         print(f"● {message}")
 
 
-def log_success(message: str, config: "Optional[ReportConfig]" = None):
+def log_success(message: str, config: "Optional[Config]" = None):
     """Log a success message to stdout."""
-    if config and config.execution.quiet:
+    if config and config.quiet:
         return
     if RICH_AVAILABLE:
         console.print(f"[success]✓[/success] {message}")
@@ -53,9 +53,9 @@ def log_success(message: str, config: "Optional[ReportConfig]" = None):
         print(f"✓ {message}")
 
 
-def log_warning(message: str, config: "Optional[ReportConfig]" = None):
+def log_warning(message: str, config: "Optional[Config]" = None):
     """Log a warning message to stdout."""
-    if config and config.execution.quiet:
+    if config and config.quiet:
         return
     if RICH_AVAILABLE:
         console.print(f"[warning]⚠[/warning] {message}")
@@ -71,9 +71,9 @@ def log_error(message: str):
         print(f"✗ {message}", file=sys.stderr)
 
 
-def log_verbose(message: str, config: "Optional[ReportConfig]" = None):
+def log_verbose(message: str, config: "Optional[Config]" = None):
     """Log a debug message when verbose mode is enabled."""
-    if config and config.execution.verbose and not config.execution.quiet:
+    if config and config.verbose and not config.quiet:
         if RICH_AVAILABLE:
             console.print(f"[debug]• {message}[/debug]")
         else:

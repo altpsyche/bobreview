@@ -15,15 +15,16 @@ from jinja2 import (
     ChoiceLoader,
     TemplateNotFound,
     select_autoescape,
+    pass_context,
 )
+from markupsafe import Markup
 
 if TYPE_CHECKING:
-    from ..engine.schema import LabelConfig
+    from ..engine.schema import Labels
 
 from .utils import format_number
-from .html_utils import sanitize_llm_html, get_shared_css, get_trend_icon, get_theme_css_block
-from .theme_system import get_theme_css
-from .plugin_system import get_extension_point
+from .html_utils import sanitize_llm_html, get_shared_css
+from .plugin_system import get_registry
 
 
 # Global template engine instance
@@ -67,9 +68,9 @@ class TemplateEngine:
         
         # Plugin-registered template paths (in priority order)
         # Lower priority number = higher priority (loaded first)
-        extension_point = get_extension_point()
+        registry = get_registry()
         # Get template paths with priority information
-        template_registrations = extension_point.get_template_paths()
+        template_registrations = registry.template_paths.get_all_registrations()
         # Already sorted by priority (lower number = higher priority)
         sorted_registrations = template_registrations
         for template_path, plugin_name, priority in sorted_registrations:
@@ -100,7 +101,7 @@ class TemplateEngine:
         """Register custom Jinja2 filters."""
         self.env.filters['format_number'] = format_number
         self.env.filters['sanitize'] = self._smart_sanitize
-        self.env.filters['trend_icon'] = get_trend_icon
+        # trend_icon filter removed - plugins define their own trend semantics
         self.env.filters['default_str'] = lambda x, d='': x if x else d
         self.env.filters['interpolate'] = self._interpolate
     
@@ -277,7 +278,6 @@ class TemplateEngine:
         """Register global template functions."""
         self.env.globals['get_css'] = get_shared_css
         self.env.globals['get_theme_css'] = get_theme_css  # Use unified ThemeSystem
-        self.env.globals['get_theme_css_block'] = get_theme_css_block  # Keep for compatibility
         
         def get_image_src(image_name: str, images_dir_rel: str = "", image_data_uris: Optional[dict] = None) -> str:
             """
@@ -298,12 +298,17 @@ class TemplateEngine:
             return image_name
         
         self.env.globals['get_image_src'] = get_image_src
+        
+        # render_component REMOVED - use Property Controls pattern instead
+        # Components now render via Jinja2 templates with validated props
+        # See docs/PROPERTY_CONTROLS_TRANSITION.md
+
     
     def render(
         self, 
         template_name: str, 
         context: Dict[str, Any],
-        labels: Optional["LabelConfig"] = None
+        labels: Optional["Labels"] = None
     ) -> str:
         """
         Render a template with the given context.
@@ -311,7 +316,7 @@ class TemplateEngine:
         Parameters:
             template_name: Name of the template file (e.g., 'pages/homepage.html.j2')
             context: Dictionary of template variables (not mutated)
-            labels: Optional LabelConfig for UI text labels
+            labels: Optional Labels for UI text
         
         Returns:
             Rendered HTML string
@@ -329,7 +334,7 @@ class TemplateEngine:
         self, 
         template_string: str, 
         context: Dict[str, Any],
-        labels: Optional["LabelConfig"] = None
+        labels: Optional["Labels"] = None
     ) -> str:
         """
         Render an inline template string.
@@ -337,7 +342,7 @@ class TemplateEngine:
         Parameters:
             template_string: Raw Jinja2 template string
             context: Dictionary of template variables (not mutated)
-            labels: Optional LabelConfig for UI text labels
+            labels: Optional Labels for UI text
         
         Returns:
             Rendered string

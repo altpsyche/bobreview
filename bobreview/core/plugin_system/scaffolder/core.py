@@ -16,20 +16,22 @@ import json
 from pathlib import Path
 from typing import Literal
 
-# Import via ThemeSystem for centralized theme access
-from ...theme_system import get_theme_system
-from ...themes import get_available_themes
+# Themes are now plugin-owned - no core imports needed
 
 # Import generators
 from .generators import (
     generate_plugin_py,
     generate_csv_parser,
     generate_context_builder,
+    generate_executor,
     generate_chart_generator,
     generate_analysis_module,
     generate_theme_module,
+    generate_widgets_module,
+    generate_component_module,
     generate_manifest,
     generate_report_system,
+    generate_user_report_config,
 )
 
 
@@ -55,13 +57,11 @@ def create_plugin(
     Returns:
         Path to the created plugin directory
     """
-    # Validate and get theme via ThemeSystem
-    theme_system = get_theme_system()
-    theme = theme_system.get_theme(color_theme)
-    
-    if not theme:
-        available = ", ".join(get_available_themes())
-        raise ValueError(f"Unknown theme '{color_theme}'. Available: {available}")
+    # color_theme is just a hint for generated theme styling
+    # No validation needed - plugins create their own themes
+
+    # Ensure output_dir is a Path
+    output_dir = Path(output_dir) if isinstance(output_dir, str) else output_dir
     
     # Normalize name for directory and Python usage
     safe_name = name.replace('-', '_').replace(' ', '_')
@@ -83,8 +83,9 @@ Provides a report system for analyzing {name} data.
 """
 
 from .plugin import {class_name}Plugin
+from .executor import generate_report
 
-__all__ = ['{class_name}Plugin']
+__all__ = ['{class_name}Plugin', 'generate_report']
 '''
     (plugin_dir / "__init__.py").write_text(init_content, encoding='utf-8')
     
@@ -107,6 +108,14 @@ __all__ = ['{class_name}CsvParser']
     parser_content = generate_csv_parser(name, class_name)
     (parsers_dir / "csv_parser.py").write_text(parser_content, encoding='utf-8')
     
+    # Create data_schema.yaml for user-defined data structure
+    data_schema = _read_template("data_schema.yaml", name=name, safe_name=safe_name)
+    (plugin_dir / "data_schema.yaml").write_text(data_schema, encoding='utf-8')
+    
+    # Create component_templates.yaml for YAML-based component templates
+    comp_templates = _read_template("component_templates.yaml", name=name, safe_name=safe_name)
+    (plugin_dir / "component_templates.yaml").write_text(comp_templates, encoding='utf-8')
+    
     if template == 'full':
         # Create context_builder.py
         context_content = generate_context_builder(name, class_name)
@@ -115,6 +124,18 @@ __all__ = ['{class_name}CsvParser']
         # Create chart_generator.py
         chart_content = generate_chart_generator(name, class_name)
         (plugin_dir / "chart_generator.py").write_text(chart_content, encoding='utf-8')
+        
+        # Create executor.py (for CLI integration)
+        executor_content = generate_executor(name, safe_name, class_name)
+        (plugin_dir / "executor.py").write_text(executor_content, encoding='utf-8')
+        
+        # Create widgets.py (custom UI components)
+        widgets_content = generate_widgets_module(name, safe_name, class_name)
+        (plugin_dir / "widgets.py").write_text(widgets_content, encoding='utf-8')
+        
+        # Create components.py (Property Controls pattern)
+        components_content = generate_component_module(name, safe_name, class_name)
+        (plugin_dir / "components.py").write_text(components_content, encoding='utf-8')
     
     # Create report_systems directory
     rs_dir = plugin_dir / "report_systems"
@@ -125,35 +146,13 @@ __all__ = ['{class_name}CsvParser']
         json.dumps(report_system, indent=4), encoding='utf-8'
     )
     
-    # Create templates directory
-    templates_dir = plugin_dir / "templates" / safe_name / "pages"
-    templates_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Read and interpolate template files
-    base_template = _read_template("pages/base.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "base.html.j2").write_text(base_template, encoding='utf-8')
-    
-    home_template = _read_template("pages/home.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "home.html.j2").write_text(home_template, encoding='utf-8')
-    
-    # Create details page for multi-page example
-    details_template = _read_template("pages/details.html.j2", name=name, safe_name=safe_name)
-    (templates_dir / "details.html.j2").write_text(details_template, encoding='utf-8')
-    
-    # Create components directory with macros
-    components_dir = plugin_dir / "templates" / "components"
-    components_dir.mkdir(parents=True, exist_ok=True)
-    
-    macros_template = _read_template("components/macros.html.j2", name=name, safe_name=safe_name)
-    (components_dir / "macros.html.j2").write_text(macros_template, encoding='utf-8')
-    
-    # Create static CSS directory
+    # Create static CSS directory for plugin styles
     static_dir = plugin_dir / "templates" / safe_name / "static"
     static_dir.mkdir(parents=True, exist_ok=True)
     
-    # Note: theme.css is NOT generated here - it's generated dynamically at runtime
-    # based on the theme specified in the report system JSON or CLI --theme flag.
-    # This ensures theme changes are always reflected without regenerating plugin files.
+    # NOTE: Reports are built entirely from YAML config (report_config.yaml
+    # + component_templates.yaml). Theme CSS is generated dynamically at runtime.
+    
     
     # Generate plugin CSS (layout and components)
     plugin_css = _read_template("static/plugin.css", name=name, safe_name=safe_name)
@@ -168,25 +167,39 @@ __all__ = ['{class_name}CsvParser']
         theme_content = generate_theme_module(name, safe_name, class_name)
         (plugin_dir / "theme.py").write_text(theme_content, encoding='utf-8')
     
-    # Create sample_data directory with better sample data
+    # Create sample_data directory with epic D&D character data!
     sample_dir = plugin_dir / "sample_data"
     sample_dir.mkdir(exist_ok=True)
     
-    sample_csv = """name,score,category
-Alpha Project,95,Backend
-Beta Module,82,Frontend
-Core System,78,Infrastructure
-Delta Service,91,Backend
-Echo Framework,65,DevOps
-Foxtrot API,88,Backend
-Golf Component,73,Frontend
-Hotel Library,96,Core
-India Utils,84,Utils
-Juliet Engine,69,Core
-Kilo Dashboard,77,Frontend
-Lima Gateway,92,Infrastructure
+    # ⚔️ D&D Character Roster - Adventurer's Guild Records ⚔️
+    # Extended stats with race, proficiencies, spells, languages for full D&D experience
+    sample_csv = """name,class,level,hp,str,dex,con,int,wis,cha,race,background,equipment,alignment,proficiencies,spells,languages,story,featured
+Thorin Ironforge,Fighter,12,98,18,12,16,10,13,14,Dwarf,Soldier,Warhammer +2 & Shield of Faith,Lawful Good,Athletics; Intimidation; History,None,Common; Dwarvish,A veteran of the Goblin Wars seeking to reclaim his clan's lost fortress.,true
+Lyralei Moonwhisper,Ranger,10,72,14,18,14,12,16,10,Elf,Outlander,Longbow of Seeking & Cloak of Elvenkind,Neutral Good,Survival; Perception; Stealth; Nature,Hunter's Mark; Pass Without Trace; Conjure Animals,Common; Elvish; Sylvan,Last survivor of a village destroyed by undead. Hunts the necromancer responsible.,true
+Grimtooth the Wise,Barbarian,14,145,20,14,18,8,12,10,Half-Orc,Tribal Nomad,Greataxe of Fury & Belt of Giant Strength,Chaotic Neutral,Athletics; Survival; Intimidation,None,Common; Orc,Despite his name he solves most problems by hitting them. Hard.,false
+Elara Brightshield,Paladin,11,95,16,10,14,12,14,16,Human,Noble,Holy Avenger & Plate of the Dawn,Lawful Good,Persuasion; Religion; Medicine,Divine Smite; Lay on Hands; Shield of Faith,Common; Celestial,Sworn to protect the innocent after witnessing a demon incursion as a child.,true
+Zephyr Shadowstep,Rogue,9,52,10,20,12,16,14,14,Halfling,Criminal,Daggers of Venom & Boots of Elvenkind,Chaotic Good,Stealth; Sleight of Hand; Deception; Thieves' Tools,None,Common; Thieves' Cant; Halfling,Reformed thief who now steals only from the corrupt and evil.,false
+Morrigan Darkhollow,Warlock,8,61,10,14,14,16,12,18,Tiefling,Sage,Staff of the Pact & Tome of Shadows,Neutral Evil,Arcana; Deception; Investigation,Eldritch Blast; Hex; Darkness; Hunger of Hadar,Common; Infernal; Deep Speech,Made a pact with an elder entity. The price is yet to be revealed.,false
+Aldric Stormcaller,Wizard,13,48,8,14,12,20,16,10,Human,Scholar,Staff of Power & Robes of the Archmagi,True Neutral,Arcana; History; Investigation,Fireball; Lightning Bolt; Counterspell; Teleport,Common; Draconic; Primordial,Obsessed with understanding the nature of wild magic surges.,false
+Kira Flameheart,Sorcerer,10,68,12,14,14,12,10,18,Human,Folk Hero,Ring of Fire Resistance & Wand of Fireballs,Chaotic Good,Persuasion; Intimidation,Fireball; Scorching Ray; Fly; Haste,Common; Draconic,Her draconic bloodline awakened during a village fire she miraculously survived.,false
+Brother Marcus,Cleric,11,78,14,10,16,12,18,14,Human,Acolyte,Mace of Disruption & Shield of Faith,Lawful Good,Medicine; Religion; Insight,Cure Wounds; Spirit Guardians; Revivify; Flame Strike,Common; Celestial,Healer and counselor who joined adventuring to spread his deity's light.,false
+Fennwick Tinkertop,Artificer,7,45,10,16,12,18,14,12,Gnome,Guild Artisan,Mechanical Companion & Bag of Holding,Neutral Good,Arcana; Investigation; Tinker's Tools,Mending; Faerie Fire; Heat Metal,Common; Gnomish,Builds wonderful contraptions. They explode only 40% of the time now.,false
+Ravenna Nightshade,Bard,9,55,10,16,12,14,12,18,Half-Elf,Entertainer,Lute of Charming & Rapier of Dancing,Chaotic Neutral,Performance; Persuasion; Deception,Vicious Mockery; Charm Person; Hypnotic Pattern,Common; Elvish; Undercommon,Collects stories of legendary heroes. Plans to become one herself.,false
+Grok Skullcrusher,Barbarian,15,162,20,12,20,6,10,8,Goliath,Outlander,Vorpal Greataxe & Cloak of Protection,Chaotic Neutral,Athletics; Survival,None,Common; Giant,The party's problem solver. Every problem looks like a skull to crush.,false
+Seraphina Dawnweaver,Cleric,12,82,12,10,14,14,18,16,Aasimar,Acolyte,Staff of Healing & Armor of Light,Lawful Good,Religion; Medicine; Persuasion,Healing Word; Mass Cure Wounds; Raise Dead; Holy Weapon,Common; Celestial,Chosen by her goddess at birth. Marked with radiant sigils.,false
+Vex the Silent,Monk,10,64,12,18,14,12,16,10,Human,Hermit,Bracers of Defense & Staff of Striking,True Neutral,Acrobatics; Stealth; Insight,None,Common; Elvish,Took a vow of silence. Communicates through gestures and written notes.,false
+Bramblewood,Druid,11,88,14,12,16,13,18,10,Firbolg,Outlander,Staff of the Woodlands & Ring of Animal Friendship,Neutral Good,Nature; Survival; Animal Handling,Speak with Animals; Call Lightning; Conjure Woodland Beings,Common; Druidic; Sylvan; Giant,A firbolg who tends to a sacred grove threatened by expanding civilization.,false
+Captain Flint,Fighter,8,76,16,14,16,12,10,14,Human,Sailor,Cutlass +1 & Pistol of Warning,Neutral Evil,Athletics; Perception; Navigator's Tools,None,Common; Aquan,Former pirate captain seeking a legendary treasure map.,false
+Whisper,Rogue,6,38,10,18,10,14,14,12,Kenku,Urchin,Cloak of Shadows & Dagger of Returning,Chaotic Good,Stealth; Sleight of Hand; Acrobatics,None,Common; Thieves' Cant,A young kenku raised by thieves learning the difference between survival and greed.,false
+Azura Frostborn,Sorcerer,9,54,10,14,12,14,12,18,Human,Noble,Staff of Frost & Ring of Warmth,Chaotic Neutral,Persuasion; Arcana,Ray of Frost; Ice Storm; Cone of Cold,Common; Primordial,Her ice magic manifested on her wedding day. The groom is still frozen.,false
 """
     (sample_dir / "sample.csv").write_text(sample_csv, encoding='utf-8')
+
+    
+    # Create user-facing report_config.yaml
+    # This is the CMS-style config that end users edit to compose reports
+    user_config = generate_user_report_config(name, safe_name, color_theme)
+    (plugin_dir / "report_config.yaml").write_text(user_config, encoding='utf-8')
     
     return plugin_dir
 

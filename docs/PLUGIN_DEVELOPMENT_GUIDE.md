@@ -34,14 +34,50 @@ Data Files → Parser → Data Points → Analyzer → Statistics
                             Jinja2 Templates → HTML Pages
 ```
 
+### Architecture: Two Configuration Layers
+
+BobReview uses **two separate configuration files** for different audiences:
+
+| Configuration | Created By | Purpose | Format |
+|--------------|------------|---------|--------|
+| **Report System JSON** | Plugin Developer | Define plugin capabilities | `report_systems/*.json` |
+| **Report Config YAML** | End User | Compose pages from components | `report_config.yaml` |
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  PLUGIN DEVELOPER LAYER                                         │
+│  report_systems/my_plugin.json                                  │
+│  ───────────────────────────────────────────────────────────    │
+│  • data_source: what data types plugin supports (CSV, FBX...)  │
+│  • llm_generators (summary, recommendations, custom)            │
+│  • widgets, charts, analyzers available                         │
+│  • default theme configuration                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  END USER LAYER                                                  │
+│  report_config.yaml                                              │
+│  ───────────────────────────────────────────────────────────    │
+│  • plugin: "my-plugin" ← which plugin to use (REQUIRED)         │
+│  • data_source: "./data/*.csv" ← user's data                    │
+│  • pages: [...] ← which pages to include                        │
+│  • components: [...] ← what to show on each page                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> [!IMPORTANT]
+> **Plugins are always required.** Users cannot create reports without a plugin.
+> The plugin defines what data types are supported and what components are available.
+
 ---
 
 ## Plugin Structure
 
-```
-bobreview/plugins/your_plugin/
+```text
+~/.bobreview/plugins/your_plugin/
 ├── __init__.py              # Package init, exports plugin class
 ├── manifest.json            # Plugin metadata and capabilities
+├── report_config.yaml       # User-editable report config (pages, charts, LLM)
 ├── plugin.py                # Main plugin class with registrations
 ├── parsers/
 │   ├── __init__.py
@@ -50,18 +86,19 @@ bobreview/plugins/your_plugin/
 ├── context_builder.py       # Template context preparation
 ├── chart_generator.py       # Chart.js code generator
 ├── report_systems/
-│   └── your_report.json     # Report configuration
+│   └── your_report.json     # Report system definition (plugin capabilities)
 ├── templates/
 │   ├── your_plugin/
 │   │   ├── pages/
 │   │   │   ├── base.html.j2
-│   │   │   ├── home.html.j2
-│   │   │   └── *.html.j2
+│   │   │   ├── overview.html.j2
+│   │   │   └── details.html.j2
 │   │   └── static/
 │   │       └── plugin.css
 │   └── components/
 │       └── macros.html.j2
 └── sample_data/
+    └── sample.csv           # Sample data to test with
 ```
 
 ---
@@ -106,12 +143,15 @@ bobreview plugins create my-plugin
 
 ```python
 # parsers/my_parser.py
-from bobreview.core.api import DataParserInterface
 from typing import List, Dict, Any
 from pathlib import Path
 
-class MyCsvParser(DataParserInterface):
-    """Parse data from CSV files."""
+class MyCsvParser:
+    """Parse data from CSV files.
+    
+    In v1.0.8 Plugin-First Architecture, parsers are standalone classes.
+    They must implement parse_file() and discover_files() methods.
+    """
     
     def parse_file(self, file_path: Path) -> Dict[str, Any]:
         """Parse a single CSV file."""
@@ -135,7 +175,11 @@ class MyCsvParser(DataParserInterface):
 from typing import List, Dict, Any
 import statistics
 
-def analyze_my_data(data_points: List[Dict[str, Any]], config=None) -> Dict[str, Any]:
+def analyze_my_data(
+    data_points: List[Dict[str, Any]],
+    config=None,
+    **kwargs  # Accept metrics, metric_config from AnalyticsService
+) -> Dict[str, Any]:
     values = [p.get('value', 0) for p in data_points]
     
     if not values:
@@ -192,13 +236,13 @@ def analyze_my_data(data_points: List[Dict[str, Any]], config=None) -> Dict[str,
     
     "pages": [
         {
-            "id": "home",
-            "filename": "index.html",
+            "id": "overview",
+            "filename": "overview.html",
             "nav_label": "Overview",
             "nav_order": 10,
             "template": {
                 "type": "jinja2",
-                "name": "my_plugin/pages/home.html.j2"
+                "name": "my_plugin/pages/overview.html.j2"
             },
             "data_requirements": {
                 "data_points": false,
@@ -239,81 +283,70 @@ def analyze_my_data(data_points: List[Dict[str, Any]], config=None) -> Dict[str,
 }
 ```
 
-### Step 5a: Create Custom Themes (Optional)
+### Step 5: Create Custom Themes
 
-Plugins can define custom themes. The scaffolder generates two examples when using `bobreview plugins create --template full`:
+Plugins define their own themes in `theme.py`. The scaffolder generates theme examples when using `bobreview plugins create --template full`.
 
-**Approach 1: Full Standalone Theme** (complete control with fonts, radii, shadows)
+> [!NOTE]
+> In v1.0.8, themes are plugin-owned. The `ReportTheme` dataclass and helper functions are defined locally in each plugin's `theme.py`.
+
+**Define your theme:**
 
 ```python
 # theme.py
-from bobreview.core.themes import ReportTheme, hex_to_rgba
+from dataclasses import dataclass
 
+def hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """Convert hex color to rgba string."""
+    hex_color = hex_color.lstrip('#')
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+@dataclass
+class ReportTheme:
+    id: str
+    name: str
+    bg: str = '#0a0e14'
+    bg_elevated: str = '#12171f'
+    bg_soft: str = '#1a2028'
+    accent: str = '#00d4aa'
+    accent_soft: str = 'rgba(0, 212, 170, 0.15)'
+    accent_strong: str = '#00ffcc'
+    text_main: str = '#e8eaed'
+    text_soft: str = '#9aa0a6'
+    ok: str = '#34d399'
+    ok_soft: str = 'rgba(52, 211, 153, 0.15)'
+    warn: str = '#fbbf24'
+    warn_soft: str = 'rgba(251, 191, 36, 0.15)'
+    danger: str = '#f87171'
+    danger_soft: str = 'rgba(248, 113, 113, 0.15)'
+    font_family: str = 'system-ui, sans-serif'
+    font_mono: str = 'monospace'
+    font_url: str = ''
+
+# Define your themes
 MY_PLUGIN_THEME = ReportTheme(
-    id='my_plugin_full',
-    name='My Plugin Theme',
-    
-    # Backgrounds
-    bg='#0a0e14',
-    bg_elevated='#12171f',
-    bg_soft='#1a2028',
-    
-    # Accents
+    id='my_plugin_dark',
+    name='My Plugin Dark',
     accent='#00d4aa',
     accent_soft=hex_to_rgba('#00d4aa', 0.15),
-    accent_strong='#00ffcc',
-    
-    # Text
-    text_main='#e8eaed',
-    text_soft='#9aa0a6',
-    
-    # Status colors
-    ok='#34d399',
-    ok_soft=hex_to_rgba('#34d399', 0.15),
-    warn='#fbbf24',
-    warn_soft=hex_to_rgba('#fbbf24', 0.15),
-    danger='#f87171',
-    danger_soft=hex_to_rgba('#f87171', 0.15),
-    
-    # Fonts (Google Fonts URL enables dynamic loading)
-    font_family='"Space Grotesk", system-ui, sans-serif',
-    font_mono='"IBM Plex Mono", monospace',
-    font_url='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap',
-)
-```
-
-**Approach 2: Extend a Base Theme** (quick customization)
-
-```python
-from bobreview.core.themes import create_theme, hex_to_rgba
-
-MY_PLUGIN_DEEP_THEME = create_theme(
-    id='my_plugin_ocean_deep',
-    name='My Plugin Ocean Deep',
-    base='ocean',  # Inherit from ocean theme
-    
-    # Only override what you need
-    bg='#060d1a',
-    bg_elevated='#0c1628',
-    accent='#5afaff',
-    accent_soft=hex_to_rgba('#5afaff', 0.12),
 )
 ```
 
 **Register in plugin.py:**
 
 ```python
-from .theme import MY_PLUGIN_THEME, MY_PLUGIN_DEEP_THEME
+from .theme import MY_PLUGIN_THEME
 
 def on_load(self, registry):
     helper = PluginHelper(registry, self.name)
     helper.add_theme(MY_PLUGIN_THEME)
-    helper.add_theme(MY_PLUGIN_DEEP_THEME)
 ```
 
-**Available base themes:** `dark`, `light`, `ocean`, `purple`, `terminal`, `sunset`
+**Available scaffold themes:** Midnight, Aurora, Sunset, Frost
 
 | Property | Description |
+|----------|-------------|
 |----------|-------------|
 | `accent` | Primary accent (buttons, links) |
 | `accent_soft` | Translucent accent for backgrounds |
@@ -328,28 +361,34 @@ def on_load(self, registry):
 
 ### Step 6: Create Chart Generator
 
-
 ```python
 # chart_generator.py
 import json
 from typing import Dict, List, Any
-from bobreview.core.api import ChartGeneratorInterface
-from bobreview.core.themes import get_theme_by_id, DARK_THEME
+from .theme import MIDNIGHT_THEME  # Import your plugin's theme
 
-class MyChartGenerator(ChartGeneratorInterface):
+class MyChartGenerator:
+    """Chart generator for your plugin.
+    
+    In v1.0.8, chart generators are standalone classes.
+    They must implement generate_chart() that returns JavaScript code.
+    """
     
     def generate_chart(
         self,
-        data_points: List[Dict[str, Any]],
+        data: List[Dict[str, Any]],
         stats: Dict[str, Any],
         config: Any,
         chart_config: Dict[str, Any]
     ) -> str:
+        data_points = list(data)
+        
         chart_id = chart_config.get('id', 'chart')
         title = chart_config.get('title', 'Chart')
         y_field = chart_config.get('y_field', 'value')
         
-        theme = get_theme_by_id('terminal') or DARK_THEME
+        # Use your plugin's theme
+        theme = MIDNIGHT_THEME
         
         labels = [p.get('name', f'#{i}') for i, p in enumerate(data_points)]
         values = [p.get(y_field, 0) for p in data_points]
@@ -392,17 +431,23 @@ class MyChartGenerator(ChartGeneratorInterface):
 ```python
 # context_builder.py
 from typing import Dict, Any, List
-from bobreview.core.api import ContextBuilderInterface
 
-class MyContextBuilder(ContextBuilderInterface):
+class MyContextBuilder:
+    """Context builder for your plugin.
+    
+    In v1.0.8, context builders are standalone classes.
+    They must implement build_context() that returns template context dict.
+    """
     
     def build_context(
         self,
-        data_points: List[Dict[str, Any]],
+        data: List[Dict[str, Any]],
         stats: Dict[str, Any],
         config: Any,
-        page_config: Dict[str, Any]
+        base_context: Dict[str, Any]
     ) -> Dict[str, Any]:
+        data_points = list(data)
+        
         critical = None
         if data_points:
             critical_idx = max(range(len(data_points)), 
@@ -464,7 +509,7 @@ class MyContextBuilder(ContextBuilderInterface):
 ### Step 9: Create Page Template
 
 ```jinja2
-{# templates/my_plugin/pages/home.html.j2 #}
+{# templates/my_plugin/pages/overview.html.j2 #}
 {% extends "my_plugin/pages/base.html.j2" %}
 {% from "components/macros.html.j2" import stat_card %}
 
@@ -489,6 +534,7 @@ class MyContextBuilder(ContextBuilderInterface):
 ```python
 # plugin.py
 from pathlib import Path
+import json
 from bobreview.core.plugin_system import BasePlugin, PluginHelper
 
 class MyPlugin(BasePlugin):
@@ -498,31 +544,49 @@ class MyPlugin(BasePlugin):
     def on_load(self, registry) -> None:
         helper = PluginHelper(registry, self.name)
         
+        # Import components
         from .parsers.my_parser import MyParser
-        helper.add_data_parser('my_parser', MyParser)
-        
         from .analysis import analyze_my_data
-        from bobreview.core.plugin_system.registries import get_analyzer_registry
-        get_analyzer_registry().register('my_analyzer', analyze_my_data)
-        
-        from .chart_generator import MyChartGenerator
-        helper.add_chart_generator('my_report', MyChartGenerator)
-        
         from .context_builder import MyContextBuilder
-        helper.add_context_builder('my_report', MyContextBuilder)
+        from .chart_generator import MyChartGenerator
         
-        template_dir = Path(__file__).parent / 'templates'
-        helper.add_templates(template_dir)
+        # Load report system definition
+        report_system_path = Path(__file__).parent / "report_systems" / "my_plugin.json"
+        with open(report_system_path) as f:
+            system_def = json.load(f)
         
+        # Register everything in one call
+        helper.setup_complete_report_system(
+            system_id="my_plugin",
+            system_def=system_def,
+            parser_class=MyParser,
+            analyzer_func=analyze_my_data,
+            context_builder_class=MyContextBuilder,
+            chart_generator_class=MyChartGenerator,
+            template_dir=Path(__file__).parent / "templates"
+        )
+        
+        # Register themes
         helper.add_builtin_themes()
         
-        report_dir = Path(__file__).parent / 'report_systems'
-        helper.add_report_systems_from_dir(report_dir)
+        # Register default services
+        helper.register_default_services()
 ```
 
 ---
 
 ## Component Reference
+
+### Security Note: Component HTML is Trusted
+
+Component HTML returned by `render()` bypasses Jinja2 autoescaping. Plugin authors
+must ensure their components sanitize any user-provided data to prevent XSS attacks.
+Never directly embed untrusted user input in component HTML.
+
+The template engine wraps component output in `Markup()` which marks it as safe HTML,
+bypassing Jinja2's default autoescaping. This is appropriate for the current trusted-plugin
+architecture, but if untrusted plugins are supported in the future, a sanitization layer
+should be added.
 
 ### Theme CSS Variables
 
@@ -544,7 +608,7 @@ class MyPlugin(BasePlugin):
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| `config` | object | ReportConfig with thresholds, title |
+| `config` | object | Config with thresholds, title |
 | `stats` | dict | Computed statistics from analyzer |
 | `data_points` | list | Raw parsed data points |
 | `images` | dict | Embedded images (base64) |
