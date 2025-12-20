@@ -341,13 +341,14 @@ class ComponentRenderer:
     
     def _render_stat_row(self, comp: Dict) -> str:
         """Render a row of stat cards side-by-side."""
+        import html as html_module
         items = comp.get('items', [])
         cards_html = ''
         for item in items:
             value = eval_template(item.get('value', '0'), self.data_points, self.stats)
-            label = item.get('label', '')
+            label = html_module.escape(str(item.get('label', '')))
             variant = item.get('variant', 'default')
-            icon = item.get('icon', '')
+            icon = html_module.escape(str(item.get('icon', '')))
             icon_html = f'<i class="fa-solid {icon}"></i> ' if icon else ''
             cards_html += (
                 f'<div class="stat-card stat-{variant}">'
@@ -359,13 +360,18 @@ class ComponentRenderer:
     
     def _render_hero_banner(self, comp: Dict) -> str:
         """Render a hero banner with title and subtitle."""
+        import html as html_module
         title = comp.get('title', '')
         subtitle = comp.get('subtitle', '')
         if '{{' in title:
             title = eval_template(title, self.data_points, self.stats)
+        else:
+            title = html_module.escape(str(title))
         if '{{' in subtitle:
             subtitle = eval_template(subtitle, self.data_points, self.stats)
-        icon = comp.get('icon', 'fa-flag')
+        else:
+            subtitle = html_module.escape(str(subtitle))
+        icon = html_module.escape(str(comp.get('icon', 'fa-flag')))
         variant = comp.get('variant', 'default')
         return (
             f'<div class="hero-banner hero-{variant}">'
@@ -378,14 +384,16 @@ class ComponentRenderer:
     
     def _render_divider(self, comp: Dict) -> str:
         """Render a section divider with optional label."""
-        label = comp.get('label', '')
+        import html as html_module
+        label = html_module.escape(str(comp.get('label', '')))
         if label:
             return f'<div class="section-divider"><span>{label}</span></div>'
         return '<div class="section-divider"></div>'
     
     def _render_progress_bar(self, comp: Dict) -> str:
         """Render a progress bar visualization."""
-        label = comp.get('label', 'Progress')
+        import html as html_module
+        label = html_module.escape(str(comp.get('label', 'Progress')))
         min_val = eval_template(comp.get('min', '0'), self.data_points, self.stats)
         max_val = eval_template(comp.get('max', '100'), self.data_points, self.stats)
         current = eval_template(comp.get('current', '50'), self.data_points, self.stats)
@@ -631,7 +639,8 @@ class ComponentRenderer:
     
     def _render_quick_cards(self, comp: Dict) -> str:
         """Render quick reference cards for each character."""
-        title = comp.get('title', 'Quick Reference Cards')
+        import html as html_module
+        title = html_module.escape(str(comp.get('title', 'Quick Reference Cards')))
         featured_only = comp.get('featured_only', False)
         
         if featured_only:
@@ -641,15 +650,16 @@ class ComponentRenderer:
         
         cards_html = ''
         for char in characters:
-            name = char.get('name', 'Unknown')
-            race = char.get('race', 'Unknown')
-            char_class = char.get('class', 'Adventurer')
+            # Escape all user-sourced content
+            name = html_module.escape(str(char.get('name', 'Unknown')))
+            race = html_module.escape(str(char.get('race', 'Unknown')))
+            char_class = html_module.escape(str(char.get('class', 'Adventurer')))
             level = char.get('level', 1)
             hp = char.get('hp', 0)
-            equipment = char.get('equipment', '')
-            proficiencies = char.get('proficiencies', '')
-            spells = char.get('spells', '')
-            languages = char.get('languages', 'Common')
+            equipment = html_module.escape(str(char.get('equipment', '')))
+            proficiencies = html_module.escape(str(char.get('proficiencies', '')))
+            spells = html_module.escape(str(char.get('spells', '')))
+            languages = html_module.escape(str(char.get('languages', 'Common')))
             
             # Build ability scores mini-display
             abilities_html = ''
@@ -958,9 +968,9 @@ def generate_report(
     
     for i, page in enumerate(pages):
         page_id = page.get('id', f'page_{i}')
-        page_id_escaped = html.escape(page_id)  # Escape for HTML attributes
+        page_id_escaped = html.escape(page_id, quote=True)  # Escape quotes for JS context
         page_title = page.get('title', f'Page {i+1}')
-        page_title_escaped = html.escape(page_title)
+        page_title_escaped = html.escape(page_title, quote=True)
         active_class = 'active' if i == 0 else ''
         
         # Navigation tab - use escaped values in onclick and content
