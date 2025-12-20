@@ -125,6 +125,16 @@ Generate beautiful HTML reports from any data using **[BobReview]** and a **plug
     create_table.add_row("--template, -t <type>", "Template: minimal or full (default: full)")
     console.print(Panel(create_table, title="[bold]Plugin Create Options[/bold]", border_style="dim"))
     
+    # LLM Configuration
+    llm_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    llm_table.add_column("Option", style="cyan", width=28)
+    llm_table.add_column("Description")
+    llm_table.add_row("--llm-provider <name>", "openai, anthropic, ollama (default: openai)")
+    llm_table.add_row("--llm-api-key <key>", "API key (or use environment variable)")
+    llm_table.add_row("--llm-model <model>", "Model name (e.g., gpt-4, llama2)")
+    llm_table.add_row("--llm-temperature <0-2>", "Creativity level (default: 0.7)")
+    console.print(Panel(llm_table, title="[bold]LLM Configuration[/bold]", border_style="dim"))
+    
     # Output & debugging
     output_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
     output_table.add_column("Option", style="cyan", width=28)
@@ -384,6 +394,28 @@ Notes:
         help='Skip LLM API calls (for testing)'
     )
     
+    # LLM Configuration
+    parser.add_argument(
+        '--llm-provider', type=str, default='openai',
+        choices=['openai', 'anthropic', 'ollama'],
+        help='LLM provider: openai, anthropic, ollama (default: openai)'
+    )
+    parser.add_argument(
+        '--llm-api-key', type=str, default=None,
+        metavar='KEY',
+        help='API key for LLM provider (or use environment variable)'
+    )
+    parser.add_argument(
+        '--llm-model', type=str, default=None,
+        metavar='MODEL',
+        help='LLM model name (e.g., gpt-4, claude-3-opus, llama2)'
+    )
+    parser.add_argument(
+        '--llm-temperature', type=float, default=0.7,
+        metavar='TEMP',
+        help='LLM temperature 0.0-2.0 (default: 0.7)'
+    )
+    
     # Discovery
     parser.add_argument(
         '--list-plugins', action='store_true',
@@ -414,6 +446,9 @@ Notes:
     plugins_create.add_argument('--template', '-t', type=str, default='full',
                                 choices=['minimal', 'full'],
                                 help='minimal = basic, full = all features (default)')
+    
+    # GUI subcommand
+    gui_parser = subparsers.add_parser('gui', help='Launch graphical interface')
     
     args = parser.parse_args()
 
@@ -462,6 +497,18 @@ Notes:
                 if p.description:
                     print(f"    {p.description}")
         return 0
+    
+    # Handle GUI command
+    if args.command == 'gui':
+        try:
+            from .gui import run_app
+            run_app()
+            return 0
+        except ImportError as e:
+            log_error(f"GUI requires flet. Install with: pip install flet")
+            if args.verbose:
+                print(f"Import error: {e}")
+            return 1
     
     # Handle plugin subcommands
     if args.command == 'plugins':
@@ -540,6 +587,16 @@ Notes:
             }
             if getattr(args, "config", None):
                 kwargs["config_path"] = args.config
+            
+            # LLM configuration - pass if specified
+            if getattr(args, "llm_provider", None):
+                kwargs["llm_provider"] = args.llm_provider
+            if getattr(args, "llm_api_key", None):
+                kwargs["llm_api_key"] = args.llm_api_key
+            if getattr(args, "llm_model", None):
+                kwargs["llm_model"] = args.llm_model
+            if getattr(args, "llm_temperature", None) is not None:
+                kwargs["llm_temperature"] = args.llm_temperature
 
             try:
                 result = generate_func(
