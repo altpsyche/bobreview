@@ -129,12 +129,6 @@ bobreview --plugin <plugin-name> --dir ./screenshots
 bobreview --plugin <plugin-name> --dir ./game_data
 ```
 
-### Change Theme
-```bash
-bobreview --plugin <plugin-name> --dir ./screenshots --theme terminal
-# Options: dark, light, high_contrast, ocean, purple, terminal, sunset
-```
-
 ### Standalone HTML (Embedded Images)
 ```bash
 bobreview --plugin <plugin-name> --dir ./screenshots

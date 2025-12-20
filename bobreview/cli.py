@@ -123,7 +123,6 @@ Generate beautiful HTML reports from any data using **[BobReview]** and a **plug
     create_table.add_column("Description")
     create_table.add_row("--output-dir, -o <dir>", "Where to create (default: ~/.bobreview/plugins/)")
     create_table.add_row("--template, -t <type>", "Template: minimal or full (default: full)")
-    create_table.add_row("--theme <name>", "Base color theme (default: dark)")
     console.print(Panel(create_table, title="[bold]Plugin Create Options[/bold]", border_style="dim"))
     
     # Output & debugging
@@ -226,8 +225,7 @@ def handle_plugin_command(args):
             return 1
         
         try:
-            color_theme = getattr(args, 'theme', 'dark')
-            created_path = create_plugin(args.name, output_dir, args.template, color_theme)
+            created_path = create_plugin(args.name, output_dir, args.template)
             print(f"Created plugin: {args.name}")
             print(f"  Location: {created_path}")
             print(f"  Template: {args.template}")
@@ -416,8 +414,6 @@ Notes:
     plugins_create.add_argument('--template', '-t', type=str, default='full',
                                 choices=['minimal', 'full'],
                                 help='minimal = basic, full = all features (default)')
-    plugins_create.add_argument('--theme', type=str, default='dark',
-                                help='Base color theme for templates (default: dark)')
     
     args = parser.parse_args()
 

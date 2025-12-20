@@ -164,9 +164,6 @@ bobreview --plugin <plugin-name> --dir . --dry-run
 # Process only 20 random samples (for quick testing)
 bobreview --plugin <plugin-name> --dir . --sample 20
 
-# Use light theme
-bobreview --plugin <plugin-name> --dir . --theme light
-
 # Use Anthropic Claude instead of OpenAI
 bobreview --plugin <plugin-name> --dir . --llm-provider anthropic --llm-api-key your-anthropic-key
 
@@ -315,7 +312,6 @@ bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
 --clear-cache            # Force fresh analysis
 --no-embed-images        # Use external image files instead of embedding
 --linked-css             # Use external CSS file (styles.css)
---theme THEME            # 7 themes: dark, light, high_contrast, ocean, purple, terminal, sunset
 --disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
 
 # LLM Provider Configuration
