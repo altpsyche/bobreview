@@ -653,6 +653,57 @@ python -c "from my_plugin.plugin import MyPlugin; print('OK')"
 
 ---
 
+---
+
 ## Reference Implementation
 
 Use `bobreview plugins create my-plugin --template full` to generate a complete working example.
+
+---
+
+## LLM Configuration
+
+Plugins receive LLM settings via `**kwargs` in their `generate_report()` function.
+
+### Available kwargs
+
+| Kwarg | Type | Default | Description |
+|-------|------|---------|-------------|
+| `llm_provider` | str | `"openai"` | Provider: `openai`, `anthropic`, `ollama` |
+| `llm_api_key` | str | `None` | API key (falls back to env var) |
+| `llm_model` | str | `"gpt-4o"` | Model name |
+| `llm_temperature` | float | `0.7` | Temperature 0.0-2.0 |
+
+### Example Usage
+
+```python
+def generate_report(
+    data_dir: str,
+    output_dir: str,
+    config_path: Optional[str] = None,
+    dry_run: bool = False,
+    **kwargs  # Receives LLM settings
+) -> Path:
+    from bobreview.core.config import Config
+    
+    # Create Config with LLM settings from kwargs
+    llm_config = Config(
+        llm_provider=kwargs.get('llm_provider', 'openai'),
+        llm_api_key=kwargs.get('llm_api_key'),
+        llm_model=kwargs.get('llm_model', 'gpt-4o'),
+        llm_temperature=kwargs.get('llm_temperature', 0.7),
+    )
+    
+    # Use llm_config for LLM calls
+    ...
+```
+
+### CLI Usage
+
+```bash
+bobreview --plugin my-plugin --dir ./data \
+  --llm-provider anthropic \
+  --llm-api-key sk-xxx \
+  --llm-model claude-3-opus \
+  --llm-temperature 0.3
+```

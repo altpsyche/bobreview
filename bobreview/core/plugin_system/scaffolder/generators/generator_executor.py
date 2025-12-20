@@ -121,7 +121,8 @@ def generate_llm_content(
     config: Dict[str, Any],
     data_points: List[Dict],
     stats: Dict[str, Any],
-    dry_run: bool = False
+    dry_run: bool = False,
+    **kwargs
 ) -> Dict[str, str]:
     """
     Generate LLM content for all prompts in YAML config.
@@ -199,7 +200,14 @@ def generate_llm_content(
                 from bobreview.core.config import Config
                 from bobreview.core.cache import init_cache
                 from bobreview.core.html_utils import sanitize_llm_html
-                llm_config = Config()
+                
+                # Create Config with LLM settings from kwargs
+                llm_config = Config(
+                    llm_provider=kwargs.get('llm_provider', 'openai'),
+                    llm_api_key=kwargs.get('llm_api_key'),
+                    llm_model=kwargs.get('llm_model', 'gpt-4o'),
+                    llm_temperature=kwargs.get('llm_temperature', 0.7),
+                )
                 init_cache(llm_config)
                 response = call_llm(rendered_prompt, config=llm_config)
                 # Store raw response for chaining
@@ -894,7 +902,8 @@ def generate_report(
     output_dir: str,
     config_path: Optional[str] = None,
     theme_id: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    **kwargs
 ) -> Path:
     """
     Generate an HTML report from data files using YAML configuration.
@@ -905,6 +914,7 @@ def generate_report(
         config_path: Path to report_config.yaml (defaults to plugin dir)
         theme_id: Theme ID to use (defaults to config's theme setting)
         dry_run: If True, skip LLM calls
+        **kwargs: LLM settings (llm_provider, llm_api_key, llm_model, llm_temperature)
     
     Returns:
         Path to the generated index.html
@@ -944,8 +954,8 @@ def generate_report(
     # Calculate stats
     stats = calculate_stats(data_points)
     
-    # Generate LLM content
-    llm_content = generate_llm_content(config, data_points, stats, dry_run)
+    # Generate LLM content (pass LLM kwargs)
+    llm_content = generate_llm_content(config, data_points, stats, dry_run, **kwargs)
     
     # Initialize chart generator and template loader
     chart_gen = ''' + class_name + '''ChartGenerator()
