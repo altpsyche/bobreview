@@ -2,7 +2,9 @@
 Generate View - Report generation interface.
 """
 
+import os
 import flet as ft
+import webbrowser
 from pathlib import Path
 from ..services import cli_wrapper
 
@@ -62,9 +64,53 @@ class GenerateView(ft.Container):
             value=False,
         )
         
+        # Progress section
+        self.progress_container = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.ProgressRing(width=20, height=20),
+                    ft.Text("", size=14, ref=ft.Ref[ft.Text]()),
+                ], spacing=10),
+            ]),
+            visible=False,
+            padding=15,
+            border_radius=8,
+            bgcolor="#1e2632",
+        )
+        self.progress_text = ft.Text("", size=14)
+        self.progress_ring = ft.ProgressRing(width=20, height=20)
+        self.progress_container.content = ft.Row([
+            self.progress_ring,
+            self.progress_text,
+        ], spacing=10)
+        
         # Status
         self.status_text = ft.Text("", size=14)
-        self.loading = ft.ProgressRing(visible=False, width=20, height=20)
+        
+        # Open report button (hidden initially)
+        self.open_report_btn = ft.ElevatedButton(
+            "Open Report",
+            icon=ft.Icons.OPEN_IN_BROWSER,
+            on_click=self._open_report,
+            visible=False,
+        )
+        self.report_path = None
+        
+        # LLM warning banner
+        self.llm_warning = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.WARNING_AMBER, color=ft.Colors.ORANGE_400),
+                ft.Text(
+                    "No LLM API key configured. Go to LLM Settings to add one, or enable Dry Run.",
+                    color=ft.Colors.ORANGE_400,
+                    size=13,
+                ),
+            ], spacing=10),
+            visible=False,
+            padding=10,
+            border_radius=8,
+            bgcolor="#3d2e1f",
+        )
         
         # Add file pickers to page overlay
         page.overlay.extend([
@@ -82,7 +128,9 @@ class GenerateView(ft.Container):
                     size=16,
                     color=ft.Colors.GREY_400,
                 ),
-                ft.Container(height=30),
+                ft.Container(height=20),
+                self.llm_warning,
+                ft.Container(height=20),
                 self.plugin_dropdown,
                 ft.Container(height=15),
                 ft.Row(
@@ -91,6 +139,7 @@ class GenerateView(ft.Container):
                         ft.IconButton(
                             icon=ft.Icons.FOLDER_OPEN,
                             on_click=lambda e: self.data_dir_picker.get_directory_path(),
+                            tooltip="Browse for data folder",
                         ),
                     ],
                     spacing=5,
@@ -102,6 +151,7 @@ class GenerateView(ft.Container):
                         ft.IconButton(
                             icon=ft.Icons.FOLDER_OPEN,
                             on_click=lambda e: self.output_dir_picker.get_directory_path(),
+                            tooltip="Browse for output folder",
                         ),
                     ],
                     spacing=5,
@@ -115,6 +165,7 @@ class GenerateView(ft.Container):
                             on_click=lambda e: self.config_picker.pick_files(
                                 allowed_extensions=["yaml", "yml"],
                             ),
+                            tooltip="Browse for config file",
                         ),
                         ft.IconButton(
                             icon=ft.Icons.CLEAR,
@@ -136,17 +187,20 @@ class GenerateView(ft.Container):
                             bgcolor=ft.Colors.GREEN_700,
                             color=ft.Colors.WHITE,
                         ),
-                        self.loading,
+                        self.open_report_btn,
                     ],
                     spacing=10,
                 ),
-                ft.Container(height=20),
+                ft.Container(height=15),
+                self.progress_container,
+                ft.Container(height=10),
                 self.status_text,
             ],
         )
         
-        # Load plugins
+        # Load plugins and check LLM
         self._load_plugins()
+        self._check_llm_config()
     
     def _load_plugins(self):
         """Load available plugins into dropdown."""
@@ -161,6 +215,16 @@ class GenerateView(ft.Container):
         except Exception as ex:
             self.status_text.value = f"Error loading plugins: {ex}"
             self.status_text.color = ft.Colors.RED_400
+        self.page.update()
+    
+    def _check_llm_config(self):
+        """Check if LLM API key is configured."""
+        has_key = (
+            os.environ.get("OPENAI_API_KEY") or
+            os.environ.get("ANTHROPIC_API_KEY") or
+            os.environ.get("OLLAMA_BASE_URL")
+        )
+        self.llm_warning.visible = not has_key
         self.page.update()
     
     def _on_data_dir_picked(self, e: ft.FilePickerResultEvent):
@@ -186,6 +250,11 @@ class GenerateView(ft.Container):
         self.config_field.value = ""
         self.page.update()
     
+    def _update_progress(self, message: str):
+        """Update progress status."""
+        self.progress_text.value = message
+        self.page.update()
+    
     def _generate_report(self, e):
         """Generate the report."""
         # Validate inputs
@@ -207,12 +276,20 @@ class GenerateView(ft.Container):
             self.page.update()
             return
         
-        self.loading.visible = True
-        self.status_text.value = "Generating report..."
-        self.status_text.color = ft.Colors.GREY_400
-        self.page.update()
+        # Show progress
+        self.progress_container.visible = True
+        self.open_report_btn.visible = False
+        self.status_text.value = ""
+        
+        self._update_progress("Loading plugin...")
         
         try:
+            self._update_progress("Parsing data files...")
+            
+            # Check for LLM if not dry run
+            if not self.dry_run_checkbox.value:
+                self._update_progress("Calling LLM for content generation...")
+            
             result = cli_wrapper.generate_report(
                 plugin_name=self.plugin_dropdown.value,
                 data_dir=self.data_dir_field.value,
@@ -221,18 +298,39 @@ class GenerateView(ft.Container):
                 dry_run=self.dry_run_checkbox.value,
             )
             
+            self._update_progress("Writing report...")
+            
+            # Success
+            self.progress_container.visible = False
             self.status_text.value = f"✓ Report generated: {result}"
             self.status_text.color = ft.Colors.GREEN_400
+            
+            # Store path and show open button
+            self.report_path = result
+            self.open_report_btn.visible = True
             
             # Show success snackbar
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Report generated successfully!"),
+                action="Open",
+                on_action=self._open_report,
             )
             self.page.snack_bar.open = True
             
         except Exception as ex:
+            self.progress_container.visible = False
             self.status_text.value = f"Error: {ex}"
             self.status_text.color = ft.Colors.RED_400
         
-        self.loading.visible = False
         self.page.update()
+    
+    def _open_report(self, e=None):
+        """Open the generated report in browser."""
+        if self.report_path:
+            # Convert to file URL
+            report_file = Path(str(self.report_path))
+            if report_file.exists():
+                webbrowser.open(f"file://{report_file.resolve()}")
+            else:
+                # Try as-is
+                webbrowser.open(f"file://{self.report_path}")

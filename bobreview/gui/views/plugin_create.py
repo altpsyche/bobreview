@@ -20,17 +20,20 @@ class PluginCreateView(ft.Container):
         # Form fields
         self.name_field = ft.TextField(
             label="Plugin Name",
-            hint_text="e.g., my-plugin",
+            hint_text="e.g., my-awesome-plugin",
             width=400,
             autofocus=True,
+            on_change=self._validate_name,
         )
+        
+        self.name_validation = ft.Text("", size=12)
         
         self.template_dropdown = ft.Dropdown(
             label="Template",
             width=400,
             value="full",
             options=[
-                ft.dropdown.Option("full", "Full - All features"),
+                ft.dropdown.Option("full", "Full - All features (recommended)"),
                 ft.dropdown.Option("minimal", "Minimal - Basic structure"),
             ],
         )
@@ -39,7 +42,14 @@ class PluginCreateView(ft.Container):
             label="Output Directory",
             hint_text="Leave empty for default (~/.bobreview/plugins/)",
             width=400,
+            read_only=True,
         )
+        
+        # File picker for output directory
+        self.output_dir_picker = ft.FilePicker(
+            on_result=self._on_output_dir_picked,
+        )
+        page.overlay.append(self.output_dir_picker)
         
         # Status
         self.status_text = ft.Text("", size=14)
@@ -52,23 +62,52 @@ class PluginCreateView(ft.Container):
                         ft.IconButton(
                             icon=ft.Icons.ARROW_BACK,
                             on_click=lambda e: on_back() if on_back else None,
+                            tooltip="Back to plugin list",
                         ),
                         ft.Text("Create New Plugin", size=32, weight=ft.FontWeight.BOLD),
                     ],
                 ),
-                ft.Container(height=30),
+                ft.Container(height=10),
                 ft.Text(
                     "Create a new BobReview plugin with scaffolder-generated code.",
                     size=16,
                     color=ft.Colors.GREY_400,
                 ),
                 ft.Container(height=30),
-                self.name_field,
+                
+                # Plugin name with validation
+                ft.Container(
+                    content=ft.Column([
+                        self.name_field,
+                        self.name_validation,
+                    ], spacing=5),
+                ),
                 ft.Container(height=15),
+                
+                # Template selection
                 self.template_dropdown,
                 ft.Container(height=15),
-                self.output_dir_field,
+                
+                # Output directory with browse button
+                ft.Row(
+                    [
+                        self.output_dir_field,
+                        ft.IconButton(
+                            icon=ft.Icons.FOLDER_OPEN,
+                            on_click=lambda e: self.output_dir_picker.get_directory_path(),
+                            tooltip="Browse for output folder",
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.CLEAR,
+                            on_click=self._clear_output_dir,
+                            tooltip="Use default location",
+                        ),
+                    ],
+                    spacing=5,
+                ),
                 ft.Container(height=30),
+                
+                # Create button
                 ft.Row(
                     [
                         ft.ElevatedButton(
@@ -86,6 +125,34 @@ class PluginCreateView(ft.Container):
                 self.status_text,
             ],
         )
+    
+    def _on_output_dir_picked(self, e: ft.FilePickerResultEvent):
+        """Handle output directory selection."""
+        if e.path:
+            self.output_dir_field.value = e.path
+            self.page.update()
+    
+    def _clear_output_dir(self, e):
+        """Clear output directory (use default)."""
+        self.output_dir_field.value = ""
+        self.page.update()
+    
+    def _validate_name(self, e):
+        """Validate plugin name in real-time."""
+        name = self.name_field.value.strip()
+        if not name:
+            self.name_validation.value = ""
+            self.name_validation.color = ft.Colors.GREY_400
+        elif not name.replace('-', '').replace('_', '').isalnum():
+            self.name_validation.value = "⚠ Only letters, numbers, hyphens, and underscores"
+            self.name_validation.color = ft.Colors.ORANGE_400
+        elif len(name) < 3:
+            self.name_validation.value = "⚠ Name should be at least 3 characters"
+            self.name_validation.color = ft.Colors.ORANGE_400
+        else:
+            self.name_validation.value = "✓ Valid name"
+            self.name_validation.color = ft.Colors.GREEN_400
+        self.page.update()
     
     def _create_plugin(self, e):
         """Handle plugin creation."""
