@@ -414,6 +414,15 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
 
 
 # =============================================================================
+# THEME NAMES LIST (for GUI discovery)
+# =============================================================================
+# Single source of truth for available theme names
+# GUI imports this to populate theme dropdown
+
+THEME_NAMES = ['dungeon', 'midnight', 'aurora', 'sunset', 'frost']
+
+
+# =============================================================================
 # USAGE
 # =============================================================================
 #
@@ -423,10 +432,13 @@ def get_theme_css_variables(theme: ReportTheme) -> str:
 # 2. Generate CSS variables:
 #        theme_css = get_theme_css_variables({safe_name.upper()}_DUNGEON)
 #
-# 3. Available themes:
-#        {safe_name}_dungeon   - D&D fantasy + gold (default)
-#        {safe_name}_midnight  - Deep blue + cyan
-#        {safe_name}_aurora    - Purple + magenta
-#        {safe_name}_sunset    - Warm amber + orange
-#        {safe_name}_frost     - Clean light blue
+# 3. Available themes (THEME_NAMES):
+#        dungeon   - D&D fantasy + gold (default)
+#        midnight  - Deep blue + cyan
+#        aurora    - Purple + magenta
+#        sunset    - Warm amber + orange
+#        frost     - Clean light blue
+#
+# 4. GUI theme discovery:
+#        from .theme import THEME_NAMES
 '''

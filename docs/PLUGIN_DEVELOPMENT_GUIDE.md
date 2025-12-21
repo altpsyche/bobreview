@@ -343,10 +343,18 @@ def on_load(self, registry):
     helper.add_theme(MY_PLUGIN_THEME)
 ```
 
-**Available scaffold themes:** Midnight, Aurora, Sunset, Frost
+**Export THEME_NAMES for GUI discovery:**
+
+```python
+# theme.py - export available theme names
+THEME_NAMES = ['my_dark', 'my_light', 'custom']  # List your theme short names
+```
+
+The GUI reads `THEME_NAMES` to populate the theme dropdown. This is the single source of truth for available themes.
+
+**Available scaffold themes:** dungeon, midnight, aurora, sunset, frost
 
 | Property | Description |
-|----------|-------------|
 |----------|-------------|
 | `accent` | Primary accent (buttons, links) |
 | `accent_soft` | Translucent accent for backgrounds |

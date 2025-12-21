@@ -201,6 +201,13 @@ Azura Frostborn,Sorcerer,9,54,10,14,12,14,12,18,Human,Noble,Staff of Frost & Rin
     user_config = generate_user_report_config(name, safe_name, color_theme)
     (plugin_dir / "report_config.yaml").write_text(user_config, encoding='utf-8')
     
+    # Register plugin directory for discovery
+    # This ensures plugins created in custom locations are still discoverable
+    from ..discovery import PluginDiscovery
+    user_plugins = PluginDiscovery.get_user_plugins_dir()
+    if output_dir.resolve() != user_plugins.resolve():
+        PluginDiscovery.add_plugin_dir_to_config(output_dir)
+    
     return plugin_dir
 
 

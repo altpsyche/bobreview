@@ -61,7 +61,44 @@ def create_plugin(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Create the plugin (scaffolder handles directory registration)
     return scaffold_create(name, output_dir, template)
+
+
+def get_plugin_themes(plugin_name: str) -> List[str]:
+    """
+    Get available theme names from a plugin.
+    
+    Returns list of theme names, or default list if not found.
+    """
+    default_themes = ['dungeon', 'midnight', 'aurora', 'sunset', 'frost']
+    
+    try:
+        plugins = list_plugins()
+        plugin = next((p for p in plugins if p.name == plugin_name), None)
+        
+        if plugin and plugin.path:
+            # Try to import THEME_NAMES from plugin's theme module
+            plugin_dir = Path(plugin.path)
+            if plugin_dir.is_file():
+                plugin_dir = plugin_dir.parent
+            
+            import sys
+            import importlib.util
+            
+            theme_path = plugin_dir / 'theme.py'
+            if theme_path.exists():
+                spec = importlib.util.spec_from_file_location('theme', theme_path)
+                if spec and spec.loader:
+                    theme_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(theme_module)
+                    
+                    if hasattr(theme_module, 'THEME_NAMES'):
+                        return theme_module.THEME_NAMES
+        
+        return default_themes
+    except Exception:
+        return default_themes
 
 
 def generate_report(
@@ -71,6 +108,7 @@ def generate_report(
     config_path: Optional[str] = None,
     dry_run: bool = False,
     no_cache: bool = False,
+    theme_id: Optional[str] = None,
     extra_plugin_dirs: Optional[List[str]] = None,
     llm_provider: Optional[str] = None,
     llm_api_key: Optional[str] = None,
@@ -143,6 +181,8 @@ def generate_report(
     kwargs = {"dry_run": dry_run, "no_cache": no_cache}
     if config_path:
         kwargs["config_path"] = config_path
+    if theme_id:
+        kwargs["theme_id"] = theme_id
     
     # LLM configuration - use passed values or fall back to environment
     if llm_provider:

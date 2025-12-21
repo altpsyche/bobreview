@@ -23,6 +23,15 @@ class GenerateView(ft.Container):
             label="Plugin",
             width=400,
             options=[],
+            on_change=self._on_plugin_changed,
+        )
+        
+        # Theme dropdown (populated when plugin is selected)
+        self.theme_dropdown = ft.Dropdown(
+            label="Theme",
+            width=200,
+            options=[],
+            value=None,
         )
         
         # Data directory picker
@@ -137,7 +146,10 @@ class GenerateView(ft.Container):
                 ft.Container(height=20),
                 self.llm_warning,
                 ft.Container(height=20),
-                self.plugin_dropdown,
+                ft.Row([
+                    self.plugin_dropdown,
+                    self.theme_dropdown,
+                ], spacing=15),
                 ft.Container(height=15),
                 ft.Row(
                     [
@@ -236,6 +248,27 @@ class GenerateView(ft.Container):
         self.llm_warning.visible = not has_key
         self.page.update()
     
+    def _on_plugin_changed(self, e):
+        """Handle plugin selection - load available themes."""
+        if e.data:
+            try:
+                themes = cli_wrapper.get_plugin_themes(e.data)
+                self.theme_dropdown.options = [
+                    ft.dropdown.Option(t, t.capitalize()) for t in themes
+                ]
+                # Set default to first theme
+                if themes:
+                    self.theme_dropdown.value = themes[0]
+                self.page.update()
+            except Exception:
+                # Fallback to default themes
+                default = ['dungeon', 'midnight', 'aurora', 'sunset', 'frost']
+                self.theme_dropdown.options = [
+                    ft.dropdown.Option(t, t.capitalize()) for t in default
+                ]
+                self.theme_dropdown.value = 'dungeon'
+                self.page.update()
+    
     def _on_data_dir_picked(self, e: ft.FilePickerResultEvent):
         """Handle data directory selection."""
         if e.path:
@@ -306,6 +339,7 @@ class GenerateView(ft.Container):
                 config_path=self.config_field.value or None,
                 dry_run=self.dry_run_checkbox.value,
                 no_cache=self.no_cache_checkbox.value,
+                theme_id=self.theme_dropdown.value,
             )
             
             self._update_progress("Writing report...")
