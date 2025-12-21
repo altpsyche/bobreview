@@ -113,6 +113,34 @@ class LLMSettingsView(ft.Container):
                 ft.Container(height=20),
                 self.status_text,
                 ft.Container(height=30),
+                
+                # Cache section
+                ft.Container(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Icon(ft.Icons.CACHED, color=ft.Colors.BLUE_300),
+                            ft.Text("LLM Cache", weight=ft.FontWeight.BOLD),
+                        ], spacing=10),
+                        ft.Text(
+                            "Cache location: ~/.bobreview/cache/",
+                            size=12,
+                            color=ft.Colors.GREY_500,
+                        ),
+                        ft.Container(height=10),
+                        ft.ElevatedButton(
+                            "Clear Cache",
+                            icon=ft.Icons.DELETE_SWEEP,
+                            on_click=self._clear_cache,
+                            bgcolor=ft.Colors.RED_700,
+                            color=ft.Colors.WHITE,
+                        ),
+                    ]),
+                    padding=20,
+                    border=ft.border.all(1, ft.Colors.GREY_800),
+                    border_radius=8,
+                ),
+                ft.Container(height=20),
+                
                 ft.Container(
                     content=ft.Column([
                         ft.Text("Environment Variables", weight=ft.FontWeight.BOLD),
@@ -235,6 +263,27 @@ class LLMSettingsView(ft.Container):
             self.status_text.color = ft.Colors.ORANGE_400
         except Exception as ex:
             self.status_text.value = f"Connection failed: {ex}"
+            self.status_text.color = ft.Colors.RED_400
+        
+        self.page.update()
+    
+    def _clear_cache(self, e):
+        """Clear the LLM response cache."""
+        try:
+            cache_dir = Path.home() / ".bobreview" / "cache"
+            if cache_dir.exists():
+                count = 0
+                for f in cache_dir.glob("*.json"):
+                    f.unlink()
+                    count += 1
+                
+                self.status_text.value = f"✓ Cleared {count} cached response(s)"
+                self.status_text.color = ft.Colors.GREEN_400
+            else:
+                self.status_text.value = "Cache directory is empty"
+                self.status_text.color = ft.Colors.GREY_400
+        except Exception as ex:
+            self.status_text.value = f"Failed to clear cache: {ex}"
             self.status_text.color = ft.Colors.RED_400
         
         self.page.update()

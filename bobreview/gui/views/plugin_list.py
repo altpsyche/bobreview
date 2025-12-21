@@ -134,11 +134,24 @@ class PluginListView(ft.Container):
                 path_str = str(p.path) if hasattr(p, 'path') and p.path else "Unknown"
                 path_display = self._truncate_path(path_str, 40)
                 
+                # Store plugin data for details view
+                plugin_data = {
+                    "name": p.name,
+                    "version": p.version or "1.0.0",
+                    "description": p.description or "No description",
+                    "path": path_str,
+                    "capabilities": getattr(p, 'capabilities', []),
+                }
+                
                 self.data_table.rows.append(
                     ft.DataRow(
                         cells=[
                             ft.DataCell(
-                                ft.Text(p.name, weight=ft.FontWeight.W_500, color=ft.Colors.BLUE_300)
+                                ft.TextButton(
+                                    p.name,
+                                    on_click=lambda e, data=plugin_data: self._show_plugin_details(data),
+                                    style=ft.ButtonStyle(color=ft.Colors.BLUE_300),
+                                )
                             ),
                             ft.DataCell(ft.Text(p.version or "1.0.0")),
                             ft.DataCell(
@@ -158,6 +171,12 @@ class PluginListView(ft.Container):
                                         icon_size=18,
                                         tooltip="Open folder",
                                         on_click=lambda e, path=path_str: self._open_folder(path),
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.DELETE_OUTLINE,
+                                        icon_size=18,
+                                        tooltip="Uninstall plugin",
+                                        on_click=lambda e, name=p.name, path=path_str: self._confirm_uninstall(name, path),
                                     ),
                                 ], spacing=0)
                             ),
@@ -260,3 +279,155 @@ class PluginListView(ft.Container):
                 self.page.snack_bar.open = True
             
             self.page.update()
+    
+    def _confirm_uninstall(self, plugin_name: str, plugin_path: str):
+        """Show confirmation dialog before uninstalling."""
+        def close_dialog(e):
+            dialog.open = False
+            self.page.update()
+        
+        def do_uninstall(e):
+            dialog.open = False
+            self.page.update()
+            self._uninstall_plugin(plugin_name, plugin_path)
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Uninstall Plugin?"),
+            content=ft.Text(f"Are you sure you want to uninstall '{plugin_name}'?\n\nThe plugin folder will be moved to trash."),
+            actions=[
+                ft.TextButton("Cancel", on_click=close_dialog),
+                ft.ElevatedButton(
+                    "Uninstall",
+                    on_click=do_uninstall,
+                    bgcolor=ft.Colors.RED_700,
+                    color=ft.Colors.WHITE,
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+    
+    def _uninstall_plugin(self, plugin_name: str, plugin_path: str):
+        """Uninstall a plugin by moving it to trash."""
+        import shutil
+        import time
+        
+        try:
+            path = Path(plugin_path)
+            if path.is_file():
+                path = path.parent
+            
+            if path.exists():
+                # Move to ~/.bobreview/trash/ for recovery
+                trash_dir = Path.home() / ".bobreview" / "trash"
+                trash_dir.mkdir(parents=True, exist_ok=True)
+                dest = trash_dir / f"{path.name}_{int(time.time())}"
+                shutil.move(str(path), str(dest))
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Plugin '{plugin_name}' moved to ~/.bobreview/trash/"),
+                )
+                self.page.snack_bar.open = True
+                
+                # Refresh list
+                self._refresh_plugins(None)
+            else:
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Plugin folder not found"),
+                    bgcolor=ft.Colors.ORANGE_800,
+                )
+                self.page.snack_bar.open = True
+                
+        except Exception as ex:
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Failed to uninstall: {ex}"),
+                bgcolor=ft.Colors.RED_800,
+            )
+            self.page.snack_bar.open = True
+        
+        self.page.update()
+    
+    def _show_plugin_details(self, plugin_data: dict):
+        """Show plugin details dialog."""
+        from ..services import cli_wrapper
+        
+        def close_dialog(e):
+            dialog.open = False
+            self.page.update()
+        
+        def open_folder(e):
+            self._open_folder(plugin_data["path"])
+        
+        # Get themes for this plugin
+        try:
+            themes = cli_wrapper.get_plugin_themes(plugin_data["name"])
+        except Exception:
+            themes = []
+        
+        # Build capabilities list
+        caps = plugin_data.get("capabilities", [])
+        caps_text = ", ".join(caps) if caps else "None detected"
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.EXTENSION, color=ft.Colors.BLUE_300),
+                ft.Text(plugin_data["name"]),
+            ], spacing=10),
+            content=ft.Container(
+                content=ft.Column([
+                    # Version
+                    ft.Row([
+                        ft.Text("Version:", weight=ft.FontWeight.BOLD, width=100),
+                        ft.Text(plugin_data["version"]),
+                    ]),
+                    ft.Divider(height=1, color=ft.Colors.GREY_800),
+                    
+                    # Description
+                    ft.Row([
+                        ft.Text("Description:", weight=ft.FontWeight.BOLD, width=100),
+                        ft.Text(plugin_data["description"], expand=True),
+                    ], vertical_alignment=ft.CrossAxisAlignment.START),
+                    ft.Divider(height=1, color=ft.Colors.GREY_800),
+                    
+                    # Path
+                    ft.Row([
+                        ft.Text("Path:", weight=ft.FontWeight.BOLD, width=100),
+                        ft.Text(
+                            plugin_data["path"],
+                            size=12,
+                            color=ft.Colors.GREY_400,
+                            selectable=True,
+                        ),
+                    ], vertical_alignment=ft.CrossAxisAlignment.START),
+                    ft.Divider(height=1, color=ft.Colors.GREY_800),
+                    
+                    # Themes
+                    ft.Row([
+                        ft.Text("Themes:", weight=ft.FontWeight.BOLD, width=100),
+                        ft.Text(", ".join(themes) if themes else "Default"),
+                    ]),
+                    ft.Divider(height=1, color=ft.Colors.GREY_800),
+                    
+                    # Capabilities
+                    ft.Row([
+                        ft.Text("Capabilities:", weight=ft.FontWeight.BOLD, width=100),
+                        ft.Text(caps_text, size=12),
+                    ]),
+                ], spacing=10),
+                width=500,
+            ),
+            actions=[
+                ft.TextButton("Open Folder", icon=ft.Icons.FOLDER_OPEN, on_click=open_folder),
+                ft.ElevatedButton("Close", on_click=close_dialog),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()

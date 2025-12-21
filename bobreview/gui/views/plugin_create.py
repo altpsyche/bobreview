@@ -199,8 +199,61 @@ class PluginCreateView(ft.Container):
             self.page.snack_bar.open = True
             
         except Exception as ex:
+            import traceback
             self.status_text.value = f"Error: {ex}"
             self.status_text.color = ft.Colors.RED_400
+            self._show_error_dialog(str(ex), traceback.format_exc())
         
         self.loading.visible = False
+        self.page.update()
+    
+    def _show_error_dialog(self, message: str, details: str):
+        """Show a detailed error dialog."""
+        def close_dialog(e):
+            dialog.open = False
+            self.page.update()
+        
+        def copy_details(e):
+            self.page.set_clipboard(details)
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text("Error details copied to clipboard"),
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.RED_400),
+                ft.Text("Plugin Creation Failed"),
+            ], spacing=10),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text(message, size=14, weight=ft.FontWeight.BOLD),
+                    ft.Container(height=10),
+                    ft.Text("Details:", size=12, color=ft.Colors.GREY_400),
+                    ft.Container(
+                        content=ft.Text(
+                            details[:500] + ("..." if len(details) > 500 else ""),
+                            size=11,
+                            color=ft.Colors.GREY_500,
+                            selectable=True,
+                        ),
+                        bgcolor="#1e2632",
+                        padding=10,
+                        border_radius=8,
+                    ),
+                ], scroll=ft.ScrollMode.AUTO),
+                width=500,
+                height=300,
+            ),
+            actions=[
+                ft.TextButton("Copy Details", on_click=copy_details),
+                ft.ElevatedButton("Close", on_click=close_dialog),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.page.overlay.append(dialog)
+        dialog.open = True
         self.page.update()
