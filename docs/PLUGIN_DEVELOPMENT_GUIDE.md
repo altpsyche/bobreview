@@ -673,6 +673,8 @@ Plugins receive LLM settings via `**kwargs` in their `generate_report()` functio
 | `llm_api_key` | str | `None` | API key (falls back to env var) |
 | `llm_model` | str | `"gpt-4o"` | Model name |
 | `llm_temperature` | float | `0.7` | Temperature 0.0-2.0 |
+| `no_cache` | bool | `False` | Skip cache, force new LLM call |
+| `dry_run` | bool | `False` | Skip LLM calls entirely |
 
 ### Example Usage
 
@@ -692,6 +694,7 @@ def generate_report(
         llm_api_key=kwargs.get('llm_api_key'),
         llm_model=kwargs.get('llm_model', 'gpt-4o'),
         llm_temperature=kwargs.get('llm_temperature', 0.7),
+        use_cache=not kwargs.get('no_cache', False),
     )
     
     # Use llm_config for LLM calls
@@ -705,5 +708,35 @@ bobreview --plugin my-plugin --dir ./data \
   --llm-provider anthropic \
   --llm-api-key sk-xxx \
   --llm-model claude-3-opus \
-  --llm-temperature 0.3
+  --llm-temperature 0.3 \
+  --no-cache
 ```
+
+---
+
+## Caching
+
+BobReview caches LLM responses to avoid redundant API calls.
+
+### Cache Location
+
+```
+~/.bobreview/cache/
+```
+
+### Cache Key
+
+Cache entries are uniquely identified by:
+- Prompt text
+- Data table content  
+- Model name
+- Temperature
+- Provider
+
+Different reports with different data get separate cache entries.
+
+### Disabling Cache
+
+- **GUI**: Check "No Cache" in Generate view
+- **CLI**: Use `--no-cache` flag
+- **Code**: Set `use_cache=False` in Config

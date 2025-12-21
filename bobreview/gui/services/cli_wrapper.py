@@ -70,6 +70,7 @@ def generate_report(
     output_dir: str,
     config_path: Optional[str] = None,
     dry_run: bool = False,
+    no_cache: bool = False,
     extra_plugin_dirs: Optional[List[str]] = None,
     llm_provider: Optional[str] = None,
     llm_api_key: Optional[str] = None,
@@ -139,7 +140,7 @@ def generate_report(
             break
     
     # Build kwargs
-    kwargs = {"dry_run": dry_run}
+    kwargs = {"dry_run": dry_run, "no_cache": no_cache}
     if config_path:
         kwargs["config_path"] = config_path
     

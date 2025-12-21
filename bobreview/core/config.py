@@ -47,7 +47,7 @@ class Config:
     
     # Cache
     use_cache: bool = True
-    cache_dir: Path = field(default_factory=lambda: Path(".bobreview_cache"))
+    cache_dir: Path = field(default_factory=lambda: Path.home() / ".bobreview" / "cache")
     
     # Thresholds (plugin-specific, stored as dict)
     thresholds: Dict[str, Any] = field(default_factory=dict)

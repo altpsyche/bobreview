@@ -202,11 +202,13 @@ def generate_llm_content(
                 from bobreview.core.html_utils import sanitize_llm_html
                 
                 # Create Config with LLM settings from kwargs
+                # no_cache=True means use_cache=False
                 llm_config = Config(
                     llm_provider=kwargs.get('llm_provider', 'openai'),
                     llm_api_key=kwargs.get('llm_api_key'),
                     llm_model=kwargs.get('llm_model', 'gpt-4o'),
                     llm_temperature=kwargs.get('llm_temperature', 0.7),
+                    use_cache=not kwargs.get('no_cache', False),
                 )
                 init_cache(llm_config)
                 response = call_llm(rendered_prompt, config=llm_config)

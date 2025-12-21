@@ -64,6 +64,12 @@ class GenerateView(ft.Container):
             value=False,
         )
         
+        # No cache checkbox
+        self.no_cache_checkbox = ft.Checkbox(
+            label="No Cache (regenerate LLM content)",
+            value=False,
+        )
+        
         # Progress section
         self.progress_container = ft.Container(
             content=ft.Column([
@@ -176,7 +182,10 @@ class GenerateView(ft.Container):
                     spacing=5,
                 ),
                 ft.Container(height=15),
-                self.dry_run_checkbox,
+                ft.Row([
+                    self.dry_run_checkbox,
+                    self.no_cache_checkbox,
+                ], spacing=20),
                 ft.Container(height=30),
                 ft.Row(
                     [
@@ -296,6 +305,7 @@ class GenerateView(ft.Container):
                 output_dir=self.output_dir_field.value,
                 config_path=self.config_field.value or None,
                 dry_run=self.dry_run_checkbox.value,
+                no_cache=self.no_cache_checkbox.value,
             )
             
             self._update_progress("Writing report...")
