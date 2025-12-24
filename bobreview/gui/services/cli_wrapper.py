@@ -69,36 +69,31 @@ def get_plugin_themes(plugin_name: str) -> List[str]:
     """
     Get available theme names from a plugin.
     
-    Returns list of theme names, or default list if not found.
+    Returns list of theme names, or empty list if not defined.
     """
-    default_themes = ['dungeon', 'midnight', 'aurora', 'sunset', 'frost']
+    from .plugin_loader import PluginLoader
+    return PluginLoader.get_themes(plugin_name)
+
+
+def get_plugin_components(plugin_name: str) -> List[dict]:
+    """
+    Get available component types from a plugin.
     
-    try:
-        plugins = list_plugins()
-        plugin = next((p for p in plugins if p.name == plugin_name), None)
-        
-        if plugin and plugin.path:
-            # Try to import THEME_NAMES from plugin's theme module
-            plugin_dir = Path(plugin.path)
-            if plugin_dir.is_file():
-                plugin_dir = plugin_dir.parent
-            
-            import sys
-            import importlib.util
-            
-            theme_path = plugin_dir / 'theme.py'
-            if theme_path.exists():
-                spec = importlib.util.spec_from_file_location('theme', theme_path)
-                if spec and spec.loader:
-                    theme_module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(theme_module)
-                    
-                    if hasattr(theme_module, 'THEME_NAMES'):
-                        return theme_module.THEME_NAMES
-        
-        return default_themes
-    except Exception:
-        return default_themes
+    Returns list of component definitions with type, label, and props.
+    Returns empty list if plugin doesn't define COMPONENT_TYPES.
+    """
+    from .plugin_loader import PluginLoader
+    return PluginLoader.get_components(plugin_name)
+
+
+def get_plugin_data_fields(plugin_name: str) -> List[str]:
+    """
+    Get available data fields from a plugin.
+    
+    Returns list of field names for expression helper.
+    """
+    from .plugin_loader import PluginLoader
+    return PluginLoader.get_data_fields(plugin_name)
 
 
 def generate_report(
@@ -177,34 +172,51 @@ def generate_report(
             plugin_module = sys.modules[mod_name]
             break
     
-    # Build kwargs
-    kwargs = {"dry_run": dry_run, "no_cache": no_cache}
+    # Build all possible kwargs
+    all_kwargs = {"dry_run": dry_run}
+    if no_cache:
+        all_kwargs["no_cache"] = no_cache
     if config_path:
-        kwargs["config_path"] = config_path
+        all_kwargs["config_path"] = config_path
     if theme_id:
-        kwargs["theme_id"] = theme_id
+        all_kwargs["theme_id"] = theme_id
     
     # LLM configuration - use passed values or fall back to environment
     if llm_provider:
-        kwargs["llm_provider"] = llm_provider
+        all_kwargs["llm_provider"] = llm_provider
     if llm_api_key:
-        kwargs["llm_api_key"] = llm_api_key
+        all_kwargs["llm_api_key"] = llm_api_key
     elif os.environ.get("OPENAI_API_KEY"):
-        kwargs["llm_api_key"] = os.environ.get("OPENAI_API_KEY")
+        all_kwargs["llm_api_key"] = os.environ.get("OPENAI_API_KEY")
     elif os.environ.get("ANTHROPIC_API_KEY"):
-        kwargs["llm_api_key"] = os.environ.get("ANTHROPIC_API_KEY")
+        all_kwargs["llm_api_key"] = os.environ.get("ANTHROPIC_API_KEY")
     if llm_model:
-        kwargs["llm_model"] = llm_model
+        all_kwargs["llm_model"] = llm_model
     if llm_temperature is not None:
-        kwargs["llm_temperature"] = llm_temperature
+        all_kwargs["llm_temperature"] = llm_temperature
+    
+    # Helper to filter kwargs to only what function accepts
+    import inspect
+    def filter_kwargs(func, kwargs):
+        sig = inspect.signature(func)
+        valid_params = set(sig.parameters.keys())
+        # Check if function accepts **kwargs
+        for param in sig.parameters.values():
+            if param.kind == inspect.Parameter.VAR_KEYWORD:
+                return kwargs  # Accepts any kwargs
+        return {k: v for k, v in kwargs.items() if k in valid_params}
     
     # Try module-level function first
     if plugin_module and hasattr(plugin_module, 'generate_report'):
-        return plugin_module.generate_report(data_dir, output_dir, **kwargs)
+        func = plugin_module.generate_report
+        filtered_kwargs = filter_kwargs(func, all_kwargs)
+        return func(data_dir, output_dir, **filtered_kwargs)
     
     # Try instance method
     if hasattr(plugin_instance, 'generate_report'):
-        return plugin_instance.generate_report(data_dir, output_dir, **kwargs)
+        func = plugin_instance.generate_report
+        filtered_kwargs = filter_kwargs(func, all_kwargs)
+        return func(data_dir, output_dir, **filtered_kwargs)
     
     raise RuntimeError(f"Plugin '{plugin_name}' does not have a generate_report function")
 

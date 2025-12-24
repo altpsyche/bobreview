@@ -27,6 +27,7 @@ def main(page: ft.Page):
     from .views.plugin_create import PluginCreateView
     from .views.generate import GenerateView
     from .views.llm_settings import LLMSettingsView
+    from .views.config_editor import ConfigEditorView
     
     # Current view content
     content = ft.Container(expand=True)
@@ -45,6 +46,12 @@ def main(page: ft.Page):
     
     def show_llm_settings(e=None):
         content.content = LLMSettingsView(page)
+        page.update()
+    
+    def show_config_editor(e=None):
+        view = ConfigEditorView(page)
+        content.content = view
+        view.on_mount()
         page.update()
     
     def show_dashboard(e=None):
@@ -74,12 +81,17 @@ def main(page: ft.Page):
                 label="Generate",
             ),
             ft.NavigationRailDestination(
+                icon=ft.Icons.EDIT_NOTE_OUTLINED,
+                selected_icon=ft.Icons.EDIT_NOTE,
+                label="Editor",
+            ),
+            ft.NavigationRailDestination(
                 icon=ft.Icons.SETTINGS_OUTLINED,
                 selected_icon=ft.Icons.SETTINGS,
                 label="LLM",
             ),
         ],
-        on_change=lambda e: _handle_nav(e, show_dashboard, show_plugin_list, show_generate, show_llm_settings),
+        on_change=lambda e: _handle_nav(e, show_dashboard, show_plugin_list, show_generate, show_config_editor, show_llm_settings),
     )
     
     # Layout
@@ -98,7 +110,7 @@ def main(page: ft.Page):
     show_dashboard()
 
 
-def _handle_nav(e, show_dashboard, show_plugin_list, show_generate, show_llm_settings):
+def _handle_nav(e, show_dashboard, show_plugin_list, show_generate, show_config_editor, show_llm_settings):
     """Handle navigation rail selection."""
     if e.control.selected_index == 0:
         show_dashboard()
@@ -107,6 +119,8 @@ def _handle_nav(e, show_dashboard, show_plugin_list, show_generate, show_llm_set
     elif e.control.selected_index == 2:
         show_generate()
     elif e.control.selected_index == 3:
+        show_config_editor()
+    elif e.control.selected_index == 4:
         show_llm_settings()
 
 
