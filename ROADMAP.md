@@ -459,6 +459,11 @@ Evolve BobReview into a comprehensive plugin-based report generation framework w
   - Removed: core/themes.py, core/api.py, service files
   - Flat Config class (no nested classes)
   - CLI: `bobreview --plugin <name> --dir <data>`
+- v1.0.9 - Flet GUI + Production Readiness
+  - Desktop GUI (`bobreview gui`)
+  - Visual config editor with undo/redo
+  - PluginLoader with caching
+  - Error dialogs, YAML validation, hot reload
 - Core architecture complete
 - Modular architecture with registry patterns
 - JSON-based report system definitions
@@ -507,5 +512,5 @@ Contributions are welcome. Consider:
 ---
 
 Last updated: December 20, 2025
-Current version: 1.0.8
+Current version: 1.0.9
 Next milestone: v2.0 - Enterprise Release

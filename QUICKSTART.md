@@ -17,6 +17,13 @@ pip install .
 
 The `bobreview` command is now available globally.
 
+**Option A: Use the GUI (Recommended)**
+```bash
+bobreview gui
+```
+
+**Option B: Use the CLI** (see below)
+
 ---
 
 ## Configuration
@@ -307,37 +314,45 @@ python -c "from bobreview.core.config import Config; print('Installation verifie
 ## Command Reference
 
 ```bash
-# Basic (recommended: use plugin)
+# Basic usage
 bobreview --plugin PLUGIN_NAME --dir PATH
 
-# Legacy (backward compatible - plugin required)
-bobreview --plugin <plugin-name> --dir PATH
+# Core options
+--plugin PLUGIN_NAME        # Plugin to use (required)
+--dir PATH                  # Data directory (default: .)
+--output FILE               # Output path (default: report.html)
+--config FILE               # Custom YAML config
+--dry-run                   # Skip LLM API calls
 
-# With options
-bobreview --plugin PLUGIN_NAME --dir PATH [OPTIONS]
+# LLM options
+--llm-provider PROVIDER     # openai, anthropic, ollama
+--llm-api-key KEY           # API key
+--llm-model MODEL           # Model name
+--verbose, -v               # Detailed output
+--quiet, -q                 # Errors only
 
-# Plugin and Report System:
---plugin PLUGIN_NAME        # Plugin to use (e.g., "my-plugin")
---report-system SYSTEM      # Report system ID (optional, uses plugin default)
---list-report-systems       # List all available report systems
-
-# Common options:
---output FILE              # Output filename
---title "TITLE"            # Report title
---location "LOCATION"      # Level/scene name
---dry-run                  # Skip LLM API calls
---sample N                 # Process N random samples
---verbose                  # Detailed output
---quiet                    # Errors only
---clear-cache              # Clear LLM cache
---no-embed-images          # Use external image files
---linked-css               # Use external CSS file
---disable-page ID          # Disable a page (home, metrics, zones, visuals, optimization, stats)
---llm-provider PROVIDER    # LLM: openai, anthropic, ollama (default: openai)
---llm-api-key KEY          # API key for selected provider
---llm-model MODEL          # Model name (default depends on provider)
---list-providers           # List available providers
+# Plugin commands
+bobreview plugins list      # Show installed plugins
+bobreview plugins create N  # Scaffold new plugin
+bobreview plugins info N    # Show plugin details
 ```
+
+---
+
+## Desktop GUI (v1.0.9)
+
+For a graphical experience, launch the Flet-based desktop app:
+
+```bash
+bobreview gui
+```
+
+Features:
+- **Dashboard**: Plugin stats, quick actions
+- **Plugins**: Install/uninstall/details
+- **Generate**: Run reports with progress
+- **Config Editor**: Visual YAML editing with undo/redo
+- **LLM Settings**: Configure all providers
 
 ---
 
@@ -368,11 +383,11 @@ This generates a demo plugin with D&D-themed sample data:
 - Read [README.md](README.md) for complete documentation
 - Check [INSTALL.md](INSTALL.md) for advanced installation
 - Review [ROADMAP.md](ROADMAP.md) for upcoming features
-- See [CHANGELOG.md](CHANGELOG.md) for v1.0.8 changes
+- See [CHANGELOG.md](CHANGELOG.md) for v1.0.9 changes
 - Try different configurations and explore options
 
 ---
 
-**BobReview v1.0.8** - Plugin-First Architecture  
+**BobReview v1.0.9** - Flet GUI + Production Readiness  
 Extensible report generation framework.
 

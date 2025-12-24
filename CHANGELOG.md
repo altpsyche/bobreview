@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2025-12-24
+
+### Flet GUI + Production Readiness
+
+Full-featured desktop GUI for plugin management, report generation, and visual config editing.
+
+### New Features
+
+- **Flet Desktop GUI** (`bobreview gui`):
+  - Dashboard with plugin stats and quick actions
+  - Plugin list view with install/uninstall/details
+  - Plugin scaffolder UI for creating new plugins
+  - Report generator with async progress tracking
+  - Visual config editor with YAML validation
+  - LLM settings panel for all providers
+
+- **Config Editor Enhancements**:
+  - Undo/Redo (50-state history stack)
+  - YAML validation on load
+  - Error dialogs with traceback + copy-to-clipboard
+  - Hot reload button (clears plugin cache)
+  - Expression helper for data field references
+
+- **PluginLoader Service**:
+  - Centralized plugin module loading with caching
+  - Reduces code duplication across GUI services
+  - Clean API: `get_executor()`, `get_themes()`, `get_components()`
+
+- **CLI Improvements**:
+  - kwargs filtering - only pass supported args to plugins
+  - Better error messages for plugin loading failures
+
+### Files Added
+
+- `bobreview/gui/` - Complete Flet GUI package (~2,500 lines)
+  - `main.py` - App entry point with navigation
+  - `services/cli_wrapper.py` - Plugin discovery, report generation
+  - `services/plugin_loader.py` - Cached module loading
+  - `views/generate.py` - Report generation UI
+  - `views/plugin_list.py` - Plugin management
+  - `views/plugin_create.py` - Scaffolder UI
+  - `views/llm_settings.py` - LLM configuration
+  - `views/config_editor/` - Visual YAML editor
+
+### Technical Details
+
+- GUI uses Flet 0.27+ for cross-platform desktop support
+- Async report generation runs in background thread
+- Config editor history uses deep copy for state snapshots
+- Plugin modules cached after first load for performance
+
+---
+
 ## [1.0.8] - 2025-12-16
 
 ### Plugin-First Architecture
@@ -909,6 +962,7 @@ No breaking changes. Existing cache and configuration remain compatible.
 
 ---
 
+[1.0.9]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/DiggingNebula8/bobreview/compare/v1.0.5...v1.0.6

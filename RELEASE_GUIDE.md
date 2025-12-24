@@ -2,31 +2,34 @@
 
 ## Extensible Report Generation Framework
 
-Version 1.0.8 - Plugin-First Architecture
+Version 1.0.9 - Flet GUI + Production Readiness
 
-### What's New in v1.0.8
+### What's New in v1.0.9
 
-- **Plugin-First Architecture**:
-  - Core is pure infrastructure - plugins provide all domain logic
-  - CLI: `bobreview --plugin <name> --dir <data>`
-  - Removed: core themes, executor, analytics/chart services
-  - Plugins own themes, report generation, charts
+- **Flet Desktop GUI** (`bobreview gui`):
+  - Dashboard with plugin stats and quick actions
+  - Plugin list with install/uninstall/details
+  - Report generator with async progress tracking
+  - Visual config editor with undo/redo
+  - LLM settings panel for all providers
 
-- **Unified Configuration System**:
-  - Single flat `Config` class replaces nested config classes
-  - CLI arguments unified into single entry point
+- **Config Editor Features**:
+  - Undo/Redo (50-state history stack)
+  - YAML validation on load
+  - Error dialogs with traceback + copy-to-clipboard
+  - Plugin hot reload button
+  - Expression helper for data field references
 
-- **D&D-Themed Plugin Scaffolding**:
-  - `bobreview plugins create my-plugin` - Generate demo plugin
-  - Sample data: Character roster with stats, classes, races, spells
-  - 5 built-in themes: Midnight, Aurora, Sunset, Frost, Dungeon
+- **PluginLoader Service**:
+  - Centralized plugin module loading with caching
+  - Clean API for accessing plugin components and themes
 
-- **Breaking Changes**:
-  - Flat config format (no nested `llm_config`, `theme`, etc.)
-  - Themes now plugin-owned (not in core)
-  - `bobreview build` → `bobreview --plugin <name>`
+- **Production Improvements**:
+  - kwargs filtering - only pass supported args to plugins
+  - Better error messages for plugin loading failures
+  - Removed hardcoded fallbacks, show warnings instead
 
-- All v1.0.7 features preserved
+- All v1.0.8 Plugin-First Architecture features preserved
 
 ---
 
@@ -95,7 +98,24 @@ bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model llama
 bobreview --version
 ```
 
-You should see: `bobreview 1.0.8`
+You should see: `bobreview 1.0.9`
+
+---
+
+## Desktop GUI (New in v1.0.9)
+
+Launch the graphical interface:
+
+```bash
+bobreview gui
+```
+
+The GUI provides:
+- **Dashboard**: Plugin stats and quick actions
+- **Plugins**: Install, uninstall, view plugin details
+- **Generate**: Run reports with progress tracking
+- **Config Editor**: Visual YAML editing with undo/redo
+- **LLM Settings**: Configure OpenAI, Anthropic, or Ollama
 
 ---
 
@@ -173,11 +193,11 @@ bobreview --plugin <plugin-name> --dir . --llm-provider ollama --llm-model mistr
 # List available plugins
 bobreview plugins list
 
-# List available report systems
-bobreview --list-report-systems
+# List installed plugins
+bobreview plugins list
 
-# List available providers
-bobreview --list-providers
+# Launch GUI
+bobreview gui
 
 # See all available options
 bobreview --help
@@ -295,40 +315,34 @@ source ~/.bashrc
 
 ```bash
 # Basic usage - plugin is required
-bobreview --plugin PLUGIN_NAME --dir /path/to/screenshots
+bobreview --plugin PLUGIN_NAME --dir /path/to/data
 
-# Plugin and Report System options
---plugin PLUGIN_NAME      # Plugin to use (e.g., "my-plugin")
---report-system SYSTEM    # Report system ID (optional, uses plugin default)
---list-report-systems     # List all available report systems
+# Core options
+--plugin PLUGIN_NAME      # Plugin to use (required)
+--dir PATH               # Data directory (default: .)
+--output FILE            # Output path (default: report.html)
+--config FILE            # Custom report config YAML
+--dry-run                # Skip LLM API calls (for testing)
 
-# Common options
---title "TEXT"           # Custom report title
---location "TEXT"        # Level/scene name
---output FILE            # Output filename
---dry-run                # Test without API calls
---sample N               # Process N random samples
---verbose                # Show detailed output
---clear-cache            # Force fresh analysis
---no-embed-images        # Use external image files instead of embedding
---linked-css             # Use external CSS file (styles.css)
---disable-page ID        # Disable a page (home, metrics, zones, visuals, optimization, stats)
-
-# LLM Provider Configuration
+# LLM Configuration
 --llm-provider PROVIDER  # Provider: openai (default), anthropic, ollama
 --llm-api-key KEY        # API key for selected provider
---llm-model MODEL        # Model name (default depends on provider)
+--llm-model MODEL        # Model name (e.g., gpt-4, llama2)
 --llm-temperature N      # Temperature 0-2 (default: 0.7)
---llm-max-tokens N       # Maximum tokens for LLM responses (default: 2000)
---llm-chunk-size N       # Samples per LLM call (default: 10)
---list-providers         # List available LLM providers
 
-# Help and version
---help                   # Show all options
+# Plugin management
+bobreview plugins list           # Show installed plugins
+bobreview plugins create NAME    # Scaffold a new plugin
+bobreview plugins info NAME      # Show plugin details
+
+# GUI and Help
+bobreview gui            # Launch desktop GUI
+bobreview --help         # Show all options
 bobreview --version      # Check version
 
-# Test installation
-python -c "from bobreview.core.config import Config; print('OK')"
+# Debugging
+--verbose, -v            # Enable verbose output
+--quiet, -q              # Errors only
 ```
 
 ---
@@ -340,9 +354,9 @@ python -c "from bobreview.core.config import Config; print('OK')"
 - **Full Documentation:** See `README.md` in the installation folder
 - **Quick Start:** See `QUICKSTART.md` for more examples
 - **Detailed Install Guide:** See `INSTALL.md` for advanced setup
-- **Release Notes:** See `CHANGELOG.md` for v1.0.8 migration guide and details
+- **Release Notes:** See `CHANGELOG.md` for v1.0.9 changes
 
 ---
 
-**BobReview v1.0.8** - Extensible report generation framework  
+**BobReview v1.0.9** - Extensible report generation framework  
 MIT License | Focused Architecture - SOLID & DRY Principles
