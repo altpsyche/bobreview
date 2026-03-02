@@ -12,7 +12,7 @@ class LLMSettingsView(ft.Container):
     
     def __init__(self, page: ft.Page):
         super().__init__()
-        self.page = page
+        self._page = page
         self.expand = True
         self.padding = 20
         
@@ -26,7 +26,7 @@ class LLMSettingsView(ft.Container):
                 ft.dropdown.Option("anthropic", "Anthropic (Claude)"),
                 ft.dropdown.Option("ollama", "Ollama (Local)"),
             ],
-            on_change=self._on_provider_change,
+            on_select=self._on_provider_change,
         )
         
         # API Key field
@@ -173,12 +173,12 @@ class LLMSettingsView(ft.Container):
             self.api_key_field.label = "API Key"
             self.ollama_url_field.visible = False
         
-        self.page.update()
+        self._page.update()
     
     def _on_temperature_change(self, e):
         """Handle temperature slider change."""
         self.temperature_value.value = f"{e.control.value:.1f}"
-        self.page.update()
+        self._page.update()
     
     def _load_settings(self):
         """Load settings from environment variables."""
@@ -216,18 +216,18 @@ class LLMSettingsView(ft.Container):
             self.status_text.color = ft.Colors.ORANGE_400
         
         # Show note about persistence
-        self.page.snack_bar = ft.SnackBar(
+        self._page.show_dialog(ft.SnackBar(
             content=ft.Text("Settings saved for this session. Set environment variables for persistence."),
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+            open=True,
+        ))
+        self._page.update()
     
     def _test_connection(self, e):
         """Test the LLM connection."""
         provider = self.provider_dropdown.value
         self.status_text.value = f"Testing {provider} connection..."
         self.status_text.color = ft.Colors.GREY_400
-        self.page.update()
+        self._page.update()
         
         try:
             if provider == "openai":
@@ -265,7 +265,7 @@ class LLMSettingsView(ft.Container):
             self.status_text.value = f"Connection failed: {ex}"
             self.status_text.color = ft.Colors.RED_400
         
-        self.page.update()
+        self._page.update()
     
     def _clear_cache(self, e):
         """Clear the LLM response cache."""
@@ -286,4 +286,4 @@ class LLMSettingsView(ft.Container):
             self.status_text.value = f"Failed to clear cache: {ex}"
             self.status_text.color = ft.Colors.RED_400
         
-        self.page.update()
+        self._page.update()

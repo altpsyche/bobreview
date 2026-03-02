@@ -14,7 +14,7 @@ class GenerateView(ft.Container):
     
     def __init__(self, page: ft.Page):
         super().__init__()
-        self.page = page
+        self._page = page
         self.expand = True
         self.padding = 20
         
@@ -23,7 +23,7 @@ class GenerateView(ft.Container):
             label="Plugin",
             width=400,
             options=[],
-            on_change=self._on_plugin_changed,
+            on_select=self._on_plugin_changed,
         )
         
         # Theme dropdown (populated when plugin is selected)
@@ -41,10 +41,8 @@ class GenerateView(ft.Container):
             width=400,
             read_only=True,
         )
-        self.data_dir_picker = ft.FilePicker(
-            on_result=self._on_data_dir_picked,
-        )
-        
+        self.data_dir_picker = ft.FilePicker()
+
         # Output directory picker
         self.output_dir_field = ft.TextField(
             label="Output Directory",
@@ -52,10 +50,8 @@ class GenerateView(ft.Container):
             width=400,
             read_only=True,
         )
-        self.output_dir_picker = ft.FilePicker(
-            on_result=self._on_output_dir_picked,
-        )
-        
+        self.output_dir_picker = ft.FilePicker()
+
         # Config file picker (optional)
         self.config_field = ft.TextField(
             label="Config YAML (Optional)",
@@ -63,9 +59,7 @@ class GenerateView(ft.Container):
             width=400,
             read_only=True,
         )
-        self.config_picker = ft.FilePicker(
-            on_result=self._on_config_picked,
-        )
+        self.config_picker = ft.FilePicker()
         
         # Dry run checkbox
         self.dry_run_checkbox = ft.Checkbox(
@@ -136,11 +130,13 @@ class GenerateView(ft.Container):
             bgcolor="#3d2e1f",
         )
         
-        # Add file pickers to page overlay
-        page.overlay.extend([
+        # Add file pickers and clipboard as services
+        self._clipboard = ft.Clipboard()
+        self._page.services.extend([
             self.data_dir_picker,
             self.output_dir_picker,
             self.config_picker,
+            self._clipboard,
         ])
         
         self.content = ft.Column(
@@ -165,7 +161,7 @@ class GenerateView(ft.Container):
                         self.data_dir_field,
                         ft.IconButton(
                             icon=ft.Icons.FOLDER_OPEN,
-                            on_click=lambda e: self.data_dir_picker.get_directory_path(),
+                            on_click=self._pick_data_dir,
                             tooltip="Browse for data folder",
                         ),
                     ],
@@ -177,7 +173,7 @@ class GenerateView(ft.Container):
                         self.output_dir_field,
                         ft.IconButton(
                             icon=ft.Icons.FOLDER_OPEN,
-                            on_click=lambda e: self.output_dir_picker.get_directory_path(),
+                            on_click=self._pick_output_dir,
                             tooltip="Browse for output folder",
                         ),
                     ],
@@ -189,9 +185,7 @@ class GenerateView(ft.Container):
                         self.config_field,
                         ft.IconButton(
                             icon=ft.Icons.FILE_OPEN,
-                            on_click=lambda e: self.config_picker.pick_files(
-                                allowed_extensions=["yaml", "yml"],
-                            ),
+                            on_click=self._pick_config_file,
                             tooltip="Browse for config file",
                         ),
                         ft.IconButton(
@@ -239,7 +233,7 @@ class GenerateView(ft.Container):
         except Exception as ex:
             self.status_text.value = f"Error loading plugins: {ex}"
             self.status_text.color = ft.Colors.RED_400
-        self.page.update()
+        self._page.update()
     
     def _check_llm_config(self):
         """Check if LLM API key is configured."""
@@ -249,7 +243,7 @@ class GenerateView(ft.Container):
             os.environ.get("OLLAMA_BASE_URL")
         )
         self.llm_warning.visible = not has_key
-        self.page.update()
+        self._page.update()
     
     def _on_plugin_changed(self, e):
         """Handle plugin selection - load available themes."""
@@ -262,7 +256,7 @@ class GenerateView(ft.Container):
                 # Set default to first theme
                 if themes:
                     self.theme_dropdown.value = themes[0]
-                self.page.update()
+                self._page.update()
             except Exception:
                 # Fallback to default themes
                 default = ['dungeon', 'midnight', 'aurora', 'sunset', 'frost']
@@ -270,37 +264,42 @@ class GenerateView(ft.Container):
                     ft.dropdown.Option(t, t.capitalize()) for t in default
                 ]
                 self.theme_dropdown.value = 'dungeon'
-                self.page.update()
+                self._page.update()
     
-    def _on_data_dir_picked(self, e: ft.FilePickerResultEvent):
-        """Handle data directory selection."""
-        if e.path:
-            self.data_dir_field.value = e.path
-            self.page.update()
-    
-    def _on_output_dir_picked(self, e: ft.FilePickerResultEvent):
-        """Handle output directory selection."""
-        if e.path:
-            self.output_dir_field.value = e.path
-            self.page.update()
-    
-    def _on_config_picked(self, e: ft.FilePickerResultEvent):
-        """Handle config file selection."""
-        if e.files:
-            self.config_field.value = e.files[0].path
-            self.page.update()
+    async def _pick_data_dir(self, e):
+        """Open data directory picker and handle result."""
+        path = await self.data_dir_picker.get_directory_path()
+        if path:
+            self.data_dir_field.value = path
+            self._page.update()
+
+    async def _pick_output_dir(self, e):
+        """Open output directory picker and handle result."""
+        path = await self.output_dir_picker.get_directory_path()
+        if path:
+            self.output_dir_field.value = path
+            self._page.update()
+
+    async def _pick_config_file(self, e):
+        """Open config file picker and handle result."""
+        files = await self.config_picker.pick_files(
+            allowed_extensions=["yaml", "yml"],
+        )
+        if files:
+            self.config_field.value = files[0].path
+            self._page.update()
     
     def _clear_config(self, e):
         """Clear config field."""
         self.config_field.value = ""
-        self.page.update()
+        self._page.update()
     
     def _update_progress(self, message: str):
         """Update progress status (thread-safe via run_task)."""
         async def _do_update():
             self.progress_text.value = message
-            self.page.update()
-        self.page.run_task(_do_update)
+            self._page.update()
+        self._page.run_task(_do_update)
 
     def _update_ui_success(self, result: str):
         """Apply success state to UI controls (must run on UI thread)."""
@@ -310,13 +309,13 @@ class GenerateView(ft.Container):
         self.report_path = result
         self.open_report_btn.visible = True
         self.generate_btn.disabled = False
-        self.page.snack_bar = ft.SnackBar(
+        self._page.show_dialog(ft.SnackBar(
             content=ft.Text("Report generated successfully!"),
             action="Open",
             on_action=self._open_report,
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+            open=True,
+        ))
+        self._page.update()
 
     def _update_ui_error(self, error_message: str, error_details: str):
         """Apply error state to UI controls (must run on UI thread)."""
@@ -324,7 +323,7 @@ class GenerateView(ft.Container):
         self.status_text.value = f"Error: {error_message}"
         self.status_text.color = ft.Colors.RED_400
         self.generate_btn.disabled = False
-        self.page.update()
+        self._page.update()
         self._show_error_dialog(error_message, error_details)
 
     def _generate_report(self, e):
@@ -335,19 +334,19 @@ class GenerateView(ft.Container):
         if not self.plugin_dropdown.value:
             self.status_text.value = "Please select a plugin"
             self.status_text.color = ft.Colors.RED_400
-            self.page.update()
+            self._page.update()
             return
 
         if not self.data_dir_field.value:
             self.status_text.value = "Please select a data directory"
             self.status_text.color = ft.Colors.RED_400
-            self.page.update()
+            self._page.update()
             return
 
         if not self.output_dir_field.value:
             self.status_text.value = "Please select an output directory"
             self.status_text.color = ft.Colors.RED_400
-            self.page.update()
+            self._page.update()
             return
 
         # Disable generate button during generation
@@ -395,7 +394,7 @@ class GenerateView(ft.Container):
             # Schedule all success UI mutations on the UI thread
             async def _apply_success():
                 self._update_ui_success(result)
-            self.page.run_task(_apply_success)
+            self._page.run_task(_apply_success)
 
         except Exception as ex:
             error_message = str(ex)
@@ -404,21 +403,19 @@ class GenerateView(ft.Container):
             # Schedule all error UI mutations on the UI thread
             async def _apply_error():
                 self._update_ui_error(error_message, error_details)
-            self.page.run_task(_apply_error)
+            self._page.run_task(_apply_error)
     
     def _show_error_dialog(self, message: str, details: str):
         """Show a detailed error dialog."""
         def close_dialog(e):
-            dialog.open = False
-            self.page.update()
-        
-        def copy_details(e):
-            self.page.set_clipboard(details)
-            self.page.snack_bar = ft.SnackBar(
+            self._page.pop_dialog()
+
+        async def copy_details(e):
+            await self._clipboard.set(details)
+            self._page.show_dialog(ft.SnackBar(
                 content=ft.Text("Error details copied to clipboard"),
-            )
-            self.page.snack_bar.open = True
-            self.page.update()
+                open=True,
+            ))
         
         dialog = ft.AlertDialog(
             modal=True,
@@ -453,9 +450,7 @@ class GenerateView(ft.Container):
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self._page.show_dialog(dialog)
     
     def _open_report(self, e=None):
         """Open the generated report in browser."""

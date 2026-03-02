@@ -15,16 +15,14 @@ class PluginListView(ft.Container):
     
     def __init__(self, page: ft.Page, on_create=None):
         super().__init__()
-        self.page = page
+        self._page = page
         self.on_create = on_create
         self.expand = True
         self.padding = 20
         
         # Add plugin folder picker
-        self.add_plugin_picker = ft.FilePicker(
-            on_result=self._on_add_plugin_picked,
-        )
-        page.overlay.append(self.add_plugin_picker)
+        self.add_plugin_picker = ft.FilePicker()
+        self._page.services.append(self.add_plugin_picker)
         
         # Data table for plugins
         self.data_table = ft.DataTable(
@@ -67,7 +65,7 @@ class PluginListView(ft.Container):
                     ft.ElevatedButton(
                         "Add Existing",
                         icon=ft.Icons.FOLDER_OPEN,
-                        on_click=lambda e: self.add_plugin_picker.get_directory_path(),
+                        on_click=self._pick_add_plugin_dir,
                     ),
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
@@ -90,7 +88,7 @@ class PluginListView(ft.Container):
                         ft.ElevatedButton(
                             "Add Existing",
                             icon=ft.Icons.FOLDER_OPEN,
-                            on_click=lambda e: self.add_plugin_picker.get_directory_path(),
+                            on_click=self._pick_add_plugin_dir,
                             tooltip="Import an existing plugin folder",
                         ),
                         ft.ElevatedButton(
@@ -123,7 +121,7 @@ class PluginListView(ft.Container):
         """Refresh the plugin list."""
         self.loading.visible = True
         self.status_text.value = "Loading plugins..."
-        self.page.update()
+        self._page.update()
         
         try:
             plugins = cli_wrapper.list_plugins()
@@ -199,7 +197,7 @@ class PluginListView(ft.Container):
             self.status_text.color = ft.Colors.RED_400
         
         self.loading.visible = False
-        self.page.update()
+        self._page.update()
     
     def _truncate_path(self, path: str, max_len: int) -> str:
         """Truncate path for display."""
@@ -221,25 +219,29 @@ class PluginListView(ft.Container):
             else:
                 subprocess.run(["xdg-open", str(folder)])
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
+            self._page.show_dialog(ft.SnackBar(
                 content=ft.Text(f"Could not open folder: {ex}"),
-            )
-            self.page.snack_bar.open = True
-            self.page.update()
+                open=True,
+            ))
     
-    def _on_add_plugin_picked(self, e: ft.FilePickerResultEvent):
+    async def _pick_add_plugin_dir(self, e):
+        """Open directory picker and handle result."""
+        path = await self.add_plugin_picker.get_directory_path()
+        if path:
+            self._handle_add_plugin(path)
+
+    def _handle_add_plugin(self, path: str):
         """Handle adding a plugin folder."""
-        if e.path:
-            plugin_path = Path(e.path)
+        if path:
+            plugin_path = Path(path)
             
             # Check if it looks like a plugin
             if not (plugin_path / "plugin.py").exists() and not (plugin_path / "__init__.py").exists():
-                self.page.snack_bar = ft.SnackBar(
+                self._page.show_dialog(ft.SnackBar(
                     content=ft.Text("This doesn't look like a BobReview plugin folder (no plugin.py found)"),
                     bgcolor=ft.Colors.ORANGE_800,
-                )
-                self.page.snack_bar.open = True
-                self.page.update()
+                    open=True,
+                ))
                 return
             
             # Add to user plugins directory
@@ -250,11 +252,11 @@ class PluginListView(ft.Container):
                 # Create symlink or copy
                 target = user_plugins_dir / plugin_path.name
                 if target.exists():
-                    self.page.snack_bar = ft.SnackBar(
+                    self._page.show_dialog(ft.SnackBar(
                         content=ft.Text(f"Plugin '{plugin_path.name}' already exists"),
                         bgcolor=ft.Colors.ORANGE_800,
-                    )
-                    self.page.snack_bar.open = True
+                        open=True,
+                    ))
                 else:
                     # Create symlink on Unix, copy on Windows
                     if sys.platform == "win32":
@@ -263,32 +265,30 @@ class PluginListView(ft.Container):
                     else:
                         target.symlink_to(plugin_path)
                     
-                    self.page.snack_bar = ft.SnackBar(
+                    self._page.show_dialog(ft.SnackBar(
                         content=ft.Text(f"Plugin '{plugin_path.name}' added successfully!"),
-                    )
-                    self.page.snack_bar.open = True
+                        open=True,
+                    ))
                     
                     # Refresh list
                     self._refresh_plugins(None)
                     
             except Exception as ex:
-                self.page.snack_bar = ft.SnackBar(
+                self._page.show_dialog(ft.SnackBar(
                     content=ft.Text(f"Error adding plugin: {ex}"),
                     bgcolor=ft.Colors.RED_800,
-                )
-                self.page.snack_bar.open = True
+                    open=True,
+                ))
             
-            self.page.update()
+            self._page.update()
     
     def _confirm_uninstall(self, plugin_name: str, plugin_path: str):
         """Show confirmation dialog before uninstalling."""
         def close_dialog(e):
-            dialog.open = False
-            self.page.update()
-        
+            self._page.pop_dialog()
+
         def do_uninstall(e):
-            dialog.open = False
-            self.page.update()
+            self._page.pop_dialog()
             self._uninstall_plugin(plugin_name, plugin_path)
         
         dialog = ft.AlertDialog(
@@ -307,10 +307,8 @@ class PluginListView(ft.Container):
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
-    
+        self._page.show_dialog(dialog)
+
     def _uninstall_plugin(self, plugin_name: str, plugin_path: str):
         """Uninstall a plugin by moving it to trash."""
         import shutil
@@ -328,37 +326,36 @@ class PluginListView(ft.Container):
                 dest = trash_dir / f"{path.name}_{int(time.time())}"
                 shutil.move(str(path), str(dest))
                 
-                self.page.snack_bar = ft.SnackBar(
+                self._page.show_dialog(ft.SnackBar(
                     content=ft.Text(f"Plugin '{plugin_name}' moved to ~/.bobreview/trash/"),
-                )
-                self.page.snack_bar.open = True
+                    open=True,
+                ))
                 
                 # Refresh list
                 self._refresh_plugins(None)
             else:
-                self.page.snack_bar = ft.SnackBar(
+                self._page.show_dialog(ft.SnackBar(
                     content=ft.Text("Plugin folder not found"),
                     bgcolor=ft.Colors.ORANGE_800,
-                )
-                self.page.snack_bar.open = True
-                
+                    open=True,
+                ))
+
         except Exception as ex:
-            self.page.snack_bar = ft.SnackBar(
+            self._page.show_dialog(ft.SnackBar(
                 content=ft.Text(f"Failed to uninstall: {ex}"),
                 bgcolor=ft.Colors.RED_800,
-            )
-            self.page.snack_bar.open = True
-        
-        self.page.update()
+                open=True,
+            ))
+
+        self._page.update()
     
     def _show_plugin_details(self, plugin_data: dict):
         """Show plugin details dialog."""
         from ..services import cli_wrapper
         
         def close_dialog(e):
-            dialog.open = False
-            self.page.update()
-        
+            self._page.pop_dialog()
+
         def open_folder(e):
             self._open_folder(plugin_data["path"])
         
@@ -428,6 +425,4 @@ class PluginListView(ft.Container):
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self._page.show_dialog(dialog)

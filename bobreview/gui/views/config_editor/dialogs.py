@@ -105,8 +105,7 @@ class PageEditorDialog:
     
     def _on_edit_component(self, comp_idx: int):
         """Handle edit component click."""
-        self.dialog.open = False
-        self.ft_page.update()
+        self.ft_page.pop_dialog()
         self.on_edit_component(comp_idx)
     
     def _add_component(self, e):
@@ -124,15 +123,13 @@ class PageEditorDialog:
         self.page_data['title'] = self.title_field.value
         self.page_data['icon'] = self.icon_field.value
         self.page_data['layout'] = self.layout_dropdown.value
-        self.dialog.open = False
+        self.ft_page.pop_dialog()
         self.on_save()
-        self.ft_page.update()
     
     def _close_dialog(self, e):
         """Close dialog without saving."""
-        self.dialog.open = False
-        self.ft_page.update()
-    
+        self.ft_page.pop_dialog()
+
     def show(self):
         """Show the dialog."""
         self._render_components()
@@ -166,9 +163,7 @@ class PageEditorDialog:
             ],
         )
         
-        self.ft_page.overlay.append(self.dialog)
-        self.dialog.open = True
-        self.ft_page.update()
+        self.ft_page.show_dialog(self.dialog)
 
 
 class ComponentEditorDialog:
@@ -270,7 +265,7 @@ class ComponentEditorDialog:
                     label="Insert Data",
                     width=200,
                     options=[ft.dropdown.Option(expr, label) for expr, label in expressions],
-                    on_change=lambda e, f=field: (
+                    on_select=lambda e, f=field: (
                         setattr(f, 'value', (f.value or '') + e.data),
                         self.ft_page.update()
                     ),
@@ -284,7 +279,7 @@ class ComponentEditorDialog:
     def _save_component(self, e):
         """Save component data."""
         import ast
-        
+
         for prop, field in self.fields.items():
             if isinstance(field, ft.Checkbox):
                 value = field.value
@@ -297,20 +292,18 @@ class ComponentEditorDialog:
                         value = ast.literal_eval(value)
                     except Exception:
                         pass
-            
+
             if value or value is False:
                 self.component[prop] = value
             elif prop in self.component:
                 del self.component[prop]
-        
-        self.dialog.open = False
-        self.ft_page.update()
+
+        self.ft_page.pop_dialog()
         self.on_save()
-    
+
     def _close_dialog(self, e):
         """Close dialog."""
-        self.dialog.open = False
-        self.ft_page.update()
+        self.ft_page.pop_dialog()
         self.on_close()
     
     def show(self):
@@ -335,6 +328,4 @@ class ComponentEditorDialog:
             ],
         )
         
-        self.ft_page.overlay.append(self.dialog)
-        self.dialog.open = True
-        self.ft_page.update()
+        self.ft_page.show_dialog(self.dialog)

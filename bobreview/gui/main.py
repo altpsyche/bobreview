@@ -160,8 +160,8 @@ def _build_dashboard(page: ft.Page, show_plugins, show_generate, show_llm):
                     padding=30,
                     border_radius=16,
                     gradient=ft.LinearGradient(
-                        begin=ft.alignment.top_left,
-                        end=ft.alignment.bottom_right,
+                        begin=ft.Alignment(-1, -1),
+                        end=ft.Alignment(1, 1),
                         colors=["#1a237e", "#0d47a1", "#1565c0"],
                     ),
                     shadow=ft.BoxShadow(

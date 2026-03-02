@@ -30,7 +30,7 @@ class ConfigEditorView(ft.Container):
     
     def __init__(self, page: ft.Page):
         super().__init__()
-        self.page = page
+        self._page = page
         self.expand = True
         self.padding = 20
         
@@ -58,7 +58,7 @@ class ConfigEditorView(ft.Container):
             label="Plugin",
             width=300,
             options=[],
-            on_change=self._on_plugin_changed,
+            on_select=self._on_plugin_changed,
         )
         
         self.data_dir_field = ft.TextField(
@@ -67,9 +67,7 @@ class ConfigEditorView(ft.Container):
             width=300,
             read_only=True,
         )
-        self.data_dir_picker = ft.FilePicker(
-            on_result=self._on_data_dir_picked,
-        )
+        self.data_dir_picker = ft.FilePicker()
         
         self.theme_dropdown = ft.Dropdown(
             label="Theme",
@@ -149,7 +147,7 @@ class ConfigEditorView(ft.Container):
                     ft.ElevatedButton(
                         "Browse",
                         icon=ft.Icons.FOLDER_OPEN,
-                        on_click=lambda e: self.data_dir_picker.get_directory_path(),
+                        on_click=self._pick_data_dir,
                     ),
                 ], spacing=10),
                 
@@ -199,7 +197,8 @@ class ConfigEditorView(ft.Container):
             expand=True,
         )
         
-        self.page.overlay.append(self.data_dir_picker)
+        self._clipboard = ft.Clipboard()
+        self._page.services.extend([self.data_dir_picker, self._clipboard])
     
     def on_mount(self):
         """Called when view is mounted."""
@@ -212,7 +211,7 @@ class ConfigEditorView(ft.Container):
             self.plugin_dropdown.options = [
                 ft.dropdown.Option(p.name, p.name) for p in plugins
             ]
-            self.page.update()
+            self._page.update()
         except Exception as ex:
             self._set_status(f"Error loading plugins: {ex}", "red")
     
@@ -267,7 +266,7 @@ class ConfigEditorView(ft.Container):
                 else:
                     self._set_status("No report_config.yaml found", "orange")
             
-            self.page.update()
+            self._page.update()
             
         except Exception as ex:
             import traceback
@@ -389,7 +388,7 @@ class ConfigEditorView(ft.Container):
             self._set_status("No plugin selected", "orange")
             return
         
-        from ..services.plugin_loader import PluginLoader
+        from ...services.plugin_loader import PluginLoader
         PluginLoader.clear_cache()
         
         # Re-trigger plugin load
@@ -399,18 +398,19 @@ class ConfigEditorView(ft.Container):
         self._on_plugin_changed(FakeEvent())
         self._set_status("✓ Plugin reloaded", "green")
     
-    def _on_data_dir_picked(self, e: ft.FilePickerResultEvent):
-        """Handle data directory selection."""
-        if e.path:
-            self.data_dir_field.value = e.path
-            
+    async def _pick_data_dir(self, e):
+        """Open data directory picker and handle result."""
+        path = await self.data_dir_picker.get_directory_path()
+        if path:
+            self.data_dir_field.value = path
+
             # Load columns using DataReader
-            if self.data_reader.read_directory(e.path):
+            if self.data_reader.read_directory(path):
                 self.expression_helper.set_columns(self.data_reader.columns)
-            
+
             message, color = self.data_reader.get_status_message()
             self._set_status(message, color)
-            self.page.update()
+            self._page.update()
     
     def _add_page(self, e):
         """Add a new page."""
@@ -426,7 +426,7 @@ class ConfigEditorView(ft.Container):
         pages.append(new_page)
         self._push_history()
         self._render_pages()
-        self.page.update()
+        self._page.update()
         self._edit_page(len(pages) - 1)
     
     def _delete_page(self, index: int):
@@ -436,7 +436,7 @@ class ConfigEditorView(ft.Container):
             pages.pop(index)
             self._push_history()
             self._render_pages()
-            self.page.update()
+            self._page.update()
     
     def _edit_page(self, index: int):
         """Open page editor dialog."""
@@ -447,11 +447,11 @@ class ConfigEditorView(ft.Container):
         page_data = pages[index]
         
         dialog = PageEditorDialog(
-            page=self.page,
+            page=self._page,
             page_data=page_data,
             page_index=index,
             available_components=self.available_components,
-            on_save=lambda: (self._push_history(), self._render_pages(), self.page.update()),
+            on_save=lambda: (self._push_history(), self._render_pages(), self._page.update()),
             on_edit_component=lambda comp_idx: self._edit_component(index, comp_idx),
         )
         dialog.show()
@@ -481,7 +481,7 @@ class ConfigEditorView(ft.Container):
                 comp_def = next((c for c in self.available_components if base_type.endswith(c['type'])), None)
         
         dialog = ComponentEditorDialog(
-            page=self.page,
+            page=self._page,
             component=comp,
             component_def=comp_def,
             expression_helper=self.expression_helper,
@@ -543,7 +543,7 @@ class ConfigEditorView(ft.Container):
             self._render_pages()
             self._update_history_buttons()
             self._set_status("↩ Undo", "green")
-            self.page.update()
+            self._page.update()
     
     def _redo(self, e):
         """Redo previously undone change."""
@@ -554,7 +554,7 @@ class ConfigEditorView(ft.Container):
             self._render_pages()
             self._update_history_buttons()
             self._set_status("↪ Redo", "green")
-            self.page.update()
+            self._page.update()
     
     def _update_history_buttons(self):
         """Update undo/redo button states."""
@@ -604,7 +604,7 @@ class ConfigEditorView(ft.Container):
             "orange": ft.Colors.ORANGE_400,
         }
         self.status_text.color = color_map.get(color, ft.Colors.GREY_400)
-        self.page.update()
+        self._page.update()
     
     def _show_error_dialog(self, title: str, message: str, details: str = ""):
         """Show error dialog with copy-to-clipboard."""
@@ -617,13 +617,12 @@ class ConfigEditorView(ft.Container):
             width=500,
         ) if details else None
         
-        def copy_details(e):
-            self.page.set_clipboard(details)
+        async def copy_details(e):
+            await self._clipboard.set(details)
             self._set_status("✓ Copied to clipboard", "green")
-        
+
         def close_dialog(e):
-            dialog.open = False
-            self.page.update()
+            self._page.pop_dialog()
         
         content_controls = [
             ft.Text(message, size=14),
@@ -653,7 +652,5 @@ class ConfigEditorView(ft.Container):
         # Filter None actions
         dialog.actions = [a for a in dialog.actions if a]
         
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self._page.show_dialog(dialog)
 

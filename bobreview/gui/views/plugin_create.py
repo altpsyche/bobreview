@@ -12,7 +12,7 @@ class PluginCreateView(ft.Container):
     
     def __init__(self, page: ft.Page, on_back=None):
         super().__init__()
-        self.page = page
+        self._page = page
         self.on_back = on_back
         self.expand = True
         self.padding = 20
@@ -46,10 +46,12 @@ class PluginCreateView(ft.Container):
         )
         
         # File picker for output directory
-        self.output_dir_picker = ft.FilePicker(
-            on_result=self._on_output_dir_picked,
-        )
-        page.overlay.append(self.output_dir_picker)
+        self.output_dir_picker = ft.FilePicker()
+        self._page.services.append(self.output_dir_picker)
+
+        # Clipboard service
+        self._clipboard = ft.Clipboard()
+        self._page.services.append(self._clipboard)
         
         # Status
         self.status_text = ft.Text("", size=14)
@@ -94,7 +96,7 @@ class PluginCreateView(ft.Container):
                         self.output_dir_field,
                         ft.IconButton(
                             icon=ft.Icons.FOLDER_OPEN,
-                            on_click=lambda e: self.output_dir_picker.get_directory_path(),
+                            on_click=self._pick_output_dir,
                             tooltip="Browse for output folder",
                         ),
                         ft.IconButton(
@@ -126,16 +128,17 @@ class PluginCreateView(ft.Container):
             ],
         )
     
-    def _on_output_dir_picked(self, e: ft.FilePickerResultEvent):
-        """Handle output directory selection."""
-        if e.path:
-            self.output_dir_field.value = e.path
-            self.page.update()
+    async def _pick_output_dir(self, e):
+        """Open directory picker and handle result."""
+        path = await self.output_dir_picker.get_directory_path()
+        if path:
+            self.output_dir_field.value = path
+            self._page.update()
     
     def _clear_output_dir(self, e):
         """Clear output directory (use default)."""
         self.output_dir_field.value = ""
-        self.page.update()
+        self._page.update()
     
     def _validate_name(self, e):
         """Validate plugin name in real-time."""
@@ -152,7 +155,7 @@ class PluginCreateView(ft.Container):
         else:
             self.name_validation.value = "✓ Valid name"
             self.name_validation.color = ft.Colors.GREEN_400
-        self.page.update()
+        self._page.update()
     
     def _create_plugin(self, e):
         """Handle plugin creation."""
@@ -161,20 +164,20 @@ class PluginCreateView(ft.Container):
         if not name:
             self.status_text.value = "Please enter a plugin name"
             self.status_text.color = ft.Colors.RED_400
-            self.page.update()
+            self._page.update()
             return
         
         # Validate name format
         if not name.replace('-', '').replace('_', '').isalnum():
             self.status_text.value = "Plugin name should only contain letters, numbers, hyphens and underscores"
             self.status_text.color = ft.Colors.RED_400
-            self.page.update()
+            self._page.update()
             return
         
         self.loading.visible = True
         self.status_text.value = "Creating plugin..."
         self.status_text.color = ft.Colors.GREY_400
-        self.page.update()
+        self._page.update()
         
         try:
             output_dir = self.output_dir_field.value.strip() or None
@@ -190,13 +193,13 @@ class PluginCreateView(ft.Container):
             self.status_text.value = f"✓ Created plugin at: {created_path}"
             self.status_text.color = ft.Colors.GREEN_400
             
-            # Show success dialog
-            self.page.snack_bar = ft.SnackBar(
+            # Show success notification
+            self._page.show_dialog(ft.SnackBar(
                 content=ft.Text(f"Plugin '{name}' created successfully!"),
                 action="View Plugins",
                 on_action=lambda e: self.on_back() if self.on_back else None,
-            )
-            self.page.snack_bar.open = True
+                open=True,
+            ))
             
         except Exception as ex:
             import traceback
@@ -205,21 +208,19 @@ class PluginCreateView(ft.Container):
             self._show_error_dialog(str(ex), traceback.format_exc())
         
         self.loading.visible = False
-        self.page.update()
+        self._page.update()
     
     def _show_error_dialog(self, message: str, details: str):
         """Show a detailed error dialog."""
         def close_dialog(e):
-            dialog.open = False
-            self.page.update()
-        
-        def copy_details(e):
-            self.page.set_clipboard(details)
-            self.page.snack_bar = ft.SnackBar(
+            self._page.pop_dialog()
+
+        async def copy_details(e):
+            await self._clipboard.set(details)
+            self._page.show_dialog(ft.SnackBar(
                 content=ft.Text("Error details copied to clipboard"),
-            )
-            self.page.snack_bar.open = True
-            self.page.update()
+                open=True,
+            ))
         
         dialog = ft.AlertDialog(
             modal=True,
@@ -254,6 +255,4 @@ class PluginCreateView(ft.Container):
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        self._page.show_dialog(dialog)
