@@ -5,6 +5,7 @@ LLM response caching for BobReview.
 
 import hashlib
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
@@ -164,6 +165,7 @@ class LLMCache:
 
 # Global cache instance
 _cache_instance: Optional[LLMCache] = None
+_cache_lock = threading.Lock()
 
 
 def get_cache() -> Optional[LLMCache]:
@@ -173,11 +175,12 @@ def get_cache() -> Optional[LLMCache]:
 
 def init_cache(config: "Config"):
     """
-    Initialize the module-level LLM cache using values from `config`.
-    
+    Initialize the module-level LLM cache using values from `config` (thread-safe).
+
     Parameters:
         config (Config): Configuration containing cache settings; used to construct the LLMCache instance that will be returned by `get_cache()`.
     """
     global _cache_instance
-    _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
+    with _cache_lock:
+        _cache_instance = LLMCache(config.cache_dir, enabled=config.use_cache, config=config)
 

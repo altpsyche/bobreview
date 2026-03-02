@@ -7,11 +7,13 @@ Plugin-First Architecture:
 - Themes now owned entirely by plugins
 """
 
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 import logging
+import threading
 
 from .registries import (
     DataParserRegistry,
+    RegistryCollisionError,
     ServiceRegistry,
     ReportSystemRegistry,
     TemplatePathRegistry,
@@ -61,6 +63,35 @@ class PluginRegistry:
         logger.info(f"Unregistered {total} components from plugin: {plugin_name}")
         return total
     
+    def set_strict(self, strict: bool) -> None:
+        """
+        Enable or disable strict collision mode on all sub-registries.
+
+        When strict is True, registering a component key already owned by
+        a different plugin raises RegistryCollisionError.
+        """
+        for registry in self._all_registries():
+            registry.set_strict(strict)
+
+    def get_collision_log(self) -> List[Tuple[str, str, str]]:
+        """
+        Get the combined collision log from all sub-registries.
+
+        Returns:
+            List of (component_key, previous_owner, new_owner) tuples
+        """
+        log: List[Tuple[str, str, str]] = []
+        for registry in self._all_registries():
+            log.extend(registry.get_collision_log())
+        return log
+
+    def _all_registries(self):
+        """Yield all sub-registries."""
+        return [
+            self.data_parsers, self.services,
+            self.report_systems, self.template_paths,
+        ]
+
     def get_stats(self) -> Dict[str, int]:
         """Get statistics about registered components."""
         return {
@@ -78,17 +109,21 @@ class PluginRegistry:
 
 # Global registry instance
 _global_registry: Optional[PluginRegistry] = None
+_registry_lock = threading.Lock()
 
 
 def get_registry() -> PluginRegistry:
-    """Get the global plugin registry instance."""
+    """Get the global plugin registry instance (thread-safe)."""
     global _global_registry
     if _global_registry is None:
-        _global_registry = PluginRegistry()
+        with _registry_lock:
+            if _global_registry is None:
+                _global_registry = PluginRegistry()
     return _global_registry
 
 
 def reset_registry() -> None:
     """Reset the global registry (mainly for testing)."""
     global _global_registry
-    _global_registry = PluginRegistry()
+    with _registry_lock:
+        _global_registry = PluginRegistry()

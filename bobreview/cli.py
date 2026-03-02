@@ -93,7 +93,9 @@ Generate beautiful HTML reports from any data using **[BobReview]** and a **plug
     core_table.add_row("--dir <path>", "Data directory (default: current directory)")
     core_table.add_row("--output <file>", "Output path (parent dir used, default: report.html)")
     core_table.add_row("--config <file>", "Custom report config YAML file")
+    core_table.add_row("--theme <id>", "Theme to use (plugin-specific)")
     core_table.add_row("--dry-run", "Skip LLM API calls (for testing)")
+    core_table.add_row("--no-cache", "Disable LLM response caching")
     console.print(Panel(core_table, title="[bold]Core Options[/bold]", border_style="dim"))
     
     # Discovery commands (including how to make a folder a plugin folder)
@@ -124,6 +126,16 @@ Generate beautiful HTML reports from any data using **[BobReview]** and a **plug
     create_table.add_row("--output-dir, -o <dir>", "Where to create (default: ~/.bobreview/plugins/)")
     create_table.add_row("--template, -t <type>", "Template: minimal or full (default: full)")
     console.print(Panel(create_table, title="[bold]Plugin Create Options[/bold]", border_style="dim"))
+    
+    # LLM Configuration
+    llm_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+    llm_table.add_column("Option", style="cyan", width=28)
+    llm_table.add_column("Description")
+    llm_table.add_row("--llm-provider <name>", "openai, anthropic, ollama (default: openai)")
+    llm_table.add_row("--llm-api-key <key>", "API key (or use environment variable)")
+    llm_table.add_row("--llm-model <model>", "Model name (e.g., gpt-4, llama2)")
+    llm_table.add_row("--llm-temperature <0-2>", "Creativity level (default: 0.7)")
+    console.print(Panel(llm_table, title="[bold]LLM Configuration[/bold]", border_style="dim"))
     
     # Output & debugging
     output_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
@@ -383,6 +395,46 @@ Notes:
         '--dry-run', action='store_true',
         help='Skip LLM API calls (for testing)'
     )
+    parser.add_argument(
+        '--theme', type=str, default=None,
+        metavar='THEME_ID',
+        help='Theme to use for report generation (plugin-specific)'
+    )
+    parser.add_argument(
+        '--no-cache', action='store_true',
+        help='Disable LLM response caching (force fresh generation)'
+    )
+    
+    # LLM Configuration
+    parser.add_argument(
+        '--llm-provider', type=str, default='openai',
+        choices=['openai', 'anthropic', 'ollama'],
+        help='LLM provider: openai, anthropic, ollama (default: openai)'
+    )
+    parser.add_argument(
+        '--llm-api-key', type=str, default=None,
+        metavar='KEY',
+        help='API key for LLM provider (or use environment variable)'
+    )
+    parser.add_argument(
+        '--llm-model', type=str, default=None,
+        metavar='MODEL',
+        help='LLM model name (e.g., gpt-4, claude-3-opus, llama2)'
+    )
+    def temperature_type(value):
+        """Validate LLM temperature is in the range 0.0-2.0."""
+        fval = float(value)
+        if fval < 0.0 or fval > 2.0:
+            raise argparse.ArgumentTypeError(
+                f"temperature must be between 0.0 and 2.0, got {fval}"
+            )
+        return fval
+
+    parser.add_argument(
+        '--llm-temperature', type=temperature_type, default=0.7,
+        metavar='TEMP',
+        help='LLM temperature 0.0-2.0 (default: 0.7)'
+    )
     
     # Discovery
     parser.add_argument(
@@ -414,6 +466,9 @@ Notes:
     plugins_create.add_argument('--template', '-t', type=str, default='full',
                                 choices=['minimal', 'full'],
                                 help='minimal = basic, full = all features (default)')
+    
+    # GUI subcommand
+    gui_parser = subparsers.add_parser('gui', help='Launch graphical interface')
     
     args = parser.parse_args()
 
@@ -463,6 +518,20 @@ Notes:
                     print(f"    {p.description}")
         return 0
     
+    # Handle GUI command
+    if args.command == 'gui':
+        try:
+            from .gui import run_app
+            run_app()
+            return 0
+        except ModuleNotFoundError as e:
+            if e.name == 'flet' or (e.name and e.name.startswith('flet.')):
+                log_error(f"GUI requires flet. Install with: pip install flet")
+                if args.verbose:
+                    print(f"Import error: {e}")
+                return 1
+            raise
+    
     # Handle plugin subcommands
     if args.command == 'plugins':
         return handle_plugin_command(args)
@@ -506,10 +575,12 @@ Notes:
             log_error(f"Plugin '{found.name}' loaded but no instance available.")
             return 1
         
-        # Look for generate_report function in the plugin module
+        # Look for generate_report function in the plugin module.
+        # The core loader registers external plugins as {safe_name} and
+        # built-in plugins as bobreview.plugins.{safe_name} in sys.modules.
         safe_name = found.name.replace('-', '_')
         plugin_module = None
-        for mod_name in [f"bobreview.plugins.{safe_name}", f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
+        for mod_name in [safe_name, f"bobreview.plugins.{safe_name}"]:
             if mod_name in sys.modules:
                 plugin_module = sys.modules[mod_name]
                 break
@@ -524,22 +595,63 @@ Notes:
         
         def call_generate_report(generate_func, name_desc):
             """Helper to call generate_report with consistent error handling."""
+            import inspect
+            import os
+
             log_info(f"Running plugin: {found.name} ({name_desc})", config=cli_config)
             log_info(f"Data directory: {data_dir}", config=cli_config)
-            # We log the full output path for user visibility, but pass the parent
-            # directory to the plugin's generate_report implementation.
             log_info(f"Output: {output_path}", config=cli_config)
             if args.dry_run:
                 log_info("Dry run mode - LLM calls will be skipped", config=cli_config)
 
-            # Build kwargs in a backwards-compatible way – only pass config_path
-            # when the user provided --config, to avoid surprising plugins that
-            # do not accept this parameter.
+            # Build kwargs
             kwargs = {
                 "dry_run": getattr(args, "dry_run", False),
             }
             if getattr(args, "config", None):
                 kwargs["config_path"] = args.config
+            if getattr(args, "theme", None):
+                kwargs["theme_id"] = args.theme
+            if getattr(args, "no_cache", False):
+                kwargs["no_cache"] = True
+
+            # LLM configuration - pass if specified, fall back to env vars
+            if getattr(args, "llm_provider", None):
+                kwargs["llm_provider"] = args.llm_provider
+            if getattr(args, "llm_api_key", None):
+                kwargs["llm_api_key"] = args.llm_api_key
+            else:
+                # Choose env var based on provider
+                provider = (getattr(args, "llm_provider", "") or "").lower()
+                provider_env_map = {
+                    "anthropic": "ANTHROPIC_API_KEY",
+                    "openai": "OPENAI_API_KEY",
+                    "ollama": "OLLAMA_API_KEY",
+                }
+                env_key = provider_env_map.get(provider)
+                if env_key and os.environ.get(env_key):
+                    kwargs["llm_api_key"] = os.environ[env_key]
+                elif not provider:
+                    # Fallback only when no specific provider was requested
+                    for fallback_key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_API_KEY"):
+                        if os.environ.get(fallback_key):
+                            kwargs["llm_api_key"] = os.environ[fallback_key]
+                            break
+            if getattr(args, "llm_model", None):
+                kwargs["llm_model"] = args.llm_model
+            if getattr(args, "llm_temperature", None) is not None:
+                kwargs["llm_temperature"] = args.llm_temperature
+
+            # Filter kwargs to only those the function accepts,
+            # preventing crashes with plugins that don't support newer params.
+            sig = inspect.signature(generate_func)
+            accepts_var_keyword = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD
+                for p in sig.parameters.values()
+            )
+            if not accepts_var_keyword:
+                valid_params = set(sig.parameters.keys())
+                kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
 
             try:
                 result = generate_func(

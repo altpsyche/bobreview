@@ -7,6 +7,7 @@ Plugin-First Architecture:
 - Themes now owned entirely by plugins
 """
 
+from .base_registry import RegistryCollisionError
 from .service_registry import ServiceRegistry
 from .report_system_registry import ReportSystemRegistry
 from .template_path_registry import TemplatePathRegistry
@@ -23,6 +24,7 @@ from .data_parser_registry import DataParserRegistry
 # - PageRegistry -> Plugin handles
 
 __all__ = [
+    'RegistryCollisionError',
     'ServiceRegistry',
     'ReportSystemRegistry',
     'TemplatePathRegistry',

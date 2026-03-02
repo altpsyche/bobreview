@@ -7,6 +7,7 @@ to register or replace services at runtime.
 
 from typing import Dict, Any, Optional, Callable, Type
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -236,17 +237,21 @@ class ServiceContainer:
 
 # Global service container
 _global_container: Optional[ServiceContainer] = None
+_container_lock = threading.Lock()
 
 
 def get_container() -> ServiceContainer:
-    """Get the global service container."""
+    """Get the global service container (thread-safe)."""
     global _global_container
     if _global_container is None:
-        _global_container = ServiceContainer()
+        with _container_lock:
+            if _global_container is None:
+                _global_container = ServiceContainer()
     return _global_container
 
 
 def reset_container() -> None:
     """Reset the global service container."""
     global _global_container
-    _global_container = ServiceContainer()
+    with _container_lock:
+        _global_container = ServiceContainer()

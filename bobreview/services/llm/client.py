@@ -73,7 +73,8 @@ def format_data_table(
                     value = format_number(value, 0)
                 else:
                     value = str(value)
-            row_values.append(str(value))
+            # Escape pipe chars so cell content can't break the table structure
+            row_values.append(str(value).replace('|', '\\|'))
         table += "| " + " | ".join(row_values) + " |\n"
     
     if max_rows is not None and total_samples > max_rows:
@@ -170,11 +171,15 @@ Data Table:
     return result
 
 
+MAX_CHUNKS = 50  # Safety limit to prevent runaway LLM API costs
+
+
 def call_llm_chunked(
     prompt_base: str,
     data_points: List[Dict[str, Any]],
     config: "Config",
     chunk_size: Optional[int] = None,
+    max_chunks: int = MAX_CHUNKS,
     table_formatter: Callable[[List[Dict[str, Any]]], str] = format_data_table,
 ) -> str:
     """
@@ -187,20 +192,44 @@ def call_llm_chunked(
         data_points (List[Dict[str, Any]]): Data points to process.
         config (Config): Report configuration containing LLM and chunking settings.
         chunk_size (Optional[int]): Number of data points per chunk; if None, uses config.llm_chunk_size.
+        max_chunks (int): Safety cap on total LLM API calls (initial chunk calls plus
+            pairwise combine calls). When the expected call count (2*n - 1 for n initial
+            chunks) exceeds this limit, data is truncated to fit. Defaults to MAX_CHUNKS.
         table_formatter (Callable[[List[Dict[str, Any]]], str]): Function that formats a list of data points into a table string.
-    
+
     Returns:
         str: Unified LLM response combining analyses from all chunks.
     """
     if chunk_size is None:
         chunk_size = config.llm_chunk_size
-    
+
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
-    
+
+    if max_chunks <= 0:
+        raise ValueError("max_chunks must be positive")
+
     if not data_points:
         return call_llm(prompt_base, data_table=None, config=config)
-    
+
+    # Safety check: cap total number of LLM API calls.
+    # The pairwise combine phase adds up to (initial_chunks - 1) extra calls,
+    # so total_expected = initial_chunks + (initial_chunks - 1) = 2*initial - 1.
+    # Reduce initial_chunks until total_expected <= max_chunks.
+    import math
+    initial_chunks = math.ceil(len(data_points) / chunk_size)
+    total_expected = 2 * initial_chunks - 1 if initial_chunks > 1 else 1
+    if total_expected > max_chunks:
+        # Solve: 2*n - 1 <= max_chunks => n <= (max_chunks + 1) / 2
+        allowed_initial = max((max_chunks + 1) // 2, 1)
+        log_warning(
+            f"Data has {len(data_points)} points requiring {initial_chunks} chunks "
+            f"({total_expected} total LLM calls including combines, limit: {max_chunks}). "
+            f"Truncating to {allowed_initial} chunks ({allowed_initial * chunk_size} points).",
+            config,
+        )
+        data_points = data_points[:allowed_initial * chunk_size]
+
     # Process in chunks
     results = []
     for i in range(0, len(data_points), chunk_size):
@@ -213,6 +242,10 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
         result = call_llm(chunk_prompt, data_table=data_table, config=config)
         results.append(result)
     
+    # Guard against empty results (e.g., if data was truncated to nothing)
+    if not results:
+        return call_llm(prompt_base, data_table=None, config=config)
+
     # Combine if multiple chunks using pairwise reduction
     if len(results) == 1:
         return results[0]

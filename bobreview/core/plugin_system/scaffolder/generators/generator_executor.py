@@ -50,6 +50,139 @@ THEMES = {
 }
 
 
+# Component types registry for CMS discovery
+# Each prop is now a dict with type, label, and optional options
+COMPONENT_TYPES = [
+    {
+        "type": "''' + safe_name + '''_hero_banner",
+        "label": "Hero Banner",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+            "subtitle": {"type": "text", "label": "Subtitle (supports Jinja2)"},
+            "icon": {"type": "text", "label": "Icon (FontAwesome)"},
+            "variant": {"type": "dropdown", "label": "Variant", "options": ["default", "ok", "warn", "error", "info"]},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_stat_row",
+        "label": "Stats Row",
+        "props": {
+            "items": {"type": "list", "label": "Stat Items (YAML list)"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_divider",
+        "label": "Section Divider",
+        "props": {
+            "label": {"type": "text", "label": "Label"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_chart",
+        "label": "Chart",
+        "props": {
+            "chart_type": {"type": "dropdown", "label": "Chart Type", "options": ["bar", "pie", "line", "doughnut", "radar"]},
+            "title": {"type": "text", "label": "Title"},
+            "data_field": {"type": "text", "label": "Data Field"},
+            "legend": {"type": "checkbox", "label": "Show Legend"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_llm",
+        "label": "LLM Content",
+        "props": {
+            "id": {"type": "text", "label": "ID (for references)"},
+            "title": {"type": "text", "label": "Title"},
+            "icon": {"type": "text", "label": "Icon (FontAwesome)"},
+            "prompt": {"type": "multiline", "label": "Prompt"},
+            "depends_on": {"type": "list", "label": "Depends On (IDs)"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_data_table",
+        "label": "Data Table",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+            "columns": {"type": "list", "label": "Columns (YAML list)"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_featured_section",
+        "label": "Featured Section",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+            "max_featured": {"type": "number", "label": "Max Featured"},
+            "show_stats": {"type": "checkbox", "label": "Show Stats"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_ability_scores",
+        "label": "Ability Scores",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_story_section",
+        "label": "Story Section",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+            "llm_id": {"type": "text", "label": "LLM ID Reference"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_initiative_tracker",
+        "label": "Initiative Tracker",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_quick_cards",
+        "label": "Quick Cards",
+        "props": {
+            "items": {"type": "list", "label": "Card Items (YAML list)"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_quote_box",
+        "label": "Quote Box",
+        "props": {
+            "llm_id": {"type": "text", "label": "LLM ID Reference"},
+            "speaker": {"type": "text", "label": "Speaker Name"},
+            "icon": {"type": "text", "label": "Icon (FontAwesome)"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_encounter_card",
+        "label": "Encounter Card",
+        "props": {
+            "llm_id": {"type": "text", "label": "LLM ID Reference"},
+            "title": {"type": "text", "label": "Title"},
+            "icon": {"type": "text", "label": "Icon (FontAwesome)"},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_progress_bar",
+        "label": "Progress Bar",
+        "props": {
+            "label": {"type": "text", "label": "Label"},
+            "value": {"type": "number", "label": "Value"},
+            "max": {"type": "number", "label": "Max Value"},
+            "variant": {"type": "dropdown", "label": "Variant", "options": ["default", "ok", "warn", "error"]},
+        }
+    },
+    {
+        "type": "''' + safe_name + '''_member_spotlight",
+        "label": "Member Spotlight",
+        "props": {
+            "title": {"type": "text", "label": "Title"},
+            "featured_field": {"type": "text", "label": "Featured Field Name"},
+        }
+    },
+]
+
+
 def load_config(config_path: Path) -> Dict[str, Any]:
     """Load report_config.yaml."""
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -121,7 +254,8 @@ def generate_llm_content(
     config: Dict[str, Any],
     data_points: List[Dict],
     stats: Dict[str, Any],
-    dry_run: bool = False
+    dry_run: bool = False,
+    **kwargs
 ) -> Dict[str, str]:
     """
     Generate LLM content for all prompts in YAML config.
@@ -199,7 +333,23 @@ def generate_llm_content(
                 from bobreview.core.config import Config
                 from bobreview.core.cache import init_cache
                 from bobreview.core.html_utils import sanitize_llm_html
-                llm_config = Config()
+                
+                # Create Config with LLM settings from kwargs
+                # no_cache=True means use_cache=False
+                llm_provider = kwargs.get('llm_provider', 'openai')
+                default_models = {
+                    'openai': 'gpt-4o',
+                    'anthropic': 'claude-sonnet-4-20250514',
+                    'ollama': 'llama3',
+                }
+                llm_model = kwargs.get('llm_model') or default_models.get(llm_provider, 'gpt-4o')
+                llm_config = Config(
+                    llm_provider=llm_provider,
+                    llm_api_key=kwargs.get('llm_api_key'),
+                    llm_model=llm_model,
+                    llm_temperature=kwargs.get('llm_temperature', 0.7),
+                    use_cache=not kwargs.get('no_cache', False),
+                )
                 init_cache(llm_config)
                 response = call_llm(rendered_prompt, config=llm_config)
                 # Store raw response for chaining
@@ -412,7 +562,9 @@ class ComponentRenderer:
             f'<span class="progress-values">{min_val} - {max_val}</span>'
             f'</div>'
             f'<div class="progress-bar-container">'
-            f'<div class="progress-bar progress-{variant}" style="width: {pct}%"></div>'
+            f'<div class="progress-bar">'
+            f'<div class="progress-fill progress-{variant}" style="width: {pct}%"></div>'
+            f'</div>'
             f'<div class="progress-marker" style="left: {pct}%">'
             f'<span class="progress-current">{current}</span>'
             f'</div></div></div>'
@@ -894,7 +1046,8 @@ def generate_report(
     output_dir: str,
     config_path: Optional[str] = None,
     theme_id: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    **kwargs
 ) -> Path:
     """
     Generate an HTML report from data files using YAML configuration.
@@ -905,6 +1058,7 @@ def generate_report(
         config_path: Path to report_config.yaml (defaults to plugin dir)
         theme_id: Theme ID to use (defaults to config's theme setting)
         dry_run: If True, skip LLM calls
+        **kwargs: LLM settings (llm_provider, llm_api_key, llm_model, llm_temperature)
     
     Returns:
         Path to the generated index.html
@@ -944,8 +1098,8 @@ def generate_report(
     # Calculate stats
     stats = calculate_stats(data_points)
     
-    # Generate LLM content
-    llm_content = generate_llm_content(config, data_points, stats, dry_run)
+    # Generate LLM content (pass LLM kwargs)
+    llm_content = generate_llm_content(config, data_points, stats, dry_run, **kwargs)
     
     # Initialize chart generator and template loader
     chart_gen = ''' + class_name + '''ChartGenerator()

@@ -4,16 +4,28 @@ BobReview - Report Generation Framework
 
 A comprehensive tool for generating detailed reports with LLM-powered insights.
 
-v1.0.8: Standardized APIs & DataFrame Support
+v1.0.9: Flet GUI
 """
 
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __author__ = "Siva Vadlamani"
-__description__ = "Report generation framework with plugin support"
+__description__ = "Report generation with plugins"
 
 # Import from new package structure
 from .core import Config
 from .cli import main as cli_main
+
+try:
+    from .gui import main as gui_main
+except ModuleNotFoundError as e:
+    if e.name == 'flet' or (e.name and e.name.startswith('flet.')):
+        def gui_main():
+            """Stub that raises when the optional flet dependency is missing."""
+            raise RuntimeError(
+                "GUI requires flet. Install with: pip install flet"
+            )
+    else:
+        raise
 
 __all__ = [
     '__author__',
@@ -21,5 +33,6 @@ __all__ = [
     '__version__',
     'Config',
     'cli_main',
+    'gui_main',
 ]
 

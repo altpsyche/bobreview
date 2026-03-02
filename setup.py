@@ -38,33 +38,15 @@ def read_requirements():
 
 def get_packages():
     """
-    Get packages: explicit core packages + auto-discovered plugins.
-    
+    Auto-discover all bobreview packages.
+
     Returns:
-        List of package names combining explicit core packages with auto-discovered plugins.
+        List of all discovered package names under bobreview.
     """
-    # Core packages (explicitly listed)
-    core_packages = [
-        "bobreview",
-        "bobreview.core",
-        "bobreview.core.plugin_system",
-        "bobreview.core.static",
-        "bobreview.core.plugin_system.registries",
-        "bobreview.plugins",
-        "bobreview.services",
-        "bobreview.services.llm",
-        "bobreview.services.llm.providers",
-        "bobreview.engine",
-    ]
-    
-    # Auto-discover plugin packages (plugins are not shipped with core)
-    plugin_packages = find_packages(
+    return find_packages(
         where=".",
-        include=["bobreview.plugins.*"],
-        exclude=["bobreview.plugins"]
+        include=["bobreview", "bobreview.*"],
     )
-    
-    return core_packages + plugin_packages
 
 
 # Read requirements from requirements.txt (single source of truth)

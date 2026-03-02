@@ -7,6 +7,7 @@ All UI text labels come from JSON configuration - no hardcoded strings.
 from pathlib import Path
 from typing import Dict, Any, Optional, TYPE_CHECKING
 from dataclasses import asdict
+import threading
 
 from jinja2 import (
     Environment,
@@ -29,6 +30,7 @@ from .plugin_system import get_registry
 
 # Global template engine instance
 _engine_instance: Optional["TemplateEngine"] = None
+_engine_lock = threading.Lock()
 
 
 class TemplateEngine:
@@ -125,8 +127,8 @@ class TemplateEngine:
             String with placeholders replaced by values
         """
         import re
-        from markupsafe import Markup
-        
+        from markupsafe import escape
+
         if not template_str or context is None:
             return template_str or ''
         
@@ -224,7 +226,7 @@ class TemplateEngine:
                 # Variable not found, keep original placeholder
                 return match.group(0)
             
-            # Format numbers nicely
+            # Format numbers nicely (numbers are safe, no escaping needed)
             if isinstance(value, float):
                 if value >= 1000:
                     return f"{round(value):,}"
@@ -234,7 +236,8 @@ class TemplateEngine:
                 return str(int(value))
             if isinstance(value, int) and value >= 1000:
                 return f"{value:,}"
-            return str(value)
+            # Escape string values to prevent XSS from user-controlled data
+            return str(escape(str(value)))
         
         # Find all {var} or {var.path} patterns
         result = re.sub(r'\{([^}]+)\}', replace_var, template_str)
@@ -383,11 +386,14 @@ def get_template_engine(custom_paths: Optional[list] = None, force_refresh: bool
     """
     global _engine_instance
     if _engine_instance is None or force_refresh:
-        _engine_instance = TemplateEngine(custom_paths)
+        with _engine_lock:
+            if _engine_instance is None or force_refresh:
+                _engine_instance = TemplateEngine(custom_paths)
     return _engine_instance
 
 
 def reset_template_engine():
     """Reset the global template engine (for testing)."""
     global _engine_instance
-    _engine_instance = None
+    with _engine_lock:
+        _engine_instance = None

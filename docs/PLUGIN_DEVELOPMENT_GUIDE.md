@@ -343,10 +343,18 @@ def on_load(self, registry):
     helper.add_theme(MY_PLUGIN_THEME)
 ```
 
-**Available scaffold themes:** Midnight, Aurora, Sunset, Frost
+**Export THEME_NAMES for GUI discovery:**
+
+```python
+# theme.py - export available theme names
+THEME_NAMES = ['my_dark', 'my_light', 'custom']  # List your theme short names
+```
+
+The GUI reads `THEME_NAMES` to populate the theme dropdown. This is the single source of truth for available themes.
+
+**Available scaffold themes:** dungeon, midnight, aurora, sunset, frost
 
 | Property | Description |
-|----------|-------------|
 |----------|-------------|
 | `accent` | Primary accent (buttons, links) |
 | `accent_soft` | Translucent accent for backgrounds |
@@ -653,6 +661,90 @@ python -c "from my_plugin.plugin import MyPlugin; print('OK')"
 
 ---
 
+---
+
 ## Reference Implementation
 
 Use `bobreview plugins create my-plugin --template full` to generate a complete working example.
+
+---
+
+## LLM Configuration
+
+Plugins receive LLM settings via `**kwargs` in their `generate_report()` function.
+
+### Available kwargs
+
+| Kwarg | Type | Default | Description |
+|-------|------|---------|-------------|
+| `llm_provider` | str | `"openai"` | Provider: `openai`, `anthropic`, `ollama` |
+| `llm_api_key` | str | `None` | API key (falls back to env var) |
+| `llm_model` | str | `"gpt-4o"` | Model name |
+| `llm_temperature` | float | `0.7` | Temperature 0.0-2.0 |
+| `no_cache` | bool | `False` | Skip cache, force new LLM call |
+| `dry_run` | bool | `False` | Skip LLM calls entirely |
+
+### Example Usage
+
+```python
+def generate_report(
+    data_dir: str,
+    output_dir: str,
+    config_path: Optional[str] = None,
+    dry_run: bool = False,
+    **kwargs  # Receives LLM settings
+) -> Path:
+    from bobreview.core.config import Config
+    
+    # Create Config with LLM settings from kwargs
+    llm_config = Config(
+        llm_provider=kwargs.get('llm_provider', 'openai'),
+        llm_api_key=kwargs.get('llm_api_key'),
+        llm_model=kwargs.get('llm_model', 'gpt-4o'),
+        llm_temperature=kwargs.get('llm_temperature', 0.7),
+        use_cache=not kwargs.get('no_cache', False),
+    )
+    
+    # Use llm_config for LLM calls
+    ...
+```
+
+### CLI Usage
+
+```bash
+bobreview --plugin my-plugin --dir ./data \
+  --llm-provider anthropic \
+  --llm-api-key sk-xxx \
+  --llm-model claude-3-opus \
+  --llm-temperature 0.3 \
+  --no-cache
+```
+
+---
+
+## Caching
+
+BobReview caches LLM responses to avoid redundant API calls.
+
+### Cache Location
+
+```
+~/.bobreview/cache/
+```
+
+### Cache Key
+
+Cache entries are uniquely identified by:
+- Prompt text
+- Data table content  
+- Model name
+- Temperature
+- Provider
+
+Different reports with different data get separate cache entries.
+
+### Disabling Cache
+
+- **GUI**: Check "No Cache" in Generate view
+- **CLI**: Use `--no-cache` flag
+- **Code**: Set `use_cache=False` in Config

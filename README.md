@@ -2,7 +2,7 @@
 
 **Plugin based report generation framework**
 
-![Version](https://img.shields.io/badge/version-1.0.8-blue)
+![Version](https://img.shields.io/badge/version-1.0.9-blue)
 ![Python](https://img.shields.io/badge/python-3.10+-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -67,9 +67,37 @@ bobreview plugins info <name>
 ### Other
 ```bash
 bobreview --list-plugins
-bobreview --list-providers
-bobreview doctor
+bobreview plugins list
+bobreview gui
 ```
+
+## Desktop GUI
+
+Launch the Flet-based desktop application:
+
+```bash
+bobreview gui
+```
+
+![BobReview GUI](docs/images/flet_gui.png)
+
+### Features
+
+| View | Description |
+|------|-------------|
+| **Dashboard** | Plugin stats, quick actions |
+| **Plugins** | Install, uninstall, view details |
+| **Generate** | Run reports with progress tracking |
+| **Config Editor** | Visual YAML editing with undo/redo |
+| **LLM Settings** | Configure OpenAI, Anthropic, Ollama |
+
+### Config Editor
+
+- Undo/Redo (50-state history)
+- YAML validation on load
+- Error dialogs with tracebacks
+- Plugin hot reload button
+- Expression helper for data fields
 
 ## Core Structure
 

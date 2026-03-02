@@ -54,14 +54,15 @@ class DataParserRegistry(BaseRegistry):
             key for key, owner in self._component_owners.items()
             if owner == plugin_name and key.startswith('parser:')
         ]
-        
+
         for key in to_remove:
             parser_name = key.split(':', 1)[1]
             if parser_name in self._parsers:
                 del self._parsers[parser_name]
                 count += 1
             del self._component_owners[key]
-        
+
+        self._prune_collision_log(plugin_name)
         logger.info(f"Unregistered {count} parsers from plugin: {plugin_name}")
         return count
 

@@ -14,6 +14,7 @@ import importlib
 import importlib.util
 import logging
 import sys
+import threading
 
 from .base import BasePlugin, PluginInfo
 from .manifest import PluginManifest, validate_manifest
@@ -73,12 +74,16 @@ class PluginLoader:
         
         # Loaded plugins: name -> plugin instance
         self._loaded: Dict[str, BasePlugin] = {}
-        
+
         # Discovered manifests: name -> manifest
         self._manifests: Dict[str, PluginManifest] = {}
-        
+
         # Track load order for proper unloading
         self._load_order: List[str] = []
+
+        # Track sys.path entries added per plugin so they can be
+        # removed on unload, preventing long-lived path pollution.
+        self._added_sys_paths: Dict[str, List[str]] = {}  # plugin_name -> [paths]
     
     def add_plugin_dir(self, directory: Path) -> None:
         """Add a directory to search for plugins."""
@@ -270,9 +275,9 @@ class PluginLoader:
                 manifest_resolved = manifest.plugin_path.resolve()
                 bundled_resolved = bundled_dir.resolve()
                 is_builtin = bundled_resolved in manifest_resolved.parents or manifest_resolved.parent == bundled_resolved
-            except Exception:
-                pass
-        
+            except Exception as e:
+                logger.debug(f"Could not determine if plugin is builtin: {e}")
+
         try:
             if is_builtin:
                 # Built-in plugins: import from package
@@ -345,10 +350,13 @@ class PluginLoader:
                 plugin_dir = manifest.plugin_path
                 safe_name = manifest.name.replace('-', '_')
                 
-                # Add parent directory to path if needed
+                # Add parent directory to path if needed and track it
+                # so it can be cleaned up on unload.
                 parent_dir = str(plugin_dir.parent)
                 if parent_dir not in sys.path:
                     sys.path.insert(0, parent_dir)
+                    paths_added = self._added_sys_paths.setdefault(manifest.name, [])
+                    paths_added.append(parent_dir)
                 
                 # Register the plugin as a package in sys.modules
                 package_name = safe_name
@@ -437,28 +445,72 @@ class PluginLoader:
     def unload(self, plugin_name: str) -> None:
         """
         Unload a plugin.
-        
+
         Parameters:
             plugin_name: Name of the plugin to unload
         """
         if plugin_name not in self._loaded:
             logger.warning(f"Plugin not loaded: {plugin_name}")
             return
-        
+
         plugin = self._loaded[plugin_name]
-        
+
         try:
             # Call on_unload
             plugin.on_unload()
-            
+
             # Unregister all components
             self.registry.unregister_plugin_components(plugin_name)
-            
+
+            # Clean up sys.path entries that were added during load
+            for path_entry in self._added_sys_paths.pop(plugin_name, []):
+                if path_entry in sys.path:
+                    sys.path.remove(path_entry)
+                    logger.debug(f"Removed sys.path entry: {path_entry}")
+
+            # Clean up sys.modules entries for this plugin so reload
+            # picks up fresh code instead of returning stale cached modules.
+            safe_name = plugin_name.replace('-', '_')
+            manifest = self._manifests.get(plugin_name)
+            plugin_dir = str(manifest.plugin_path.resolve()) if manifest and manifest.plugin_path else None
+            stale_prefixes = (safe_name + '.', f'bobreview.plugins.{safe_name}.')
+            stale_keys = [
+                key for key in list(sys.modules)
+                if key == safe_name
+                or key == f'bobreview.plugins.{safe_name}'
+                or key.startswith(stale_prefixes)
+            ]
+            for key in stale_keys:
+                mod = sys.modules.get(key)
+                # Verify module ownership: only remove modules that belong
+                # to this plugin (have a __file__ under the plugin directory)
+                # or have no __file__ (namespace packages created during load).
+                mod_file = getattr(mod, '__file__', None)
+                if mod_file and plugin_dir:
+                    try:
+                        resolved_mod = Path(mod_file).resolve()
+                        resolved_mod.relative_to(Path(plugin_dir))
+                    except ValueError:
+                        logger.debug(f"Skipping sys.modules entry {key}: outside plugin dir")
+                        continue
+                    except OSError:
+                        continue
+                del sys.modules[key]
+                logger.debug(f"Removed sys.modules entry: {key}")
+
             # Remove from loaded
             del self._loaded[plugin_name]
             if plugin_name in self._load_order:
                 self._load_order.remove(plugin_name)
-            
+
+            # Clear engine caches that may reference this plugin's report
+            # systems or templates.
+            try:
+                from ...engine.loader import clear_cache as clear_engine_cache
+                clear_engine_cache()
+            except Exception as e:
+                logger.debug("Failed to clear engine cache: %s", e, exc_info=True)
+
             logger.info(f"Unloaded plugin: {plugin_name}")
             
         except Exception as e:
@@ -497,23 +549,27 @@ class PluginLoader:
     ) -> List[BasePlugin]:
         """
         Load all enabled plugins.
-        
+
+        After loading, the global template engine is refreshed so that
+        any template paths registered by the newly loaded plugins are
+        picked up immediately.
+
         Parameters:
             enabled: List of enabled plugin names (None = all discovered)
             disabled: List of disabled plugin names
-            
+
         Returns:
             List of loaded plugins
         """
         disabled = disabled or []
         loaded = []
-        
+
         # Determine which plugins to load
         if enabled is not None:
             to_load = [name for name in enabled if name not in disabled]
         else:
             to_load = [name for name in self._manifests if name not in disabled]
-        
+
         # Load each plugin
         for plugin_name in to_load:
             try:
@@ -521,7 +577,35 @@ class PluginLoader:
                 loaded.append(plugin)
             except Exception as e:
                 logger.error(f"Failed to load plugin '{plugin_name}': {e}")
-        
+
+        # Refresh the template engine so newly registered template paths
+        # are visible.  Import lazily to avoid circular dependency.
+        if loaded:
+            try:
+                from ..template_engine import get_template_engine
+                # Preserve any previously configured custom template paths
+                existing_engine = get_template_engine()
+                existing_paths = None
+                if hasattr(existing_engine, 'env') and hasattr(existing_engine.env, 'loader'):
+                    choice_loader = existing_engine.env.loader
+                    if hasattr(choice_loader, 'loaders'):
+                        existing_paths = [
+                            loader.searchpath[0]
+                            for loader in choice_loader.loaders
+                            if hasattr(loader, 'searchpath') and loader.searchpath
+                        ]
+                get_template_engine(force_refresh=True, custom_paths=existing_paths)
+            except Exception as e:
+                logger.debug(f"Template engine refresh skipped: {e}")
+
+            # Invalidate engine discovery/report caches so newly loaded
+            # plugins' report systems are visible without manual refresh.
+            try:
+                from ...engine.loader import clear_cache as clear_engine_cache
+                clear_engine_cache()
+            except Exception as e:
+                logger.debug(f"Engine cache invalidation skipped: {e}")
+
         return loaded
     
     def unload_all(self) -> None:
@@ -559,18 +643,22 @@ class PluginLoader:
 
 # Global loader instance
 _global_loader: Optional[PluginLoader] = None
+_loader_lock = threading.Lock()
 
 
 def get_loader() -> PluginLoader:
-    """Get the global plugin loader instance."""
+    """Get the global plugin loader instance (thread-safe)."""
     global _global_loader
     if _global_loader is None:
-        _global_loader = PluginLoader()
+        with _loader_lock:
+            if _global_loader is None:
+                _global_loader = PluginLoader()
     return _global_loader
 
 
 def init_loader(plugin_dirs: List[Path]) -> PluginLoader:
     """Initialize the global plugin loader with directories."""
     global _global_loader
-    _global_loader = PluginLoader(plugin_dirs)
+    with _loader_lock:
+        _global_loader = PluginLoader(plugin_dirs)
     return _global_loader

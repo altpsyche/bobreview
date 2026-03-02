@@ -28,6 +28,7 @@ Usage:
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 import logging
+import threading
 
 from .processor import ValidatedComponent, get_component_processor
 
@@ -194,31 +195,35 @@ class ComponentRenderer:
 
 # Singleton instance
 _renderer_instance: Optional[ComponentRenderer] = None
+_renderer_lock = threading.Lock()
 
 
 def get_component_renderer(template_engine=None) -> ComponentRenderer:
     """
-    Get or create the global ComponentRenderer instance.
-    
+    Get or create the global ComponentRenderer instance (thread-safe).
+
     Parameters:
         template_engine: TemplateEngine instance (required on first call)
-    
+
     Returns:
         ComponentRenderer singleton
     """
     global _renderer_instance
-    
+
     if _renderer_instance is None:
-        if template_engine is None:
-            raise ValueError(
-                "template_engine is required when creating ComponentRenderer"
-            )
-        _renderer_instance = ComponentRenderer(template_engine)
-    
+        with _renderer_lock:
+            if _renderer_instance is None:
+                if template_engine is None:
+                    raise ValueError(
+                        "template_engine is required when creating ComponentRenderer"
+                    )
+                _renderer_instance = ComponentRenderer(template_engine)
+
     return _renderer_instance
 
 
 def reset_component_renderer():
     """Reset the renderer singleton (for testing)."""
     global _renderer_instance
-    _renderer_instance = None
+    with _renderer_lock:
+        _renderer_instance = None

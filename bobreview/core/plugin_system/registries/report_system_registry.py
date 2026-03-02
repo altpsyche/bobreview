@@ -57,14 +57,15 @@ class ReportSystemRegistry(BaseRegistry):
             key for key, owner in self._component_owners.items()
             if owner == plugin_name and key.startswith('report_system:')
         ]
-        
+
         for key in to_remove:
             system_name = key.split(':', 1)[1]
             if system_name in self._report_systems:
                 del self._report_systems[system_name]
                 count += 1
             del self._component_owners[key]
-        
+
+        self._prune_collision_log(plugin_name)
         logger.info(f"Unregistered {count} report systems from plugin: {plugin_name}")
         return count
 

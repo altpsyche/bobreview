@@ -77,14 +77,15 @@ class ServiceRegistry(BaseRegistry):
             key for key, owner in self._component_owners.items()
             if owner == plugin_name and key.startswith('service:')
         ]
-        
+
         for key in to_remove:
             service_name = key.split(':', 1)[1]
             if service_name in self._services:
                 del self._services[service_name]
                 count += 1
             del self._component_owners[key]
-        
+
+        self._prune_collision_log(plugin_name)
         logger.info(f"Unregistered {count} services from plugin: {plugin_name}")
         return count
 

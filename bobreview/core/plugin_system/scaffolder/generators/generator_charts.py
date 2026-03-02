@@ -81,7 +81,20 @@ class ''' + class_name + '''ChartGenerator:
             return self._generate_histogram(chart_id, title, values, y_field, theme)
         
         if chart_type in ('pie', 'doughnut'):
-            return self._generate_pie_chart(chart_id, title, labels, values, chart_type, theme)
+            # Aggregate from the full dataset (not the truncated top-20)
+            # so distribution charts reflect all data points.
+            from collections import Counter
+            all_labels = [d.get(x_field, d.get('name', f'#{i}')) for i, d in enumerate(data_points)]
+            counts = Counter(all_labels)
+            # Cap to top 15 categories; aggregate the rest into "Other"
+            top_items = counts.most_common(15)
+            other_count = sum(counts.values()) - sum(c for _, c in top_items)
+            agg_labels = [label for label, _ in top_items]
+            agg_values = [count for _, count in top_items]
+            if other_count > 0:
+                agg_labels.append("Other")
+                agg_values.append(other_count)
+            return self._generate_pie_chart(chart_id, title, agg_labels, agg_values, chart_type, theme)
         
         if chart_type == 'line':
             return self._generate_line_chart(chart_id, title, labels, values, theme)
