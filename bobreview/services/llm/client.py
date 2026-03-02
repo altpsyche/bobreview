@@ -199,23 +199,33 @@ def call_llm_chunked(
     """
     if chunk_size is None:
         chunk_size = config.llm_chunk_size
-    
+
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
-    
+
+    if max_chunks <= 0:
+        raise ValueError("max_chunks must be positive")
+
     if not data_points:
         return call_llm(prompt_base, data_table=None, config=config)
 
-    # Safety check: cap total number of LLM API calls
+    # Safety check: cap total number of LLM API calls.
+    # The pairwise combine phase adds up to (initial_chunks - 1) extra calls,
+    # so total_expected = initial_chunks + (initial_chunks - 1) = 2*initial - 1.
+    # Reduce initial_chunks until total_expected <= max_chunks.
     import math
-    total_chunks = math.ceil(len(data_points) / chunk_size)
-    if total_chunks > max_chunks:
+    initial_chunks = math.ceil(len(data_points) / chunk_size)
+    total_expected = 2 * initial_chunks - 1 if initial_chunks > 1 else 1
+    if total_expected > max_chunks:
+        # Solve: 2*n - 1 <= max_chunks => n <= (max_chunks + 1) / 2
+        allowed_initial = max((max_chunks + 1) // 2, 1)
         log_warning(
-            f"Data has {len(data_points)} points requiring {total_chunks} chunks "
-            f"(limit: {max_chunks}). Truncating to first {max_chunks * chunk_size} points.",
+            f"Data has {len(data_points)} points requiring {initial_chunks} chunks "
+            f"({total_expected} total LLM calls including combines, limit: {max_chunks}). "
+            f"Truncating to {allowed_initial} chunks ({allowed_initial * chunk_size} points).",
             config,
         )
-        data_points = data_points[:max_chunks * chunk_size]
+        data_points = data_points[:allowed_initial * chunk_size]
 
     # Process in chunks
     results = []
@@ -229,6 +239,10 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
         result = call_llm(chunk_prompt, data_table=data_table, config=config)
         results.append(result)
     
+    # Guard against empty results (e.g., if data was truncated to nothing)
+    if not results:
+        return table_formatter([])
+
     # Combine if multiple chunks using pairwise reduction
     if len(results) == 1:
         return results[0]

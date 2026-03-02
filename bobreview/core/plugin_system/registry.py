@@ -125,4 +125,5 @@ def get_registry() -> PluginRegistry:
 def reset_registry() -> None:
     """Reset the global registry (mainly for testing)."""
     global _global_registry
-    _global_registry = PluginRegistry()
+    with _registry_lock:
+        _global_registry = PluginRegistry()

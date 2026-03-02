@@ -280,17 +280,17 @@ header p {
     text-shadow: 0 2px 10px var(--accent-soft);
 }
 
-.stat-card--ok .stat-value {
+.stat-card.stat-ok .stat-value {
     color: var(--ok);
     text-shadow: 0 2px 10px var(--ok);
 }
 
-.stat-card--warn .stat-value {
+.stat-card.stat-warn .stat-value {
     color: var(--warn);
     text-shadow: 0 2px 10px var(--warn);
 }
 
-.stat-card--danger .stat-value {
+.stat-card.stat-danger .stat-value {
     color: var(--danger);
     text-shadow: 0 2px 10px var(--danger);
 }
@@ -370,20 +370,20 @@ header p {
     letter-spacing: 0.05em;
 }
 
-.hero-banner--danger {
+.hero-banner.hero-danger {
     border-color: var(--danger);
 }
 
-.hero-banner--danger .hero-icon {
+.hero-banner.hero-danger .hero-icon {
     color: var(--danger);
     text-shadow: 0 0 30px var(--danger);
 }
 
-.hero-banner--danger h2 {
+.hero-banner.hero-danger h2 {
     color: var(--danger);
 }
 
-.hero-banner--info {
+.hero-banner.hero-info {
     border-color: var(--accent);
 }
 
@@ -457,22 +457,22 @@ header p {
     box-shadow: 0 0 10px;
 }
 
-.progress-fill--ok {
+.progress-bar.progress-ok {
     background: linear-gradient(90deg, var(--ok), #6ee7b7);
     box-shadow: 0 0 10px var(--ok);
 }
 
-.progress-fill--warn {
+.progress-bar.progress-warn {
     background: linear-gradient(90deg, var(--warn), #fcd34d);
     box-shadow: 0 0 10px var(--warn);
 }
 
-.progress-fill--danger {
+.progress-bar.progress-danger {
     background: linear-gradient(90deg, var(--danger), #fca5a5);
     box-shadow: 0 0 10px var(--danger);
 }
 
-.progress-fill--accent {
+.progress-bar.progress-accent {
     background: linear-gradient(90deg, var(--accent), var(--accent-strong));
     box-shadow: 0 0 10px var(--accent);
 }

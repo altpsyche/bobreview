@@ -98,12 +98,12 @@ class PluginDiscovery:
             import yaml
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f) or {}
-            
+
             dirs = config.get('plugin_dirs', [])
             if isinstance(dirs, list):
                 return [Path(d).expanduser().resolve() for d in dirs if d]
-        except Exception as e:
-            logger.warning("Failed to read plugin config %s: %s", config_file, e)
+        except (OSError, yaml.YAMLError) as e:
+            logger.warning("Failed to read plugin config %s: %s", config_file, e, exc_info=True)
         return []
     
     @staticmethod
@@ -127,8 +127,8 @@ class PluginDiscovery:
                 import yaml
                 with open(config_file, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f) or {}
-            except Exception as e:
-                logger.warning("Failed to parse plugin config %s: %s", config_file, e)
+            except (OSError, yaml.YAMLError) as e:
+                logger.warning("Failed to parse plugin config %s: %s", config_file, e, exc_info=True)
         
         # Add directory if not already present
         resolved = str(directory.expanduser().resolve())
@@ -145,8 +145,8 @@ class PluginDiscovery:
                 with open(config_file, 'w', encoding='utf-8') as f:
                     yaml.safe_dump(config, f, default_flow_style=False)
                 return True
-            except Exception as e:
-                logger.warning("Failed to write plugin config %s: %s", config_file, e)
+            except (OSError, yaml.YAMLError) as e:
+                logger.warning("Failed to write plugin config %s: %s", config_file, e, exc_info=True)
                 return False
         return True  # Already present
     

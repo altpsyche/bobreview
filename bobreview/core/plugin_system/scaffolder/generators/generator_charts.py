@@ -81,7 +81,14 @@ class ''' + class_name + '''ChartGenerator:
             return self._generate_histogram(chart_id, title, values, y_field, theme)
         
         if chart_type in ('pie', 'doughnut'):
-            return self._generate_pie_chart(chart_id, title, labels, values, chart_type, theme)
+            # Aggregate labels into unique categories with counts for
+            # distribution charts (doughnut/pie should show category counts,
+            # not individual data point values).
+            from collections import Counter
+            counts = Counter(labels)
+            agg_labels = list(counts.keys())
+            agg_values = list(counts.values())
+            return self._generate_pie_chart(chart_id, title, agg_labels, agg_values, chart_type, theme)
         
         if chart_type == 'line':
             return self._generate_line_chart(chart_id, title, labels, values, theme)

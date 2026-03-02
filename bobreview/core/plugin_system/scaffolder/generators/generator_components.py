@@ -123,7 +123,7 @@ class {class_name}StatCard:
             trend_icon = '<span class="trend trend-down">↓</span>'
         
         import html
-        status_class = f"stat-card--{{status}}" if status != "neutral" else ""
+        status_class = f"stat-{{status}}" if status != "neutral" else ""
         
         return f"""
         <div class="stat-card {{status_class}}">
@@ -159,9 +159,9 @@ class {class_name}StatCard:
             color: var(--text-soft);
             margin-top: 0.25rem;
         }}
-        .stat-card--ok {{ border-color: var(--ok); }}
-        .stat-card--warn {{ border-color: var(--warn); }}
-        .stat-card--danger {{ border-color: var(--danger); }}
+        .stat-card.stat-ok {{ border-color: var(--ok); }}
+        .stat-card.stat-warn {{ border-color: var(--warn); }}
+        .stat-card.stat-danger {{ border-color: var(--danger); }}
         .trend {{ margin-left: 0.25rem; }}
         .trend-up {{ color: var(--ok); }}
         .trend-down {{ color: var(--danger); }}

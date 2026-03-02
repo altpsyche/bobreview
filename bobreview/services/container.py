@@ -253,4 +253,5 @@ def get_container() -> ServiceContainer:
 def reset_container() -> None:
     """Reset the global service container."""
     global _global_container
-    _global_container = ServiceContainer()
+    with _container_lock:
+        _global_container = ServiceContainer()

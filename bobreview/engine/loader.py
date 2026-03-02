@@ -90,7 +90,7 @@ def discover_report_systems(use_cache: bool = True) -> List[Dict[str, Any]]:
     global _discovery_cache
 
     if use_cache and _discovery_cache is not None:
-        return list(_discovery_cache)
+        return copy.deepcopy(_discovery_cache)
 
     logger = logging.getLogger(__name__)
     systems = []
@@ -148,7 +148,7 @@ def discover_report_systems(use_cache: bool = True) -> List[Dict[str, Any]]:
     result = sorted(systems, key=lambda s: (source_priority.get(s["source"], 99), s["id"]))
 
     _discovery_cache = result
-    return list(result)
+    return copy.deepcopy(result)
 
 
 def list_available_systems() -> List[Dict[str, Any]]:
@@ -195,7 +195,16 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
                 allowed_dirs.append(Path(pdir).resolve())
         except Exception:
             pass
-        if not any(str(resolved).startswith(str(d)) for d in allowed_dirs):
+
+        def _is_under(child: Path, parent: Path) -> bool:
+            """Check if child path is under parent using proper ancestry."""
+            try:
+                child.relative_to(parent)
+                return True
+            except ValueError:
+                return False
+
+        if not any(_is_under(resolved, d) for d in allowed_dirs):
             _logger = logging.getLogger(__name__)
             _logger.warning(
                 "Rejected direct path outside allowed directories: %s", resolved
@@ -316,7 +325,8 @@ def load_report_system(
         # Normalize overrides so equivalent dicts share the same cache key
         # Use default=str to handle non-JSON-serializable types (e.g., Path, Enum)
         overrides_key = json.dumps(cli_overrides, sort_keys=True, default=str)
-    cache_key = f"{id_or_path}:{overrides_key}"
+    plugin_key = plugin_name if plugin_name is not None else ""
+    cache_key = f"{plugin_key}:{id_or_path}:{overrides_key}"
     if use_cache and cache_key in _report_system_cache:
         # Return a deep copy to prevent mutation of cached instances
         return copy.deepcopy(_report_system_cache[cache_key])

@@ -22,9 +22,8 @@ def list_plugins(extra_dirs: Optional[List[str]] = None):
     if extra_dirs:
         for d in extra_dirs:
             loader.add_plugin_dir(Path(d))
-    # Discover only if not already done
-    if not loader.get_discovered_plugins():
-        loader.discover()
+    # Always refresh discovery to pick up newly added plugin directories
+    loader.discover()
     return loader.get_discovered_plugins()
 
 
@@ -69,8 +68,17 @@ def create_plugin(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Check if plugin directory already exists (same guard as CLI)
-    safe_name = name.replace('-', '_').replace(' ', '_')
+    # Sanitize name: prevent path traversal and restrict to safe characters
+    import re as _re
+    # Strip path separators and parent-dir references
+    base_name = Path(name).name  # take only the final component
+    safe_name = base_name.replace('-', '_').replace(' ', '_')
+    # Enforce whitelist: only letters, digits, underscores, hyphens
+    if not _re.fullmatch(r'[A-Za-z0-9_-]+', safe_name) or not safe_name:
+        raise ValueError(
+            f"Invalid plugin name '{name}': must contain only letters, digits, "
+            "underscores, and hyphens (no path separators or '..')"
+        )
     plugin_dir = output_dir / safe_name
     if plugin_dir.exists():
         raise FileExistsError(
@@ -157,8 +165,8 @@ def generate_report(
     if extra_plugin_dirs:
         for d in extra_plugin_dirs:
             loader.add_plugin_dir(Path(d))
-    if not loader.get_discovered_plugins():
-        loader.discover()
+    # Always refresh discovery to pick up newly added plugin directories
+    loader.discover()
     
     # Find the plugin
     plugins = loader.get_discovered_plugins()
@@ -207,10 +215,22 @@ def generate_report(
         all_kwargs["llm_provider"] = llm_provider
     if llm_api_key:
         all_kwargs["llm_api_key"] = llm_api_key
-    elif os.environ.get("OPENAI_API_KEY"):
-        all_kwargs["llm_api_key"] = os.environ.get("OPENAI_API_KEY")
-    elif os.environ.get("ANTHROPIC_API_KEY"):
-        all_kwargs["llm_api_key"] = os.environ.get("ANTHROPIC_API_KEY")
+    else:
+        # Choose env var based on provider
+        provider_env_map = {
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "ollama": "OLLAMA_API_KEY",
+        }
+        env_key = provider_env_map.get((llm_provider or "").lower())
+        if env_key and os.environ.get(env_key):
+            all_kwargs["llm_api_key"] = os.environ[env_key]
+        else:
+            # Fallback: try known keys in order
+            for fallback_key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_API_KEY"):
+                if os.environ.get(fallback_key):
+                    all_kwargs["llm_api_key"] = os.environ[fallback_key]
+                    break
     if llm_model:
         all_kwargs["llm_model"] = llm_model
     if llm_temperature is not None:

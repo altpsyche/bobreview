@@ -76,14 +76,22 @@ class BaseRegistry:
                         f"(requested by '{plugin_name}')."
                     )
 
-                logger.warning(
-                    f"Component '{component_key}' already registered by "
-                    f"'{previous_owner}', overwriting with '{plugin_name}'"
-                )
-            elif not overwrite:
-                logger.warning(f"Component already registered: {component_key}")
-
-        self._component_owners[component_key] = plugin_name
+                if overwrite:
+                    logger.warning(
+                        f"Component '{component_key}' already registered by "
+                        f"'{previous_owner}', overwriting with '{plugin_name}'"
+                    )
+                    self._component_owners[component_key] = plugin_name
+                else:
+                    logger.warning(
+                        f"Component '{component_key}' already registered by "
+                        f"'{previous_owner}', keeping existing owner (overwrite=False)"
+                    )
+            else:
+                # Same owner re-registering
+                self._component_owners[component_key] = plugin_name
+        else:
+            self._component_owners[component_key] = plugin_name
 
     def get_component_owner(self, component_key: str) -> Optional[str]:
         """

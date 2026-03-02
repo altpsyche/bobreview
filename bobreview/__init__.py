@@ -17,12 +17,15 @@ from .cli import main as cli_main
 
 try:
     from .gui import main as gui_main
-except (ImportError, ModuleNotFoundError):
-    def gui_main():
-        """Stub that raises when the optional flet dependency is missing."""
-        raise RuntimeError(
-            "GUI requires flet. Install with: pip install flet"
-        )
+except ModuleNotFoundError as e:
+    if e.name == 'flet' or (e.name and e.name.startswith('flet.')):
+        def gui_main():
+            """Stub that raises when the optional flet dependency is missing."""
+            raise RuntimeError(
+                "GUI requires flet. Install with: pip install flet"
+            )
+    else:
+        raise
 
 __all__ = [
     '__author__',

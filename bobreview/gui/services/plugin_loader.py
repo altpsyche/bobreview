@@ -7,12 +7,27 @@ Provides a single point for loading plugin modules (executor, theme) with:
 - Clean API for accessing plugin attributes
 """
 
+import hashlib
 import sys
 import importlib
 import importlib.util
+import threading
 from pathlib import Path
 from typing import ClassVar, Dict, List, Optional, Any
 from types import ModuleType
+
+
+def _normalize_plugin_module_name(plugin_name: str) -> str:
+    """
+    Produce a collision-free Python-safe module name from a plugin name.
+
+    Uses a hash suffix to guarantee uniqueness even when two plugin names
+    differ only in characters that would be collapsed by simple replacement
+    (e.g., "foo-bar" vs "foo_bar").
+    """
+    readable = plugin_name.replace('-', '_').replace(' ', '_')
+    digest = hashlib.sha1(plugin_name.encode()).hexdigest()[:8]
+    return f"plugin_{readable}_{digest}"
 
 
 class PluginLoader:
@@ -30,31 +45,36 @@ class PluginLoader:
 
     # Plugin path cache: {plugin_name: Path}
     _path_cache: ClassVar[Dict[str, Path]] = {}
-    
+
+    # Re-entrant lock for thread safety on shared class state
+    _lock: ClassVar[threading.RLock] = threading.RLock()
+
     @classmethod
     def clear_cache(cls):
         """Clear all cached modules and sys.modules entries for hot-reload."""
-        # Remove stale sys.modules entries for cached plugins so Python
-        # reimports fresh code on the next load.
-        for plugin_name in list(cls._cache):
-            safe_name = plugin_name.replace('-', '_')
-            stale_prefixes = (safe_name + '.', f'bobreview.plugins.{safe_name}.')
-            stale_keys = [
-                key for key in list(sys.modules)
-                if key == safe_name
-                or key == f'bobreview.plugins.{safe_name}'
-                or key.startswith(stale_prefixes)
-            ]
-            for key in stale_keys:
-                del sys.modules[key]
-        cls._cache.clear()
-        cls._path_cache.clear()
-    
+        with cls._lock:
+            # Remove stale sys.modules entries for cached plugins so Python
+            # reimports fresh code on the next load.
+            for plugin_name in list(cls._cache):
+                safe_name = _normalize_plugin_module_name(plugin_name)
+                stale_prefixes = (safe_name + '.', f'bobreview.plugins.{safe_name}.')
+                stale_keys = [
+                    key for key in list(sys.modules)
+                    if key == safe_name
+                    or key == f'bobreview.plugins.{safe_name}'
+                    or key.startswith(stale_prefixes)
+                ]
+                for key in stale_keys:
+                    del sys.modules[key]
+            cls._cache.clear()
+            cls._path_cache.clear()
+
     @classmethod
     def _get_plugin_dir(cls, plugin_name: str) -> Optional[Path]:
         """Get plugin directory path, with caching."""
-        if plugin_name in cls._path_cache:
-            return cls._path_cache[plugin_name]
+        with cls._lock:
+            if plugin_name in cls._path_cache:
+                return cls._path_cache[plugin_name]
 
         # Import here to avoid circular imports.
         # Use get_loader() to reuse the existing global loader instead of
@@ -66,18 +86,19 @@ class PluginLoader:
         if not loader.get_discovered_plugins():
             loader.discover()
         plugins = loader.get_discovered_plugins()
-        
+
         plugin = next((p for p in plugins if p.name == plugin_name), None)
-        
+
         if plugin and plugin.path:
             plugin_dir = Path(plugin.path)
             if plugin_dir.is_file():
                 plugin_dir = plugin_dir.parent
-            cls._path_cache[plugin_name] = plugin_dir
+            with cls._lock:
+                cls._path_cache[plugin_name] = plugin_dir
             return plugin_dir
-        
+
         return None
-    
+
     @classmethod
     def _import_module(cls, plugin_name: str, module_name: str) -> Optional[ModuleType]:
         """
@@ -95,8 +116,9 @@ class PluginLoader:
             Imported module or None if not found
         """
         # Check cache first
-        if plugin_name in cls._cache and module_name in cls._cache[plugin_name]:
-            return cls._cache[plugin_name][module_name]
+        with cls._lock:
+            if plugin_name in cls._cache and module_name in cls._cache[plugin_name]:
+                return cls._cache[plugin_name][module_name]
 
         plugin_dir = cls._get_plugin_dir(plugin_name)
         if not plugin_dir:
@@ -107,38 +129,51 @@ class PluginLoader:
             return None
 
         try:
-            safe_name = plugin_name.replace('-', '_')
+            safe_name = _normalize_plugin_module_name(plugin_name)
             full_module_name = f"{safe_name}.{module_name}"
 
-            # Ensure the package is registered so relative imports work
-            if safe_name not in sys.modules:
-                init_path = plugin_dir / "__init__.py"
-                if init_path.exists():
-                    pkg_spec = importlib.util.spec_from_file_location(
-                        safe_name, init_path,
-                        submodule_search_locations=[str(plugin_dir)],
-                    )
-                    if pkg_spec and pkg_spec.loader:
-                        pkg_mod = importlib.util.module_from_spec(pkg_spec)
-                        pkg_mod.__path__ = [str(plugin_dir)]
-                        pkg_mod.__package__ = safe_name
-                        sys.modules[safe_name] = pkg_mod
-                        pkg_spec.loader.exec_module(pkg_mod)
+            with cls._lock:
+                # Ensure the package is registered so relative imports work
+                if safe_name not in sys.modules:
+                    init_path = plugin_dir / "__init__.py"
+                    if init_path.exists():
+                        pkg_spec = importlib.util.spec_from_file_location(
+                            safe_name, init_path,
+                            submodule_search_locations=[str(plugin_dir)],
+                        )
+                        if pkg_spec and pkg_spec.loader:
+                            pkg_mod = importlib.util.module_from_spec(pkg_spec)
+                            pkg_mod.__path__ = [str(plugin_dir)]
+                            pkg_mod.__package__ = safe_name
+                            sys.modules[safe_name] = pkg_mod
+                            try:
+                                pkg_spec.loader.exec_module(pkg_mod)
+                            except Exception:
+                                # Clean up partially initialized module
+                                if sys.modules.get(safe_name) is pkg_mod:
+                                    del sys.modules[safe_name]
+                                raise
 
-            spec = importlib.util.spec_from_file_location(
-                full_module_name, module_path,
-            )
-            if spec and spec.loader:
-                module = importlib.util.module_from_spec(spec)
-                module.__package__ = safe_name
-                sys.modules[full_module_name] = module
-                spec.loader.exec_module(module)
+                spec = importlib.util.spec_from_file_location(
+                    full_module_name, module_path,
+                )
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    module.__package__ = safe_name
+                    sys.modules[full_module_name] = module
+                    try:
+                        spec.loader.exec_module(module)
+                    except Exception:
+                        # Clean up partially initialized module
+                        if sys.modules.get(full_module_name) is module:
+                            del sys.modules[full_module_name]
+                        raise
 
-                # Cache the module
-                if plugin_name not in cls._cache:
-                    cls._cache[plugin_name] = {}
-                cls._cache[plugin_name][module_name] = module
-                return module
+                    # Cache the module
+                    if plugin_name not in cls._cache:
+                        cls._cache[plugin_name] = {}
+                    cls._cache[plugin_name][module_name] = module
+                    return module
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(
@@ -146,58 +181,58 @@ class PluginLoader:
             )
 
         return None
-    
+
     @classmethod
     def get_executor(cls, plugin_name: str) -> Optional[ModuleType]:
         """Get the executor module for a plugin."""
         return cls._import_module(plugin_name, 'executor')
-    
+
     @classmethod
     def get_theme_module(cls, plugin_name: str) -> Optional[ModuleType]:
         """Get the theme module for a plugin."""
         return cls._import_module(plugin_name, 'theme')
-    
+
     @classmethod
     def get_components(cls, plugin_name: str) -> List[dict]:
         """
         Get COMPONENT_TYPES from plugin's executor.
-        
+
         Returns empty list if not defined.
         """
         executor = cls.get_executor(plugin_name)
         if executor and hasattr(executor, 'COMPONENT_TYPES'):
             return executor.COMPONENT_TYPES
         return []
-    
+
     @classmethod
     def get_data_fields(cls, plugin_name: str) -> List[str]:
         """
         Get DATA_FIELDS from plugin's executor.
-        
+
         Returns empty list if not defined.
         """
         executor = cls.get_executor(plugin_name)
         if executor and hasattr(executor, 'DATA_FIELDS'):
             return executor.DATA_FIELDS
         return []
-    
+
     @classmethod
     def get_themes(cls, plugin_name: str) -> List[str]:
         """
         Get THEME_NAMES from plugin's theme module.
-        
+
         Returns empty list if not defined.
         """
         theme_module = cls.get_theme_module(plugin_name)
         if theme_module and hasattr(theme_module, 'THEME_NAMES'):
             return theme_module.THEME_NAMES
         return []
-    
+
     @classmethod
     def get_attribute(cls, plugin_name: str, module: str, attribute: str, default: Any = None) -> Any:
         """
         Generic method to get any attribute from a plugin module.
-        
+
         Args:
             plugin_name: Name of the plugin
             module: Module name ('executor', 'theme', etc.)

@@ -471,6 +471,7 @@ class PluginLoader:
             # Clean up sys.modules entries for this plugin so reload
             # picks up fresh code instead of returning stale cached modules.
             safe_name = plugin_name.replace('-', '_')
+            plugin_dir = str(manifest.plugin_path.resolve()) if manifest.plugin_path else None
             stale_prefixes = (safe_name + '.', f'bobreview.plugins.{safe_name}.')
             stale_keys = [
                 key for key in list(sys.modules)
@@ -479,6 +480,19 @@ class PluginLoader:
                 or key.startswith(stale_prefixes)
             ]
             for key in stale_keys:
+                mod = sys.modules.get(key)
+                # Verify module ownership: only remove modules that belong
+                # to this plugin (have a __file__ under the plugin directory)
+                # or have no __file__ (namespace packages created during load).
+                mod_file = getattr(mod, '__file__', None)
+                if mod_file and plugin_dir:
+                    try:
+                        resolved_mod = str(Path(mod_file).resolve())
+                        if not resolved_mod.startswith(plugin_dir):
+                            logger.debug(f"Skipping sys.modules entry {key}: outside plugin dir")
+                            continue
+                    except (ValueError, OSError):
+                        continue
                 del sys.modules[key]
                 logger.debug(f"Removed sys.modules entry: {key}")
 
@@ -492,8 +506,8 @@ class PluginLoader:
             try:
                 from ...engine.loader import clear_cache as clear_engine_cache
                 clear_engine_cache()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Failed to clear engine cache: %s", e, exc_info=True)
 
             logger.info(f"Unloaded plugin: {plugin_name}")
             
@@ -567,7 +581,18 @@ class PluginLoader:
         if loaded:
             try:
                 from ..template_engine import get_template_engine
-                get_template_engine(force_refresh=True)
+                # Preserve any previously configured custom template paths
+                existing_engine = get_template_engine()
+                existing_paths = None
+                if hasattr(existing_engine, 'env') and hasattr(existing_engine.env, 'loader'):
+                    choice_loader = existing_engine.env.loader
+                    if hasattr(choice_loader, 'loaders'):
+                        existing_paths = [
+                            loader.searchpath[0]
+                            for loader in choice_loader.loaders
+                            if hasattr(loader, 'searchpath') and loader.searchpath
+                        ]
+                get_template_engine(force_refresh=True, custom_paths=existing_paths)
             except Exception as e:
                 logger.debug(f"Template engine refresh skipped: {e}")
 
@@ -624,5 +649,6 @@ def get_loader() -> PluginLoader:
 def init_loader(plugin_dirs: List[Path]) -> PluginLoader:
     """Initialize the global plugin loader with directories."""
     global _global_loader
-    _global_loader = PluginLoader(plugin_dirs)
+    with _loader_lock:
+        _global_loader = PluginLoader(plugin_dirs)
     return _global_loader

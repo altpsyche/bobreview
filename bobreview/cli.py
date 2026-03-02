@@ -421,8 +421,17 @@ Notes:
         metavar='MODEL',
         help='LLM model name (e.g., gpt-4, claude-3-opus, llama2)'
     )
+    def temperature_type(value):
+        """Validate LLM temperature is in the range 0.0-2.0."""
+        fval = float(value)
+        if fval < 0.0 or fval > 2.0:
+            raise argparse.ArgumentTypeError(
+                f"temperature must be between 0.0 and 2.0, got {fval}"
+            )
+        return fval
+
     parser.add_argument(
-        '--llm-temperature', type=float, default=0.7,
+        '--llm-temperature', type=temperature_type, default=0.7,
         metavar='TEMP',
         help='LLM temperature 0.0-2.0 (default: 0.7)'
     )
@@ -609,10 +618,23 @@ Notes:
                 kwargs["llm_provider"] = args.llm_provider
             if getattr(args, "llm_api_key", None):
                 kwargs["llm_api_key"] = args.llm_api_key
-            elif os.environ.get("OPENAI_API_KEY"):
-                kwargs["llm_api_key"] = os.environ["OPENAI_API_KEY"]
-            elif os.environ.get("ANTHROPIC_API_KEY"):
-                kwargs["llm_api_key"] = os.environ["ANTHROPIC_API_KEY"]
+            else:
+                # Choose env var based on provider
+                provider = (getattr(args, "llm_provider", "") or "").lower()
+                provider_env_map = {
+                    "anthropic": "ANTHROPIC_API_KEY",
+                    "openai": "OPENAI_API_KEY",
+                    "ollama": "OLLAMA_API_KEY",
+                }
+                env_key = provider_env_map.get(provider)
+                if env_key and os.environ.get(env_key):
+                    kwargs["llm_api_key"] = os.environ[env_key]
+                else:
+                    # Fallback: try known keys in order
+                    for fallback_key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_API_KEY"):
+                        if os.environ.get(fallback_key):
+                            kwargs["llm_api_key"] = os.environ[fallback_key]
+                            break
             if getattr(args, "llm_model", None):
                 kwargs["llm_model"] = args.llm_model
             if getattr(args, "llm_temperature", None) is not None:

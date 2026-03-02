@@ -225,4 +225,5 @@ def get_component_renderer(template_engine=None) -> ComponentRenderer:
 def reset_component_renderer():
     """Reset the renderer singleton (for testing)."""
     global _renderer_instance
-    _renderer_instance = None
+    with _renderer_lock:
+        _renderer_instance = None

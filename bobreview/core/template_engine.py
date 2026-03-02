@@ -127,7 +127,7 @@ class TemplateEngine:
             String with placeholders replaced by values
         """
         import re
-        from markupsafe import Markup, escape
+        from markupsafe import escape
 
         if not template_str or context is None:
             return template_str or ''
