@@ -54,6 +54,8 @@ bobreview = "bobreview.cli:main"
 bobreview = [
     "py.typed",
     "core/static/styles.css",
+    "core/plugin_system/scaffolder/templates/*.yaml",
+    "core/plugin_system/scaffolder/templates/static/*.css",
 ]
 
 [tool.black]

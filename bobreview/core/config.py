@@ -141,5 +141,13 @@ def load_config(
             config.llm_model = cli_args['llm_model']
         if cli_args.get('llm_api_key'):
             config.llm_api_key = cli_args['llm_api_key']
-    
+
+    # Validate the final config
+    errors = config.validate()
+    if errors:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Config validation issues: %s", "; ".join(errors)
+        )
+
     return config

@@ -23,6 +23,9 @@ from ..core.plugin_system import get_registry, get_loader
 # Cache for loaded report systems
 _report_system_cache: Dict[str, ReportSystemDefinition] = {}
 
+# Cache for discover_report_systems() to avoid redundant filesystem scans
+_discovery_cache: Optional[List[Dict[str, Any]]] = None
+
 
 def get_builtin_report_systems_dir() -> Path:
     """Get the path to the built-in report systems directory."""
@@ -71,32 +74,39 @@ def _discover_systems_in_directory(
     return systems
 
 
-def discover_report_systems() -> List[Dict[str, Any]]:
+def discover_report_systems(use_cache: bool = True) -> List[Dict[str, Any]]:
     """
     Discover all available report systems (plugin-registered, built-in, and user custom).
-    
+
+    Results are cached after the first successful scan.  Pass
+    ``use_cache=False`` (or call ``clear_cache()``) to force a rescan.
+
     Uses lazy discovery - checks plugin directories for report_systems/ subdirectories
     without loading the plugins, then also checks loaded plugins in the registry.
-    
+
     Returns:
         List of dictionaries with 'id', 'name', 'version', 'path', 'source' keys
     """
+    global _discovery_cache
+
+    if use_cache and _discovery_cache is not None:
+        return list(_discovery_cache)
+
     logger = logging.getLogger(__name__)
     systems = []
-    
+
     # First, discover report systems from plugin directories (without loading plugins)
-    # Check plugin directories for report_systems/ subdirectories
     plugin_manager = get_loader()
-    # Get discovered plugin manifests (not loaded plugins)
-    manifests = plugin_manager.get_discovered_plugins() if hasattr(plugin_manager, 'get_discovered_plugins') else []
+    # Get discovered plugin manifests (not loaded plugins).
+    # Reuse whatever the loader already has; only discover() if empty.
+    manifests = plugin_manager.get_discovered_plugins()
     if not manifests:
-        # Try discovering if not done yet
         try:
             plugin_manager.discover()
             manifests = plugin_manager.get_discovered_plugins()
         except Exception as e:
             logger.debug(f"Plugin discovery failed: {e}")
-    
+
     # Check each plugin's directory for report_systems/ subdirectory
     for plugin_info in manifests:
         plugin_path = Path(plugin_info.path) if plugin_info.path else None
@@ -107,7 +117,7 @@ def discover_report_systems() -> List[Dict[str, Any]]:
                     # Don't duplicate
                     if not any(s['id'] == system['id'] for s in systems):
                         systems.append(system)
-    
+
     # Also check plugin registry for report systems from already-loaded plugins
     registry = get_registry()
     for name, system_def in registry.report_systems.get_all().items():
@@ -121,21 +131,24 @@ def discover_report_systems() -> List[Dict[str, Any]]:
                 'path': f'plugin:{name}',  # Indicate it's from a plugin
                 'source': 'plugin'
             })
-    
+
     # Discover built-in systems (filesystem fallback)
     builtin_dir = get_builtin_report_systems_dir()
     for system in _discover_systems_in_directory(builtin_dir, 'builtin', logger):
         # Don't duplicate if already registered by plugin
         if not any(s['id'] == system['id'] for s in systems):
             systems.append(system)
-    
+
     # Discover user custom systems
     user_dir = get_user_report_systems_dir()
     systems.extend(_discover_systems_in_directory(user_dir, 'user', logger))
-    
+
     # Return systems in deterministic order (sorted by source priority, then id)
     source_priority = {'plugin': 0, 'user': 1, 'builtin': 2}
-    return sorted(systems, key=lambda s: (source_priority.get(s["source"], 99), s["id"]))
+    result = sorted(systems, key=lambda s: (source_priority.get(s["source"], 99), s["id"]))
+
+    _discovery_cache = result
+    return list(result)
 
 
 def list_available_systems() -> List[Dict[str, Any]]:
@@ -169,18 +182,43 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
     # Check if it's a direct path to a file
     direct_path = Path(id_or_path)
     if direct_path.exists() and direct_path.is_file():
-        return direct_path.resolve()
-    
+        resolved = direct_path.resolve()
+        # Guard against path traversal: only allow .json files in known
+        # safe directories (user report systems, built-in, plugin dirs).
+        allowed_dirs = [
+            get_user_report_systems_dir().resolve(),
+            get_builtin_report_systems_dir().resolve(),
+        ]
+        # Also allow plugin directories
+        try:
+            for pdir in get_loader().plugin_dirs:
+                allowed_dirs.append(Path(pdir).resolve())
+        except Exception:
+            pass
+        if not any(str(resolved).startswith(str(d)) for d in allowed_dirs):
+            _logger = logging.getLogger(__name__)
+            _logger.warning(
+                "Rejected direct path outside allowed directories: %s", resolved
+            )
+        else:
+            return resolved
+
     # If it's a bare filename like "foo.json", also try its stem as an ID
     candidate_id = direct_path.stem if direct_path.suffix == ".json" and direct_path.parent == Path("") else id_or_path
     
+    # Get the loader once and reuse it.  Only discover if not done yet.
+    plugin_manager = get_loader()
+    if not plugin_manager.get_discovered_plugins():
+        try:
+            plugin_manager.discover()
+        except Exception as e:
+            logging.getLogger(__name__).debug(f"Plugin discovery failed during path search: {e}")
+
+    manifests = plugin_manager.get_discovered_plugins()
+
     # If plugin_name is specified, try that plugin first
     if plugin_name:
-        plugin_manager = get_loader()
-        if not plugin_manager.get_discovered_plugins():
-            plugin_manager.discover()
-        
-        for manifest in plugin_manager.get_discovered_plugins():
+        for manifest in manifests:
             if manifest.name == plugin_name or manifest.name.replace('-', '_') == plugin_name.replace('-', '_'):
                 plugin_path = Path(manifest.path) if manifest.path else None
                 if plugin_path and plugin_path.exists():
@@ -188,18 +226,7 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
                     if plugin_json_path.exists():
                         return plugin_json_path.resolve()
                 break
-    
-    # Try in plugin directories (check filesystem without loading plugins)
-    plugin_manager = get_loader()
-    manifests = plugin_manager.get_discovered_plugins() if hasattr(plugin_manager, 'get_discovered_plugins') else []
-    if not manifests:
-        # Try discovering if not done yet
-        try:
-            plugin_manager.discover()
-            manifests = plugin_manager.get_discovered_plugins()
-        except Exception as e:
-            logger.debug(f"Plugin discovery failed during path search: {e}")
-    
+
     # Check each plugin's report_systems/ directory
     for plugin_info in manifests:
         plugin_path = Path(plugin_info.path) if plugin_info.path else None
@@ -360,8 +387,10 @@ def load_report_system(
 
 
 def clear_cache():
-    """Clear the report system cache."""
+    """Clear the report system cache and discovery cache."""
+    global _discovery_cache
     _report_system_cache.clear()
+    _discovery_cache = None
 
 
 def ensure_user_directory() -> Path:

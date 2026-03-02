@@ -93,7 +93,9 @@ Generate beautiful HTML reports from any data using **[BobReview]** and a **plug
     core_table.add_row("--dir <path>", "Data directory (default: current directory)")
     core_table.add_row("--output <file>", "Output path (parent dir used, default: report.html)")
     core_table.add_row("--config <file>", "Custom report config YAML file")
+    core_table.add_row("--theme <id>", "Theme to use (plugin-specific)")
     core_table.add_row("--dry-run", "Skip LLM API calls (for testing)")
+    core_table.add_row("--no-cache", "Disable LLM response caching")
     console.print(Panel(core_table, title="[bold]Core Options[/bold]", border_style="dim"))
     
     # Discovery commands (including how to make a folder a plugin folder)
@@ -393,6 +395,15 @@ Notes:
         '--dry-run', action='store_true',
         help='Skip LLM API calls (for testing)'
     )
+    parser.add_argument(
+        '--theme', type=str, default=None,
+        metavar='THEME_ID',
+        help='Theme to use for report generation (plugin-specific)'
+    )
+    parser.add_argument(
+        '--no-cache', action='store_true',
+        help='Disable LLM response caching (force fresh generation)'
+    )
     
     # LLM Configuration
     parser.add_argument(
@@ -553,10 +564,12 @@ Notes:
             log_error(f"Plugin '{found.name}' loaded but no instance available.")
             return 1
         
-        # Look for generate_report function in the plugin module
+        # Look for generate_report function in the plugin module.
+        # The core loader registers external plugins as {safe_name} and
+        # built-in plugins as bobreview.plugins.{safe_name} in sys.modules.
         safe_name = found.name.replace('-', '_')
         plugin_module = None
-        for mod_name in [f"bobreview.plugins.{safe_name}", f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
+        for mod_name in [safe_name, f"bobreview.plugins.{safe_name}"]:
             if mod_name in sys.modules:
                 plugin_module = sys.modules[mod_name]
                 break
@@ -571,32 +584,50 @@ Notes:
         
         def call_generate_report(generate_func, name_desc):
             """Helper to call generate_report with consistent error handling."""
+            import inspect
+            import os
+
             log_info(f"Running plugin: {found.name} ({name_desc})", config=cli_config)
             log_info(f"Data directory: {data_dir}", config=cli_config)
-            # We log the full output path for user visibility, but pass the parent
-            # directory to the plugin's generate_report implementation.
             log_info(f"Output: {output_path}", config=cli_config)
             if args.dry_run:
                 log_info("Dry run mode - LLM calls will be skipped", config=cli_config)
 
-            # Build kwargs in a backwards-compatible way – only pass config_path
-            # when the user provided --config, to avoid surprising plugins that
-            # do not accept this parameter.
+            # Build kwargs
             kwargs = {
                 "dry_run": getattr(args, "dry_run", False),
             }
             if getattr(args, "config", None):
                 kwargs["config_path"] = args.config
-            
-            # LLM configuration - pass if specified
+            if getattr(args, "theme", None):
+                kwargs["theme_id"] = args.theme
+            if getattr(args, "no_cache", False):
+                kwargs["no_cache"] = True
+
+            # LLM configuration - pass if specified, fall back to env vars
             if getattr(args, "llm_provider", None):
                 kwargs["llm_provider"] = args.llm_provider
             if getattr(args, "llm_api_key", None):
                 kwargs["llm_api_key"] = args.llm_api_key
+            elif os.environ.get("OPENAI_API_KEY"):
+                kwargs["llm_api_key"] = os.environ["OPENAI_API_KEY"]
+            elif os.environ.get("ANTHROPIC_API_KEY"):
+                kwargs["llm_api_key"] = os.environ["ANTHROPIC_API_KEY"]
             if getattr(args, "llm_model", None):
                 kwargs["llm_model"] = args.llm_model
             if getattr(args, "llm_temperature", None) is not None:
                 kwargs["llm_temperature"] = args.llm_temperature
+
+            # Filter kwargs to only those the function accepts,
+            # preventing crashes with plugins that don't support newer params.
+            sig = inspect.signature(generate_func)
+            accepts_var_keyword = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD
+                for p in sig.parameters.values()
+            )
+            if not accepts_var_keyword:
+                valid_params = set(sig.parameters.keys())
+                kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
 
             try:
                 result = generate_func(

@@ -1,0 +1,2523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>verify-cli-test Adventurer&#x27;s Guild</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+:root {
+  /* Backgrounds */
+  --bg: #f0f9ff;
+  --bg-elevated: #ffffff;
+  --bg-soft: #e0f2fe;
+  
+  /* Accents */
+  --accent: #0284c7;
+  --accent-soft: rgba(2, 132, 199, 0.12);
+  --accent-strong: #0ea5e9;
+  
+  /* Text */
+  --text-main: #0f172a;
+  --text-soft: #475569;
+  
+  /* Status Colors */
+  --ok: #16a34a;
+  --ok-soft: rgba(22, 163, 74, 0.1);
+  --warn: #d97706;
+  --warn-soft: rgba(217, 119, 6, 0.1);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  
+  /* Borders & Effects */
+  --border-subtle: #bae6fd;
+  --shadow-soft: 0 4px 20px rgba(14, 165, 233, 0.08);
+  --shadow-strong: 0 12px 40px rgba(14, 165, 233, 0.15);
+  
+  /* Border Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  
+  /* Fonts */
+  --font-family: "Cinzel", "Lora", "Palatino Linotype", serif;
+  --font-mono: "Courier New", "Lucida Console", monospace;
+}
+/*
+ * verify-cli-test Plugin Styles
+ * 
+ * D&D FANTASY PARCHMENT THEME - Medieval Tavern Aesthetic
+ * Premium layout and component styles with full theme support.
+ * Theme colors are provided via CSS variables from get_theme_css().
+ */
+
+/* ===========================================
+   GLOBAL RESET & BASE
+   =========================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background:
+        radial-gradient(ellipse at top, var(--bg-soft) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, var(--bg) 0%, transparent 50%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 50%, var(--bg) 100%);
+    background-attachment: fixed;
+    color: var(--text-main);
+    min-height: 100vh;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Parchment texture overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+}
+
+/* ===========================================
+   ORNATE HEADER - Guild Banner Style
+   =========================================== */
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2.5rem 2rem;
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 3px solid var(--accent);
+    border-radius: 4px;
+    position: relative;
+    box-shadow:
+        inset 0 0 60px rgba(0, 0, 0, 0.5),
+        0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Corner decorations */
+header::before,
+header::after {
+    content: '\f6d1';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    color: var(--accent);
+    font-size: 1rem;
+    text-shadow: 0 0 10px var(--accent);
+}
+
+header::before {
+    top: -0.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+header::after {
+    bottom: -0.6rem;
+    left: 50%;
+    transform: translateX(-50%) rotate(180deg);
+}
+
+/* Hide decorative Font Awesome glyphs from screen readers */
+@media speech {
+
+    header::before,
+    header::after {
+        content: none;
+    }
+}
+
+header h1 {
+    color: var(--accent-strong);
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-shadow:
+        0 0 20px var(--accent-soft),
+        0 4px 8px rgba(0, 0, 0, 0.8);
+}
+
+header p {
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    font-style: italic;
+    letter-spacing: 0.05em;
+}
+
+/* ===========================================
+   NAVIGATION TABS - Tavern Menu Boards
+   =========================================== */
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 4px;
+}
+
+.tabs::before {
+    content: '☰ GUILD NOTICES';
+    width: 100%;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-soft);
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.tab-btn {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 2px;
+    color: var(--text-soft);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.tab-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0.5rem;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tab-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.tab-btn.active {
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: var(--text-contrast, #ffffff);
+    border-color: var(--accent-strong);
+    box-shadow:
+        0 4px 20px var(--accent-soft),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.tab-btn.active::before {
+    opacity: 0;
+}
+
+/* ===========================================
+   PAGE LAYOUTS - Scroll Sections
+   =========================================== */
+.page-content {
+    display: none;
+}
+
+.page-content.active {
+    display: block;
+    animation: unfurlScroll 0.4s ease-out;
+}
+
+@keyframes unfurlScroll {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scaleY(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scaleY(1);
+    }
+}
+
+.page-content.active.layout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 1.5rem;
+}
+
+.page-content.active.layout-single {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* ===========================================
+   STAT CARDS - Tavern Notice Boards
+   =========================================== */
+.stat-card {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    box-shadow:
+        inset 0 0 30px rgba(0, 0, 0, 0.3),
+        0 4px 20px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow:
+        inset 0 0 30px rgba(0, 0, 0, 0.3),
+        0 8px 30px rgba(0, 0, 0, 0.5),
+        0 0 20px var(--accent-soft);
+}
+
+.stat-label {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+}
+
+.stat-value {
+    color: var(--accent-strong);
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 10px var(--accent-soft);
+}
+
+.stat-card--ok .stat-value {
+    color: var(--ok);
+    text-shadow: 0 2px 10px var(--ok);
+}
+
+.stat-card--warn .stat-value {
+    color: var(--warn);
+    text-shadow: 0 2px 10px var(--warn);
+}
+
+.stat-card--danger .stat-value {
+    color: var(--danger);
+    text-shadow: 0 2px 10px var(--danger);
+}
+
+.stat-icon {
+    color: var(--accent);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+/* ===========================================
+   HERO BANNER - Quest Notice Style
+   =========================================== */
+.hero-banner {
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 2rem 2.5rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+    box-shadow:
+        inset 0 0 50px rgba(0, 0, 0, 0.4),
+        0 8px 30px rgba(0, 0, 0, 0.5);
+    grid-column: 1 / -1;
+}
+
+.hero-banner::before,
+.hero-banner::after {
+    content: '⚔';
+    position: absolute;
+    color: var(--accent);
+    font-size: 1.25rem;
+    text-shadow: 0 0 10px var(--accent);
+}
+
+.hero-banner::before {
+    top: -0.75rem;
+    left: 1.5rem;
+}
+
+.hero-banner::after {
+    top: -0.75rem;
+    right: 1.5rem;
+}
+
+/* Hide decorative sword emojis from screen readers */
+@media speech {
+
+    .hero-banner::before,
+    .hero-banner::after {
+        content: none;
+    }
+}
+
+.hero-icon {
+    font-size: 3rem;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-soft);
+    margin-bottom: 1rem;
+}
+
+.hero-banner h2 {
+    color: var(--accent-strong);
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.hero-banner p {
+    color: var(--text-soft);
+    font-style: italic;
+    letter-spacing: 0.05em;
+}
+
+.hero-banner--danger {
+    border-color: var(--danger);
+}
+
+.hero-banner--danger .hero-icon {
+    color: var(--danger);
+    text-shadow: 0 0 30px var(--danger);
+}
+
+.hero-banner--danger h2 {
+    color: var(--danger);
+}
+
+.hero-banner--info {
+    border-color: var(--accent);
+}
+
+/* ===========================================
+   DIVIDERS - Decorative Scroll Dividers
+   =========================================== */
+.section-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 2rem 0;
+    grid-column: 1 / -1;
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+.section-divider::before,
+.section-divider::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
+}
+
+.divider-icon {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+/* ===========================================
+   PROGRESS BARS - Quest Completion Style
+   =========================================== */
+.progress-card {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    padding: 1.25rem 1.5rem;
+    position: relative;
+}
+
+.progress-label {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.progress-value {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.progress-bar {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    height: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px;
+}
+
+.progress-fill--ok {
+    background: linear-gradient(90deg, var(--ok), #6ee7b7);
+    box-shadow: 0 0 10px var(--ok);
+}
+
+.progress-fill--warn {
+    background: linear-gradient(90deg, var(--warn), #fcd34d);
+    box-shadow: 0 0 10px var(--warn);
+}
+
+.progress-fill--danger {
+    background: linear-gradient(90deg, var(--danger), #fca5a5);
+    box-shadow: 0 0 10px var(--danger);
+}
+
+.progress-fill--accent {
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    box-shadow: 0 0 10px var(--accent);
+}
+
+/* ===========================================
+   MEMBER SPOTLIGHT - Champion Display
+   =========================================== */
+.spotlight-card {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+        linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    box-shadow:
+        inset 0 0 40px rgba(0, 0, 0, 0.3),
+        0 8px 30px rgba(0, 0, 0, 0.5),
+        0 0 30px var(--accent-soft);
+}
+
+.spotlight-card::before {
+    content: '★ GUILD CHAMPION ★';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    padding: 0 1rem;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 10px var(--accent);
+}
+
+.spotlight-icon {
+    font-size: 2.5rem;
+    color: var(--accent);
+    text-shadow: 0 0 25px var(--accent-soft);
+    margin-bottom: 0.75rem;
+}
+
+.spotlight-title {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+}
+
+.spotlight-name {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.spotlight-meta {
+    color: var(--text-soft);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.spotlight-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.spotlight-stat i {
+    color: var(--accent);
+}
+
+.spotlight-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px dashed var(--border-subtle);
+}
+
+.spotlight-abilities {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-subtle);
+    letter-spacing: 0.05em;
+}
+
+/* ===========================================
+   CHARTS - Parchment Scroll Style
+   =========================================== */
+.chart-card {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    padding: 1.5rem;
+    position: relative;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3);
+}
+
+.chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.chart-card h3 {
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.chart-container {
+    position: relative;
+    height: 280px;
+}
+
+/* ===========================================
+   LLM CONTENT - Ancient Scroll/Tome Style
+   =========================================== */
+.llm-section {
+    background:
+        linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--accent);
+    border-left: 6px solid var(--accent);
+    padding: 2rem;
+    grid-column: 1 / -1;
+    position: relative;
+    box-shadow:
+        inset 0 0 40px rgba(0, 0, 0, 0.4),
+        0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.llm-section::before {
+    content: '\f70e';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: -15px;
+    left: 20px;
+    font-size: 1.25rem;
+    color: var(--accent);
+    background: var(--bg-elevated);
+    padding: 0 0.5rem;
+}
+
+.llm-section h3 {
+    color: var(--accent-strong);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 1px dashed var(--border-subtle);
+    padding-bottom: 0.75rem;
+}
+
+.llm-content {
+    color: var(--text-main);
+    line-height: 1.9;
+    font-style: italic;
+}
+
+.llm-content p {
+    margin-bottom: 1rem;
+}
+
+.llm-content ul,
+.llm-content ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.llm-content strong {
+    color: var(--accent-strong);
+    font-style: normal;
+}
+
+.llm-dry-run {
+    color: var(--text-soft);
+    font-style: italic;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 3px dashed var(--accent);
+}
+
+.llm-error {
+    color: var(--danger);
+    padding: 1rem;
+    background: var(--danger-soft);
+}
+
+/* ===========================================
+   DATA TABLES - Guild Registry Ledger
+   =========================================== */
+.table-section {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    overflow: hidden;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3);
+    grid-column: 1 / -1;
+}
+
+.table-section h3 {
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid var(--border-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-soft);
+    padding: 1rem 1.25rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid var(--accent);
+}
+
+td {
+    padding: 1rem 1.25rem;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.9rem;
+}
+
+tr:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+tr:hover td:first-child {
+    color: var(--accent);
+}
+
+/* ===========================================
+   STAT ROW - Guild Stat Cards
+   =========================================== */
+.stat-row,
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    grid-column: 1 / -1;
+}
+
+/* ===========================================
+   FEATURED SECTION - Champion Cards
+   =========================================== */
+.featured-section {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    grid-column: 1 / -1;
+}
+
+.featured-title {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-shadow: 0 2px 8px var(--accent-soft);
+}
+
+.featured-title::before,
+.featured-title::after {
+    content: '★';
+    font-size: 1rem;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent);
+}
+
+/* Hide decorative stars from screen readers */
+@media speech {
+
+    .featured-title::before,
+    .featured-title::after {
+        content: none;
+    }
+}
+
+.featured-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.featured-card {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+        linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.featured-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong), var(--accent));
+    box-shadow: 0 0 20px var(--accent-soft);
+}
+
+.featured-card::after {
+    content: '★';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 1.25rem;
+    color: var(--accent);
+    text-shadow: 0 0 15px var(--accent);
+    opacity: 0.6;
+    transition: all 0.3s ease;
+}
+
+.featured-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: var(--accent);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.4),
+        0 0 30px var(--accent-soft),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.featured-card:hover::after {
+    opacity: 1;
+    transform: rotate(15deg) scale(1.2);
+}
+
+/* Hide decorative star from screen readers */
+@media speech {
+    .featured-card::after {
+        content: none;
+    }
+}
+
+.featured-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.featured-name {
+    color: var(--accent-strong);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.02em;
+}
+
+.featured-class {
+    color: var(--text-contrast, #ffffff);
+    font-size: 0.75rem;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 8px var(--accent-soft);
+}
+
+.featured-meta {
+    display: flex;
+    gap: 1.25rem;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.featured-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.featured-meta i {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.featured-abilities {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.ability-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.ability-badge:hover {
+    background: var(--accent-soft);
+    transform: translateY(-2px);
+}
+
+.ability-name {
+    font-size: 0.6rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
+}
+
+.ability-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-strong);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.featured-equipment {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+}
+
+.featured-equipment i {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.featured-story {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-style: italic;
+    line-height: 1.7;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.15) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    position: relative;
+}
+
+.featured-story::before {
+    content: '"';
+    position: absolute;
+    top: 0.25rem;
+    left: 0.5rem;
+    font-size: 2rem;
+    color: var(--accent);
+    opacity: 0.3;
+    font-style: normal;
+}
+
+.no-featured {
+    color: var(--text-soft);
+    font-style: italic;
+    padding: 1rem;
+    background: var(--bg-soft);
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* ===========================================
+   ABILITY SCORES SECTION - D&D Big Six Display
+   =========================================== */
+.ability-scores-section {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, transparent 100%);
+    border-radius: 12px;
+}
+
+.ability-title {
+    color: var(--accent);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.ability-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .ability-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.ability-card {
+    position: relative;
+    padding: 1rem 0.5rem;
+}
+
+.ability-card .stat-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.ability-card .stat-value i {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.stat-range {
+    color: var(--text-soft);
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+}
+
+/* ===========================================
+   STORY SECTION - Character Backstories
+   =========================================== */
+.story-section {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, transparent 100%);
+    border-radius: 12px;
+}
+
+.story-title {
+    color: var(--accent-strong);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.story-title::before {
+    content: '📖';
+    font-size: 1rem;
+}
+
+/* Hide decorative book emoji from screen readers */
+@media speech {
+    .story-title::before {
+        content: none;
+    }
+}
+
+.story-card {
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 1px solid var(--border-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+
+.story-card:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+}
+
+.story-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.story-name {
+    color: var(--accent-strong);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.story-class {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    background: var(--bg);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.story-text {
+    color: var(--text-main);
+    font-style: italic;
+    line-height: 1.7;
+    margin: 0;
+}
+
+.no-stories {
+    color: var(--text-soft);
+    font-style: italic;
+    padding: 1rem;
+    background: var(--bg-soft);
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* ===========================================
+   SPOTLIGHT ABILITIES (mini display)
+   =========================================== */
+.spotlight-abilities {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.02em;
+}
+
+/* ===========================================
+   INITIATIVE TRACKER - Combat Turn Order
+   =========================================== */
+.initiative-tracker {
+    margin: 1.5rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border-radius: 16px;
+    border: 2px solid var(--accent);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.initiative-title {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--accent-soft);
+}
+
+.initiative-title i {
+    font-size: 1.75rem;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent-soft);
+}
+
+.initiative-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.initiative-table th {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: var(--text-contrast, #ffffff);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+
+.initiative-table th:first-child {
+    border-radius: 8px 0 0 0;
+}
+
+.initiative-table th:last-child {
+    border-radius: 0 8px 0 0;
+}
+
+.initiative-row {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.initiative-row:nth-child(odd) {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.initiative-row:hover {
+    background: var(--accent-soft);
+    transform: scale(1.01);
+}
+
+.initiative-row td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.init-order {
+    font-weight: 800;
+    font-size: 1.5rem;
+    width: 60px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.init-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-main);
+}
+
+.init-class {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.init-hp {
+    color: var(--ok);
+    font-weight: 600;
+}
+
+.init-hp i {
+    margin-right: 0.4rem;
+}
+
+.init-dex {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--accent-soft);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.init-input {
+    background: var(--bg);
+    border: 2px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    color: var(--text-main);
+    width: 100%;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.init-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ===========================================
+   QUICK REFERENCE CARDS - Character Cards
+   =========================================== */
+.quick-cards-section {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, transparent 100%);
+    border-radius: 16px;
+}
+
+.qc-title {
+    color: var(--accent-strong);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.quick-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+}
+
+.quick-card {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    position: relative;
+}
+
+.quick-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong), var(--accent));
+}
+
+.quick-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: var(--accent);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), 0 0 30px var(--accent-soft);
+}
+
+.qc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid var(--accent);
+}
+
+.qc-name {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--accent-strong);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.qc-race-class {
+    font-size: 0.7rem;
+    color: var(--text-contrast, #ffffff);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.qc-hp {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ok);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-shadow: 0 0 20px var(--ok);
+}
+
+.qc-abilities {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin: 0 1.25rem 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+}
+
+.qc-stat {
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.qc-stat:hover {
+    background: var(--accent-soft);
+    transform: translateY(-2px);
+}
+
+.qc-stat b {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.qc-proficiencies,
+.qc-languages,
+.qc-equipment,
+.qc-spells {
+    font-size: 0.85rem;
+    color: var(--text-main);
+    margin: 0 1.25rem 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border-left: 3px solid var(--border-subtle);
+    transition: all 0.2s ease;
+}
+
+.qc-proficiencies:hover,
+.qc-languages:hover,
+.qc-equipment:hover,
+.qc-spells:hover {
+    border-left-color: var(--accent);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.qc-proficiencies i,
+.qc-languages i,
+.qc-equipment i,
+.qc-spells i {
+    color: var(--accent);
+    margin-right: 0.75rem;
+}
+
+/* ===========================================
+   QUOTE BOX - NPC Dialogue
+   =========================================== */
+.quote-box {
+    margin: 1.5rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border-radius: 12px;
+    border: 2px solid var(--border-subtle);
+    position: relative;
+    text-align: center;
+}
+
+.quote-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.quote-icon {
+    font-size: 2.5rem;
+    color: var(--accent);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+.quote-text {
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--text-main);
+    margin: 0 0 1rem 0;
+    line-height: 1.6;
+}
+
+.quote-speaker {
+    display: block;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.quote-villain {
+    border-color: var(--danger);
+}
+
+.quote-villain::before {
+    background: linear-gradient(90deg, transparent, var(--danger), transparent);
+}
+
+.quote-villain .quote-icon,
+.quote-villain .quote-speaker {
+    color: var(--danger);
+}
+
+/* ===========================================
+   ENCOUNTER CARD - Enemy Stat Block
+   =========================================== */
+.encounter-card {
+    margin: 1rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, rgba(139, 69, 69, 0.1) 0%, var(--bg-soft) 100%);
+    border: 2px solid var(--danger);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.enc-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--danger);
+}
+
+.enc-icon {
+    font-size: 1.5rem;
+    color: var(--danger);
+}
+
+.enc-name {
+    flex: 1;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.enc-cr {
+    background: var(--danger);
+    color: var(--text-contrast, #ffffff);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.enc-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.enc-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.enc-stat i {
+    color: var(--danger);
+}
+
+.enc-description {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.enc-abilities,
+.enc-tactics {
+    font-size: 0.9rem;
+    color: var(--text-soft);
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid var(--danger);
+}
+
+.enc-abilities b,
+.enc-tactics b {
+    color: var(--danger);
+}
+
+/* ===========================================
+   MEMBER SPOTLIGHT - Guild Champion Card
+   =========================================== */
+.member-spotlight {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--accent);
+    border-left: 5px solid var(--accent-strong);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    position: relative;
+    box-shadow: var(--shadow-soft);
+    grid-column: 1 / -1;
+}
+
+.member-spotlight::before {
+    content: '★ GUILD CHAMPION ★';
+    position: absolute;
+    top: -0.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    color: var(--accent-strong);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 0.25rem 1rem;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-sm);
+}
+
+.spotlight-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.spotlight-badge i {
+    font-size: 1.5rem;
+    color: var(--bg);
+}
+
+.spotlight-content {
+    flex: 1;
+}
+
+.spotlight-title {
+    color: var(--accent-strong);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.spotlight-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
+.spotlight-details {
+    color: var(--text-soft);
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.spotlight-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.spotlight-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.15);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-md);
+}
+
+.spotlight-stat i {
+    color: var(--accent);
+}
+
+.spotlight-abilities {
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* ===========================================
+   STATS ROW - Side-by-Side Layout
+   =========================================== */
+.stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    grid-column: 1 / -1;
+}
+
+.stats-row .stat-card {
+    flex: 1 1 150px;
+    min-width: 120px;
+}
+
+/* ===========================================
+   DATA TABLE - Complete Roster
+   =========================================== */
+.table-section {
+    grid-column: 1 / -1;
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-elevated) 100%);
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+
+.table-section h3 {
+    color: var(--accent);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table thead {
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+}
+
+.data-table th {
+    padding: 1rem;
+    text-align: left;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--accent);
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 0.85rem 1rem;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.data-table tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* ===========================================
+   RESPONSIVE - Tavern on Small Devices
+   =========================================== */
+@media (max-width: 768px) {
+    .layout-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tabs {
+        flex-direction: column;
+    }
+
+    .tabs::before {
+        display: none;
+    }
+
+    .container {
+        padding: 1rem;
+    }
+
+    header h1 {
+        font-size: 1.75rem;
+        letter-spacing: 0.1em;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .quick-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .qc-abilities {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .featured-abilities {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>verify-cli-test Adventurer&#x27;s Guild</h1>
+            <p>Theme: VerifyCliTest Frost | 18 items</p>
+        </header>
+        <nav class="tabs"><button class="tab-btn active" onclick="showPage('tavern', event)">The Tavern</button><button class="tab-btn " onclick="showPage('armoury', event)">The Armoury</button><button class="tab-btn " onclick="showPage('quests', event)">Quest Board</button><button class="tab-btn " onclick="showPage('stories', event)">Story Forge</button><button class="tab-btn " onclick="showPage('registry', event)">Guild Registry</button><button class="tab-btn " onclick="showPage('npcs', event)">NPCs</button><button class="tab-btn " onclick="showPage('encounters', event)">Encounters</button><button class="tab-btn " onclick="showPage('session_prep', event)">Session Prep</button></nav>
+        <div id="tavern" class="page-content active layout-single"><div class="hero-banner hero-ok"><i class="fa-solid fa-shield hero-icon"></i><div class="hero-content"><h2 class="hero-title">Welcome to the Guild</h2><p class="hero-subtitle">18 adventurers ready for glory</p></div></div><div class="section-divider"><span>Featured Heroes</span></div><div class="featured-section"><h3 class="featured-title">Heroes of Renown</h3><div class="featured-grid"><div class="featured-card"><div class="featured-header"><h3 class="featured-name">Thorin Ironforge</h3><span class="featured-class">Fighter Lvl 12</span></div><div class="featured-meta"><span><i class="fa-solid fa-heart"></i> 98 HP</span><span><i class="fa-solid fa-scroll"></i> Soldier</span></div><div class="featured-abilities"><span class="ability-badge"><span class="ability-name">STR</span><span class="ability-value">18</span></span><span class="ability-badge"><span class="ability-name">DEX</span><span class="ability-value">12</span></span><span class="ability-badge"><span class="ability-name">CON</span><span class="ability-value">16</span></span><span class="ability-badge"><span class="ability-name">INT</span><span class="ability-value">10</span></span><span class="ability-badge"><span class="ability-name">WIS</span><span class="ability-value">13</span></span><span class="ability-badge"><span class="ability-name">CHA</span><span class="ability-value">14</span></span></div><div class="featured-equipment"><i class="fa-solid fa-swords"></i> Warhammer +2 &amp; Shield of Faith</div><p class="featured-story">A veteran of the Goblin Wars seeking to reclaim his clan&#x27;s lost fortress.</p></div><div class="featured-card"><div class="featured-header"><h3 class="featured-name">Lyralei Moonwhisper</h3><span class="featured-class">Ranger Lvl 10</span></div><div class="featured-meta"><span><i class="fa-solid fa-heart"></i> 72 HP</span><span><i class="fa-solid fa-scroll"></i> Outlander</span></div><div class="featured-abilities"><span class="ability-badge"><span class="ability-name">STR</span><span class="ability-value">14</span></span><span class="ability-badge"><span class="ability-name">DEX</span><span class="ability-value">18</span></span><span class="ability-badge"><span class="ability-name">CON</span><span class="ability-value">14</span></span><span class="ability-badge"><span class="ability-name">INT</span><span class="ability-value">12</span></span><span class="ability-badge"><span class="ability-name">WIS</span><span class="ability-value">16</span></span><span class="ability-badge"><span class="ability-name">CHA</span><span class="ability-value">10</span></span></div><div class="featured-equipment"><i class="fa-solid fa-swords"></i> Longbow of Seeking &amp; Cloak of Elvenkind</div><p class="featured-story">Last survivor of a village destroyed by undead. Hunts the necromancer responsible.</p></div><div class="featured-card"><div class="featured-header"><h3 class="featured-name">Elara Brightshield</h3><span class="featured-class">Paladin Lvl 11</span></div><div class="featured-meta"><span><i class="fa-solid fa-heart"></i> 95 HP</span><span><i class="fa-solid fa-scroll"></i> Noble</span></div><div class="featured-abilities"><span class="ability-badge"><span class="ability-name">STR</span><span class="ability-value">16</span></span><span class="ability-badge"><span class="ability-name">DEX</span><span class="ability-value">10</span></span><span class="ability-badge"><span class="ability-name">CON</span><span class="ability-value">14</span></span><span class="ability-badge"><span class="ability-name">INT</span><span class="ability-value">12</span></span><span class="ability-badge"><span class="ability-name">WIS</span><span class="ability-value">14</span></span><span class="ability-badge"><span class="ability-name">CHA</span><span class="ability-value">16</span></span></div><div class="featured-equipment"><i class="fa-solid fa-swords"></i> Holy Avenger &amp; Plate of the Dawn</div><p class="featured-story">Sworn to protect the innocent after witnessing a demon incursion as a child.</p></div></div></div><div class="section-divider"><span>Party Statistics</span></div><div class="stats-row"><div class="stat-card stat-info"><div class="stat-value"><i class="fa-solid fa-users"></i> 18</div><div class="stat-label">Heroes</div></div><div class="stat-card stat-ok"><div class="stat-value"><i class="fa-solid fa-crown"></i> Lvl 15</div><div class="stat-label">Champion</div></div><div class="stat-card stat-default"><div class="stat-value"><i class="fa-solid fa-heart"></i> 1381</div><div class="stat-label">Total HP</div></div><div class="stat-card stat-warn"><div class="stat-value"><i class="fa-solid fa-chart-line"></i> 10.3</div><div class="stat-label">Avg Level</div></div></div><div class="llm-section">
+  <h3>The Guild Master&#39;s Wisdom</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: The Guild Master&#x27;s Wisdom]</em><br><small>Prompt: You are Greybeard, a legendary retired adventurer who now runs the guild.  PARTY: 18 adventurers | Avg Level 10.3  TONIGHT&#x27;S ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons.  Give a SHORT assessment in character: 1. Rate the party for T...</small></div></div>
+</div></div><div id="armoury" class="page-content  layout-single"><div class="hero-banner hero-warn"><i class="fa-solid fa-swords hero-icon"></i><div class="hero-content"><h2 class="hero-title">Combat Readiness</h2><p class="hero-subtitle">Analyzing party strength for the adventure ahead</p></div></div><div class="llm-section">
+  <h3>Tactical Assessment</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Tactical Assessment]</em><br><small>Prompt: Quick tactical party assessment for the adventure ahead:  ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons.  PARTY STATS: - 18 members, HP 38-162 - Avg STR: 13.0, DEX: 14.0, CON: 14.0  Rate combat readiness FOR THIS THEME and suggest app...</small></div></div>
+</div><div class="section-divider"><span>Party Ability Scores</span></div><div class="ability-scores-section"><h3 class="ability-title">Average Party Stats</h3><div class="stats-row ability-row"><div class="stat-card stat-info ability-card"><div class="stat-value"><i class="fa-solid fa-fist-raised"></i> 13.1</div><div class="stat-label">Strength</div><div class="stat-range">8 - 20</div></div><div class="stat-card stat-info ability-card"><div class="stat-value"><i class="fa-solid fa-feather"></i> 14.2</div><div class="stat-label">Dexterity</div><div class="stat-range">10 - 20</div></div><div class="stat-card stat-info ability-card"><div class="stat-value"><i class="fa-solid fa-heart-pulse"></i> 14.2</div><div class="stat-label">Constitution</div><div class="stat-range">10 - 20</div></div><div class="stat-card stat-info ability-card"><div class="stat-value"><i class="fa-solid fa-brain"></i> 13.1</div><div class="stat-label">Intelligence</div><div class="stat-range">6 - 20</div></div><div class="stat-card stat-info ability-card"><div class="stat-value"><i class="fa-solid fa-eye"></i> 13.8</div><div class="stat-label">Wisdom</div><div class="stat-range">10 - 18</div></div><div class="stat-card stat-info ability-card"><div class="stat-value"><i class="fa-solid fa-comments"></i> 13.4</div><div class="stat-label">Charisma</div><div class="stat-range">8 - 18</div></div></div></div><div class="section-divider"><span>Hit Point Analysis</span></div><div class="stats-row"><div class="stat-card stat-ok"><div class="stat-value"><i class="fa-solid fa-shield"></i> 162</div><div class="stat-label">Tank HP</div></div><div class="stat-card stat-danger"><div class="stat-value"><i class="fa-solid fa-skull"></i> 38</div><div class="stat-label">Lowest HP</div></div><div class="stat-card stat-info"><div class="stat-value"><i class="fa-solid fa-heart-pulse"></i> 77.0</div><div class="stat-label">Average HP</div></div></div><div class="progress-card"><div class="progress-header"><span class="progress-label">Party HP Range</span><span class="progress-values">38 - 162</span></div><div class="progress-bar-container"><div class="progress-bar progress-ok" style="width: 31.451612903225808%"></div><div class="progress-marker" style="left: 31.451612903225808%"><span class="progress-current">77.0</span></div></div></div><div class="section-divider"><span>Reference Charts</span></div><div class="chart-card">
+  <h3>Class Distribution</h3>
+  <div class="chart-container">
+    <canvas id="class_chart"></canvas>
+  </div>
+</div></div><div id="quests" class="page-content  layout-single"><div class="hero-banner hero-info"><i class="fa-solid fa-scroll hero-icon"></i><div class="hero-content"><h2 class="hero-title">Quest Board</h2><p class="hero-subtitle">Choose your adventure wisely, heroes</p></div></div><div class="llm-section">
+  <h3>Available Quests</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Available Quests]</em><br><small>Prompt: Generate 3 quest hooks for a level 10.0 party.  ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons.  PARTY MEMBERS:  - Thorin Ironforge (Fighter): A veteran of the Goblin Wars seeking to reclaim his clan&amp;#39;s lost fortress....  - Lyralei ...</small></div></div>
+</div><div class="section-divider"><span>Party Composition</span></div><div class="stats-row"><div class="stat-card stat-info"><div class="stat-value"><i class="fa-solid fa-masks-theater"></i> 14</div><div class="stat-label">Backgrounds</div></div><div class="stat-card stat-ok"><div class="stat-value"><i class="fa-solid fa-hat-wizard"></i> 13</div><div class="stat-label">Classes</div></div><div class="stat-card stat-warn"><div class="stat-value"><i class="fa-solid fa-balance-scale"></i> 6</div><div class="stat-label">Alignments</div></div></div><div class="chart-card">
+  <h3>Moral Alignment</h3>
+  <div class="chart-container">
+    <canvas id="align_chart"></canvas>
+  </div>
+</div></div><div id="stories" class="page-content  layout-single"><div class="hero-banner hero-info"><i class="fa-solid fa-wand-magic-sparkles hero-icon"></i><div class="hero-content"><h2 class="hero-title">The Story Forge</h2><p class="hero-subtitle">Transform character backstories into epic sessions</p></div></div><div class="section-divider"><span>Character Stories</span></div><div class="story-section"><h3 class="story-title">Tales of the Party</h3><div class="story-card"><div class="story-header"><span class="story-name">Thorin Ironforge</span><span class="story-class">Fighter</span></div><p class="story-text">A veteran of the Goblin Wars seeking to reclaim his clan&#x27;s lost fortress.</p></div><div class="story-card"><div class="story-header"><span class="story-name">Lyralei Moonwhisper</span><span class="story-class">Ranger</span></div><p class="story-text">Last survivor of a village destroyed by undead. Hunts the necromancer responsible.</p></div><div class="story-card"><div class="story-header"><span class="story-name">Elara Brightshield</span><span class="story-class">Paladin</span></div><p class="story-text">Sworn to protect the innocent after witnessing a demon incursion as a child.</p></div></div><div class="section-divider"><span>Session Generator</span></div><div class="llm-section">
+  <h3>Tonight&#39;s Adventure</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Tonight&#x27;s Adventure] (depends on: quest_hooks)</em><br><small>Prompt: You are a master Dungeon Master. Create a ONE-SHOT adventure outline.  ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons.  FEATURED HEROES:  - Thorin Ironforge (Fighter): A veteran of the Goblin Wars seeking to reclaim his clan&amp;#39;s lost...</small></div></div>
+</div></div><div id="registry" class="page-content  layout-single"><div class="hero-banner hero-default"><i class="fa-solid fa-book-open hero-icon"></i><div class="hero-content"><h2 class="hero-title">Guild Registry</h2><p class="hero-subtitle">Official record of registered adventurers</p></div></div><div class="section-divider"><span>Registry Overview</span></div><div class="stats-row"><div class="stat-card stat-info"><div class="stat-value"><i class="fa-solid fa-users"></i> 18</div><div class="stat-label">Registered</div></div><div class="stat-card stat-ok"><div class="stat-value"><i class="fa-solid fa-crown"></i> Lvl 15</div><div class="stat-label">Highest Level</div></div><div class="stat-card stat-default"><div class="stat-value"><i class="fa-solid fa-heart"></i> 1381</div><div class="stat-label">Total HP Pool</div></div></div><div class="spotlight-card"><div class="spotlight-icon"><i class="fa-solid fa-crown"></i></div><div class="spotlight-title">Guild Champion</div><div class="spotlight-name">Grok Skullcrusher</div><div class="spotlight-meta">Barbarian • Outlander</div><div class="spotlight-stats"><span class="spotlight-stat"><i class="fa-solid fa-star"></i> Lvl 15</span><span class="spotlight-stat"><i class="fa-solid fa-heart"></i> 162 HP</span></div><div class="spotlight-abilities">STR: 20 | DEX: 12 | CON: 20 | INT: 6 | WIS: 10 | CHA: 8</div></div><div class="section-divider"><span>Complete Roster</span></div><div class="table-section">
+  <h3>Complete Adventurer Roster</h3>
+  <table class="data-table">
+    <thead>
+      <tr>
+        
+          <th>Name</th>
+        
+          <th>Class</th>
+        
+          <th>Level</th>
+        
+          <th>Hp</th>
+        
+          <th>Str</th>
+        
+          <th>Dex</th>
+        
+          <th>Con</th>
+        
+          <th>Int</th>
+        
+          <th>Wis</th>
+        
+          <th>Cha</th>
+        
+          <th>Background</th>
+        
+          <th>Equipment</th>
+        
+      </tr>
+    </thead>
+    <tbody>
+      
+        <tr>
+          
+            <td>Thorin Ironforge</td>
+          
+            <td>Fighter</td>
+          
+            <td>12</td>
+          
+            <td>98</td>
+          
+            <td>18</td>
+          
+            <td>12</td>
+          
+            <td>16</td>
+          
+            <td>10</td>
+          
+            <td>13</td>
+          
+            <td>14</td>
+          
+            <td>Soldier</td>
+          
+            <td>Warhammer +2 &amp; Shield of Faith</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Lyralei Moonwhisper</td>
+          
+            <td>Ranger</td>
+          
+            <td>10</td>
+          
+            <td>72</td>
+          
+            <td>14</td>
+          
+            <td>18</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>16</td>
+          
+            <td>10</td>
+          
+            <td>Outlander</td>
+          
+            <td>Longbow of Seeking &amp; Cloak of Elvenkind</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Grimtooth the Wise</td>
+          
+            <td>Barbarian</td>
+          
+            <td>14</td>
+          
+            <td>145</td>
+          
+            <td>20</td>
+          
+            <td>14</td>
+          
+            <td>18</td>
+          
+            <td>8</td>
+          
+            <td>12</td>
+          
+            <td>10</td>
+          
+            <td>Tribal Nomad</td>
+          
+            <td>Greataxe of Fury &amp; Belt of Giant Strength</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Elara Brightshield</td>
+          
+            <td>Paladin</td>
+          
+            <td>11</td>
+          
+            <td>95</td>
+          
+            <td>16</td>
+          
+            <td>10</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>14</td>
+          
+            <td>16</td>
+          
+            <td>Noble</td>
+          
+            <td>Holy Avenger &amp; Plate of the Dawn</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Zephyr Shadowstep</td>
+          
+            <td>Rogue</td>
+          
+            <td>9</td>
+          
+            <td>52</td>
+          
+            <td>10</td>
+          
+            <td>20</td>
+          
+            <td>12</td>
+          
+            <td>16</td>
+          
+            <td>14</td>
+          
+            <td>14</td>
+          
+            <td>Criminal</td>
+          
+            <td>Daggers of Venom &amp; Boots of Elvenkind</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Morrigan Darkhollow</td>
+          
+            <td>Warlock</td>
+          
+            <td>8</td>
+          
+            <td>61</td>
+          
+            <td>10</td>
+          
+            <td>14</td>
+          
+            <td>14</td>
+          
+            <td>16</td>
+          
+            <td>12</td>
+          
+            <td>18</td>
+          
+            <td>Sage</td>
+          
+            <td>Staff of the Pact &amp; Tome of Shadows</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Aldric Stormcaller</td>
+          
+            <td>Wizard</td>
+          
+            <td>13</td>
+          
+            <td>48</td>
+          
+            <td>8</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>20</td>
+          
+            <td>16</td>
+          
+            <td>10</td>
+          
+            <td>Scholar</td>
+          
+            <td>Staff of Power &amp; Robes of the Archmagi</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Kira Flameheart</td>
+          
+            <td>Sorcerer</td>
+          
+            <td>10</td>
+          
+            <td>68</td>
+          
+            <td>12</td>
+          
+            <td>14</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>10</td>
+          
+            <td>18</td>
+          
+            <td>Folk Hero</td>
+          
+            <td>Ring of Fire Resistance &amp; Wand of Fireballs</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Brother Marcus</td>
+          
+            <td>Cleric</td>
+          
+            <td>11</td>
+          
+            <td>78</td>
+          
+            <td>14</td>
+          
+            <td>10</td>
+          
+            <td>16</td>
+          
+            <td>12</td>
+          
+            <td>18</td>
+          
+            <td>14</td>
+          
+            <td>Acolyte</td>
+          
+            <td>Mace of Disruption &amp; Shield of Faith</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Fennwick Tinkertop</td>
+          
+            <td>Artificer</td>
+          
+            <td>7</td>
+          
+            <td>45</td>
+          
+            <td>10</td>
+          
+            <td>16</td>
+          
+            <td>12</td>
+          
+            <td>18</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>Guild Artisan</td>
+          
+            <td>Mechanical Companion &amp; Bag of Holding</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Ravenna Nightshade</td>
+          
+            <td>Bard</td>
+          
+            <td>9</td>
+          
+            <td>55</td>
+          
+            <td>10</td>
+          
+            <td>16</td>
+          
+            <td>12</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>18</td>
+          
+            <td>Entertainer</td>
+          
+            <td>Lute of Charming &amp; Rapier of Dancing</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Grok Skullcrusher</td>
+          
+            <td>Barbarian</td>
+          
+            <td>15</td>
+          
+            <td>162</td>
+          
+            <td>20</td>
+          
+            <td>12</td>
+          
+            <td>20</td>
+          
+            <td>6</td>
+          
+            <td>10</td>
+          
+            <td>8</td>
+          
+            <td>Outlander</td>
+          
+            <td>Vorpal Greataxe &amp; Cloak of Protection</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Seraphina Dawnweaver</td>
+          
+            <td>Cleric</td>
+          
+            <td>12</td>
+          
+            <td>82</td>
+          
+            <td>12</td>
+          
+            <td>10</td>
+          
+            <td>14</td>
+          
+            <td>14</td>
+          
+            <td>18</td>
+          
+            <td>16</td>
+          
+            <td>Acolyte</td>
+          
+            <td>Staff of Healing &amp; Armor of Light</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Vex the Silent</td>
+          
+            <td>Monk</td>
+          
+            <td>10</td>
+          
+            <td>64</td>
+          
+            <td>12</td>
+          
+            <td>18</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>16</td>
+          
+            <td>10</td>
+          
+            <td>Hermit</td>
+          
+            <td>Bracers of Defense &amp; Staff of Striking</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Bramblewood</td>
+          
+            <td>Druid</td>
+          
+            <td>11</td>
+          
+            <td>88</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>16</td>
+          
+            <td>13</td>
+          
+            <td>18</td>
+          
+            <td>10</td>
+          
+            <td>Outlander</td>
+          
+            <td>Staff of the Woodlands &amp; Ring of Animal Friendship</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Captain Flint</td>
+          
+            <td>Fighter</td>
+          
+            <td>8</td>
+          
+            <td>76</td>
+          
+            <td>16</td>
+          
+            <td>14</td>
+          
+            <td>16</td>
+          
+            <td>12</td>
+          
+            <td>10</td>
+          
+            <td>14</td>
+          
+            <td>Sailor</td>
+          
+            <td>Cutlass +1 &amp; Pistol of Warning</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Whisper</td>
+          
+            <td>Rogue</td>
+          
+            <td>6</td>
+          
+            <td>38</td>
+          
+            <td>10</td>
+          
+            <td>18</td>
+          
+            <td>10</td>
+          
+            <td>14</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>Urchin</td>
+          
+            <td>Cloak of Shadows &amp; Dagger of Returning</td>
+          
+        </tr>
+      
+        <tr>
+          
+            <td>Azura Frostborn</td>
+          
+            <td>Sorcerer</td>
+          
+            <td>9</td>
+          
+            <td>54</td>
+          
+            <td>10</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>14</td>
+          
+            <td>12</td>
+          
+            <td>18</td>
+          
+            <td>Noble</td>
+          
+            <td>Staff of Frost &amp; Ring of Warmth</td>
+          
+        </tr>
+      
+    </tbody>
+  </table>
+  <p class="table-info">Showing 18 of 18 items</p>
+</div></div><div id="npcs" class="page-content  layout-single"><div class="hero-banner hero-info"><i class="fa-solid fa-masks-theater hero-icon"></i><div class="hero-content"><h2 class="hero-title">Cast of Characters</h2><p class="hero-subtitle">NPCs generated for tonight&#x27;s adventure</p></div></div><div class="llm-section">
+  <h3>Key NPCs</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Key NPCs]</em><br><small>Prompt: Generate 4 NPCs for tonight&#x27;s adventure.  ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons.  PARTY LEVEL: 10.0  Create NPCs that fit the theme. For each NPC: **[NAME]** - [ROLE] ([Friendly/Neutral/Hostile]) *Appearance:* [1 sentence] *Pe...</small></div></div>
+</div><div class="section-divider"><span>Tavern Rumors</span></div><div class="llm-section">
+  <h3>Whispers in the Tavern</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Whispers in the Tavern]</em><br><small>Prompt: Generate 5 tavern rumors that players might hear.  ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons.  Create rumors that build atmosphere and provide hooks: - 2 rumors that are TRUE and directly relate to the adventure - 2 rumors that ar...</small></div></div>
+</div></div><div id="encounters" class="page-content  layout-single"><div class="hero-banner hero-danger"><i class="fa-solid fa-dragon hero-icon"></i><div class="hero-content"><h2 class="hero-title">Encounters</h2><p class="hero-subtitle">Combat and challenges for the session</p></div></div><div class="llm-section">
+  <h3>Prepared Encounters</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Prepared Encounters] (depends on: tactician, quest_hooks)</em><br><small>Prompt: Generate 3 combat encounters for tonight&#x27;s session.  ADVENTURE THEME: A mysterious curse is spreading through the land, and ancient evils stir in forgotten dungeons. PARTY: 18 characters, Avg Level 10.0  TACTICAL ASSESSMENT: [Placeholder output for tactician]  AVAILABLE QUESTS: [Placeholder output f...</small></div></div>
+</div><div class="section-divider"><span>Treasure &amp; Rewards</span></div><div class="llm-section">
+  <h3>Treasure Hoard</h3>
+  <div class="llm-content"><div class="llm-dry-run"><em>[LLM Placeholder: Treasure Hoard] (depends on: encounter_builder)</em><br><small>Prompt: Generate loot appropriate for the encounters.  PARTY LEVEL: 10.0  ENCOUNTERS TO REWARD: [Placeholder output for encounter_builder]  Create treasure that feels earned:  **Easy Encounter Loot:** - Gold: [Amount]gp - Items: [1-2 useful items]  **Medium Encounter Loot:** - Gold: [Amount]gp - Magic Item:...</small></div></div>
+</div></div><div id="session_prep" class="page-content  layout-single"><div class="hero-banner hero-default"><i class="fa-solid fa-clipboard-list hero-icon"></i><div class="hero-content"><h2 class="hero-title">Session Prep</h2><p class="hero-subtitle">Quick reference materials for the DM</p></div></div><div class="section-divider"><span>Initiative Tracker</span></div><div class="initiative-tracker"><h3 class="initiative-title"><i class="fa-solid fa-dice-d20"></i> Combat Initiative</h3><table class="initiative-table"><thead><tr><th>#</th><th>Name</th><th>Class</th><th>HP</th><th>Init</th><th>Notes</th></tr></thead><tbody><tr class="initiative-row"><td class="init-order">1</td><td class="init-name">Zephyr Shadowstep</td><td class="init-class">Rogue</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 52</td><td class="init-dex">DEX 20</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">2</td><td class="init-name">Lyralei Moonwhisper</td><td class="init-class">Ranger</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 72</td><td class="init-dex">DEX 18</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">3</td><td class="init-name">Vex the Silent</td><td class="init-class">Monk</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 64</td><td class="init-dex">DEX 18</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">4</td><td class="init-name">Whisper</td><td class="init-class">Rogue</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 38</td><td class="init-dex">DEX 18</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">5</td><td class="init-name">Fennwick Tinkertop</td><td class="init-class">Artificer</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 45</td><td class="init-dex">DEX 16</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">6</td><td class="init-name">Ravenna Nightshade</td><td class="init-class">Bard</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 55</td><td class="init-dex">DEX 16</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">7</td><td class="init-name">Grimtooth the Wise</td><td class="init-class">Barbarian</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 145</td><td class="init-dex">DEX 14</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">8</td><td class="init-name">Morrigan Darkhollow</td><td class="init-class">Warlock</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 61</td><td class="init-dex">DEX 14</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">9</td><td class="init-name">Aldric Stormcaller</td><td class="init-class">Wizard</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 48</td><td class="init-dex">DEX 14</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr><tr class="initiative-row"><td class="init-order">10</td><td class="init-name">Kira Flameheart</td><td class="init-class">Sorcerer</td><td class="init-hp"><i class="fa-solid fa-heart"></i> 68</td><td class="init-dex">DEX 14</td><td class="init-notes"><input type="text" placeholder="Notes..." class="init-input"></td></tr></tbody></table></div><div class="section-divider"><span>Character Quick Reference</span></div><div class="quick-cards-section"><h3 class="qc-title">Party Reference Cards</h3><div class="quick-cards-grid"><div class="quick-card"><div class="qc-header"><span class="qc-name">Thorin Ironforge</span><span class="qc-race-class">Dwarf Fighter 12</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 98 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 18 (+4)</span><span class="qc-stat"><b>DEX</b> 12 (+1)</span><span class="qc-stat"><b>CON</b> 16 (+3)</span><span class="qc-stat"><b>INT</b> 10 (+0)</span><span class="qc-stat"><b>WIS</b> 13 (+1)</span><span class="qc-stat"><b>CHA</b> 14 (+2)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Athletics; Intimidation; History</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Dwarvish</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Warhammer +2 &amp; Shield of Faith</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Lyralei Moonwhisper</span><span class="qc-race-class">Elf Ranger 10</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 72 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 14 (+2)</span><span class="qc-stat"><b>DEX</b> 18 (+4)</span><span class="qc-stat"><b>CON</b> 14 (+2)</span><span class="qc-stat"><b>INT</b> 12 (+1)</span><span class="qc-stat"><b>WIS</b> 16 (+3)</span><span class="qc-stat"><b>CHA</b> 10 (+0)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Survival; Perception; Stealth; Nature</div><div class="qc-spells"><i class="fa-solid fa-wand-sparkles"></i> Hunter&#x27;s Mark; Pass Without Trace; Conjure Animals</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Elvish; Sylvan</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Longbow of Seeking &amp; Cloak of Elvenkind</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Grimtooth the Wise</span><span class="qc-race-class">Half-Orc Barbarian 14</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 145 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 20 (+5)</span><span class="qc-stat"><b>DEX</b> 14 (+2)</span><span class="qc-stat"><b>CON</b> 18 (+4)</span><span class="qc-stat"><b>INT</b> 8 (-1)</span><span class="qc-stat"><b>WIS</b> 12 (+1)</span><span class="qc-stat"><b>CHA</b> 10 (+0)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Athletics; Survival; Intimidation</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Orc</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Greataxe of Fury &amp; Belt of Giant Strength</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Elara Brightshield</span><span class="qc-race-class">Human Paladin 11</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 95 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 16 (+3)</span><span class="qc-stat"><b>DEX</b> 10 (+0)</span><span class="qc-stat"><b>CON</b> 14 (+2)</span><span class="qc-stat"><b>INT</b> 12 (+1)</span><span class="qc-stat"><b>WIS</b> 14 (+2)</span><span class="qc-stat"><b>CHA</b> 16 (+3)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Persuasion; Religion; Medicine</div><div class="qc-spells"><i class="fa-solid fa-wand-sparkles"></i> Divine Smite; Lay on Hands; Shield of Faith</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Celestial</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Holy Avenger &amp; Plate of the Dawn</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Zephyr Shadowstep</span><span class="qc-race-class">Halfling Rogue 9</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 52 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 10 (+0)</span><span class="qc-stat"><b>DEX</b> 20 (+5)</span><span class="qc-stat"><b>CON</b> 12 (+1)</span><span class="qc-stat"><b>INT</b> 16 (+3)</span><span class="qc-stat"><b>WIS</b> 14 (+2)</span><span class="qc-stat"><b>CHA</b> 14 (+2)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Stealth; Sleight of Hand; Deception; Thieves&#x27; Tools</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Thieves&#x27; Cant; Halfling</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Daggers of Venom &amp; Boots of Elvenkind</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Morrigan Darkhollow</span><span class="qc-race-class">Tiefling Warlock 8</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 61 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 10 (+0)</span><span class="qc-stat"><b>DEX</b> 14 (+2)</span><span class="qc-stat"><b>CON</b> 14 (+2)</span><span class="qc-stat"><b>INT</b> 16 (+3)</span><span class="qc-stat"><b>WIS</b> 12 (+1)</span><span class="qc-stat"><b>CHA</b> 18 (+4)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Arcana; Deception; Investigation</div><div class="qc-spells"><i class="fa-solid fa-wand-sparkles"></i> Eldritch Blast; Hex; Darkness; Hunger of Hadar</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Infernal; Deep Speech</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Staff of the Pact &amp; Tome of Shadows</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Aldric Stormcaller</span><span class="qc-race-class">Human Wizard 13</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 48 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 8 (-1)</span><span class="qc-stat"><b>DEX</b> 14 (+2)</span><span class="qc-stat"><b>CON</b> 12 (+1)</span><span class="qc-stat"><b>INT</b> 20 (+5)</span><span class="qc-stat"><b>WIS</b> 16 (+3)</span><span class="qc-stat"><b>CHA</b> 10 (+0)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Arcana; History; Investigation</div><div class="qc-spells"><i class="fa-solid fa-wand-sparkles"></i> Fireball; Lightning Bolt; Counterspell; Teleport</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Draconic; Primordial</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Staff of Power &amp; Robes of the Archmagi</div></div><div class="quick-card"><div class="qc-header"><span class="qc-name">Kira Flameheart</span><span class="qc-race-class">Human Sorcerer 10</span></div><div class="qc-hp"><i class="fa-solid fa-heart"></i> 68 HP</div><div class="qc-abilities"><span class="qc-stat"><b>STR</b> 12 (+1)</span><span class="qc-stat"><b>DEX</b> 14 (+2)</span><span class="qc-stat"><b>CON</b> 14 (+2)</span><span class="qc-stat"><b>INT</b> 12 (+1)</span><span class="qc-stat"><b>WIS</b> 10 (+0)</span><span class="qc-stat"><b>CHA</b> 18 (+4)</span></div><div class="qc-proficiencies"><i class="fa-solid fa-star"></i> Persuasion; Intimidation</div><div class="qc-spells"><i class="fa-solid fa-wand-sparkles"></i> Fireball; Scorching Ray; Fly; Haste</div><div class="qc-languages"><i class="fa-solid fa-language"></i> Common; Draconic</div><div class="qc-equipment"><i class="fa-solid fa-swords"></i> Ring of Fire Resistance &amp; Wand of Fireballs</div></div></div></div></div>
+    </div>
+    <script>
+function showPage(pageId, event) {
+    document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+}
+
+// Class Distribution Doughnut Chart
+(function() {
+    const ctx = document.getElementById('class_chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ["Barbarian", "Barbarian", "Wizard", "Fighter", "Cleric", "Paladin", "Cleric", "Druid", "Ranger", "Sorcerer", "Monk", "Rogue", "Bard", "Sorcerer", "Warlock", "Fighter", "Artificer", "Rogue"],
+            datasets: [{
+                data: [15, 14, 13, 12, 12, 11, 11, 11, 10, 10, 10, 9, 9, 9, 8, 8, 7, 6],
+                backgroundColor: ["#0284c7", "#16a34a", "#d97706", "#dc2626", "rgba(2, 132, 199, 0.6)", "rgba(22, 163, 74, 0.6)", "#0284c7", "#16a34a", "#d97706", "#dc2626", "rgba(2, 132, 199, 0.6)", "rgba(22, 163, 74, 0.6)", "#0284c7", "#16a34a", "#d97706", "#dc2626", "rgba(2, 132, 199, 0.6)", "rgba(22, 163, 74, 0.6)"],
+                borderColor: '#f0f9ff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: "Class Distribution", color: '#0f172a' },
+                legend: { 
+                    position: 'right',
+                    labels: { color: '#475569', padding: 15 } 
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(240, 249, 255, 0.94)',
+                    titleColor: '#0f172a',
+                    bodyColor: '#475569',
+                    borderColor: '#0284c7',
+                    borderWidth: 1
+                }
+            }
+        }
+    });
+})();
+
+// Moral Alignment Doughnut Chart
+(function() {
+    const ctx = document.getElementById('align_chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ["Chaotic Neutral", "Chaotic Neutral", "True Neutral", "Lawful Good", "Lawful Good", "Lawful Good", "Lawful Good", "Neutral Good", "Neutral Good", "Chaotic Good", "True Neutral", "Chaotic Good", "Chaotic Neutral", "Chaotic Neutral", "Neutral Evil", "Neutral Evil", "Neutral Good", "Chaotic Good"],
+            datasets: [{
+                data: [15, 14, 13, 12, 12, 11, 11, 11, 10, 10, 10, 9, 9, 9, 8, 8, 7, 6],
+                backgroundColor: ["#0284c7", "#16a34a", "#d97706", "#dc2626", "rgba(2, 132, 199, 0.6)", "rgba(22, 163, 74, 0.6)", "#0284c7", "#16a34a", "#d97706", "#dc2626", "rgba(2, 132, 199, 0.6)", "rgba(22, 163, 74, 0.6)", "#0284c7", "#16a34a", "#d97706", "#dc2626", "rgba(2, 132, 199, 0.6)", "rgba(22, 163, 74, 0.6)"],
+                borderColor: '#f0f9ff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: "Moral Alignment", color: '#0f172a' },
+                legend: { 
+                    position: 'right',
+                    labels: { color: '#475569', padding: 15 } 
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(240, 249, 255, 0.94)',
+                    titleColor: '#0f172a',
+                    bodyColor: '#475569',
+                    borderColor: '#0284c7',
+                    borderWidth: 1
+                }
+            }
+        }
+    });
+})();
+
+    </script>
+</body>
+</html>

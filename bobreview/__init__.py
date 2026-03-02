@@ -14,7 +14,15 @@ __description__ = "Report generation with plugins"
 # Import from new package structure
 from .core import Config
 from .cli import main as cli_main
-from .gui import main as gui_main
+
+try:
+    from .gui import main as gui_main
+except (ImportError, ModuleNotFoundError):
+    def gui_main():
+        """Stub that raises when the optional flet dependency is missing."""
+        raise RuntimeError(
+            "GUI requires flet. Install with: pip install flet"
+        )
 
 __all__ = [
     '__author__',

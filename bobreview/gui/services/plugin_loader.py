@@ -11,29 +11,42 @@ import sys
 import importlib
 import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import ClassVar, Dict, List, Optional, Any
 from types import ModuleType
 
 
 class PluginLoader:
     """
     Centralized plugin module loader with caching.
-    
+
     Use this class instead of direct importlib calls to:
     - Avoid code duplication
     - Enable module caching
     - Handle relative imports properly
     """
-    
+
     # Module cache: {plugin_name: {module_type: module}}
-    _cache: Dict[str, Dict[str, ModuleType]] = {}
-    
+    _cache: ClassVar[Dict[str, Dict[str, ModuleType]]] = {}
+
     # Plugin path cache: {plugin_name: Path}
-    _path_cache: Dict[str, Path] = {}
+    _path_cache: ClassVar[Dict[str, Path]] = {}
     
     @classmethod
     def clear_cache(cls):
-        """Clear all cached modules. Useful for development/testing."""
+        """Clear all cached modules and sys.modules entries for hot-reload."""
+        # Remove stale sys.modules entries for cached plugins so Python
+        # reimports fresh code on the next load.
+        for plugin_name in list(cls._cache):
+            safe_name = plugin_name.replace('-', '_')
+            stale_prefixes = (safe_name + '.', f'bobreview.plugins.{safe_name}.')
+            stale_keys = [
+                key for key in list(sys.modules)
+                if key == safe_name
+                or key == f'bobreview.plugins.{safe_name}'
+                or key.startswith(stale_prefixes)
+            ]
+            for key in stale_keys:
+                del sys.modules[key]
         cls._cache.clear()
         cls._path_cache.clear()
     
@@ -42,13 +55,16 @@ class PluginLoader:
         """Get plugin directory path, with caching."""
         if plugin_name in cls._path_cache:
             return cls._path_cache[plugin_name]
-        
-        # Import here to avoid circular imports - use same pattern as cli_wrapper
-        from bobreview.core.plugin_system import PluginDiscovery, init_loader
-        
-        dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=[])
-        loader = init_loader(dirs)
-        loader.discover()
+
+        # Import here to avoid circular imports.
+        # Use get_loader() to reuse the existing global loader instead of
+        # init_loader() which replaces it on every call.
+        from bobreview.core.plugin_system import get_loader
+
+        loader = get_loader()
+        # Discover only if not already discovered
+        if not loader.get_discovered_plugins():
+            loader.discover()
         plugins = loader.get_discovered_plugins()
         
         plugin = next((p for p in plugins if p.name == plugin_name), None)
@@ -65,61 +81,70 @@ class PluginLoader:
     @classmethod
     def _import_module(cls, plugin_name: str, module_name: str) -> Optional[ModuleType]:
         """
-        Import a module from a plugin with proper relative import handling.
-        
+        Import a module from a plugin using spec_from_file_location.
+
+        Uses importlib.util.spec_from_file_location directly instead of
+        manipulating sys.path, which avoids interference with the core
+        loader's persistent sys.path entries.
+
         Args:
             plugin_name: Name of the plugin
             module_name: Name of module to import (e.g., 'executor', 'theme')
-        
+
         Returns:
             Imported module or None if not found
         """
         # Check cache first
         if plugin_name in cls._cache and module_name in cls._cache[plugin_name]:
             return cls._cache[plugin_name][module_name]
-        
+
         plugin_dir = cls._get_plugin_dir(plugin_name)
         if not plugin_dir:
             return None
-        
+
         module_path = plugin_dir / f'{module_name}.py'
         if not module_path.exists():
             return None
-        
-        # Add plugin parent to sys.path for relative imports
-        plugin_parent = str(plugin_dir.parent)
-        if plugin_parent not in sys.path:
-            sys.path.insert(0, plugin_parent)
-        
+
         try:
-            # Try importing as package.module for proper relative imports
-            full_module_name = f"{plugin_dir.name}.{module_name}"
-            module = importlib.import_module(full_module_name)
-            
-            # Cache the module
-            if plugin_name not in cls._cache:
-                cls._cache[plugin_name] = {}
-            cls._cache[plugin_name][module_name] = module
-            
-            return module
-            
-        except ImportError:
-            # Fallback to spec-based import for non-package plugins
-            try:
-                spec = importlib.util.spec_from_file_location(module_name, module_path)
-                if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    
-                    # Cache the module
-                    if plugin_name not in cls._cache:
-                        cls._cache[plugin_name] = {}
-                    cls._cache[plugin_name][module_name] = module
-                    
-                    return module
-            except Exception:
-                pass
-        
+            safe_name = plugin_name.replace('-', '_')
+            full_module_name = f"{safe_name}.{module_name}"
+
+            # Ensure the package is registered so relative imports work
+            if safe_name not in sys.modules:
+                init_path = plugin_dir / "__init__.py"
+                if init_path.exists():
+                    pkg_spec = importlib.util.spec_from_file_location(
+                        safe_name, init_path,
+                        submodule_search_locations=[str(plugin_dir)],
+                    )
+                    if pkg_spec and pkg_spec.loader:
+                        pkg_mod = importlib.util.module_from_spec(pkg_spec)
+                        pkg_mod.__path__ = [str(plugin_dir)]
+                        pkg_mod.__package__ = safe_name
+                        sys.modules[safe_name] = pkg_mod
+                        pkg_spec.loader.exec_module(pkg_mod)
+
+            spec = importlib.util.spec_from_file_location(
+                full_module_name, module_path,
+            )
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                module.__package__ = safe_name
+                sys.modules[full_module_name] = module
+                spec.loader.exec_module(module)
+
+                # Cache the module
+                if plugin_name not in cls._cache:
+                    cls._cache[plugin_name] = {}
+                cls._cache[plugin_name][module_name] = module
+                return module
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to import %s from plugin %s: %s", module_name, plugin_name, e
+            )
+
         return None
     
     @classmethod

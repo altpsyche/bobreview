@@ -5,10 +5,13 @@ Provides configurable plugin path discovery without hardcoded paths.
 Plugins can be loaded from multiple sources in priority order.
 """
 
+import logging
 import os
 from importlib.resources import files
 from pathlib import Path
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # Package resources - loaded at module level (no lazy imports)
@@ -99,8 +102,8 @@ class PluginDiscovery:
             dirs = config.get('plugin_dirs', [])
             if isinstance(dirs, list):
                 return [Path(d).expanduser().resolve() for d in dirs if d]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to read plugin config %s: %s", config_file, e)
         return []
     
     @staticmethod
@@ -124,8 +127,8 @@ class PluginDiscovery:
                 import yaml
                 with open(config_file, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f) or {}
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to parse plugin config %s: %s", config_file, e)
         
         # Add directory if not already present
         resolved = str(directory.expanduser().resolve())
@@ -142,7 +145,8 @@ class PluginDiscovery:
                 with open(config_file, 'w', encoding='utf-8') as f:
                     yaml.safe_dump(config, f, default_flow_style=False)
                 return True
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to write plugin config %s: %s", config_file, e)
                 return False
         return True  # Already present
     

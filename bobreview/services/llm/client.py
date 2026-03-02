@@ -73,7 +73,8 @@ def format_data_table(
                     value = format_number(value, 0)
                 else:
                     value = str(value)
-            row_values.append(str(value))
+            # Escape pipe chars so cell content can't break the table structure
+            row_values.append(str(value).replace('|', '\\|'))
         table += "| " + " | ".join(row_values) + " |\n"
     
     if max_rows is not None and total_samples > max_rows:
@@ -170,11 +171,15 @@ Data Table:
     return result
 
 
+MAX_CHUNKS = 50  # Safety limit to prevent runaway LLM API costs
+
+
 def call_llm_chunked(
     prompt_base: str,
     data_points: List[Dict[str, Any]],
     config: "Config",
     chunk_size: Optional[int] = None,
+    max_chunks: int = MAX_CHUNKS,
     table_formatter: Callable[[List[Dict[str, Any]]], str] = format_data_table,
 ) -> str:
     """
@@ -200,7 +205,18 @@ def call_llm_chunked(
     
     if not data_points:
         return call_llm(prompt_base, data_table=None, config=config)
-    
+
+    # Safety check: cap total number of LLM API calls
+    import math
+    total_chunks = math.ceil(len(data_points) / chunk_size)
+    if total_chunks > max_chunks:
+        log_warning(
+            f"Data has {len(data_points)} points requiring {total_chunks} chunks "
+            f"(limit: {max_chunks}). Truncating to first {max_chunks * chunk_size} points.",
+            config,
+        )
+        data_points = data_points[:max_chunks * chunk_size]
+
     # Process in chunks
     results = []
     for i in range(0, len(data_points), chunk_size):

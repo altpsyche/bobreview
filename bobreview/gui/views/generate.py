@@ -296,43 +296,70 @@ class GenerateView(ft.Container):
         self.page.update()
     
     def _update_progress(self, message: str):
-        """Update progress status."""
-        self.progress_text.value = message
+        """Update progress status (thread-safe via run_task)."""
+        async def _do_update():
+            self.progress_text.value = message
+            self.page.update()
+        self.page.run_task(_do_update)
+
+    def _update_ui_success(self, result: str):
+        """Apply success state to UI controls (must run on UI thread)."""
+        self.progress_container.visible = False
+        self.status_text.value = f"Report generated: {result}"
+        self.status_text.color = ft.Colors.GREEN_400
+        self.report_path = result
+        self.open_report_btn.visible = True
+        self.generate_btn.disabled = False
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text("Report generated successfully!"),
+            action="Open",
+            on_action=self._open_report,
+        )
+        self.page.snack_bar.open = True
         self.page.update()
-    
+
+    def _update_ui_error(self, error_message: str, error_details: str):
+        """Apply error state to UI controls (must run on UI thread)."""
+        self.progress_container.visible = False
+        self.status_text.value = f"Error: {error_message}"
+        self.status_text.color = ft.Colors.RED_400
+        self.generate_btn.disabled = False
+        self.page.update()
+        self._show_error_dialog(error_message, error_details)
+
     def _generate_report(self, e):
         """Generate the report (starts async worker thread)."""
         import threading
-        
+
         # Validate inputs
         if not self.plugin_dropdown.value:
             self.status_text.value = "Please select a plugin"
             self.status_text.color = ft.Colors.RED_400
             self.page.update()
             return
-        
+
         if not self.data_dir_field.value:
             self.status_text.value = "Please select a data directory"
             self.status_text.color = ft.Colors.RED_400
             self.page.update()
             return
-        
+
         if not self.output_dir_field.value:
             self.status_text.value = "Please select an output directory"
             self.status_text.color = ft.Colors.RED_400
             self.page.update()
             return
-        
+
         # Disable generate button during generation
         self.generate_btn.disabled = True
-        
+
         # Show progress
         self.progress_container.visible = True
         self.open_report_btn.visible = False
         self.status_text.value = ""
-        
+
         self._update_progress("Loading plugin...")
-        
+
         # Capture params for thread
         params = {
             "plugin_name": self.plugin_dropdown.value,
@@ -343,56 +370,41 @@ class GenerateView(ft.Container):
             "no_cache": self.no_cache_checkbox.value,
             "theme_id": self.theme_dropdown.value,
         }
-        
+
         # Run in background thread
         thread = threading.Thread(target=self._run_generation, args=(params,))
         thread.daemon = True
         thread.start()
-    
+
     def _run_generation(self, params: dict):
-        """Run generation in background thread."""
+        """Run generation in background thread. All UI mutations are
+        dispatched to the UI thread via page.run_task()."""
         import traceback
-        
+
         try:
             self._update_progress("Parsing data files...")
-            
+
             # Check for LLM if not dry run
             if not params["dry_run"]:
                 self._update_progress("Calling LLM for content generation...")
-            
+
             result = cli_wrapper.generate_report(**params)
-            
+
             self._update_progress("Writing report...")
-            
-            # Success - update UI
-            self.progress_container.visible = False
-            self.status_text.value = f"✓ Report generated: {result}"
-            self.status_text.color = ft.Colors.GREEN_400
-            
-            # Store path and show open button
-            self.report_path = result
-            self.open_report_btn.visible = True
-            
-            # Show success snackbar
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Report generated successfully!"),
-                action="Open",
-                on_action=self._open_report,
-            )
-            self.page.snack_bar.open = True
-            
+
+            # Schedule all success UI mutations on the UI thread
+            async def _apply_success():
+                self._update_ui_success(result)
+            self.page.run_task(_apply_success)
+
         except Exception as ex:
-            self.progress_container.visible = False
-            self.status_text.value = f"Error: {ex}"
-            self.status_text.color = ft.Colors.RED_400
-            
-            # Show detailed error dialog
-            self._show_error_dialog(str(ex), traceback.format_exc())
-        
-        finally:
-            # Re-enable button
-            self.generate_btn.disabled = False
-            self.page.update()
+            error_message = str(ex)
+            error_details = traceback.format_exc()
+
+            # Schedule all error UI mutations on the UI thread
+            async def _apply_error():
+                self._update_ui_error(error_message, error_details)
+            self.page.run_task(_apply_error)
     
     def _show_error_dialog(self, message: str, details: str):
         """Show a detailed error dialog."""

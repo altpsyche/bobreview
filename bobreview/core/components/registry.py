@@ -18,6 +18,7 @@ Example:
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Type, Callable
 import logging
+import threading
 
 from .prop_types import PropDef
 
@@ -57,16 +58,19 @@ class ComponentRegistry:
     """
     
     _instance: Optional['ComponentRegistry'] = None
-    
+    _instance_lock = threading.Lock()
+
     def __init__(self):
         self._components: Dict[str, ComponentDefinition] = {}
         self._pending_registrations: list = []
-    
+
     @classmethod
     def get_instance(cls) -> 'ComponentRegistry':
-        """Get the singleton registry instance."""
+        """Get the singleton registry instance (thread-safe)."""
         if cls._instance is None:
-            cls._instance = cls()
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls()
         return cls._instance
     
     @classmethod

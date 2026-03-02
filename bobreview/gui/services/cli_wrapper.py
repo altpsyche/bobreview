@@ -11,15 +11,20 @@ from typing import List, Optional
 def list_plugins(extra_dirs: Optional[List[str]] = None):
     """
     Get list of discovered plugins.
-    
+
     Returns:
         List of PluginManifest objects with name, version, description, path, loaded
     """
-    from bobreview.core.plugin_system import PluginDiscovery, init_loader
-    
-    dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=extra_dirs or [])
-    loader = init_loader(dirs)
-    loader.discover()
+    from bobreview.core.plugin_system import get_loader
+
+    loader = get_loader()
+    # Add any extra directories the caller requested
+    if extra_dirs:
+        for d in extra_dirs:
+            loader.add_plugin_dir(Path(d))
+    # Discover only if not already done
+    if not loader.get_discovered_plugins():
+        loader.discover()
     return loader.get_discovered_plugins()
 
 
@@ -44,23 +49,34 @@ def create_plugin(
 ) -> Path:
     """
     Create a new plugin using the scaffolder.
-    
+
     Parameters:
         name: Plugin name (e.g., "my-plugin")
         output_dir: Where to create (default: ~/.bobreview/plugins/)
         template: 'minimal' or 'full'
-    
+
     Returns:
         Path to created plugin directory
+
+    Raises:
+        FileExistsError: If the plugin directory already exists
     """
     from bobreview.core.plugin_system.scaffolder.core import create_plugin as scaffold_create
-    
+
     if output_dir is None:
         output_dir = Path.home() / ".bobreview" / "plugins"
-    
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
+    # Check if plugin directory already exists (same guard as CLI)
+    safe_name = name.replace('-', '_').replace(' ', '_')
+    plugin_dir = output_dir / safe_name
+    if plugin_dir.exists():
+        raise FileExistsError(
+            f"Plugin directory already exists: {plugin_dir}"
+        )
+
     # Create the plugin (scaffolder handles directory registration)
     return scaffold_create(name, output_dir, template)
 
@@ -134,12 +150,15 @@ def generate_report(
     """
     import sys
     import os
-    from bobreview.core.plugin_system import PluginDiscovery, init_loader, PluginLoadError
-    
+    from bobreview.core.plugin_system import get_loader, PluginLoadError
+
     # Initialize plugin system
-    dirs = PluginDiscovery.get_plugin_dirs(extra_dirs=extra_plugin_dirs or [])
-    loader = init_loader(dirs)
-    loader.discover()
+    loader = get_loader()
+    if extra_plugin_dirs:
+        for d in extra_plugin_dirs:
+            loader.add_plugin_dir(Path(d))
+    if not loader.get_discovered_plugins():
+        loader.discover()
     
     # Find the plugin
     plugins = loader.get_discovered_plugins()
@@ -165,9 +184,11 @@ def generate_report(
         raise RuntimeError(f"Plugin loaded but no instance available")
     
     # Find generate_report function
+    # The core loader registers external plugins as {safe_name} in sys.modules,
+    # and built-in plugins as bobreview.plugins.{safe_name}.
     safe_name = found.name.replace('-', '_')
     plugin_module = None
-    for mod_name in [f"bobreview.plugins.{safe_name}", f"plugins.{safe_name}", safe_name, f"user_plugins.{safe_name}"]:
+    for mod_name in [safe_name, f"bobreview.plugins.{safe_name}"]:
         if mod_name in sys.modules:
             plugin_module = sys.modules[mod_name]
             break
