@@ -220,7 +220,12 @@ class ConfigEditorView(ft.Container):
         plugin_name = e.data
         if not plugin_name:
             return
-        
+
+        # Reset stale state from previously selected plugin
+        self.config_path = None
+        self.current_config = {}
+        self.pages_column.controls.clear()
+
         try:
             # Load themes
             themes = cli_wrapper.get_plugin_themes(plugin_name)
@@ -233,8 +238,7 @@ class ConfigEditorView(ft.Container):
             
             # Load data fields for expression helper
             data_fields = cli_wrapper.get_plugin_data_fields(plugin_name)
-            if data_fields:
-                self.expression_helper.set_columns(data_fields)
+            self.expression_helper.set_columns(data_fields or [])
             
             # Build warnings for missing plugin features
             warnings = []

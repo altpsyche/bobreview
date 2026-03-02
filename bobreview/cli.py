@@ -631,8 +631,8 @@ Notes:
                 env_key = provider_env_map.get(provider)
                 if env_key and os.environ.get(env_key):
                     kwargs["llm_api_key"] = os.environ[env_key]
-                else:
-                    # Fallback: try known keys in order
+                elif not provider:
+                    # Fallback only when no specific provider was requested
                     for fallback_key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OLLAMA_API_KEY"):
                         if os.environ.get(fallback_key):
                             kwargs["llm_api_key"] = os.environ[fallback_key]

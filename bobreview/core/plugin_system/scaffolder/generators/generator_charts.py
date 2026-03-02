@@ -86,8 +86,14 @@ class ''' + class_name + '''ChartGenerator:
             from collections import Counter
             all_labels = [d.get(x_field, d.get('name', f'#{i}')) for i, d in enumerate(data_points)]
             counts = Counter(all_labels)
-            agg_labels = list(counts.keys())
-            agg_values = list(counts.values())
+            # Cap to top 15 categories; aggregate the rest into "Other"
+            top_items = counts.most_common(15)
+            other_count = sum(counts.values()) - sum(c for _, c in top_items)
+            agg_labels = [label for label, _ in top_items]
+            agg_values = [count for _, count in top_items]
+            if other_count > 0:
+                agg_labels.append("Other")
+                agg_values.append(other_count)
             return self._generate_pie_chart(chart_id, title, agg_labels, agg_values, chart_type, theme)
         
         if chart_type == 'line':

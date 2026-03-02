@@ -193,6 +193,11 @@ class LLMSettingsView(ft.Container):
         # Check for Ollama URL
         if os.environ.get("OLLAMA_BASE_URL"):
             self.ollama_url_field.value = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+            # If no other provider key was set, select ollama as the active provider
+            if not os.environ.get("OPENAI_API_KEY") and not os.environ.get("ANTHROPIC_API_KEY"):
+                self.provider_dropdown.value = "ollama"
+                self.ollama_url_field.visible = True
+                self.api_key_field.label = "API Key (optional for local)"
     
     def _save_settings(self, e):
         """Save settings to environment variables."""
@@ -214,7 +219,15 @@ class LLMSettingsView(ft.Container):
         else:
             self.status_text.value = "Please enter an API key"
             self.status_text.color = ft.Colors.ORANGE_400
-        
+
+        # Persist model and temperature if set
+        model = self.model_field.value.strip()
+        if model:
+            os.environ["BOBREVIEW_LLM_MODEL"] = model
+        temperature = self.temperature_slider.value
+        if temperature is not None:
+            os.environ["BOBREVIEW_LLM_TEMPERATURE"] = str(temperature)
+
         # Show note about persistence
         self._page.show_dialog(ft.SnackBar(
             content=ft.Text("Settings saved for this session. Set environment variables for persistence."),

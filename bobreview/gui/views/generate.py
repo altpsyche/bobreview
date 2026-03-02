@@ -230,6 +230,16 @@ class GenerateView(ft.Container):
             ]
             if plugins:
                 self.plugin_dropdown.value = plugins[0].name
+                # Populate themes for the initially selected plugin
+                try:
+                    themes = cli_wrapper.get_plugin_themes(plugins[0].name)
+                    self.theme_dropdown.options = [
+                        ft.dropdown.Option(t, t.capitalize()) for t in themes
+                    ]
+                    if themes:
+                        self.theme_dropdown.value = themes[0]
+                except Exception:
+                    pass
         except Exception as ex:
             self.status_text.value = f"Error loading plugins: {ex}"
             self.status_text.color = ft.Colors.RED_400

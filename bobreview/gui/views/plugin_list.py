@@ -238,7 +238,7 @@ class PluginListView(ft.Container):
             # Check if it looks like a plugin
             if not (plugin_path / "plugin.py").exists() and not (plugin_path / "__init__.py").exists():
                 self._page.show_dialog(ft.SnackBar(
-                    content=ft.Text("This doesn't look like a BobReview plugin folder (no plugin.py found)"),
+                    content=ft.Text("This doesn't look like a BobReview plugin folder (no plugin.py or __init__.py found)"),
                     bgcolor=ft.Colors.ORANGE_800,
                     open=True,
                 ))

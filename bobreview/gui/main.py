@@ -130,7 +130,7 @@ def _build_dashboard(page: ft.Page, show_plugins, show_generate, show_llm):
     try:
         from .services import cli_wrapper
         plugin_count = len(cli_wrapper.list_plugins())
-    except:
+    except Exception:
         plugin_count = 0
     
     # Get version info from package

@@ -336,10 +336,17 @@ def generate_llm_content(
                 
                 # Create Config with LLM settings from kwargs
                 # no_cache=True means use_cache=False
+                llm_provider = kwargs.get('llm_provider', 'openai')
+                default_models = {
+                    'openai': 'gpt-4o',
+                    'anthropic': 'claude-sonnet-4-20250514',
+                    'ollama': 'llama3',
+                }
+                llm_model = kwargs.get('llm_model') or default_models.get(llm_provider, 'gpt-4o')
                 llm_config = Config(
-                    llm_provider=kwargs.get('llm_provider', 'openai'),
+                    llm_provider=llm_provider,
                     llm_api_key=kwargs.get('llm_api_key'),
-                    llm_model=kwargs.get('llm_model', 'gpt-4o'),
+                    llm_model=llm_model,
                     llm_temperature=kwargs.get('llm_temperature', 0.7),
                     use_cache=not kwargs.get('no_cache', False),
                 )

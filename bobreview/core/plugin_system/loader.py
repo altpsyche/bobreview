@@ -598,6 +598,14 @@ class PluginLoader:
             except Exception as e:
                 logger.debug(f"Template engine refresh skipped: {e}")
 
+            # Invalidate engine discovery/report caches so newly loaded
+            # plugins' report systems are visible without manual refresh.
+            try:
+                from ...engine.loader import clear_cache as clear_engine_cache
+                clear_engine_cache()
+            except Exception as e:
+                logger.debug(f"Engine cache invalidation skipped: {e}")
+
         return loaded
     
     def unload_all(self) -> None:

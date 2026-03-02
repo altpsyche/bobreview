@@ -21,8 +21,10 @@ class PageEditorDialog:
         on_save: Callable,
         on_edit_component: Callable[[int], None],
     ):
+        import copy
         self.ft_page = page
-        self.page_data = page_data
+        self._original_page_data = page_data
+        self.page_data = copy.deepcopy(page_data)
         self.page_index = page_index
         self.available_components = available_components
         self.on_save = on_save
@@ -118,11 +120,14 @@ class PageEditorDialog:
             self.ft_page.update()
     
     def _save_page(self, e):
-        """Save page data."""
+        """Save page data — write working copy back to the original dict."""
         self.page_data['id'] = self.id_field.value
         self.page_data['title'] = self.title_field.value
         self.page_data['icon'] = self.icon_field.value
         self.page_data['layout'] = self.layout_dropdown.value
+        # Commit edits back to the original reference
+        self._original_page_data.clear()
+        self._original_page_data.update(self.page_data)
         self.ft_page.pop_dialog()
         self.on_save()
     
