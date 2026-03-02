@@ -192,8 +192,11 @@ def call_llm_chunked(
         data_points (List[Dict[str, Any]]): Data points to process.
         config (Config): Report configuration containing LLM and chunking settings.
         chunk_size (Optional[int]): Number of data points per chunk; if None, uses config.llm_chunk_size.
+        max_chunks (int): Safety cap on total LLM API calls (initial chunk calls plus
+            pairwise combine calls). When the expected call count (2*n - 1 for n initial
+            chunks) exceeds this limit, data is truncated to fit. Defaults to MAX_CHUNKS.
         table_formatter (Callable[[List[Dict[str, Any]]], str]): Function that formats a list of data points into a table string.
-    
+
     Returns:
         str: Unified LLM response combining analyses from all chunks.
     """
@@ -241,7 +244,7 @@ Processing samples {i+1}-{min(i+chunk_size, len(data_points))} of {len(data_poin
     
     # Guard against empty results (e.g., if data was truncated to nothing)
     if not results:
-        return table_formatter([])
+        return call_llm(prompt_base, data_table=None, config=config)
 
     # Combine if multiple chunks using pairwise reduction
     if len(results) == 1:

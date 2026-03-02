@@ -81,11 +81,11 @@ class ''' + class_name + '''ChartGenerator:
             return self._generate_histogram(chart_id, title, values, y_field, theme)
         
         if chart_type in ('pie', 'doughnut'):
-            # Aggregate labels into unique categories with counts for
-            # distribution charts (doughnut/pie should show category counts,
-            # not individual data point values).
+            # Aggregate from the full dataset (not the truncated top-20)
+            # so distribution charts reflect all data points.
             from collections import Counter
-            counts = Counter(labels)
+            all_labels = [d.get(x_field, d.get('name', f'#{i}')) for i, d in enumerate(data_points)]
+            counts = Counter(all_labels)
             agg_labels = list(counts.keys())
             agg_values = list(counts.values())
             return self._generate_pie_chart(chart_id, title, agg_labels, agg_values, chart_type, theme)

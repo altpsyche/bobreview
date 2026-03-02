@@ -524,11 +524,13 @@ Notes:
             from .gui import run_app
             run_app()
             return 0
-        except ImportError as e:
-            log_error(f"GUI requires flet. Install with: pip install flet")
-            if args.verbose:
-                print(f"Import error: {e}")
-            return 1
+        except ModuleNotFoundError as e:
+            if e.name == 'flet' or (e.name and e.name.startswith('flet.')):
+                log_error(f"GUI requires flet. Install with: pip install flet")
+                if args.verbose:
+                    print(f"Import error: {e}")
+                return 1
+            raise
     
     # Handle plugin subcommands
     if args.command == 'plugins':

@@ -194,7 +194,9 @@ def find_report_system_path(id_or_path: str, plugin_name: Optional[str] = None) 
             for pdir in get_loader().plugin_dirs:
                 allowed_dirs.append(Path(pdir).resolve())
         except Exception:
-            pass
+            logging.getLogger(__name__).debug(
+                "Could not resolve plugin dirs for allowlist", exc_info=True
+            )
 
         def _is_under(child: Path, parent: Path) -> bool:
             """Check if child path is under parent using proper ancestry."""

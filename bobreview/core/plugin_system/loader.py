@@ -471,7 +471,8 @@ class PluginLoader:
             # Clean up sys.modules entries for this plugin so reload
             # picks up fresh code instead of returning stale cached modules.
             safe_name = plugin_name.replace('-', '_')
-            plugin_dir = str(manifest.plugin_path.resolve()) if manifest.plugin_path else None
+            manifest = self._manifests.get(plugin_name)
+            plugin_dir = str(manifest.plugin_path.resolve()) if manifest and manifest.plugin_path else None
             stale_prefixes = (safe_name + '.', f'bobreview.plugins.{safe_name}.')
             stale_keys = [
                 key for key in list(sys.modules)
@@ -487,11 +488,12 @@ class PluginLoader:
                 mod_file = getattr(mod, '__file__', None)
                 if mod_file and plugin_dir:
                     try:
-                        resolved_mod = str(Path(mod_file).resolve())
-                        if not resolved_mod.startswith(plugin_dir):
-                            logger.debug(f"Skipping sys.modules entry {key}: outside plugin dir")
-                            continue
-                    except (ValueError, OSError):
+                        resolved_mod = Path(mod_file).resolve()
+                        resolved_mod.relative_to(Path(plugin_dir))
+                    except ValueError:
+                        logger.debug(f"Skipping sys.modules entry {key}: outside plugin dir")
+                        continue
+                    except OSError:
                         continue
                 del sys.modules[key]
                 logger.debug(f"Removed sys.modules entry: {key}")

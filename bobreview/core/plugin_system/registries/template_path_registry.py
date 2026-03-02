@@ -94,6 +94,7 @@ class TemplatePathRegistry(BaseRegistry):
             if key in self._component_owners:
                 del self._component_owners[key]
 
+        self._prune_collision_log(plugin_name)
         logger.info(f"Unregistered {count} template paths from plugin: {plugin_name}")
         return count
 

@@ -395,4 +395,5 @@ def get_template_engine(custom_paths: Optional[list] = None, force_refresh: bool
 def reset_template_engine():
     """Reset the global template engine (for testing)."""
     global _engine_instance
-    _engine_instance = None
+    with _engine_lock:
+        _engine_instance = None

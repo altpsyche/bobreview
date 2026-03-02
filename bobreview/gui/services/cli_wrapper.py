@@ -35,8 +35,9 @@ def get_plugin_info(name: str, extra_dirs: Optional[List[str]] = None):
         PluginManifest or None if not found
     """
     plugins = list_plugins(extra_dirs)
+    normalized = name.replace('_', '-')
     for p in plugins:
-        if p.name == name or p.name.replace('_', '-') == name:
+        if p.name.replace('_', '-') == normalized:
             return p
     return None
 
@@ -86,7 +87,7 @@ def create_plugin(
         )
 
     # Create the plugin (scaffolder handles directory registration)
-    return scaffold_create(name, output_dir, template)
+    return scaffold_create(safe_name, output_dir, template)
 
 
 def get_plugin_themes(plugin_name: str) -> List[str]:
@@ -171,8 +172,9 @@ def generate_report(
     # Find the plugin
     plugins = loader.get_discovered_plugins()
     found = None
+    normalized = plugin_name.replace('_', '-')
     for p in plugins:
-        if p.name == plugin_name or p.name.replace('_', '-') == plugin_name:
+        if p.name.replace('_', '-') == normalized:
             found = p
             break
     

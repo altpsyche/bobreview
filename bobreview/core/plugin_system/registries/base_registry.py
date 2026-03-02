@@ -114,6 +114,22 @@ class BaseRegistry:
         """
         return list(self._collision_log)
 
+    def _prune_collision_log(self, plugin_name: str) -> None:
+        """
+        Remove collision log entries involving a plugin.
+
+        Subclasses that override unregister_plugin_components should call
+        this method to keep the collision log bounded across load/unload
+        cycles.
+
+        Parameters:
+            plugin_name: Name of the plugin being unregistered
+        """
+        self._collision_log = [
+            entry for entry in self._collision_log
+            if entry[1] != plugin_name and entry[2] != plugin_name
+        ]
+
     def unregister_plugin_components(self, plugin_name: str) -> int:
         """
         Unregister all components from a specific plugin.
@@ -132,12 +148,7 @@ class BaseRegistry:
         for key in to_remove:
             del self._component_owners[key]
 
-        # Clean collision log entries involving this plugin to prevent
-        # unbounded growth across load/unload cycles.
-        self._collision_log = [
-            entry for entry in self._collision_log
-            if entry[1] != plugin_name and entry[2] != plugin_name
-        ]
+        self._prune_collision_log(plugin_name)
 
         return len(to_remove)
 

@@ -457,22 +457,22 @@ header p {
     box-shadow: 0 0 10px;
 }
 
-.progress-bar.progress-ok {
+.progress-fill.progress-ok {
     background: linear-gradient(90deg, var(--ok), #6ee7b7);
     box-shadow: 0 0 10px var(--ok);
 }
 
-.progress-bar.progress-warn {
+.progress-fill.progress-warn {
     background: linear-gradient(90deg, var(--warn), #fcd34d);
     box-shadow: 0 0 10px var(--warn);
 }
 
-.progress-bar.progress-danger {
+.progress-fill.progress-danger {
     background: linear-gradient(90deg, var(--danger), #fca5a5);
     box-shadow: 0 0 10px var(--danger);
 }
 
-.progress-bar.progress-accent {
+.progress-fill.progress-accent {
     background: linear-gradient(90deg, var(--accent), var(--accent-strong));
     box-shadow: 0 0 10px var(--accent);
 }
